@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using FastTests.Corax.Bugs;
 using FastTests.Voron;
-using Parquet.Thrift;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
-using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Data.RawData;
 using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
@@ -30,7 +25,7 @@ public class CompactTreeOptimizedLookup : StorageTest
         using (var wtx = Env.WriteTransaction())
         {
             CompactTree dates = wtx.CompactTreeFor("Dates");
-            foreach ( var terms in ReadTermsFromResource("Terms.log.gz"))
+            foreach (var terms in ReadTermsFromResource("Terms.log.gz"))
             {
                 dates.InitializeStateForTryGetNextValue();
                 for (var index = 0; index < terms.Count; index++)
@@ -43,12 +38,12 @@ public class CompactTreeOptimizedLookup : StorageTest
                     }
                 }
             }
-            
+
             dates.Verify();
             dates.VerifyOrderOfElements();
         }
     }
-    
+
     private static IEnumerable<List<string>> ReadTermsFromResource(string file)
     {
         var reader = new StreamReader(new GZipStream(typeof(CompactTreeOptimizedLookup).Assembly.GetManifestResourceStream("StressTests.Corax.Bugs." + file), CompressionMode.Decompress));
@@ -66,6 +61,6 @@ public class CompactTreeOptimizedLookup : StorageTest
             adds.Add(line);
         }
 
-        yield return  adds;
+        yield return adds;
     }
 }

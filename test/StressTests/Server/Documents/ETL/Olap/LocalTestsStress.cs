@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Parquet;
-using Parquet.Data;
+using Parquet.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
@@ -77,14 +77,14 @@ loadToOrders(partitionBy(key), o);
                 var firstBatchTime = DateTime.UtcNow;
                 var firstBatchTimeMinutes = firstBatchTime.Minute;
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
-                
+
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
                 using (var fs = File.OpenRead(files[0]))
-                using (var parquetReader = new ParquetReader(fs))
+                using (var parquetReader = await ParquetReader.CreateAsync(fs))
                 {
                     Assert.Equal(1, parquetReader.RowGroupCount);
                     Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
@@ -94,7 +94,7 @@ loadToOrders(partitionBy(key), o);
                     {
                         Assert.True(field.Name.In(expectedFields));
 
-                        var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                        var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
                         Assert.True(data.Length == 10);
 
                         if (field.Name == ParquetTransformedItems.LastModifiedColumn)
@@ -145,12 +145,12 @@ loadToOrders(partitionBy(key), o);
 
                 var secondBatchTime = DateTime.UtcNow;
                 var secondBatchTimeMinutes = secondBatchTime.Minute;
-                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0 || 
+                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0 ||
                     // grant one second tolerance 
                     (secondBatchTime - firstBatchTime).TotalSeconds >= 59 ||
-                    secondBatchTime.Second == 59 && firstBatchTimeMinutes == secondBatchTimeMinutes; 
-                
-                Assert.True(oneMinuteApart, 
+                    secondBatchTime.Second == 59 && firstBatchTimeMinutes == secondBatchTimeMinutes;
+
+                Assert.True(oneMinuteApart,
                     $"First batch time : {firstBatchTime}, second batch time : {secondBatchTime}. Files : {string.Join(", ", Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories))}");
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);

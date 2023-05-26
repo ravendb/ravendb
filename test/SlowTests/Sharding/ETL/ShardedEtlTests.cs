@@ -383,7 +383,7 @@ loadToAddresses(load(this.AddressId));
                     var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
                     Assert.Equal(0, addresses.Length);
                 }
-                
+
                 expectedCount -= 3;
 
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
@@ -1306,7 +1306,7 @@ loadToOrders(partitionBy(key), o);
                 var expectedFields = new[] { "RequireAt", "Total", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
                 using (var fs = File.OpenRead(files[0]))
-                using (var parquetReader = new ParquetReader(fs))
+                using (var parquetReader = await ParquetReader.CreateAsync(fs))
                 {
                     Assert.Equal(1, parquetReader.RowGroupCount);
                     Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
@@ -1396,7 +1396,7 @@ loadToOrders(partitionBy(key), o);
                     }
 
                     var etlDone = Sharding.Etl.WaitForEtlOnAllShards(store, (_, statistics) => statistics.LoadSuccesses != 0);
-                    
+
                     var script = @"
 var orderData = {
     Company : this.Company,
@@ -1445,7 +1445,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         var februaryFiles = await s3Client.ListObjectsAsync(prefix: forFebruary, string.Empty, false);
                         Assert.Equal(3, februaryFiles.FileInfoDetails.Count);
 
-                        foreach (var files in new [] {januaryFiles, februaryFiles})
+                        foreach (var files in new[] { januaryFiles, februaryFiles })
                         {
                             var paths = files.FileInfoDetails.Select(f => f.FullPath).ToList();
                             var record = await Sharding.GetShardingConfigurationAsync(store);
@@ -1462,7 +1462,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         await using var ms = new MemoryStream();
                         await blob.Data.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -1507,7 +1507,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         await using var ms = new MemoryStream();
                         await blob.Data.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -1638,7 +1638,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 Assert.True(ordersCount == numberOfOrders, await AddDebugInfoOnFailure(store, numberOfOrders, ordersCount));
 
                 var orderLinesCount = (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
-                Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder, 
+                Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder,
                     await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
 
                 for (int i = 0; i < numberOfOrders; i++)
@@ -1911,7 +1911,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 {
                     using (var session = src.OpenSession())
                     {
-                        var id = $"users/{i}${ids[i%10]}";
+                        var id = $"users/{i}${ids[i % 10]}";
                         ids.Add(id);
                         session.Store(new User(), id);
 
@@ -1956,7 +1956,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 error = Assert.ThrowsAny<RavenException>(() =>
                 {
-                    SetupElasticEtl(src, collections: new List<string>(){ "Users" }, script: null, mentor: "A");
+                    SetupElasticEtl(src, collections: new List<string>() { "Users" }, script: null, mentor: "A");
                 });
 
                 Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);

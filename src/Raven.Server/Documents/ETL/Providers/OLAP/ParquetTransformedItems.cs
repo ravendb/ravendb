@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Parquet;
-using Parquet.Data;
+using Parquet.Schema;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Sparrow.Json;
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public string Key => _key;
 
         private readonly RowGroup _group;
-        private readonly Dictionary<string, DataType> _dataTypes;
+        private readonly Dictionary<string, Type> _dataTypes;
         private Dictionary<string, DataField> _fields;
         private readonly string _tableName, _key, _tmpFilePath, _fileNameSuffix;
         private string _documentIdColumn, _remoteFolderName, _localFolderName;
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private float[] _floatArr;
         private double[] _doubleArr;
         private decimal[] _decimalArr;
-        private DateTimeOffset[] _dtoArr;
+        private DateTime[] _dtArr;
         private TimeSpan[] _tsArr;
 
         private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss.ffffff";
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private static readonly long UnixEpochTicks = new DateTime(1970, 1, 1).Ticks;
 
-        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, List<string> partitions, OlapEtlConfiguration configuration) 
+        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, List<string> partitions, OlapEtlConfiguration configuration)
             : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _configuration = configuration;
             _fileNameSuffix = fileNameSuffix;
             _tmpFilePath = tmpPath;
-            _dataTypes = new Dictionary<string, DataType>();
+            _dataTypes = new Dictionary<string, Type>();
             _group = new RowGroup();
 
             SetIdColumn();
@@ -131,16 +131,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             uploadInfo = new UploadInfo
             {
-                FileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}", 
-                FolderName = _remoteFolderName, 
+                FileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}",
+                FolderName = _remoteFolderName,
             };
 
             var localPath = Path.Combine(_tmpFilePath, _localFolderName ?? string.Empty, uploadInfo.FileName);
             if (_localFolderName != null)
                 Directory.CreateDirectory(Path.Combine(_tmpFilePath, _localFolderName));
-            
+
             using (Stream fileStream = File.Open(localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-            using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
+            using (var parquetWriter = ParquetWriter.CreateAsync(new ParquetSchema(Fields.Values), fileStream).GetAwaiter().GetResult())
             {
                 WriteGroup(parquetWriter);
             }
@@ -157,14 +157,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             foreach (var kvp in _dataTypes)
             {
-                if (kvp.Value == DataType.Unspecified)
+                if (kvp.Value == null)
                     continue;
 
                 fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
             }
 
-            fields[_documentIdColumn] = new DataField(_documentIdColumn, DataType.String);
-            fields[LastModifiedColumn] = new DataField(LastModifiedColumn, DataType.Int64);
+            fields[_documentIdColumn] = new DataField(_documentIdColumn, typeof(string));
+            fields[LastModifiedColumn] = new DataField(LastModifiedColumn, typeof(long));
 
             return fields;
         }
@@ -183,68 +183,82 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     var data = kvp.Value;
                     Array array;
 
-                    switch (field.DataType)
+                    if (field.ClrType == typeof(bool))
                     {
-                        case DataType.Boolean:
-                            array = _boolArr ??= new bool[data.Count];
-                            break;
-                        case DataType.Byte:
-                            array = _byteArr ??= new byte[data.Count];
-                            break;
-                        case DataType.SignedByte:
-                            array = _sbyteArr ??= new sbyte[data.Count];
-                            break;
-                        case DataType.Short:
-                            array = _shortArr ??= new short[data.Count];
-                            break;
-                        case DataType.Int32:
-                            array = _intArr ??= new int[data.Count];
-                            break;
-                        case DataType.Int64:
-                            array = _longArr ??= new long[data.Count];
-                            break;
-                        case DataType.UnsignedInt16:
-                            array = _ushortArr ??= new ushort[data.Count];
-                            break;
-                        case DataType.UnsignedInt32:
-                            array = _uintArr ??= new uint[data.Count];
-                            break;
-                        case DataType.UnsignedInt64:
-                            array = _ulongArr ??= new ulong[data.Count];
-                            break;
-                        case DataType.Float:
-                            array = _floatArr ??= new float[data.Count];
-                            break;
-                        case DataType.Double:
-                            array = _doubleArr ??= new double[data.Count];
-                            break;
-                        case DataType.Decimal:
-                            array = _decimalArr ??= new decimal[data.Count];
-                            break;
-                        case DataType.String:
-                            array = _strArr ??= new string[data.Count];
-                            break;
-                        case DataType.DateTimeOffset:
-                            array = _dtoArr ??= new DateTimeOffset[data.Count];
-                            break;
-                        case DataType.TimeSpan:
-                            array = _tsArr ??= new TimeSpan[data.Count];
-                            break;
-                        default:
-                            ThrowUnsupportedDataType(field.DataType);
-                            return;
+                        array = _boolArr ??= new bool[data.Count];
+                    }
+                    else if (field.ClrType == typeof(byte))
+                    {
+                        array = _byteArr ??= new byte[data.Count];
+                    }
+                    else if (field.ClrType == typeof(sbyte))
+                    {
+                        array = _sbyteArr ??= new sbyte[data.Count];
+                    }
+                    else if (field.ClrType == typeof(short))
+                    {
+                        array = _shortArr ??= new short[data.Count];
+                    }
+                    else if (field.ClrType == typeof(int))
+                    {
+                        array = _intArr ??= new int[data.Count];
+                    }
+                    else if (field.ClrType == typeof(long))
+                    {
+                        array = _longArr ??= new long[data.Count];
+                    }
+                    else if (field.ClrType == typeof(ushort))
+                    {
+                        array = _ushortArr ??= new ushort[data.Count];
+                    }
+                    else if (field.ClrType == typeof(uint))
+                    {
+                        array = _uintArr ??= new uint[data.Count];
+                    }
+                    else if (field.ClrType == typeof(ulong))
+                    {
+                        array = _ulongArr ??= new ulong[data.Count];
+                    }
+                    else if (field.ClrType == typeof(float))
+                    {
+                        array = _floatArr ??= new float[data.Count];
+                    }
+                    else if (field.ClrType == typeof(double))
+                    {
+                        array = _doubleArr ??= new double[data.Count];
+                    }
+                    else if (field.ClrType == typeof(decimal))
+                    {
+                        array = _decimalArr ??= new decimal[data.Count];
+                    }
+                    else if (field.ClrType == typeof(string))
+                    {
+                        array = _strArr ??= new string[data.Count];
+                    }
+                    else if (field.ClrType == typeof(DateTime))
+                    {
+                        array = _dtArr ??= new DateTime[data.Count];
+                    }
+                    else if (field.ClrType == typeof(TimeSpan))
+                    {
+                        array = _tsArr ??= new TimeSpan[data.Count];
+                    }
+                    else
+                    {
+                        ThrowUnsupportedDataType(field.ClrType);
+                        return;
                     }
 
                     Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{kvp.Key}'");
 
                     data.CopyTo(array, 0);
-                    groupWriter.WriteColumn(new DataColumn(field, array));
+                    groupWriter.WriteColumnAsync(new DataColumn(field, array)).GetAwaiter().GetResult();
                 }
             }
 
             _boolArr = null;
             _strArr = null;
-            _dtoArr = null;
+            _dtArr = null;
             _tsArr = null;
             _byteArr = null;
             _sbyteArr = null;
@@ -271,7 +285,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _group.Ids.Add(item.DocumentId);
             _group.LastModified.Add(UnixTimestampFromDateTime(item.Document.LastModified));
-            
+
             foreach (var prop in item.Properties)
             {
                 names.Add(prop.Name);
@@ -280,7 +294,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             foreach (var kvp in _dataTypes)
             {
-                if (names.Contains(kvp.Key)) 
+                if (names.Contains(kvp.Key))
                     continue;
 
                 // handle item with missing field
@@ -300,7 +314,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (prop.Type == BlittableJsonToken.Null)
             {
                 if (newField)
-                    UpdateField(DataType.Unspecified, propName, data, _group);
+                    UpdateField(null, propName, data, _group);
                 else
                     AddDefaultData(data, dataType, 1);
                 return;
@@ -313,7 +327,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 UpdateField(dataType = propType, propName, data, _group);
             }
 
-            else if (dataType == DataType.Unspecified)
+            else if (dataType == null)
             {
                 // existing field that had no values, until now
                 // need to change the field type and add default values to fields' data
@@ -353,13 +367,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static DataType GetPropertyDataType(LazyStringValue docId, OlapColumn prop, ref IList data)
+        private static Type GetPropertyDataType(LazyStringValue docId, OlapColumn prop, ref IList data)
         {
-            DataType propType;
+            Type propType;
             switch (prop.Type & BlittableJsonReaderBase.TypesMask)
             {
                 case BlittableJsonToken.Integer:
-                    propType = DataType.Int64;
+                    propType = typeof(long);
                     data ??= new List<long>();
                     break;
                 case BlittableJsonToken.LazyNumber:
@@ -367,19 +381,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     if (lnv.TryParseULong(out var ulongValue))
                     {
                         prop.Value = ulongValue;
-                        propType = DataType.Int64;
+                        propType = typeof(long);
                         data ??= new List<long>();
                     }
                     else if (lnv.TryParseDecimal(out var decimalValue))
                     {
                         prop.Value = decimalValue;
-                        propType = DataType.Decimal;
+                        propType = typeof(decimal);
                         data ??= new List<decimal>();
                     }
                     else
                     {
                         prop.Value = (double)lnv;
-                        propType = DataType.Double;
+                        propType = typeof(double);
                         data ??= new List<double>();
                     }
                     break;
@@ -388,23 +402,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     var str = prop.Value.ToString();
                     if (TryParseDate(str, out var dto))
                     {
-                        propType = DataType.DateTimeOffset;
-                        data ??= new List<DateTimeOffset>();
+                        propType = typeof(DateTime);
+                        data ??= new List<DateTime>();
                         prop.Value = dto;
                         break;
                     }
                     if (TryParseTimeSpan(str, out var ts))
                     {
-                        propType = DataType.TimeSpan;
+                        propType = typeof(TimeSpan);
                         data ??= new List<TimeSpan>();
                         prop.Value = ts;
                         break;
                     }
-                    propType = DataType.String;
+                    propType = typeof(string);
                     data ??= new List<string>();
                     break;
                 case BlittableJsonToken.Boolean:
-                    propType = DataType.Boolean;
+                    propType = typeof(bool);
                     data ??= new List<bool>();
                     break;
                 case BlittableJsonToken.StartObject:
@@ -418,7 +432,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return propType;
         }
 
-        private static DataType GetTypeFromObject(LazyStringValue docId, OlapColumn prop, ref IList data)
+        private static Type GetTypeFromObject(LazyStringValue docId, OlapColumn prop, ref IList data)
         {
             using (var objectValue = (BlittableJsonReaderObject)prop.Value)
             {
@@ -427,10 +441,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     prop.Value = objectValue.ToString();
                     data ??= new List<string>();
-                    return DataType.String;
+                    return typeof(string);
                 }
 
-                DataType propType;
+                Type propType;
                 object value;
                 var type = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), ignoreCase: true);
 
@@ -438,57 +452,57 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     case DbType.Byte:
                         value = Convert.ToByte(fieldValue);
-                        propType = DataType.Byte;
+                        propType = typeof(byte);
                         data ??= new List<byte>();
                         break;
                     case DbType.SByte:
                         value = Convert.ToSByte(fieldValue);
-                        propType = DataType.SignedByte;
+                        propType = typeof(sbyte);
                         data ??= new List<sbyte>();
                         break;
                     case DbType.Int16:
                         value = Convert.ToInt16(fieldValue);
-                        propType = DataType.Short;
+                        propType = typeof(short);
                         data ??= new List<short>();
                         break;
                     case DbType.Int32:
                         value = Convert.ToInt32(fieldValue);
-                        propType = DataType.Int32;
+                        propType = typeof(int);
                         data ??= new List<int>();
                         break;
                     case DbType.Int64:
                         value = Convert.ToInt64(fieldValue);
-                        propType = DataType.Int64;
+                        propType = typeof(long);
                         data ??= new List<long>();
                         break;
                     case DbType.UInt16:
                         value = Convert.ToUInt16(fieldValue);
-                        propType = DataType.UnsignedInt16;
+                        propType = typeof(ushort);
                         data ??= new List<ushort>();
                         break;
                     case DbType.UInt32:
                         value = Convert.ToUInt32(fieldValue);
-                        propType = DataType.UnsignedInt32;
+                        propType = typeof(uint);
                         data ??= new List<uint>();
                         break;
                     case DbType.UInt64:
                         value = Convert.ToUInt64(fieldValue);
-                        propType = DataType.UnsignedInt64;
+                        propType = typeof(ulong);
                         data ??= new List<ulong>();
                         break;
                     case DbType.Single:
                         value = Convert.ToSingle(fieldValue);
-                        propType = DataType.Float;
+                        propType = typeof(float);
                         data ??= new List<float>();
                         break;
                     case DbType.Double:
                         value = Convert.ToDouble(fieldValue);
-                        propType = DataType.Double;
+                        propType = typeof(double);
                         data ??= new List<double>();
                         break;
                     case DbType.Decimal:
                         value = Convert.ToDecimal(fieldValue);
-                        propType = DataType.Decimal;
+                        propType = typeof(decimal);
                         data ??= new List<decimal>();
                         break;
                     default:
@@ -500,221 +514,242 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static bool TryChangeDataType(DataType dataType, DataType propType, IList data, out IList newData)
+        private static bool TryChangeDataType(Type dataType, Type propType, IList data, out IList newData)
         {
             newData = data;
 
-            switch (propType)
+            if (propType == typeof(double))
             {
-                case DataType.Double:
+                if (dataType == typeof(long) || dataType == typeof(decimal))
                 {
-                    switch (dataType)
+                    newData = new List<double>();
+                    foreach (var number in data)
                     {
-                        case DataType.Int64:
-                        case DataType.Decimal:
-                            newData = new List<double>();
-                            foreach (var number in data)
-                            {
-                                newData.Add(Convert.ToDouble(number));
-                            }
-                            return true;
-                        default:
-                            return false;
-
-                    }
-                }
-
-                case DataType.Decimal:
-                {
-                    switch (dataType)
-                    {
-                        case DataType.Int64:
-                            newData = new List<decimal>();
-                            foreach (var number in data)
-                            {
-                                newData.Add(Convert.ToDecimal(number));
-                            }
-                            return true;
-                        default:
-                            return false;
-                    }
-                }
-
-                case DataType.Int64:
-                {
-                    if (data.Count != 0)
-                        return false;
-
-                    switch (dataType)
-                    {
-                        // edge case : data might have been initialized to List<long> / List<decimal>
-                        case DataType.Double:
-                            newData = new List<double>();
-                            break;
-                        case DataType.Decimal:
-                            newData = new List<decimal>();
-                            break;
+                        newData.Add(Convert.ToDouble(number));
                     }
 
-                    // no need for field update
-                    return false;
+                    return true;
                 }
 
-                default:
-                    return false;
+                return false;
             }
+
+            if (propType == typeof(decimal))
+            {
+                if (dataType == typeof(long))
+                {
+                    newData = new List<decimal>();
+                    foreach (var number in data)
+                    {
+                        newData.Add(Convert.ToDecimal(number));
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (propType == typeof(decimal))
+            {
+                if (data.Count != 0)
+                    return false;
+
+                // edge case : data might have been initialized to List<long> / List<decimal>
+                if (dataType == typeof(double))
+                    newData = new List<double>();
+                else if (dataType == typeof(decimal))
+                    newData = new List<decimal>();
+
+                // no need for field update
+                return false;
+            }
+
+            return false;
         }
 
-        private static bool TryChangeValueType(DataType dataType, DataType propType, object value, out object newValue)
+        private static bool TryChangeValueType(Type dataType, Type propType, object value, out object newValue)
         {
             newValue = default;
 
-            if (propType != DataType.Int64 && propType != DataType.Decimal)
+            if (propType != typeof(long) && propType != typeof(decimal))
                 return false;
 
-            switch (dataType)
+            if (dataType == typeof(decimal))
             {
-                case DataType.Decimal:
-                    newValue = Convert.ToDecimal(value);
-                    return true;
-                case DataType.Double:
-                    newValue = Convert.ToDouble(value);
-                    return true;
-                default:
-                    return false;
+                newValue = Convert.ToDecimal(value);
+                return true;
+            }
+
+            if (dataType == typeof(double))
+            {
+                newValue = Convert.ToDouble(value);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void AddNewValue(IList data, Type dataType, object value)
+        {
+            if (dataType is null)
+            {
+                // nothing to do
+            }
+            else if (dataType == typeof(bool))
+            {
+                data?.Add((bool)value);
+            }
+            else if (dataType == typeof(string))
+            {
+                data?.Add(value.ToString());
+            }
+            else if (dataType == typeof(byte))
+            {
+                data?.Add((byte)value);
+            }
+            else if (dataType == typeof(sbyte))
+            {
+                data?.Add((sbyte)value);
+            }
+            else if (dataType == typeof(short))
+            {
+                data?.Add((short)value);
+            }
+            else if (dataType == typeof(int))
+            {
+                data?.Add((int)value);
+            }
+            else if (dataType == typeof(long))
+            {
+                data?.Add((long)value);
+            }
+            else if (dataType == typeof(ushort))
+            {
+                data?.Add((ushort)value);
+            }
+            else if (dataType == typeof(uint))
+            {
+                data?.Add((uint)value);
+            }
+            else if (dataType == typeof(ulong))
+            {
+                data?.Add((ulong)value);
+            }
+            else if (dataType == typeof(float))
+            {
+                data?.Add((float)value);
+            }
+            else if (dataType == typeof(double))
+            {
+                data?.Add((double)value);
+            }
+            else if (dataType == typeof(decimal))
+            {
+                data?.Add((decimal)value);
+            }
+            else if (dataType == typeof(DateTime))
+            {
+                data?.Add((DateTime)value);
+            }
+            else if (dataType == typeof(TimeSpan))
+            {
+                data?.Add((TimeSpan)value);
+            }
+            else
+            {
+                ThrowUnsupportedDataType(dataType);
             }
         }
 
-        private static void AddNewValue(IList data, DataType dataType, object value)
+        private static void ThrowUnsupportedDataType(Type dataType)
         {
-            switch (dataType)
-            {
-                case DataType.Unspecified:
-                    break;
-                case DataType.Boolean:
-                    data?.Add((bool)value);
-                    break;
-                case DataType.String:
-                    data?.Add(value.ToString());
-                    break;
-                case DataType.Byte:
-                    data?.Add((byte)value);
-                    break;
-                case DataType.SignedByte:
-                    data?.Add((sbyte)value);
-                    break;
-                case DataType.Short:
-                    data?.Add((short)value);
-                    break;
-                case DataType.Int32:
-                    data?.Add((int)value);
-                    break;
-                case DataType.Int64:
-                    data?.Add((long)value);
-                    break;
-                case DataType.UnsignedInt16:
-                    data?.Add((ushort)value);
-                    break;
-                case DataType.UnsignedInt32:
-                    data?.Add((uint)value);
-                    break;
-                case DataType.UnsignedInt64:
-                    data?.Add((ulong)value);
-                    break;
-                case DataType.Float:
-                    data?.Add((float)value);
-                    break;
-                case DataType.Double:
-                    data?.Add((double)value);
-                    break;
-                case DataType.Decimal:
-                    data?.Add((decimal)value);
-                    break;
-                case DataType.DateTimeOffset:
-                    data?.Add((DateTimeOffset)value);
-                    break;
-                case DataType.TimeSpan:
-                    data?.Add((TimeSpan)value);
-                    break;
-                default:
-                    ThrowUnsupportedDataType(dataType);
-                    break;
-            }
+            throw new NotSupportedException($"Unsupported data type '{dataType.Name}'");
         }
 
-        private static void ThrowUnsupportedDataType(DataType dataType)
-        {
-            throw new NotSupportedException($"Unsupported {nameof(DataType)} '{dataType}'");
-        }
-
-        private void UpdateField(DataType dataType, string propName, IList data, RowGroup group, bool addDefaultData = true)
+        private void UpdateField(Type dataType, string propName, IList data, RowGroup group, bool addDefaultData = true)
         {
             _dataTypes[propName] = dataType;
             group.Data[propName] = data;
 
-            if (addDefaultData == false) 
+            if (addDefaultData == false)
                 return;
-            
+
             AddDefaultData(data, dataType, group.Count);
         }
 
-        private static void AddDefaultData(IList data, DataType type, long count)
+        private static void AddDefaultData(IList data, Type type, long count)
         {
             if (count == 0 || data == null)
                 return;
 
-            switch (type)
+            if (type is null)
             {
-                case DataType.Unspecified:
-                    break;
-                case DataType.Boolean:
-                    AddDefaultData<bool>(data, count);
-                    break;
-                case DataType.Byte:
-                    AddDefaultData<byte>(data, count);
-                    break;
-                case DataType.SignedByte:
-                    AddDefaultData<sbyte>(data, count);
-                    break;
-                case DataType.Short:
-                    AddDefaultData<short>(data, count);
-                    break;
-                case DataType.Int32:
-                    AddDefaultData<int>(data, count);
-                    break;
-                case DataType.Int64:
-                    AddDefaultData<long>(data, count);
-                    break;
-                case DataType.UnsignedInt16:
-                    AddDefaultData<ushort>(data, count);
-                    break;
-                case DataType.UnsignedInt32:
-                    AddDefaultData<uint>(data, count);
-                    break;
-                case DataType.UnsignedInt64:
-                    AddDefaultData<ulong>(data, count);
-                    break;
-                case DataType.Float:
-                    AddDefaultData<float>(data, count);
-                    break;
-                case DataType.Double:
-                    AddDefaultData<double>(data, count);
-                    break;
-                case DataType.Decimal:
-                    AddDefaultData<decimal>(data, count);
-                    break;
-                case DataType.String:
-                    AddDefaultData<string>(data, count);
-                    break;
-                case DataType.DateTimeOffset:
-                    AddDefaultData<DateTimeOffset>(data, count);
-                    break;
-                case DataType.TimeSpan:
-                    AddDefaultData<TimeSpan>(data, count);
-                    break;
-                default:
-                    ThrowUnsupportedDataType(type);
-                    break;
+                // nothing to do
+            }
+            else if (type == typeof(bool))
+            {
+                AddDefaultData<bool>(data, count);
+            }
+            else if (type == typeof(byte))
+            {
+                AddDefaultData<byte>(data, count);
+            }
+            else if (type == typeof(sbyte))
+            {
+                AddDefaultData<sbyte>(data, count);
+            }
+            else if (type == typeof(short))
+            {
+                AddDefaultData<short>(data, count);
+            }
+            else if (type == typeof(int))
+            {
+                AddDefaultData<int>(data, count);
+            }
+            else if (type == typeof(long))
+            {
+                AddDefaultData<long>(data, count);
+            }
+            else if (type == typeof(ushort))
+            {
+                AddDefaultData<ushort>(data, count);
+            }
+            else if (type == typeof(uint))
+            {
+                AddDefaultData<uint>(data, count);
+            }
+            else if (type == typeof(ulong))
+            {
+                AddDefaultData<ulong>(data, count);
+            }
+            else if (type == typeof(float))
+            {
+                AddDefaultData<float>(data, count);
+            }
+            else if (type == typeof(double))
+            {
+                AddDefaultData<double>(data, count);
+            }
+            else if (type == typeof(decimal))
+            {
+                AddDefaultData<decimal>(data, count);
+            }
+            else if (type == typeof(string))
+            {
+                AddDefaultData<string>(data, count);
+            }
+            else if (type == typeof(DateTime))
+            {
+                AddDefaultData<DateTime>(data, count);
+            }
+            else if (type == typeof(TimeSpan))
+            {
+                AddDefaultData<TimeSpan>(data, count);
+            }
+            else
+            {
+                ThrowUnsupportedDataType(type);
             }
         }
 
@@ -726,17 +761,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        internal static unsafe bool TryParseDate(string str, out DateTimeOffset dto)
+        internal static unsafe bool TryParseDate(string str, out DateTime dt)
         {
             fixed (char* c = str)
             {
-                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out dto, properlyParseThreeDigitsMilliseconds: true);
+                var result = LazyStringParser.TryParseDateTime(c, str.Length, out dt, out var dto, properlyParseThreeDigitsMilliseconds: true);
                 switch (result)
                 {
                     case LazyStringParser.Result.DateTime:
-                        dto = dt;
                         break;
                     case LazyStringParser.Result.DateTimeOffset:
+                        dt = dto.DateTime;
                         break;
                     case LazyStringParser.Result.Failed:
                         return false;

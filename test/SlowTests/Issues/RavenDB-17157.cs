@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
-using Parquet.Thrift;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Json;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -62,7 +57,7 @@ namespace SlowTests.Issues
                 {
                     sessionCreatedEventArgs.Session.WaitForIndexesAfterSaveChanges();
                 };
-                
+
                 new UsersIndex().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -105,13 +100,13 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
 
             using (var store1 = new DocumentStore
-                   {
-                       Database = db,
-                       Urls = new[] { nodes[0].WebUrl },
-                       Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
-                       {
-                           DisableTopologyUpdates = true
-                       }
+            {
+                Database = db,
+                Urls = new[] { nodes[0].WebUrl },
+                Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
             }.Initialize())
             using (var store2 = new DocumentStore
             {
@@ -171,7 +166,7 @@ namespace SlowTests.Issues
 
             public UsersIndex()
             {
-                Map = users => 
+                Map = users =>
                     from user in users
                     select new Result
                     {
