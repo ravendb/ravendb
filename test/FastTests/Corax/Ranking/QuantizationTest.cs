@@ -63,7 +63,7 @@ public class QuantizationTest : RavenTestBase
         Assert.Equal(idsWithShifted, idsWithShiftedCopy);
     }
 
-    
+#if NET7_0_OR_GREATER
     // We were trying to improve the performance of the EntryIdEncodings's functions by using SIMD, but we found that the fixed keyword used to obtain a pointer from a Span was causing a significant
     // performance overhead that nullified any gains from using SIMD. We attempted to load a vector using Unsafe.AsPointer, but this approach was not safe because we're sometimes using
     // a buffer from a managed pointer, which could be moved by the garbage collector to a different location. After some research, we discovered a third way to load a vector that is both GC safe
@@ -75,10 +75,10 @@ public class QuantizationTest : RavenTestBase
         var buffer = new long[4];
 
         ref var firstElement = ref buffer[0];
-        
+
         Assert.True(VectorsShouldBeEqualAfterGc(ref firstElement));
-        
-        
+
+
         bool VectorsShouldBeEqualAfterGc(ref long ptr)
         {
             var vecO = Unsafe.ReadUnaligned<Vector256<long>>(ref Unsafe.As<long, byte>(ref ptr));
@@ -91,7 +91,7 @@ public class QuantizationTest : RavenTestBase
             return vecO.Equals(vec1);
         }
     }
-    
+
     [Fact]
     public unsafe void CanSafelyReadVectorFromManagedMemory()
     {
@@ -123,4 +123,5 @@ public class QuantizationTest : RavenTestBase
         for (int i = 0; i < 8; ++i)
             Assert.Equal(int.MaxValue >> 10, buffer[i]);
     }
+#endif
 }

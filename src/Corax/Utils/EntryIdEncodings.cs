@@ -51,13 +51,13 @@ public static class EntryIdEncodings
     {
         return (entryId >> EntryIdOffset);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static unsafe void Encode(Span<long> entries, Span<short> frequencies)
     {
         for (int idX = 0; idX < entries.Length; ++idX)
         {
-            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX); 
+            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX);
             ref var frequency = ref Unsafe.Add(ref MemoryMarshal.GetReference(frequencies), idX);
             entryId = (entryId << EntryIdOffset) | (FrequencyQuantization(frequency) << ContainerTypeOffset);
         }
@@ -70,6 +70,10 @@ public static class EntryIdEncodings
     public static unsafe void DecodeAndDiscardFrequencyAvx2(Span<long> entries, int read)
     {
         int idX = read - (read % Vector256<long>.Count);
+#if NET6_0
+        goto Classic;
+#elif NET7_0_OR_GREATER
+
         if (read < Vector256<long>.Count)
             goto Classic;
 
@@ -84,17 +88,19 @@ public static class EntryIdEncodings
 
             currentIdx += Vector256<long>.Count;
         }
-
-        Classic:
+#endif
+    Classic:
         if (idX < read)
             DecodeAndDiscardFrequencyClassic(entries.Slice(idX), read - idX);
-        
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static unsafe void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
     {
         int idX = read - (read % Vector128<long>.Count);
+#if NET6_0
+        goto Classic;
+#elif NET7_0_OR_GREATER
         if (read < Vector128<long>.Count)
             goto Classic;
 
@@ -105,17 +111,17 @@ public static class EntryIdEncodings
             ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
             var innerBuffer = Vector128.LoadUnsafe(ref currentPtr);
             var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
-            Vector128.StoreUnsafe(shiftRightLogical, ref currentPtr); 
-            
+            Vector128.StoreUnsafe(shiftRightLogical, ref currentPtr);
+
             currentIdx += Vector128<long>.Count;
         }
-
-        Classic:
+#endif
+    Classic:
         if (idX < read)
             DecodeAndDiscardFrequencyClassic(entries.Slice(idX), read - idX);
-        
+
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void DecodeAndDiscardFrequencyClassic(Span<long> entries, int read)
     {
@@ -163,14 +169,14 @@ public static class EntryIdEncodings
     {
         return FrequencyReconstructionFromQuantization(FrequencyQuantization(frequency));
     }
-    
+
     internal static long FrequencyQuantization(short frequency)
     {
         if (Lzcnt.IsSupported)
             return LzcntFrequencyQuantization(frequency);
         if (ArmBase.Arm64.IsSupported)
             ArmLzcntFrequencyQuantization(frequency);
-        
+
         return FrequencyQuantizationWithoutAcceleration(frequency);
     }
 
@@ -186,7 +192,7 @@ public static class EntryIdEncodings
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static long LzcntFrequencyQuantization(short frequency)
     {
@@ -234,7 +240,7 @@ public static class EntryIdEncodings
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForSeekInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset;
-    
+
     [Conditional("DEBUG")]
     internal static void AssertIsNotEncodedContainerId(long id)
     {
@@ -247,5 +253,5 @@ public static class EntryIdEncodings
         Debug.Assert((id & mask) != (0x01 << ContainerTypeOffset), "Has exactly one frequency, indicates that it could be encoded or corrupted.");
 #endif
     }
-    
+
 }

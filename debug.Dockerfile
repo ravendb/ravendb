@@ -13,11 +13,11 @@ RUN ls && du -sh ./src/* && du -sh ./src/Raven.Server/*
 
 RUN dotnet restore ./src/Raven.Server/Raven.Server.csproj
 RUN dotnet build ./src/Raven.Server/Raven.Server.csproj && \
-    echo '{}' > ./src/Raven.Server/bin/Debug/net7.0/settings.json
+    echo '{}' > ./src/Raven.Server/bin/Debug/net6.0/settings.json
 
 COPY tools/ ./tools
 RUN dotnet build ./tools/TypingsGenerator/TypingsGenerator.csproj \
     && cd src/Raven.Studio \
     && npm install && npm run gulp restore && npm run gulp compile
 
-ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net7.0/Raven.Server.dll" ]
+ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net6.0/Raven.Server.dll" ]

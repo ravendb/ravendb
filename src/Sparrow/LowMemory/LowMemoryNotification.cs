@@ -66,7 +66,7 @@ namespace Sparrow.LowMemory
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
 
-#if NET7_0_OR_GREATER
+#if NET6_0_OR_GREATER
                     if (SupportsCompactionOfLargeObjectHeap)
                         RequestLohCompactionIfNeeded(memoryInfo, now);
 #endif
@@ -122,7 +122,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-#if NET7_0_OR_GREATER
+#if NET6_0_OR_GREATER
         internal bool SupportsCompactionOfLargeObjectHeap { get; set; }
         
         private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)

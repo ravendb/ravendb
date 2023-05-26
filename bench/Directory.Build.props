@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Version></Version>
 
-    <LangVersion>11</LangVersion>
+    <LangVersion>latest</LangVersion>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
     

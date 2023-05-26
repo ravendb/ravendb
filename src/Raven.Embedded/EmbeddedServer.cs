@@ -257,7 +257,7 @@ namespace Raven.Embedded
             };
             domainBind = true;
 #endif
-#if NET462
+#if NET461
             AppDomain.CurrentDomain.DomainUnload += (s, args) =>
             {
                 ShutdownServerProcess(process);
