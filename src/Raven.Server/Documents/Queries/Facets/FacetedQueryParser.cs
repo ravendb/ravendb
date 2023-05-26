@@ -198,12 +198,8 @@ namespace Raven.Server.Documents.Queries.Facets
         {
             if (expression is BetweenExpression bee)
             {
-                var hValue = searchEngineType == SearchEngineType.Corax 
-                    ? ConvertFieldValueForCorax(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters) 
-                    : ConvertFieldValueForLucene(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters);
-                var lValue = searchEngineType == SearchEngineType.Corax 
-                    ? ConvertFieldValueForCorax(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters)
-                    : ConvertFieldValueForLucene(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters);
+                var hValue = ConvertFieldValueForLucene(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters);
+                var lValue = ConvertFieldValueForLucene(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters);
 
                 var fieldName = ((FieldExpression)bee.Source).GetText(null);
 
@@ -222,9 +218,6 @@ namespace Raven.Server.Documents.Queries.Facets
                     RangeText = expression.GetText(query.Query)
                 };
 
-                if (searchEngineType is SearchEngineType.Corax)
-                    return new CoraxParsedRange(range);
-                
                 return range;
             }
 
@@ -239,9 +232,7 @@ namespace Raven.Server.Documents.Queries.Facets
                         var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
-                        var fieldValue = searchEngineType == SearchEngineType.Corax 
-                            ? ConvertFieldValueForCorax(r.Token.Value, r.Value, query.Query.QueryParameters)
-                            : ConvertFieldValueForLucene(r.Token.Value, r.Value, query.Query.QueryParameters);
+                        var fieldValue = ConvertFieldValueForLucene(r.Token.Value, r.Value, query.Query.QueryParameters);
 
                         type = fieldValue.Type;
 
@@ -250,7 +241,7 @@ namespace Raven.Server.Documents.Queries.Facets
                             Field = fieldName,
                             RangeText = expression.GetText(query.Query)
                         };
-                        
+
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
                         {
                             range.HighValue = fieldValue.Value;
@@ -303,8 +294,6 @@ namespace Raven.Server.Documents.Queries.Facets
 
             ParsedRange GetForSearchEngine(ParsedRange inner)
             {
-                if (searchEngineType is SearchEngineType.Corax)
-                    return new CoraxParsedRange(inner);
                 return inner;
             }
         }
@@ -338,7 +327,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 case ValueTokenType.Parameter:
                     queryParameters.TryGet(value, out object o);
                     var rangeType = RangeType.None;
-                    if (o is long l) 
+                    if (o is long l)
                     {
                         o = NumericUtils.DoubleToPrefixCoded(l);
                         rangeType = RangeType.Double;
@@ -383,11 +372,11 @@ namespace Raven.Server.Documents.Queries.Facets
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
-        
+
         public class CoraxParsedRange : ParsedRange
         {
-            private Operation _leftSide; 
-            private Operation _rightSide; 
+            private Operation _leftSide;
+            private Operation _rightSide;
 
             public double LowValueAsDouble = double.MinValue;
             public double HighValueAsDouble = double.MaxValue;
@@ -395,7 +384,7 @@ namespace Raven.Server.Documents.Queries.Facets
             public long HighValueAsLong = long.MaxValue;
             public ReadOnlySpan<byte> HighValueAsBytes => _highValueAsBytes.AsSpan();
             private readonly byte[] _highValueAsBytes;
-            
+
             public ReadOnlySpan<byte> LowValueAsBytes => _lowValueAsBytes.AsSpan();
             private readonly byte[] _lowValueAsBytes;
             public CoraxParsedRange(ParsedRange range)
@@ -406,11 +395,11 @@ namespace Raven.Server.Documents.Queries.Facets
                 LowInclusive = range.LowInclusive;
                 if (LowInclusive)
                     _leftSide |= Operation.Equal;
-                
+
                 HighInclusive = range.HighInclusive;
                 if (HighInclusive)
                     _rightSide |= Operation.Equal;
-                
+
                 LowValue = range.LowValue;
                 HighValue = range.HighValue;
                 RangeText = range.RangeText;
@@ -423,7 +412,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     long.TryParse(LowValue, out LowValueAsLong);
                     double.TryParse(LowValue, out LowValueAsDouble);
                 }
-                
+
                 if (HighValue != null)
                 {
                     _rightSide |= Operation.LowerThan;
@@ -434,7 +423,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
 
             public bool IsMatch(double value)
-            {              
+            {
                 var leftSide = _leftSide switch
                 {
                     Operation.None => true,
@@ -442,7 +431,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.GreaterOrEqualThan => value >= LowValueAsDouble,
                     _ => ThrowOnUnsupportedType(_leftSide)
                 };
-                
+
                 var rightSide = _rightSide switch
                 {
                     Operation.None => true,
@@ -453,7 +442,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 return leftSide & rightSide;
             }
-            
+
             public bool IsMatch(long value)
             {
                 var leftSide = _leftSide switch
@@ -464,7 +453,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     _ => ThrowOnUnsupportedType(_leftSide)
 
                 };
-                
+
                 var rightSide = _rightSide switch
                 {
                     Operation.None => true,
@@ -475,14 +464,14 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 return leftSide & rightSide;
             }
-            
+
             public bool IsMatch(ReadOnlySpan<byte> value)
             {
                 var compareLow = LowValue == null
                         ? -1
                         : value.SequenceCompareTo(LowValueAsBytes);
-                var compareHigh = HighValue == null 
-                    ? 1 
+                var compareHigh = HighValue == null
+                    ? 1
                     : value.SequenceCompareTo(HighValueAsBytes);
 
                 return CalculateResult(in compareLow, in compareHigh);
@@ -509,11 +498,11 @@ namespace Raven.Server.Documents.Queries.Facets
             {
                 throw new NotSupportedException($"{nameof(CoraxParsedRange)} is not supporting {operation} comparison. This is a bug.");
             }
-            
+
             [Flags]
             private enum Operation
             {
-                None = 0, 
+                None = 0,
                 LowerThan = 1,
                 GreaterThan = 1 << 1,
                 Equal = 1 << 2,
@@ -521,7 +510,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 GreaterOrEqualThan = GreaterThan | Equal,
             }
         }
-        
+
         public class ParsedRange
         {
             public bool LowInclusive;
@@ -551,7 +540,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 return true;
             }
-            
+
             public override string ToString()
             {
                 return string.Format("{0}:{1}", Field, RangeText);

@@ -72,7 +72,7 @@ public class RavenDataAttribute : DataAttribute
 
     internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
-        if (mode.HasFlag(RavenSearchEngineMode.Corax))
+        if (mode.HasFlag(RavenSearchEngineMode.Corax) && false)
         {
             var coraxOptions = options.Clone();
             coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;

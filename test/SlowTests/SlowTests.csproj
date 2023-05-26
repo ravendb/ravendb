@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.5</RuntimeFrameworkVersion>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeFrameworkVersion>6.0.16</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -56,8 +56,6 @@
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="Corax\Bugs\repro-2.log.gz" />
-    <EmbeddedResource Include="Corax\Bugs\repro-4.log.gz" />
     <EmbeddedResource Include="Data\legacy-counters.4.1.5.ravendbdump" />
     <EmbeddedResource Include="Data\npgsql.basic.create.sql" />
     <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />
@@ -150,8 +148,8 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-    <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="6.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

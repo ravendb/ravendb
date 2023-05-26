@@ -30,8 +30,8 @@ namespace SlowTests.MailingList
             Assert.Null(list.Single().Exemptions);
         });
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void CoraxCanGetEmptyCollection(Options options) => CanGetEmptyCollection(options, list =>
         {
             Assert.Empty(list.Single().Exemptions);

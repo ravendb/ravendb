@@ -1,12 +1,10 @@
 ﻿using System;
-using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix.Tree;
 using NetTopologySuite;
 using Raven.Client;
-using Raven.Client.Exceptions.Corax;
 using Sparrow.Json;
 using Spatial4n.Context.Nts;
 using Spatial4n.Distance;
@@ -88,25 +86,6 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
 
             return Array.Empty<AbstractField>();
-        }
-
-        public CoraxSpatialPointEntry[] CoraxCreateIndexableFields(object value)
-        {
-            var shape = value as IShape;
-            if (shape != null || TryReadShape(value, out shape))
-            {
-                if (shape is not IPoint)
-                    throw new NotSupportedInCoraxException($"{nameof(Corax)} does not support indexing objects that are not points on a world map.");
-               
-                var geohashRaw = Spatial4n.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
-
-                return new []
-                {
-                    new CoraxSpatialPointEntry(shape.Center.Y, shape.Center.X, geohashRaw)
-                };
-            }
-
-            return Array.Empty<CoraxSpatialPointEntry>();
         }
 
         private bool TryReadShape(object value, out IShape shape)
