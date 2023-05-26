@@ -274,7 +274,7 @@ namespace Sparrow.Server.Compression
             long bitWriterBuffer = 0;
             while (keyLength > 0)
             {
-                ref var currentKeyPtr = ref Unsafe.AddByteOffset(ref keyStartPtr, keyPtr);
+                ref var currentKeyPtr = ref Unsafe.AddByteOffset(ref keyStartPtr, new IntPtr(keyPtr));
 
                 // Initialize the important variables.
                 uint symbolValue;
@@ -331,7 +331,7 @@ namespace Sparrow.Server.Compression
 
             intBufPtr = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
 
-            var idx = Unsafe.ByteOffset(ref intBufStartPtr, ref intBufPtr) / sizeof(long);
+            var idx = Unsafe.ByteOffset(ref intBufStartPtr, ref intBufPtr).ToInt64() / sizeof(long);
             return (int)(idx << 6) + intBufLen;
             
         }

@@ -1,7 +1,7 @@
 ﻿<Project>
   <PropertyGroup>
     <Version></Version>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
 
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>
