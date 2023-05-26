@@ -1,28 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Corax;
-using Corax.Mappings;
-using Corax.Queries;
-using Corax.Utils;
-using Mono.Unix.Native;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server;
-using Spatial4n.Shapes;
-using Voron;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -349,17 +337,6 @@ public static class QueryBuilderHelper
         throw new InvalidOperationException($"Value should be a '{expectedType}' but was '{fieldType}'.");
     }
 
-    internal static UnaryMatchOperation TranslateUnaryMatchOperation(OperatorType current) => current switch
-    {
-        OperatorType.Equal => UnaryMatchOperation.Equals,
-        OperatorType.NotEqual => UnaryMatchOperation.NotEquals,
-        OperatorType.LessThan => UnaryMatchOperation.LessThan,
-        OperatorType.GreaterThan => UnaryMatchOperation.GreaterThan,
-        OperatorType.LessThanEqual => UnaryMatchOperation.LessThanOrEqual,
-        OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
-        _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
-    };
-    
     internal static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
         Query query,
         InExpression expression,
@@ -511,69 +488,6 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static FieldMetadata GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
-        bool isForQuery = true)
-    {
-        if (fieldName is "score()")
-            return FieldMetadata.Build(allocator, fieldName, -1, FieldIndexingMode.Normal, null);
-
-
-
-        return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery: isForQuery, isSorting: true);
-    }
-
-    internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
-        FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
-        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)
-    {
-        RuntimeHelpers.EnsureSufficientExecutionStack();
-        FieldMetadata metadata;
-        
-        //Sometimes index can contians Id property and its different than real document ID. We've to 
-        if ((fieldName.Equals(Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) && indexMapping.ContainsField(fieldName)) == false && 
-            fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-        {
-            metadata = indexMapping.GetByFieldId(0).Metadata;
-            return exact 
-                ? metadata.ChangeAnalyzer(FieldIndexingMode.Exact, null).ChangeScoringMode(hasBoost)
-                : metadata.ChangeScoringMode(hasBoost);
-        }
-        
-        if (isForQuery == false)
-        {
-            if (fieldName is "score" or "score()")
-                return default;
-        }
-
-        var shouldTurnOffAnalyzersForTime = index.IndexFieldsPersistence.HasTimeValues(fieldName) && isSorting == false;
-        if (indexMapping.TryGetByFieldName(allocator, fieldName, out var indexFinding))
-        {
-            if (exact || shouldTurnOffAnalyzersForTime) //When field has exact let's change the analyzer to do nothing
-                metadata = indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Exact);
-            else if (indexFinding.FieldIndexingMode is FieldIndexingMode.Search) // in case of search
-                metadata = handleSearch  
-                    ? indexFinding.Metadata //when we want mapping for search lets use 'search` analyzer 
-                    : indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Normal, indexMapping.DefaultAnalyzer); //but when we do a TermMatch we want to have just default analyzer, even on full-text search field
-            else
-                metadata = indexFinding.Metadata;
-
-            metadata = metadata.ChangeScoringMode(hasBoost);
-        }
-        else
-        {
-            if (hasDynamics == false)
-                ThrowNotFoundInIndex();
-
-            var mode = shouldTurnOffAnalyzersForTime || exact 
-                ? FieldIndexingMode.Exact 
-                : FieldIndexingMode.Normal;
-            metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer, hasBoost: hasBoost);
-        }
-
-        return metadata;
-        void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
-    }
-
     internal static QueryFieldName ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata, BlittableJsonReaderObject parameters)
     {
         return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
@@ -618,28 +532,6 @@ public static class QueryBuilderHelper
         throw new ArgumentException($"Unknown method {method.Name}");
     }
 
-    internal static string CoraxGetValueAsString(object value) => value switch
-    {
-        StringSegment s => s.Value,
-        string {Length: 0} => Constants.Documents.Indexing.Fields.EmptyString,
-        string s => s,
-        long l => l.ToString(CultureInfo.InvariantCulture),
-        double d => d.ToString(CultureInfo.InvariantCulture),
-        null => Corax.Constants.NullValue,
-        _ => value?.ToString()
-    };
-
-    internal static ComparerType GetComparerType(bool ascending, OrderMetadata order) => (ascending, order.FieldType, order.Field.FieldId) switch
-    {
-        (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,
-        (false, MatchCompareFieldType.Spatial, _) => ComparerType.DescendingSpatial,
-        (_, MatchCompareFieldType.Score, _) => ComparerType.Boosting,
-        (true, MatchCompareFieldType.Alphanumeric, _) => ComparerType.AscendingAlphanumeric,
-        (false, MatchCompareFieldType.Alphanumeric, _) => ComparerType.DescendingAlphanumeric,
-        (true, _, _) => ComparerType.Ascending,
-        (false, _, _) => ComparerType.Descending,
-    };
-
     internal enum ComparerType
     {
         Ascending,
@@ -651,67 +543,6 @@ public static class QueryBuilderHelper
         DescendingSpatial
     }
 
-    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression, 
-        SpatialField spatialField, out SpatialUnits units)
-    {
-        var wktValue = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)expression.Arguments[0]);
-        QueryBuilderHelper.AssertValueIsString(fieldName, wktValue.Type);
-
-        SpatialUnits? spatialUnits = null;
-        if (expression.Arguments.Count == 2)
-            spatialUnits = GetSpatialUnits(builderParameters.Metadata.Query, expression.Arguments[1] as ValueExpression, builderParameters.Metadata, builderParameters.QueryParameters, fieldName);
-
-        units = spatialUnits ?? spatialField.Units;
-
-        var wkt = CoraxGetValueAsString(wktValue.Value);
-
-        try
-        {
-            return spatialField.ReadShape(wkt, spatialUnits);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", builderParameters.Metadata.QueryText, builderParameters.QueryParameters, e);
-        }
-    }
-    
-    internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
-        SpatialField spatialField, out SpatialUnits units)
-    {
-        var radius = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
-        QueryBuilderHelper.AssertValueIsNumber(fieldName, radius.Type);
-
-        var latitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-        QueryBuilderHelper.AssertValueIsNumber(fieldName, latitude.Type);
-
-        var longitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
-        QueryBuilderHelper.AssertValueIsNumber(fieldName, longitude.Type);
-
-        SpatialUnits? spatialUnits = null;
-        if (expression.Arguments.Count == 4)
-            spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
-
-        units = spatialUnits ?? spatialField.Units;
-
-        return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
-    }
-
-    private static SpatialUnits? GetSpatialUnits(Query query, ValueExpression value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
-    {
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
-
-        var spatialUnitsValue = QueryBuilderHelper.GetValue(query, metadata, parameters, value);
-        QueryBuilderHelper.AssertValueIsString(fieldName, spatialUnitsValue.Type);
-
-        var spatialUnitsValueAsString = CoraxGetValueAsString(spatialUnitsValue.Value);
-        if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
-            throw new InvalidOperationException(
-                $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
-
-        return (SpatialUnits)su;
-    }
-    
     internal static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
     {
         ticksFirst = -1;

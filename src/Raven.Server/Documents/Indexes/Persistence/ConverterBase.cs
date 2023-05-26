@@ -3,16 +3,12 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
-using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -139,12 +135,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (value is TimeOnly)
                 return ValueType.TimeOnly;
 
-            if (value is CoraxSpatialPointEntry)
-                return ValueType.CoraxSpatialPointEntry;
-
-            if (value is CoraxDynamicItem)
-                return ValueType.CoraxDynamicItem;
-            
             return ValueType.ConvertToJson;
         }
 

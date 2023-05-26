@@ -17,7 +17,6 @@ namespace SlowTests.Server.Documents.Indexing
         private static IEnumerable<object[]> Data() => new[]
         {
             new[] { new CollisionsOfReduceKeyHashes.TestData() {NumberOfUsers = 50000, Locations = new[] {"Canada", "France"}, SearchEngineType = SearchEngineType.Lucene}},
-            new[] { new CollisionsOfReduceKeyHashes.TestData() {NumberOfUsers = 50000, Locations = new[] {"Canada", "France"}, SearchEngineType = SearchEngineType.Corax}}
         };
         
         [Theory] 

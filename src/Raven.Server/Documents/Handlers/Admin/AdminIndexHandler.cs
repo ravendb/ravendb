@@ -93,14 +93,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new ArgumentException("Index must have a 'Maps' fields");
 
                     indexDefinition.Type = indexDefinition.DetectStaticIndexType();
-
-                    if (indexDefinition.Configuration.TryGetValue(Constants.Configuration.Indexes.IndexingStaticSearchEngineType, out var searchEngine))
-                    {
-                        if (searchEngine.Equals(SearchEngineType.Corax.ToString(), StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            RavenConfiguration.AssertCanUseCoraxFeature(Server.Configuration);
-                        }
-                    }
                     
                     // C# index using a non-admin endpoint
                     if (indexDefinition.Type.IsJavaScript() == false && validatedAsAdmin == false)

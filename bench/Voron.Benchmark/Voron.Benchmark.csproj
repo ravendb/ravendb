@@ -18,7 +18,6 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
