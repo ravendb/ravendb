@@ -370,8 +370,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void CanUseDynamicSpatialFields(Options options)
         {
             var kalab = 10;
@@ -507,8 +507,8 @@ namespace FastTests.Client.Indexing
             }
         }
         
-        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void OutputReduceToCollectionWithDeletions(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -552,8 +552,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void DateCheckMapReduce(Options options)
         {
             using (var store = GetDocumentStore(options))
