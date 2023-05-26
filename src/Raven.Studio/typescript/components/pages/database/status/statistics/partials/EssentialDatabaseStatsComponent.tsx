@@ -190,7 +190,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                 </span>
                                 <UncontrolledPopover
                                     target="js-timeseries-segments"
-                                    placement="top"
+                                    placement="right"
                                     trigger="hover"
                                     container="js-timeseries-segments"
                                 >
