@@ -732,6 +732,10 @@ namespace Voron
                         tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
                         tx.AfterCommitWhenNewTransactionsPrevented += AfterCommitWhenNewTransactionsPrevented;
                     }
+                    else
+                    {
+                        tx.CurrentTransactionHolder = NativeMemory.CurrentThreadStats;
+                    }
 
                     ActiveTransactions.Add(tx);
 
