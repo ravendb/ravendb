@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
@@ -14,7 +15,6 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
@@ -47,10 +47,12 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ServerStore _server;
         private readonly TimeSpan _stabilizationTime;
         private readonly long _stabilizationTimeMs;
-        
+
         public SystemTime Time = new SystemTime();
 
         private ServerNotificationCenter NotificationCenter => _server.NotificationCenter;
+
+        internal ClusterMaintenanceSupervisor Maintenance => _maintenance;
 
         public ClusterObserver(
             ServerStore server,
@@ -199,24 +201,14 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             var databaseName = rawRecord.DatabaseName;
                             var topology = rawRecord.Sharding.Orchestrator.Topology;
-                            var state = new DatabaseObservationState
-                            {
-                                Name = databaseName,
-                                DatabaseTopology = topology,
-                                ClusterTopology = clusterTopology,
-                                Current = newStats,
-                                Previous = prevStats,
-                                RawDatabase = rawRecord,
-                                LastIndexModification = etag,
-                                ObserverIteration = _iteration
-                            };
+                            var state = new DatabaseObservationState(databaseName, rawRecord, topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
                             if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
                                 continue;
-                            
+
                             List<DeleteDatabaseCommand> unneededDeletions = null; // database deletions are irrelevant in orchestrator topology changes
                             var updateReason = _orchestratorTopologyUpdater.Update(context, state, ref unneededDeletions);
-                            
+
                             if (updateReason != null)
                             {
                                 _observerLogger.AddToDecisionLog(databaseName, updateReason, _iteration);
@@ -226,7 +218,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     Topology = topology,
                                     RaftCommandIndex = etag,
                                 };
-                                
+
                                 updateCommands.Add((cmd, updateReason));
                             }
 
@@ -237,24 +229,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         foreach (var topology in rawRecord.Topologies)
                         {
-                            var state = new DatabaseObservationState
-                            {
-                                Name = topology.Name,
-                                DatabaseTopology = topology.Topology,
-                                ClusterTopology = clusterTopology,
-                                Current = newStats,
-                                Previous = prevStats,
-                                RawDatabase = rawRecord,
-                                LastIndexModification = etag,
-                                ObserverIteration = _iteration
-                            };
+                            var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
                             mergedState.AddState(state);
 
                             if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
                                 continue;
 
-                            var updateReason =  _databaseTopologyUpdater.Update(context, state, ref deletions);
+                            var updateReason = _databaseTopologyUpdater.Update(context, state, ref deletions);
                             if (updateReason != null)
                             {
                                 _observerLogger.AddToDecisionLog(state.Name, updateReason, state.ObserverIteration);
@@ -279,9 +261,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (cleanupIndexes)
                         {
                             var cleanupCommandsForDatabase = GetUnusedAutoIndexes(mergedState);
-                                cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
+                            cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
                         }
-                        
+
                         if (cleanupTombstones)
                         {
                             var cmd = GetCompareExchangeTombstonesToCleanup(database, mergedState, context, out var cleanupState);
@@ -609,7 +591,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, mergedState, out long maxEtag);
-            
+
             return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
                 ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
                 : null;
@@ -622,7 +604,7 @@ namespace Raven.Server.ServerWide.Maintenance
             InvalidPeriodicBackupStatus,
             NoMoreTombstones
         }
-        
+
         private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
             List<long> periodicBackupTaskIds;
@@ -787,7 +769,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             return true;
         }
-        
+
         private Task<(long Index, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
         {
             if (_engine.LeaderTag != _server.NodeTag)
@@ -864,7 +846,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_isShardedState == false)
                     throw new InvalidOperationException($"The database {state.Name} is sharded (shard: {shardNumber}), but was initialized as a regular one.");
-                
+
                 States[shardNumber] = state;
             }
 
@@ -876,15 +858,35 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal class DatabaseObservationState
         {
-            public string Name;
-            public DatabaseTopology DatabaseTopology;
-            public Dictionary<string, ClusterNodeStatusReport> Current;
-            public Dictionary<string, ClusterNodeStatusReport> Previous;
-            public ClusterTopology ClusterTopology;
+            public readonly string Name;
+            public readonly DatabaseTopology DatabaseTopology;
+            public readonly Dictionary<string, ClusterNodeStatusReport> Current;
+            public readonly Dictionary<string, ClusterNodeStatusReport> Previous;
+            public readonly ClusterTopology ClusterTopology;
 
-            public RawDatabaseRecord RawDatabase;
-            public long LastIndexModification;
-            public long ObserverIteration;
+            public readonly RawDatabaseRecord RawDatabase;
+            public readonly long LastIndexModification;
+            public readonly long ObserverIteration;
+
+            public DatabaseObservationState(
+                [NotNull] string name, 
+                [NotNull] RawDatabaseRecord databaseRecord,
+                [NotNull] DatabaseTopology databaseTopology,
+                [NotNull] ClusterTopology clusterTopology,
+                Dictionary<string, ClusterNodeStatusReport> current,
+                Dictionary<string, ClusterNodeStatusReport> previous,
+                long lastIndexModification,
+                long observerIteration)
+            {
+                Name = name ?? throw new ArgumentNullException(nameof(name));
+                RawDatabase = databaseRecord ?? throw new ArgumentNullException(nameof(databaseRecord));
+                DatabaseTopology = databaseTopology ?? throw new ArgumentNullException(nameof(databaseTopology));
+                ClusterTopology = clusterTopology ?? throw new ArgumentNullException(nameof(clusterTopology));
+                Current = current ?? throw new ArgumentNullException(nameof(current));
+                Previous = previous ?? throw new ArgumentNullException(nameof(previous));
+                LastIndexModification = lastIndexModification;
+                ObserverIteration = observerIteration;
+            }
 
             public long ReadTruncatedClusterTransactionCommandsCount()
             {

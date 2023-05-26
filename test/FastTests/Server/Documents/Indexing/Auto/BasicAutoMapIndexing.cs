@@ -975,41 +975,39 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (context.OpenReadTransaction())
                 using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
-                    var state = new ClusterObserver.DatabaseObservationState
+                    var clusterTopology = database.ServerStore.GetClusterTopology(context);
+                    var previous = database.ServerStore.Observer.Maintenance.GetStats();
+                    var current = new Dictionary<string, ClusterNodeStatusReport>
                     {
-                        RawDatabase = rawRecord,
-                        Name = database.Name,
-                        DatabaseTopology = rawRecord.Topology,
-                        Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
-                            {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                            Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                                {
                                     {
+                                        database.Name, new DatabaseStatusReport
                                         {
-                                            database.Name, new DatabaseStatusReport
+                                            UpTime =
+                                                database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan.Add(TimeSpan.FromSeconds(1)),
+                                            LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                             {
-                                                UpTime =
-                                                    database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan.Add(TimeSpan.FromSeconds(1)),
-                                                LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                                 {
+                                                    index0.Name, new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index0.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Idle,
-                                                            LastQueried = database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan
-                                                        }
+                                                        State = IndexState.Idle,
+                                                        LastQueried = database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan
                                                     }
                                                 }
                                             }
                                         }
-                                    },
-                                    ClusterNodeStatusReport.ReportStatus.Ok,
-                                    null,
-                                    now,
-                                    null)
-                            }
+                                    }
+                                },
+                                ClusterNodeStatusReport.ReportStatus.Ok,
+                                null,
+                                now,
+                                null)
                         }
                     };
+
+                    var state = new ClusterObserver.DatabaseObservationState(database.Name, rawRecord, rawRecord.Topology, clusterTopology, current, previous, 0, 0);
 
                     await CleanupUnusedAutoIndexesOnNonSharded(state);
                 }
@@ -1036,47 +1034,49 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (context.OpenReadTransaction())
                 using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
-                    var state = new ClusterObserver.DatabaseObservationState()
+                    var clusterTopology = database.ServerStore.GetClusterTopology(context);
+                    var previous = database.ServerStore.Observer.Maintenance.GetStats();
+                    var current = new Dictionary<string, ClusterNodeStatusReport>
                     {
-                        RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.Topology,
-                        Name = database.Name,
-                        Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
-                            {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                            Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(),
+                                new Dictionary<string, DatabaseStatusReport>
+                                {
                                     {
+                                        database.Name,
+                                        new DatabaseStatusReport
                                         {
-                                            database.Name, new DatabaseStatusReport
+                                            UpTime = now - database.StartTime,
+                                            LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                             {
-                                                UpTime = now - database.StartTime,
-                                                LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                                 {
+                                                    index1.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index1.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index1.GetLastQueryingTime()
-                                                        }
-                                                    },
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index1.GetLastQueryingTime()
+                                                    }
+                                                },
+                                                {
+                                                    index2.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index2.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index2.GetLastQueryingTime()
-                                                        }
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index2.GetLastQueryingTime()
                                                     }
                                                 }
                                             }
                                         }
-                                    },
-                                    ClusterNodeStatusReport.ReportStatus.Ok,
-                                    null,
-                                    now,
-                                    null)
-                            }
+                                    }
+                                },
+                                ClusterNodeStatusReport.ReportStatus.Ok,
+                                null,
+                                now,
+                                null)
                         }
                     };
+
+                    var state = new ClusterObserver.DatabaseObservationState(database.Name, rawRecord, rawRecord.Topology, clusterTopology, current, previous, 0, 0);
 
                     // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
                     await CleanupUnusedAutoIndexesOnNonSharded(state);
@@ -1098,47 +1098,49 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (context.OpenReadTransaction())
                 using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
-                    var state = new ClusterObserver.DatabaseObservationState()
+                    var clusterTopology = database.ServerStore.GetClusterTopology(context);
+                    var previous = database.ServerStore.Observer.Maintenance.GetStats();
+                    var current = new Dictionary<string, ClusterNodeStatusReport>
                     {
-                        RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.Topology,
-                        Name = database.Name,
-                        Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
-                            {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                            Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(),
+                                new Dictionary<string, DatabaseStatusReport>
+                                {
                                     {
+                                        database.Name,
+                                        new DatabaseStatusReport
                                         {
-                                            database.Name, new DatabaseStatusReport
+                                            UpTime = now - database.StartTime,
+                                            LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                             {
-                                                UpTime = now - database.StartTime,
-                                                LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                                 {
+                                                    index1.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index1.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index1.GetLastQueryingTime()
-                                                        }
-                                                    },
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index1.GetLastQueryingTime()
+                                                    }
+                                                },
+                                                {
+                                                    index2.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index2.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index2.GetLastQueryingTime()
-                                                        }
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index2.GetLastQueryingTime()
                                                     }
                                                 }
                                             }
                                         }
-                                    },
-                                    ClusterNodeStatusReport.ReportStatus.Ok,
-                                    null,
-                                    now,
-                                    null)
-                            }
+                                    }
+                                },
+                                ClusterNodeStatusReport.ReportStatus.Ok,
+                                null,
+                                now,
+                                null)
                         }
                     };
+
+                    var state = new ClusterObserver.DatabaseObservationState(database.Name, rawRecord, rawRecord.Topology, clusterTopology, current, previous, 0, 0);
 
                     // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
                     await CleanupUnusedAutoIndexesOnNonSharded(state);
@@ -1160,47 +1162,49 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (context.OpenReadTransaction())
                 using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
-                    var state = new ClusterObserver.DatabaseObservationState()
+                    var clusterTopology = database.ServerStore.GetClusterTopology(context);
+                    var previous = database.ServerStore.Observer.Maintenance.GetStats();
+                    var current = new Dictionary<string, ClusterNodeStatusReport>
                     {
-                        RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.Topology,
-                        Name = database.Name,
-                        Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
-                            {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                            Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(),
+                                new Dictionary<string, DatabaseStatusReport>
+                                {
                                     {
+                                        database.Name,
+                                        new DatabaseStatusReport
                                         {
-                                            database.Name, new DatabaseStatusReport
+                                            UpTime = now - database.StartTime,
+                                            LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                             {
-                                                UpTime = now - database.StartTime,
-                                                LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                                 {
+                                                    index1.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index1.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index1.GetLastQueryingTime()
-                                                        }
-                                                    },
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index1.GetLastQueryingTime()
+                                                    }
+                                                },
+                                                {
+                                                    index2.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index2.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Normal,
-                                                            LastQueried = now - index2.GetLastQueryingTime()
-                                                        }
+                                                        State = IndexState.Normal,
+                                                        LastQueried = now - index2.GetLastQueryingTime()
                                                     }
                                                 }
                                             }
                                         }
-                                    },
-                                    ClusterNodeStatusReport.ReportStatus.Ok,
-                                    null,
-                                    now,
-                                    null)
-                            }
+                                    }
+                                },
+                                ClusterNodeStatusReport.ReportStatus.Ok,
+                                null,
+                                now,
+                                null)
                         }
                     };
+
+                    var state = new ClusterObserver.DatabaseObservationState(database.Name, rawRecord, rawRecord.Topology, clusterTopology, current, previous, 0, 0);
 
                     // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
                     await CleanupUnusedAutoIndexesOnNonSharded(state);
@@ -1222,47 +1226,49 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (context.OpenReadTransaction())
                 using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
-                    var state = new ClusterObserver.DatabaseObservationState()
+                    var clusterTopology = database.ServerStore.GetClusterTopology(context);
+                    var previous = database.ServerStore.Observer.Maintenance.GetStats();
+                    var current = new Dictionary<string, ClusterNodeStatusReport>
                     {
-                        RawDatabase = rawRecord,
-                        DatabaseTopology = rawRecord.Topology,
-                        Name = database.Name,
-                        Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
-                            {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
+                            Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(),
+                                new Dictionary<string, DatabaseStatusReport>
+                                {
                                     {
+                                        database.Name,
+                                        new DatabaseStatusReport
                                         {
-                                            database.Name, new DatabaseStatusReport
+                                            UpTime = now - database.StartTime,
+                                            LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                             {
-                                                UpTime = now - database.StartTime,
-                                                LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
                                                 {
+                                                    index1.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index1.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Idle,
-                                                            LastQueried = now - index1.GetLastQueryingTime()
-                                                        }
-                                                    },
+                                                        State = IndexState.Idle,
+                                                        LastQueried = now - index1.GetLastQueryingTime()
+                                                    }
+                                                },
+                                                {
+                                                    index2.Name,
+                                                    new DatabaseStatusReport.ObservedIndexStatus
                                                     {
-                                                        index2.Name, new DatabaseStatusReport.ObservedIndexStatus
-                                                        {
-                                                            State = IndexState.Idle,
-                                                            LastQueried = now - index2.GetLastQueryingTime()
-                                                        }
+                                                        State = IndexState.Idle,
+                                                        LastQueried = now - index2.GetLastQueryingTime()
                                                     }
                                                 }
                                             }
                                         }
-                                    },
-                                    ClusterNodeStatusReport.ReportStatus.Ok,
-                                    null,
-                                    now,
-                                    null)
-                            }
+                                    }
+                                },
+                                ClusterNodeStatusReport.ReportStatus.Ok,
+                                null,
+                                now,
+                                null)
                         }
                     };
+
+                    var state = new ClusterObserver.DatabaseObservationState(database.Name, rawRecord, rawRecord.Topology, clusterTopology, current, previous, 0, 0);
 
                     // this will delete indexes
                     await CleanupUnusedAutoIndexesOnNonSharded(state);
