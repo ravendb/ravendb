@@ -23,18 +23,20 @@ namespace Raven.Client.Documents.Operations.QueueSink
 
         public RavenCommand<UpdateQueueSinkOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateQueueSinkCommand(_taskId, _configuration);
+            return new UpdateQueueSinkCommand(conventions, _taskId, _configuration);
         }
 
         private class UpdateQueueSinkCommand : RavenCommand<UpdateQueueSinkOperationResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly QueueSinkConfiguration _configuration;
+            private readonly DocumentConventions _conventions;
 
-            public UpdateQueueSinkCommand(long taskId, QueueSinkConfiguration configuration)
+            public UpdateQueueSinkCommand(DocumentConventions conventions, long taskId, QueueSinkConfiguration configuration)
             {
                 _taskId = taskId;
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             }
 
             public override bool IsReadRequest => false;
@@ -46,7 +48,9 @@ namespace Raven.Client.Documents.Operations.QueueSink
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(
+                        async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
+                            .ConfigureAwait(false), _conventions)
                 };
 
                 return request;

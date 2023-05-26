@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Logging;
@@ -539,6 +540,27 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             }
 
             result.DatabaseRecord.IndexesHistoryUpdated = true;
+        }
+
+        if (databaseRecord.QueueSinks.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueSinks))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring kafka queue sinks configuration from smuggler");
+            foreach (var sink in databaseRecord.QueueSinks)
+            {
+                _currentDatabaseRecord?.QueueSinks.ForEach(x =>
+                {
+                    if (x.Name.Equals(sink.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.QueueSink, _name, RaftIdGenerator.DontCareId)));
+                    }
+                });
+                sink.TaskId = 0;
+                sink.Disabled = true;
+                tasks.Add(_server.SendToLeaderAsync(new AddQueueSinkCommand(sink, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.QueueSinksUpdated = true;
         }
 
         if (tasks.Count == 0)
