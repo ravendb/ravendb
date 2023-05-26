@@ -1,22 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using Corax;
 using Corax.Mappings;
-using FastTests.Voron;
 using Newtonsoft.Json.Linq;
-using Parquet.Thrift;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
-using SharpCompress.Compressors;
-using SharpCompress.Compressors.Deflate;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Voron;
-using Voron.Data.CompactTrees;
-using Voron.Data.RawData;
 using Xunit;
 using Xunit.Abstractions;
-using Encoding = System.Text.Encoding;
 
 namespace FastTests.Corax.Bugs;
 
@@ -46,17 +36,17 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
         {
             enumerableWriterScope.Write(string.Empty, 1, "Nice Answer", ref indexEntryWriter);
         }
-      
+
         enumerableWriterScope.Finish(string.Empty, 1, ref indexEntryWriter);
-        
+
         scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
 
         indexEntryWriter.Finish(out var output);
 
         new IndexEntryReader(output.Ptr, output.Length).GetFieldReaderFor(0).Read(out var id);
     }
-    
-    private static JArray  ReadDocFromResource(string file)
+
+    private static JArray ReadDocFromResource(string file)
     {
         var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
         return JArray.Parse(reader.ReadToEnd());

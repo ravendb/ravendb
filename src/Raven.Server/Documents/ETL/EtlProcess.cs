@@ -1241,7 +1241,7 @@ namespace Raven.Server.Documents.ETL
                                             partitionItems.Columns.Add(new OlapEtlTestScriptResult.PartitionColumn
                                             {
                                                 Name = field.Name,
-                                                Type = field.DataType.ToString(),
+                                                Type = field.ClrType.Name,
                                                 Values = columnData.Value
                                             });
                                         }

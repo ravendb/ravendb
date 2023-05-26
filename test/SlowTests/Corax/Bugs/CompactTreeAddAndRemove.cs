@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
-using Parquet.Thrift;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 using Tests.Infrastructure;
-using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Data.RawData;
-using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
@@ -84,6 +79,6 @@ public class CompactTreeAddAndRemove : StorageTest
             adds.Add(line);
         }
 
-        yield return  adds;
+        yield return adds;
     }
 }

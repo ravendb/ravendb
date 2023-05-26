@@ -653,8 +653,8 @@ function execute(doc, args){
                                 }
                             }
 
-                            if (ParquetTransformedItems.TryParseDate(path, out var dateTimeOffset))
-                                revisionIncludes.AddRevision(dateTimeOffset.DateTime);
+                            if (ParquetTransformedItems.TryParseDate(path, out var dateTime))
+                                revisionIncludes.AddRevision(dateTime);
                             else
                                 revisionIncludes.AddRevision(path);
                             break;

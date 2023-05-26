@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests;
 using Parquet;
-using Parquet.Data;
+using Parquet.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
@@ -160,9 +160,9 @@ loadToOrders(partitionBy(key),
                         var fullPath = cloudObjects[0].Name;
                         var stream = client.DownloadObject(fullPath);
                         var ms = new MemoryStream();
-                        stream.CopyTo(ms);
+                        await stream.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -175,7 +175,7 @@ loadToOrders(partitionBy(key),
                             {
                                 Assert.True(field.Name.In(expectedFields));
 
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
                                 Assert.True(data.Length == 10);
 
                                 if (field.Name == ParquetTransformedItems.LastModifiedColumn)
@@ -330,7 +330,7 @@ loadToOrders(partitionBy(key), orderData);
                         var ms = new MemoryStream();
                         await stream.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -342,7 +342,7 @@ loadToOrders(partitionBy(key), orderData);
                             {
                                 Assert.True(field.Name.In(expectedFields));
 
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
                                 Assert.True(data.Length == 31);
                             }
                         }
@@ -362,7 +362,7 @@ loadToOrders(partitionBy(key), orderData);
                         var ms = new MemoryStream();
                         await stream.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -374,7 +374,7 @@ loadToOrders(partitionBy(key), orderData);
                             {
                                 Assert.True(field.Name.In(expectedFields));
 
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
                                 Assert.True(data.Length == 28 * 5);
                             }
                         }
@@ -533,9 +533,9 @@ loadToOrders(noPartition(),
 
                         var stream = client.DownloadObject(cloudObjects[0].Name);
                         var ms = new MemoryStream();
-                        stream.CopyTo(ms);
+                        await stream.CopyToAsync(ms);
 
-                        using (var parquetReader = new ParquetReader(ms))
+                        using (var parquetReader = await ParquetReader.CreateAsync(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -548,7 +548,7 @@ loadToOrders(noPartition(),
                             {
                                 Assert.True(field.Name.In(expectedFields));
 
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
                                 Assert.True(data.Length == 100);
 
                                 if (field.Name == ParquetTransformedItems.LastModifiedColumn)
@@ -559,7 +559,7 @@ loadToOrders(noPartition(),
                                 {
                                     if (field.Name == "OrderDate")
                                     {
-                                        var expectedDto = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count), DateTimeKind.Utc));
+                                        var expectedDto = DateTime.SpecifyKind(baseline.AddDays(count), DateTimeKind.Utc);
                                         Assert.Equal(expectedDto, val);
                                     }
 
