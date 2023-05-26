@@ -21,15 +21,17 @@ namespace Raven.Client.Documents.Operations.QueueSink
 
         public RavenCommand<AddQueueSinkOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new AddQueueSinkCommand(_configuration);
+            return new AddQueueSinkCommand(conventions, _configuration);
         }
 
         private class AddQueueSinkCommand : RavenCommand<AddQueueSinkOperationResult>, IRaftCommand
         {
             private readonly QueueSinkConfiguration _configuration;
+            private readonly DocumentConventions _conventions;
 
-            public AddQueueSinkCommand(QueueSinkConfiguration configuration)
+            public AddQueueSinkCommand(DocumentConventions conventions, QueueSinkConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -42,7 +44,9 @@ namespace Raven.Client.Documents.Operations.QueueSink
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(
+                        async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
+                            .ConfigureAwait(false), _conventions)
                 };
 
                 return request;

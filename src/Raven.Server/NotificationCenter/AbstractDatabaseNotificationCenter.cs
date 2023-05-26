@@ -15,6 +15,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public readonly Indexing Indexing;
     public readonly RequestLatency RequestLatency;
     public readonly EtlNotifications EtlNotifications;
+    public readonly QueueSinkNotifications QueueSinkNotifications;
     public readonly SlowWriteNotifications SlowWrites;
 
     protected AbstractDatabaseNotificationCenter(ServerStore serverStore, string database, RavenConfiguration configuration, CancellationToken shutdown)
@@ -32,6 +33,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
         RequestLatency = new RequestLatency(this);
         EtlNotifications = new EtlNotifications(this);
         SlowWrites = new SlowWriteNotifications(this);
+        QueueSinkNotifications = new QueueSinkNotifications(this);
 
         PostponedNotificationSender = new PostponedNotificationsSender(database, Storage, Watchers, shutdown);
     }

@@ -9,15 +9,11 @@ namespace Raven.Server.NotificationCenter
 {
     public class QueueSinkNotifications
     {
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _databaseName;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
-        public QueueSinkNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string databaseName)
+        public QueueSinkNotifications(AbstractDatabaseNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _databaseName = databaseName;
         }
 
         public AlertRaised AddScriptErrors(string processTag, string processName, Queue<QueueSinkErrorInfo> errors, string preMessage = null)
@@ -59,12 +55,12 @@ namespace Raven.Server.NotificationCenter
 
             var id = AlertRaised.GetKey(alertType, key);
 
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 details = GetDetails<T>(ntv);
 
                 return AlertRaised.Create(
-                    _databaseName,
+                    _notificationCenter.Database,
                     $"{processTag}: '{processName}'",
                     message,
                     alertType,
@@ -82,7 +78,7 @@ namespace Raven.Server.NotificationCenter
 
             var id = AlertRaised.GetKey(alertType, key);
 
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 return GetDetails<T>(ntv);
             }

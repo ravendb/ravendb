@@ -1574,6 +1574,7 @@ namespace Raven.Server.Documents
             ReplicationLoader?.HandleDatabaseRecordChange(record, index);
             EtlLoader?.HandleDatabaseRecordChange(record);
             SubscriptionStorage?.HandleDatabaseRecordChange(record);
+            QueueSinkLoader?.HandleDatabaseRecordChange(record);
 
             OnDatabaseRecordChanged(record);
         }
