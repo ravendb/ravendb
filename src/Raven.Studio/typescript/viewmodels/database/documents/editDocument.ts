@@ -530,8 +530,11 @@ class editDocument extends shardViewModelBase {
         
         this.atomicGuardUrl = ko.pureComputed(() => {
             const id = this.document().getId();
+            if (!id) {
+                return null;
+            }
            
-            return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.activeDatabase());
+            return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.db);
         });
 
         this.isConflictDocument = ko.computed(() => {
