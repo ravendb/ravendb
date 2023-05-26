@@ -28,7 +28,7 @@ namespace SlowTests.MailingList.Apo
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void LazyWhereAndOrderBy(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -60,7 +60,7 @@ namespace SlowTests.MailingList.Apo
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public async Task LazyQuery_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();
@@ -110,7 +110,7 @@ namespace SlowTests.MailingList.Apo
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();

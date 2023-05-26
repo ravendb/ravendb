@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
         });
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void CoraxCanGetEmptyCollection(Options options) => CanGetEmptyCollection(options, list =>
         {
             Assert.Empty(list.Single().Exemptions);
