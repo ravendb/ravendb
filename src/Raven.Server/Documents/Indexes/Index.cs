@@ -14,7 +14,6 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
@@ -32,7 +31,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -843,11 +841,6 @@ namespace Raven.Server.Documents.Indexes
                 case SearchEngineType.Lucene:
                     IndexPersistence = new LuceneIndexPersistence(this);
                     SearchEngineType = SearchEngineType.Lucene;
-                    break;
-                case SearchEngineType.Corax:
-                    RavenConfiguration.AssertCanUseCoraxFeature(DocumentDatabase.ServerStore.Configuration);
-                    IndexPersistence = new CoraxIndexPersistence(this);
-                    SearchEngineType = SearchEngineType.Corax;
                     break;
                 default:
                     throw new InvalidDataException($"Cannot read search engine type for {Name}. Please reset the index.");
@@ -4695,9 +4688,6 @@ namespace Raven.Server.Documents.Indexes
 
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotSupportedException($"{nameof(Compact)} is supported for Corax indexes.");
-
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Compact));
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
@@ -4804,9 +4794,6 @@ namespace Raven.Server.Documents.Indexes
 
         public void Optimize(IndexOptimizeResult result, CancellationToken token)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotImplementedInCoraxException($"{nameof(Optimize)} is not implemented yet.");
-
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Optimize));
 
             try
@@ -4957,9 +4944,6 @@ namespace Raven.Server.Documents.Indexes
 
                 generator.HandlePostingListDetails += (postingList, report) =>
                 {
-                    if (!Corax.Constants.IndexWriter.LargePostingListsSetSlice.Equals(postingList.Name))
-                        return;
-
                     var it = postingList.Iterate();
                     while (it.MoveNext())
                     {
@@ -5193,12 +5177,6 @@ namespace Raven.Server.Documents.Indexes
 
         public int Dump(string path, Action<IOperationProgress> onProgress)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-            {
-                //todo maciej
-                return 0;
-            }
-
             LuceneIndexPersistence indexPersistence = (LuceneIndexPersistence)IndexPersistence;
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);

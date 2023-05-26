@@ -5,11 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.NotificationCenter.Notifications;
@@ -130,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static
             // never hit
             return null;
         }
-        
+
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
@@ -184,9 +182,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
 
-        
+
         public int StackSizeInSelectClause { get; set; }
-        
+
         public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
@@ -241,12 +239,12 @@ namespace Raven.Server.Documents.Indexes.Static
                     PerformanceHintType.Indexing,
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
-                
+
                 if (Log.IsOperationsEnabled)
                     Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
             }
         }
-        
+
         protected dynamic TryConvert<T>(object value)
             where T : struct
         {
@@ -411,50 +409,10 @@ namespace Raven.Server.Documents.Indexes.Static
             var scope = CurrentIndexingScope.Current;
             return scope.Index.SearchEngineType switch
             {
-                SearchEngineType.Corax => CoraxCreateField(scope, name, value, options),
                 _ => LuceneCreateField(scope, name, value, options)
             };
         }
 
-        protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
-        {
-            options = options ?? CreateFieldOptions.Default;
-
-            IndexFieldOptions allFields = null;
-            if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
-                mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
-
-            var field = IndexField.Create(name, new IndexFieldOptions
-            {
-                Storage = options.Storage,
-                TermVector = options.TermVector,
-                Indexing = options.Indexing,
-            }, allFields, Corax.Constants.IndexWriter.DynamicField);
-
-            if (scope.DynamicFields == null)
-                scope.DynamicFields = new Dictionary<string, FieldIndexing>();
-
-            var fieldAlreadyExists = scope.DynamicFields.ContainsKey(name);
-            if (fieldAlreadyExists == false)
-                scope.CreatedFieldsCount++;
-            else if (fieldAlreadyExists && scope.DynamicFields[name] != field.Indexing)
-            {
-                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{scope.DynamicFields[name]}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
-            }
-            scope.DynamicFields[name] = field.Indexing;
-
-
-            var result = new List<CoraxDynamicItem>();
-            result.Add(new CoraxDynamicItem()
-            {
-                Field = field,
-                FieldName = name,
-                Value = value
-            });
-           
-            return result;
-        }
-        
         protected IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
@@ -485,7 +443,7 @@ namespace Raven.Server.Documents.Indexes.Static
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
             return result;
         }
-        
+
         protected IEnumerable<object> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
@@ -508,11 +466,12 @@ namespace Raven.Server.Documents.Indexes.Static
             var scope = CurrentIndexingScope.Current;
             var creationFieldOptions = new CreateFieldOptions
             {
-                Storage = stored ? FieldStorage.Yes : FieldStorage.No, Indexing = indexing, TermVector = FieldTermVector.No
+                Storage = stored ? FieldStorage.Yes : FieldStorage.No,
+                Indexing = indexing,
+                TermVector = FieldTermVector.No
             };
             return scope.Index.SearchEngineType switch
             {
-                SearchEngineType.Corax => CoraxCreateField(scope, name, value, creationFieldOptions),
                 _ => LuceneCreateField(scope, name, value, creationFieldOptions)
             };
         }
@@ -521,12 +480,12 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (field is LazyStringValue lsv)
             {
-                if (LazyStringParser.TryParseDateOnly(lsv.Buffer, lsv.Length, out var @do) == false) 
+                if (LazyStringParser.TryParseDateOnly(lsv.Buffer, lsv.Length, out var @do) == false)
                     return DynamicNullObject.Null;
-                
+
                 return @do;
             }
-            
+
             if (field is string str)
             {
                 fixed (char* strBuffer = str.AsSpan())
@@ -537,7 +496,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return to;
                 }
             }
-            
+
             if (field is DateTime dt)
             {
                 return DateOnly.FromDateTime(dt);
@@ -547,17 +506,17 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 return dtO;
             }
-            
+
             if (field is null)
             {
                 return DynamicNullObject.ExplicitNull;
             }
-            
+
             if (field is DynamicNullObject dno)
             {
                 return dno;
             }
-            
+
             throw new InvalidDataException($"Expected {nameof(DateTime)}, {nameof(DateOnly)}, null, string or JSON value.");
         }
 
@@ -581,7 +540,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return to;
                 }
             }
-            
+
             if (field is TimeSpan ts)
             {
                 return TimeOnly.FromTimeSpan(ts);
@@ -596,12 +555,12 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 return DynamicNullObject.ExplicitNull;
             }
-            
+
             if (field is DynamicNullObject dno)
             {
                 return dno;
             }
-            
+
             throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)}, null, string or JSON value.");
         }
 
@@ -609,7 +568,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             return CreateSpatialField(name, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
@@ -617,7 +576,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             var spatialField = GetOrCreateSpatialField(name);
 
             return CreateSpatialField(spatialField, lat, lng);
@@ -627,7 +586,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             var spatialField = GetOrCreateSpatialField(name);
             return CreateSpatialField(spatialField, shapeWkt);
         }
@@ -636,7 +595,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             return CreateSpatialField(spatialField, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
@@ -644,7 +603,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             if (lng == null || double.IsNaN(lng.Value))
                 return Enumerable.Empty<AbstractField>();
             if (lat == null || double.IsNaN(lat.Value))
@@ -653,24 +612,24 @@ namespace Raven.Server.Documents.Indexes.Static
             IShape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
                 ? spatialField.LuceneCreateIndexableFields(shape)
-                : Enumerable.Cast<object>(spatialField.CoraxCreateIndexableFields(shape));
+                : null;
         }
 
         internal static IEnumerable<object> CreateSpatialField(SpatialField spatialField, object shapeWkt)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
                 ? spatialField.LuceneCreateIndexableFields(shapeWkt)
-                : Enumerable.Cast<object>(spatialField.CoraxCreateIndexableFields(shapeWkt));
+                : null;
         }
 
         internal static SpatialField GetOrCreateSpatialField(string name)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
         }
 

@@ -233,10 +233,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 OutputReduceResultsLucene(indexContext, stats, writer, reduceKeyHash, results, isNewSection);
             }
-            else if (_index.SearchEngineType == SearchEngineType.Corax)
-            {
-                OutputReduceResultsCorax(indexContext, stats, writer, reduceKeyHash, results, isNewSection);
-            }
             else
             {
                 throw new NotSupportedException("Unsupported search engine type: " + _index.SearchEngineType);

@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Corax;
-using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json.Parsing;
-using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -33,9 +30,6 @@ namespace Raven.Server.Documents.Queries.Results
                 string id = string.Empty;
                 switch (SearchEngineType)
                 {
-                    case SearchEngineType.Corax:
-                        id = retrieverInput.DocumentId;
-                        break;
                     case SearchEngineType.None:
                     case SearchEngineType.Lucene:
                         if (TryGetKeyLucene(ref retrieverInput, out id) == false)
@@ -61,12 +55,6 @@ namespace Raven.Server.Documents.Queries.Results
             //Lucene method
             key = retrieverInput.LuceneDocument.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, retrieverInput.State);
             return string.IsNullOrEmpty(key) == false;
-        }
-
-        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
-        {
-            key = searcher.GetRawIdentityFor(id);
-            return key.Length > 0;
         }
 
         public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
