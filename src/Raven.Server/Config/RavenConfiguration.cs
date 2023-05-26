@@ -222,25 +222,11 @@ namespace Raven.Server.Config
             return this;
         }
 
-        public static void AssertPostInitCanUseCoraxFeature(RavenConfiguration configuration)
-        {
-            if (configuration.Indexing.AutoIndexingEngineType == SearchEngineType.Corax || configuration.Indexing.StaticIndexingEngineType == SearchEngineType.Corax)
-                AssertCanUseCoraxFeature(configuration);
-        }
-        
-        public static void AssertCanUseCoraxFeature(RavenConfiguration configuration)
-        {
-            var featureGuardian = new FeatureGuardian(configuration);
-            featureGuardian.Assert(Feature.Corax, () => $"To use {nameof(Corax)} search engine you have set {nameof(CoreConfiguration.FeaturesAvailability)} as {FeaturesAvailability.Experimental}.");
-        }
-        
         public void PostInit()
         {
             if (ResourceType != ResourceType.Server)
                 return;
 
-            AssertPostInitCanUseCoraxFeature(this);
-            
             try
             {
                 SecurityConfiguration.Validate(this);

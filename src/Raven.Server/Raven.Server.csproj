@@ -144,7 +144,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Corax\Corax.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />

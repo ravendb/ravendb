@@ -36,9 +36,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         private static IEnumerable<object[]> Data() => new []
         {
             new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Lucene }},
-            new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Corax }},
             new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Lucene }},
-            new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Corax }}
         };
         
         [Theory] 

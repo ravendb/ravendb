@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Corax;
-using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -57,11 +55,6 @@ namespace Raven.Server.Documents.Queries.Results
         public override bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
-        }
-
-        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
-        {
-            throw new NotSupportedException("Graph Queries do not deal with Corax indexes.");
         }
 
         public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(_context, id);
