@@ -56,12 +56,12 @@ internal unsafe class SortHelper
             long leftValue = *leftPtr++;
             var inc = GallopSearch(leftValue);
             rightPtr += inc;
-            if (leftValue != *rightPtr++) 
+            if (leftValue != *rightPtr) 
                 continue;
 
             var val = dstStart[dstIndx];
             * dstPtr++ = val;
-            *rightPtr |= ~long.MaxValue; // mark it as used for the *next* time
+            *rightPtr++ |= ~long.MaxValue; // mark it as used for the *next* time
 
         }
 

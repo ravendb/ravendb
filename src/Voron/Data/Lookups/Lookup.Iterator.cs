@@ -50,16 +50,14 @@ namespace Voron.Data.Lookups
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries)
                     {
                         var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
                         for (int i = 0; i < read; i++)
                         {
-                            results[i] = GetValue(ref state, state.LastSearchPosition);
+                            results[i] = GetValue(ref state, state.LastSearchPosition++);
                         }
-
-                        state.LastSearchPosition += read;
                         return read;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
@@ -175,11 +173,11 @@ namespace Voron.Data.Lookups
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition >= 0)
                     {
-                        var read = Math.Min(results.Length , state.LastSearchPosition);
-                        for (int i = read; i >= 0; i--)
+                        int read = 0;
+                        while(read < results.Length && state.LastSearchPosition >= 0)
                         {
-                            results[i] = GetValue(ref state, state.LastSearchPosition);
-                            state.LastSearchPosition--;
+                            int curPos = state.LastSearchPosition--;
+                            results[read++] = GetValue(ref state, curPos);
                         }
                         return read;
                     }
