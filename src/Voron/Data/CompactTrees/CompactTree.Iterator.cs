@@ -87,10 +87,10 @@ namespace Voron.Data.CompactTrees
                         var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
                         for (int i = 0; i < read; i++)
                         {
-                            results[i] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition + i]);
+                            int curPos = state.LastSearchPosition++;
+                            results[i] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[curPos]);
                         }
 
-                        state.LastSearchPosition += read;
                         return read;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
@@ -247,11 +247,11 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition >= 0)
                     {
-                        var read = Math.Min(results.Length , state.LastSearchPosition);
-                        for (int i = read; i >= 0; i--)
+                        int read = 0;
+                        while(read < results.Length && state.LastSearchPosition >= 0)
                         {
-                            results[i] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition]);
-                            state.LastSearchPosition--;
+                            int curPos = state.LastSearchPosition--;
+                            results[read++] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[curPos]);
                         }
                         return read;
                     }
