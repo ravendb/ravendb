@@ -251,11 +251,11 @@ public static unsafe class SimdBitPacker<TSimdTransform>
 
     private static byte ComputeSharedPrefix(long* entries, int count, out ushort prefix)
     {
-        const ushort prefix13Bits = 0x1FFF;
-        const byte shiftAmount = 13;
+        const ushort prefix10Bits = 0x3FF;
+        const byte shiftAmount = 10;// == EntryIdEncodings.EntryIdOffset
         
-        prefix = (ushort)(entries[0] & prefix13Bits);
-        var prefixMask = Vector256.Create<long>(prefix13Bits);
+        prefix = (ushort)(entries[0] & prefix10Bits);
+        var prefixMask = Vector256.Create<long>(prefix10Bits);
         var sharedPrefix = Vector256.Create<long>(prefix);
         var countOfSharedPrefixes = Vector256<long>.Zero;
         int i = 0;
@@ -266,7 +266,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         var scalarCountOfSharedPrefixes = 0;
         for (; i < count; i++)
         {
-            scalarCountOfSharedPrefixes -= BoolToInt((entries[i] & prefix13Bits) == prefix);
+            scalarCountOfSharedPrefixes -= BoolToInt((entries[i] & prefix10Bits) == prefix);
         }
         countOfSharedPrefixes += Vector256.Create<long>(scalarCountOfSharedPrefixes);
 
