@@ -32,10 +32,6 @@ function BuildServer ( $srcDir, $outDir, $target) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
-    if ($env:RAVEN_BuildOptions -like "*AllowEncryptedOverHttp*") {
-        $commandArgs += "/p:RAVEN_BuildOptions=$RAVEN_BuildOptions"
-    }
-
     $commandArgs += '/p:SourceLinkCreate=true'
     
     #if ($target -and $global:isPublishBundlingEnabled) {
