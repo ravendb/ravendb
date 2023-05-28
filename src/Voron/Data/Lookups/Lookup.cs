@@ -318,6 +318,19 @@ namespace Voron.Data.Lookups
             FindPageFor(key, ref _internalCursor);
             return RemoveFromPage(allowRecurse: true);
         }
+        
+        public bool TryRemove(TKey key, out long value)
+        {
+            FindPageFor(key, ref _internalCursor);
+            ref var state = ref _internalCursor._stk[_internalCursor._pos];
+            if (state.LastMatch != 0)
+            {
+                value = default;
+                return false;
+            }
+            value = GetValue(ref state, state.LastSearchPosition);
+            return RemoveFromPage(allowRecurse: true);
+        }
 
         private void RemoveFromPage(bool allowRecurse, int pos)
         {

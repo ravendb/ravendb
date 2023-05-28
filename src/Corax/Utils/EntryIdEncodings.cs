@@ -234,18 +234,4 @@ public static class EntryIdEncodings
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForSeekInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset;
-    
-    [Conditional("DEBUG")]
-    internal static void AssertIsNotEncodedContainerId(long id)
-    {
-#if DEBUG
-        Debug.Assert(ContainerTypeOffset == 2, "Update the assertion");
-        Debug.Assert(FrequencySizeInBits == 8, "Update the assertion");
-        // To make all ids uniform we also encode container type. This way we assume that encoded part will look like this:
-        // [STORAGE_ID - 54][FREQUENCY: 0b0000_0001][XX]
-        long mask = 0xFF << ContainerTypeOffset;
-        Debug.Assert((id & mask) != (0x01 << ContainerTypeOffset), "Has exactly one frequency, indicates that it could be encoded or corrupted.");
-#endif
-    }
-    
 }

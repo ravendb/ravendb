@@ -139,6 +139,12 @@ public class RawCoraxFlag : StorageTest
             }
         }
 
+        {
+            using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
+            var match = searcher.AllEntries();
+            Assert.Equal(2, match.Fill(mem));
+        }
+        
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {

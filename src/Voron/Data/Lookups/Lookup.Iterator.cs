@@ -12,6 +12,12 @@ namespace Voron.Data.Lookups
             private Lookup<TKey> _tree;
             private IteratorCursorState _cursor;
 
+            public ForwardIterator()
+            {
+                _tree = null;
+                _cursor = new IteratorCursorState { _pos = -1 };
+            }
+            
             public void Init<T>(T tree)
             {
                 _tree = (Lookup<TKey>)(object)tree;
@@ -40,6 +46,30 @@ namespace Voron.Data.Lookups
                     _tree.PushPage(next, ref cState);
 
                     state = ref cState._stk[cState._pos];
+                }
+            }
+            
+            public int FillKeys(Span<TKey> results)
+            {
+                if (_cursor._pos < 0)
+                    return 0;
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
+                    if (state.LastSearchPosition < state.Header->NumberOfEntries)
+                    {
+                        var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
+                        for (int i = 0; i < read; i++)
+                        {
+                            results[i] = GetKey(ref state, state.LastSearchPosition++);
+                        }
+                        return read;
+                    }
+                    if (_tree.GoToNextPage(ref _cursor) == false)
+                    {
+                        return 0;
+                    }
                 }
             }
 

@@ -19,6 +19,7 @@ using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax;
 
@@ -57,6 +58,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Tree _fieldsTree;
     private readonly Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
+    private readonly Lookup<long> _entryIdToOffset;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -70,6 +72,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _entryIdToOffset = _transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
@@ -79,6 +82,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _entryIdToOffset = _transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
     }
 
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
@@ -97,18 +101,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
     {
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
+        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
         int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
         return data.ToUnmanagedSpan().Slice(size + len);
     }
 
     public IndexEntryReader GetEntryReaderFor(long id)
     {
-        return GetEntryReaderFor(_transaction, ref _lastPage, id, out _);
+        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+        
+        return GetEntryReaderForEntryContainerId(_transaction, entryId, ref _lastPage, out _);
     }
 
-    public static IndexEntryReader GetEntryReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
+    public static IndexEntryReader GetEntryReaderForEntryContainerId(Transaction transaction,  long id, ref Page page,out int rawSize)
     {
+        
         var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
         int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
 
@@ -120,7 +130,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexEntryReader GetReaderAndIdentifyFor(long id, out string key)
     {
-        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
+        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
 
         int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
 
@@ -133,14 +147,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public string GetIdentityFor(long id)
     {
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
+        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId).ToSpan();
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return Encoding.UTF8.GetString(data.Slice(len, size));
     }
 
     public UnmanagedSpan GetRawIdentityFor(long id)
     {
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToUnmanagedSpan();
+        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId).ToUnmanagedSpan();
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return data.Slice(len, size);
     }
