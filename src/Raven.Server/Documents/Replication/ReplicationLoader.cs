@@ -1929,7 +1929,7 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).ExternalReplications;
+                var externals = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name)?.ExternalReplications;
                 if (externals != null)
                 {
                     foreach (var external in externals)

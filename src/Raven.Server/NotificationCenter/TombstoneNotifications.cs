@@ -6,7 +6,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using static Raven.Server.Documents.DocumentsStorage.TombstonesCount;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -27,7 +26,7 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(Dictionary<(string, string), DocumentsStorage.TombstonesCount> blockingTombstones)
+        public void Add(Dictionary<(string, string), long> blockingTombstones)
         {
             BlockingTombstonesDetails details = new BlockingTombstonesDetails(blockingTombstones);
             _notificationCenter.Add(AlertRaised.Create(_database, _title, _msg, AlertType.BlockingTombstones,
@@ -48,13 +47,11 @@ namespace Raven.Server.NotificationCenter
                     detail.TryGet(nameof(BlockingTombstoneDetails.Source), out string source);
                     detail.TryGet(nameof(BlockingTombstoneDetails.Collection), out string collection);
                     detail.TryGet(nameof(BlockingTombstoneDetails.NumberOfTombstones), out long numOfTombstones);
-                    detail.TryGet(nameof(BlockingTombstoneDetails.Accuracy), out DocumentsStorage.TombstonesCount.TombstonesAccuracy tombstonesAccuracy);
                     var blockingTombstoneDetails = new BlockingTombstoneDetails()
                     {
                         Source = source,
                         Collection = collection,
-                        NumberOfTombstones = numOfTombstones,
-                        Accuracy = tombstonesAccuracy
+                        NumberOfTombstones = numOfTombstones
                     };
                     list.Add(blockingTombstoneDetails);
                 }
@@ -65,12 +62,12 @@ namespace Raven.Server.NotificationCenter
 
         internal class BlockingTombstonesDetails : INotificationDetails
         {
-            public BlockingTombstonesDetails(Dictionary<(string, string), DocumentsStorage.TombstonesCount> blockingTombstones)
+            public BlockingTombstonesDetails(Dictionary<(string, string), long> blockingTombstones)
             {
                 BlockingTombstones = blockingTombstones;
             }
 
-            public Dictionary<(string, string), DocumentsStorage.TombstonesCount> BlockingTombstones { get; set; }
+            public Dictionary<(string, string), long> BlockingTombstones { get; set; }
 
             public DynamicJsonValue ToJson()
             {
@@ -81,8 +78,7 @@ namespace Raven.Server.NotificationCenter
                     {
                         [nameof(BlockingTombstoneDetails.Source)] = key.Item1,
                         [nameof(BlockingTombstoneDetails.Collection)] = key.Item2,
-                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = BlockingTombstones[key].Count,
-                        [nameof(BlockingTombstoneDetails.Accuracy)] = BlockingTombstones[key].Accuracy
+                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = BlockingTombstones[key]
                     });
                 }
 
@@ -98,7 +94,6 @@ namespace Raven.Server.NotificationCenter
             public string Source { get; set; }
             public string Collection { get; set; }
             public long NumberOfTombstones { get; set; }
-            public TombstonesAccuracy Accuracy { get; set; }
         }
     }
 }

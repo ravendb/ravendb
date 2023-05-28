@@ -122,8 +122,8 @@ namespace Raven.Server.Documents
 
         private void CreateWarningIfThereAreBlockingTombstones(HashSet<string> tombstoneCollections)
         {
-            var currentBlockingTombstones = new Dictionary<(string, string), DocumentsStorage.TombstonesCount>();
-            var tombstonesPerCollection = new Dictionary<string, DocumentsStorage.TombstonesCount>(StringComparer.OrdinalIgnoreCase);
+            var currentBlockingTombstones = new Dictionary<(string, string), long>();
+            var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             bool needToWarn = false;
 
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents
                                 tombstonesPerCollection[tombstoneCollection] = tombstonesCount;
                             }
 
-                            if (tombstonesCount.Count > 0)
+                            if (tombstonesCount > 0)
                             {
                                 needToWarn = true;
                                 currentBlockingTombstones.Add((disabledSubscriber, tombstoneCollection), tombstonesCount);
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
         internal TombstonesState GetState(bool addInfoForDebug = false)
         {
             var result = new TombstonesState();
-            HashSet<string> tombstoneCollections = new HashSet<string>();
+            HashSet<string> tombstoneCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (CancellationToken.IsCancellationRequested)
                 return result;

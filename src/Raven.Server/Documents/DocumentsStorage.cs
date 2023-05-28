@@ -33,6 +33,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
 {
@@ -1323,14 +1324,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public TombstonesCount TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
         {
             string tableName;
-            TombstonesCount tombstonesCount = new TombstonesCount()
-            {
-                Count = 0,
-                Accuracy = TombstonesCount.TombstonesAccuracy.Exact
-            };
 
             if (collection == AttachmentsStorage.AttachmentsTombstones ||
                 collection == RevisionsStorage.RevisionsTombstones)
@@ -1340,35 +1336,17 @@ namespace Raven.Server.Documents
             else
             {
                 var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    return 0;
+
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
-                return tombstonesCount;
+                return 0;
 
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
-            {
-                if (++tombstonesCount.Count >= 10_000)
-                {
-                    tombstonesCount.Accuracy = TombstonesCount.TombstonesAccuracy.MoreThan;
-                    break;
-                }
-            }
-
-            return tombstonesCount;
-        }
-
-        public class TombstonesCount
-        {
-            public long Count;
-            public TombstonesAccuracy Accuracy;
-
-            public enum TombstonesAccuracy
-            {
-                Exact,
-                MoreThan
-            }
+            return table.NumberOfEntries;
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(
