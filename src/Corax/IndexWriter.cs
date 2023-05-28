@@ -1599,6 +1599,7 @@ namespace Corax
             using var dumper = new IndexTermDumper(fieldsTree, indexedField.Name);
 
             fieldTree.InitializeStateForTryGetNextValue();
+            long totalLengthOfTerm = 0;
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
@@ -1626,7 +1627,7 @@ namespace Corax
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
 
                     AddNewTerm(ref entries, tmpBuf, out termId);
-                    _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, entries.TermSize);
+                    totalLengthOfTerm += entries.TermSize;
                     
                     dumper.WriteAddition(term, termId);
                     termContainerId = fieldTree.Add(scope.Key, termId);
@@ -1650,7 +1651,8 @@ namespace Corax
                                 ThrowTriedToDeleteTermThatDoesNotExists();
                             }
 
-                            _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, -entries.TermSize);
+                            totalLengthOfTerm -= entries.TermSize;
+                            
                             dumper.WriteRemoval(term, ttt);
                             _numberOfTermModifications--;
                             break;
@@ -1672,6 +1674,9 @@ namespace Corax
 
                 scope.Dispose();
             }
+            
+            _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+
         }
 
         private void SetRange(List<long> list, ReadOnlySpan<long> span)
