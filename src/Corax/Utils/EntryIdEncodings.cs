@@ -24,7 +24,6 @@ public static class EntryIdEncodings
     private const long Mask = 0xFFL;
     private const byte ContainerTypeOffset = 2;
     private const long MaxEntryId = 1L << 54;
-    private static readonly ulong VectorLongSize = (ulong)Vector256<long>.Count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static long Encode(long entryId, short count, TermIdMask containerType)
