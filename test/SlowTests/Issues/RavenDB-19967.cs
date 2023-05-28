@@ -97,53 +97,7 @@ namespace SlowTests.Issues
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
                 var detail = blockingTombstonesDetails[0];
-
                 Assert.Equal(1, detail.NumberOfTombstones);
-                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
-            }
-        }
-
-        [Fact]
-        public async Task TombstoneCleaningMoreThan10K_AfterIndexDisabled()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 0; i < 10_001; i++)
-                    {
-                        var user = new User { Name = "Yonatan", Id = $"{i}"};
-                        await session.StoreAsync(user);
-                    }
-
-                    await session.SaveChangesAsync();
-                }
-
-                var userIndex = new UserByName();
-                string indexName = userIndex.IndexName;
-                await userIndex.ExecuteAsync(store);
-                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 0; i < 10_001; i++)
-                    {
-                        session.Delete($"{i}");
-                    }
-
-                    await session.SaveChangesAsync();
-                }
-
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
-
-                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
-                var detail = blockingTombstonesDetails[0];
-
-                Assert.Equal(10_000, detail.NumberOfTombstones);
-                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.MoreThan, detail.Accuracy);
             }
         }
 
@@ -177,9 +131,7 @@ namespace SlowTests.Issues
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
                 var detail = blockingTombstonesDetails[0];
-
                 Assert.Equal(1, detail.NumberOfTombstones);
-                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
@@ -235,9 +187,7 @@ namespace SlowTests.Issues
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
                 var detail = blockingTombstonesDetails[0];
-
                 Assert.Equal(1, detail.NumberOfTombstones);
-                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
@@ -278,9 +228,83 @@ namespace SlowTests.Issues
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
                 var detail = blockingTombstonesDetails[0];
-
                 Assert.Equal(2, detail.NumberOfTombstones);
-                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
+            }
+        }
+
+        [Fact]
+        public async Task TombstoneCleaningAfterErroredIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var user = new User
+                {
+                    Name = "Yonatan",
+                    Count = 0
+                };
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var index = new ErroredIndex();
+                await index.ExecuteAsync(store);
+
+                var state = await WaitForValueAsync(async () =>
+                {
+                    var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+                    return indexStats.State;
+                }, IndexState.Error);
+                Assert.Equal(IndexState.Error, state);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(user.Id);
+                    await session.SaveChangesAsync();
+                }
+
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+                Assert.Equal(1, detail.NumberOfTombstones);
+            }
+        }
+
+        [Fact]
+        public async Task TombstoneCleaningAfterPausedIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var user = new User { Name = "Yonatan" };
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var userIndex = new UserByName();
+                await userIndex.ExecuteAsync(store);
+                await store.Maintenance.SendAsync(new StopIndexOperation(userIndex.IndexName));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(user.Id);
+                    await session.SaveChangesAsync();
+                }
+
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+                Assert.Equal(1, detail.NumberOfTombstones);
             }
         }
 
@@ -292,6 +316,18 @@ namespace SlowTests.Issues
                     select new
                     {
                         user.Name
+                    };
+            }
+        }
+
+        private class ErroredIndex : AbstractIndexCreationTask<User>
+        {
+            public ErroredIndex()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        Count = 3 / user.Count
                     };
             }
         }
