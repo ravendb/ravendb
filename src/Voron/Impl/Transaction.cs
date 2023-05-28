@@ -7,11 +7,13 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
+using Voron.Data.Lookups;
 using Voron.Data.RawData;
 using Voron.Data.PostingLists;
 using Constants = Voron.Global.Constants;
@@ -152,6 +154,11 @@ namespace Voron.Impl
             {
                 return OpenContainer(nameSlice);
             }
+        }
+
+        public Lookup<TKey> LookupFor<TKey>(Slice name) where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+        {
+            return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }
 
         public long OpenContainer(Slice name)

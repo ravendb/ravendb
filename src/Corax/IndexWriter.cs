@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -397,9 +396,10 @@ namespace Corax
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
-        private readonly HashSet<long> _deletedEntries = new();
+        private readonly Dictionary<long, long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
+        private Lookup<long> _entryIdToOffset;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
 
@@ -441,11 +441,13 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            _entryIdToOffset = Transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-            
+            _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
+
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
 
         }
@@ -462,8 +464,10 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            
+            _entryIdToOffset = Transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
+
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
@@ -493,7 +497,7 @@ namespace Corax
             int requiredSize = idLen + id.Size + data.Length;
             // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
             requiredSize += 16 - (requiredSize % 16);
-            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
+            var entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
             id.CopyTo(space);
@@ -503,6 +507,11 @@ namespace Corax
             space.Clear();// clean any old data that may have already been there
 
             var context = Transaction.Allocator;
+            
+            
+            var entryId = ++_lastEntryId;
+            _entryIdToOffset.Add(entryId, entryContainerId);
+
 
             fixed (byte* newEntryDataPtr = data)
             {
@@ -541,8 +550,6 @@ namespace Corax
         //We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
         private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
         {
-            EntryIdEncodings.AssertIsNotEncodedContainerId(entryId);
-            
             if (documentBoost.AlmostEquals(1f))
             {
                 
@@ -568,7 +575,6 @@ namespace Corax
         /// <param name="entryId">Container id of entry (without encodings)</param>
         private unsafe void RemoveDocumentBoost(long entryId)
         {
-            EntryIdEncodings.AssertIsNotEncodedContainerId(entryId);
             _documentBoost.Delete(entryId);
         }
         
@@ -597,7 +603,10 @@ namespace Corax
             Page lastVisitedPage = default;
 
             var entryId = EntryIdEncodings.DecodeAndDiscardFrequency(idInTree);
-            var oldEntryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
+            if (_entryIdToOffset.TryGetValue(entryId, out var entryContainerId) == false)
+                throw new InvalidOperationException("Unable to get entry id: " + entryId);
+            
+            var oldEntryReader = IndexSearcher.GetEntryReaderForEntryContainerId(Transaction, entryContainerId, ref lastVisitedPage, out var rawSize);
             
             if (oldEntryReader.Buffer.SequenceEqual(data))
                 return idInTree; // no change, can skip all work here, joy!
@@ -630,7 +639,7 @@ namespace Corax
             IndexDynamicFields(data);
             
             // now we can update the actual details here...
-            var space = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
+            var space = Container.GetMutable(Transaction.LowLevelTransaction, entryContainerId);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
             id.AsSpan().CopyTo(space);
@@ -881,6 +890,7 @@ namespace Corax
         private readonly HashSet<long> _entriesAlreadyAdded;
         private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly IndexOperationsDumper _indexDebugDumper;
+        private long _lastEntryId;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1171,9 +1181,9 @@ namespace Corax
             }
         }
 
-        private void RecordTermsToDeleteFrom(long entryToDelete,  LowLevelTransaction llt, ref Page lastVisitedPage)
+        private void RecordTermsToDeleteFrom(long entryToDelete, long entryContainerId,  LowLevelTransaction llt, ref Page lastVisitedPage)
         {
-            var entryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out var _);
+            var entryReader = IndexSearcher.GetEntryReaderForEntryContainerId(Transaction, entryContainerId,ref lastVisitedPage, out var _);
             foreach (var binding in _fieldsMapping)
             {
                 if (binding.IsIndexed == false)
@@ -1191,7 +1201,7 @@ namespace Corax
                 RemoveSingleTerm(indexedField, fieldReader, entryToDelete);
             }
 
-            Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
+            Container.Delete(llt, _entriesContainerId, entryContainerId); // delete raw index entry
         }
 
         private void RemoveSingleTerm(IndexedField indexedField, in IndexEntryReader.FieldReader fieldReader, long entryToDelete)
@@ -1372,10 +1382,10 @@ namespace Corax
         {
             var llt = Transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
-            foreach (long entryToDelete in _deletedEntries)
+            foreach ((long entryToDelete, long entryContainerId) in _deletedEntries)
             {
                 RemoveDocumentBoost(entryToDelete);
-                RecordTermsToDeleteFrom(entryToDelete, llt, ref lastVisitedPage);
+                RecordTermsToDeleteFrom(entryToDelete, entryContainerId, llt, ref lastVisitedPage);
             }
         }
 
@@ -1397,10 +1407,10 @@ namespace Corax
         [SkipLocalsInit]
         private unsafe void RecordDeletion(long idInTree)
         {
-            var entryId = EntryIdEncodings.GetContainerId(idInTree);
+            var containerId = EntryIdEncodings.GetContainerId(idInTree);
             if ((idInTree & (long)TermIdMask.PostingList) != 0)
             {
-                var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
+                var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, containerId);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
                 using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
@@ -1410,37 +1420,47 @@ namespace Corax
                 {
                     // since this is also encoded we've to delete frequency and container type as well
                     EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
-                    _numberOfModifications -= read;
                     for (int i = 0; i < read; i++)
                     {
-                        _deletedEntries.Add(buffer[i]);
+                        long entryId = buffer[i];
+                        if (_entryIdToOffset.TryRemove(entryId, out var internalId) == false)
+                            throw new InvalidOperationException("Unable to find entry id: " + entryId);
+
+                        _deletedEntries.Add(entryId, internalId);
                     }
+                    _numberOfModifications -= read;
                 }
             }
             else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
-                var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId);
-                _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var offset); // discard count here
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address + offset, smallSet.Length - offset);
-                var buffer = stackalloc long[1024];
-                var bufferAsSpan = new Span<long>(buffer, 1024);
+                var smallSet = Container.Get(Transaction.LowLevelTransaction, containerId);
+                // combine with existing value
+                _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address + pos, smallSet.Length - pos);
+                var output = stackalloc long[1024];
                 while (true)
                 {
-                    var read = reader.Fill(buffer, 1024);
-                    if (read == 0)
+                    var read = reader.Fill(output, 1024);
+                    if (read == 0) 
                         break;
-                    EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
+                    EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(output, 1024), read);
                     for (int i = 0; i < read; i++)
                     {
-                        _deletedEntries.Add(buffer[i]);
-                    }
+                        long entryId = output[i];
+                        if (_entryIdToOffset.TryRemove(entryId, out var internalId) == false)
+                            throw new InvalidOperationException("Unable to find entry id: " + entryId);
 
+                        _deletedEntries.Add(entryId, internalId);
+                    }
                     _numberOfModifications -= read;
                 }
             }
             else
             {
-                _deletedEntries.Add(entryId);
+                if (_entryIdToOffset.TryRemove(containerId, out var internalId) == false)
+                    throw new InvalidOperationException("Unable to find entry id: " + containerId);
+
+                _deletedEntries.Add(containerId, internalId);
                 _numberOfModifications--;
             }
         }
@@ -1477,6 +1497,8 @@ namespace Corax
             Tree entriesToSpatialTree = Transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
+            _indexMetadata.Add(Constants.IndexWriter.LastEntryIdSlice, _lastEntryId);
+            
             ProcessDeletes();
 
             Slice[] keys = Array.Empty<Slice>();

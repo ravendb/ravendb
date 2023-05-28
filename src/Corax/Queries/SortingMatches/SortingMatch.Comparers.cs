@@ -229,7 +229,11 @@ namespace Corax.Queries.SortingMatches;
         {
             for (int i = 0; i < buffer.Length; i++)
             {
-                long sortKey = CopyTermPrefix(batchTerms[i]) | (uint)i;
+                long l = 0;
+                Memory.Copy(&l, batchTerms[i].Address + 1 /* skip metadata byte */, 
+                    Math.Min(6, batchTerms[i].Length - 1));
+                l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
+                long sortKey = l | (uint)i;
                 if (isDescending)
                     sortKey = -sortKey;
                 buffer[i] = sortKey;
