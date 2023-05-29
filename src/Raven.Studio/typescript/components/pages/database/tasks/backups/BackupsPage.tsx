@@ -15,12 +15,13 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Spinner } from "reactstrap";
+import { Button, Col, Row, Spinner } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
 import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
+import AboutView from "components/common/AboutView";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -274,13 +275,36 @@ export function BackupsPage(props: BackupsPageProps) {
         <div className="flex-grow-1 flex-stretch-items">
             <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (
-                    <div className="flex-shrink-0 mb-4">
+                    <div className="flex-shrink-0 hstack gap-4 mb-4">
                         <Button
                             onClick={navigateToRestoreDatabase}
                             title="Navigate to creating a new database from a backup"
                         >
                             <Icon icon="restore-backup" /> Restore a database from a backup
                         </Button>
+                        <FlexGrow />
+                        <AboutView>
+                            <Row>
+                                <Col sm={"auto"}>
+                                    <Icon className="fs-1" icon="backup" color="info" margin="m-0" />
+                                </Col>
+                                <Col>
+                                    <p>
+                                        <strong>Backups</strong> save your data at a specific point in time and allow
+                                        you to restore your database from that point.
+                                    </p>
+                                    <p>
+                                        This Studio view enables you to create ongoing periodic backup tasks, as well as
+                                        one-time manual backups, for a particular database.
+                                    </p>
+                                    <hr />
+                                    <div className="small-label mb-2">useful links</div>
+                                    <a href="https://ravendb.net/docs/article-page/5.4/csharp/studio/database/tasks/backup-task">
+                                        <Icon icon="newtab" /> Docs - Backups
+                                    </a>
+                                </Col>
+                            </Row>
+                        </AboutView>
                     </div>
                 )}
 

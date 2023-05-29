@@ -177,6 +177,18 @@
     bottom: 0;
 }
 
+.btn .kbd {
+    font-size: 10px;
+    kbd {
+        background-color: transparent;
+        box-shadow: none;
+        color: inherit;
+        border: 1px solid;
+        border-radius: $border-radius-sm;
+        padding: 1px 4px;
+    }
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
