@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
@@ -35,6 +36,12 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             foreach (var shardResult in results.Values)
             {
+                if (shardResult.Command.StatusCode == HttpStatusCode.NotFound)
+                {
+                    //lipstick on a pig 
+                    continue;
+                }
+
                 var operationResult = shardResult.Result.Result;
 
                 switch (operationResult)
