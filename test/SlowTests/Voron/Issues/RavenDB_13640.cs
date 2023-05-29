@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void Should_properly_clear_transaction_after_begin_async_commit_failure()
         {
             var tx1 = Env.WriteTransaction();
