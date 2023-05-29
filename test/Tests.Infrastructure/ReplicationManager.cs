@@ -58,17 +58,24 @@ public partial class RavenTestBase
             }
         }
 
-        internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName, bool breakReplication)
+        internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName, ReplicationOptions options)
         {
             Dictionary<string, ReplicationInstance> instances = new();
             foreach (var server in servers)
             {
-                var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName, breakReplication);
+                var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName, options);
                 if (instance != null)
                     instances[server.ServerStore.NodeTag] = instance;
             }
 
             return new ReplicationManager(databaseName, instances);
+        }
+        
+        public class ReplicationOptions
+        {
+            public bool BreakReplicationOnStart = true;
+            public bool KeepMaxItemsCountOnDispose;
+            public int? MaxItemsCount = 1;
         }
     }
 }
