@@ -157,6 +157,21 @@ public partial class RavenTestBase
             return record.Sharding;
         }
 
+        public string GetRandomIdForShard(ShardingConfiguration config, int shardNumber)
+        {
+            var tries = 100;
+            using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            while (tries > 0)
+            {
+                var id = $"foo/{Random.Shared.Next()}";
+                if (ShardHelper.GetShardNumberFor(config, allocator, id) == shardNumber)
+                    return id;
+                tries--;
+            }
+
+            throw new InvalidOperationException($"Have no luck! couldn't randomize an id for shard {shardNumber}");
+        }
+
         public int GetBucket(ShardingConfiguration config, string id)
         {
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))

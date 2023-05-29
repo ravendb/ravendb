@@ -781,7 +781,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Smuggler)]
         public async Task CanExportAndImportCountersTwice()
         {
             var file = GetTempFileName();

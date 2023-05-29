@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Stats;
@@ -15,24 +16,27 @@ namespace Tests.Infrastructure
     {
         private readonly DocumentDatabase _database;
         public readonly string DatabaseName;
+        private readonly RavenTestBase.ReplicationManager.ReplicationOptions _options;
         private ManualResetEventSlim _replicateOnceMre;
         private bool _replicateOnceInitialized = false;
 
-        protected ReplicationInstance(string databaseName)
-        {
-            DatabaseName = databaseName;
-        }
-
-        public ReplicationInstance(DocumentDatabase database, string databaseName, bool breakReplication)
+        public ReplicationInstance(DocumentDatabase database, string databaseName, RavenTestBase.ReplicationManager.ReplicationOptions options)
         {
             _database = database;
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+            _options = options;
 
-            if (breakReplication)
+            if (options.BreakReplicationOnStart)
             {
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
                 _replicateOnceMre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
             }
+        }
+
+        public ReplicationInstance(DocumentDatabase database, string databaseName, bool breakReplication) :
+            this(database, databaseName, new RavenTestBase.ReplicationManager.ReplicationOptions { BreakReplicationOnStart = breakReplication })
+        {
+
         }
 
         public void Break()
@@ -52,7 +56,7 @@ namespace Tests.Infrastructure
 
         private void InitializeReplicateOnce()
         {
-            _database.Configuration.Replication.MaxItemsCount = 1;
+            _database.Configuration.Replication.MaxItemsCount = _options.MaxItemsCount;
 
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
             _replicateOnceMre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
@@ -108,20 +112,16 @@ namespace Tests.Infrastructure
 
         public virtual void Dispose()
         {
-            if (_replicateOnceInitialized)
-            {
-                WaitForReset();
-                _replicateOnceMre.Set();
-            }
-
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-            _database.Configuration.Replication.MaxItemsCount = null;
+            if (_options.KeepMaxItemsCountOnDispose == false)
+                _database.Configuration.Replication.MaxItemsCount = null;
+            _replicateOnceMre?.Set();
         }
 
-        internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName, bool breakReplication = false)
+        internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName, RavenTestBase.ReplicationManager.ReplicationOptions options)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Make this func private when legacy BreakReplication() is removed");
-            return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName, breakReplication);
+            return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName, options);
         }
     }
 }

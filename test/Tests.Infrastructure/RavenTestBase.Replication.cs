@@ -74,6 +74,25 @@ public partial class RavenTestBase
             return val == expected;
         }
 
+        public async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeout)
+            where T : class
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenAsyncSession(store.Database))
+                {
+                    var doc = await session.LoadAsync<T>(id);
+                    if (doc != null)
+                        return doc;
+                }
+
+                await Task.Delay(100);
+            }
+
+            return null;
+        }
+
         public Task<string> GetErrorsAsync(IDocumentStore store) => GetErrorsForClusterAsync(new List<RavenServer> { _parent.Server }, store.Database);
 
         public async Task<string> GetErrorsForClusterAsync(IEnumerable<RavenServer> servers, string database)

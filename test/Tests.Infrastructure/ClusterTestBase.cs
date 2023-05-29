@@ -28,6 +28,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -124,15 +125,37 @@ namespace Tests.Infrastructure
             Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
         }
 
-        protected async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
+        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
         {
-            var id = "marker/" + Guid.NewGuid();
-            using (var s = src.OpenSession())
+            var sharding = await Sharding.GetShardingConfigurationAsync(src);
+            if (sharding == null)
             {
-                s.Store(new { }, id);
-                s.SaveChanges();
+                var id = "marker/" + Guid.NewGuid();
+                using (var s = src.OpenSession())
+                {
+                    s.Store(new { }, id);
+                    s.SaveChanges();
+                }
+                Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
+                return;
             }
-            Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
+
+            foreach (var shardNumber in sharding.Shards.Keys)
+            {
+                var database = ShardHelper.ToShardName(src.Database, shardNumber);
+                var id = $"marker/{Guid.NewGuid()}${Sharding.GetRandomIdForShard(sharding, shardNumber)}";
+
+                using (var s = src.OpenSession(database))
+                {
+                    s.Store(new { }, id);
+                    s.SaveChanges();
+                }
+
+                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000);
+                if (r == null)
+                    WaitForUserToContinueTheTest(dst, debug: false);
+                Assert.NotNull(r);
+            }
         }
 
         protected static async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeout)
@@ -250,7 +273,7 @@ namespace Tests.Infrastructure
 
         protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
-            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database);
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database, new ReplicationManager.ReplicationOptions());
             await replication.EnsureNoReplicationLoopAsync();
         }
 

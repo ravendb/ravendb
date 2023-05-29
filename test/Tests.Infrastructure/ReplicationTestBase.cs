@@ -39,18 +39,28 @@ namespace Tests.Infrastructure
         {
         }
 
-        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(IDocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
+        public ValueTask<IReplicationManager> GetReplicationManagerAsync(IDocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
+        {
+            var options = new ReplicationManager.ReplicationOptions
+            {
+                BreakReplicationOnStart = breakReplication
+            };
+
+            return GetReplicationManagerAsync(store, databaseName, mode, options, servers);
+        }
+
+        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(IDocumentStore store, string databaseName, RavenDatabaseMode mode, ReplicationManager.ReplicationOptions options, List<RavenServer> servers = null)
         {
             if (mode == RavenDatabaseMode.Single)
-                return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() , databaseName, breakReplication);
+                return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() , databaseName, options);
 
             return await ShardedReplicationTestBase.ShardedReplicationManager.GetShardedReplicationManager(await Sharding.GetShardingConfigurationAsync(store),
-                    servers ?? GetServers(), databaseName, breakReplication);
+                servers ?? GetServers(), databaseName, options);
         }
 
         public async Task<ReplicationInstance> BreakReplication(Raven.Server.ServerWide.ServerStore from, string databaseName)
         {
-            var replication = await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName);
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName, new ReplicationManager.ReplicationOptions());
             replication.Break();
             return replication;
         }
