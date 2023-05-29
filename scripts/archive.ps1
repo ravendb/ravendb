@@ -49,7 +49,7 @@ function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName 
 
 function ZipFilesFromDir( $targetFilename, $sourceDir ) {
     $toZipGlob = [io.path]::combine($sourceDir, '*')
-    $zipFile = "$targetFilename.zip"
+    $zipFile = "$targetFilename$($env:RAVEN_ArtifactNameSuffix).zip"
     Compress-Archive -Path "$toZipGlob" -DestinationPath "$zipFile"
 }
 
@@ -61,7 +61,7 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
 
     $glob = [io.path]::combine($sourceDir, '*')
     if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue)) {
-        & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
+        & tar -C $sourceDir -cjvf "$targetFilename$($env:RAVEN_ArtifactNameSuffix).tar.bz2" .
         CheckLastExitCode
     }
     else 
@@ -69,7 +69,7 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
         $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
         & "$7za" a -ttar "$targetFilename.tar" $glob
         CheckLastExitCode
-        & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
+        & "$7za" a -tbzip2 "$targetFilename$($env:RAVEN_ArtifactNameSuffix).tar.bz2" "$targetFilename.tar"
         CheckLastExitCode
         rm "$targetFilename.tar"
         CheckLastExitCode

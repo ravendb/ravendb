@@ -242,4 +242,8 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RAVEN_BuildOptions)' != ''">
+    <DefineConstants>$(DefineConstants);$(RAVEN_BuildOptions)</DefineConstants>
+  </PropertyGroup>
 </Project>
