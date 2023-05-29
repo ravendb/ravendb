@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Tests.Infrastructure;
 using Voron;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
@@ -21,7 +21,7 @@ namespace SlowTests.Voron.Storage
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void CanRestartEmptyAsyncTransaction()
         {
             RequireFileBasedPager();
