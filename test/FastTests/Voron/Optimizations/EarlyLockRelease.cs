@@ -2,8 +2,8 @@
 using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Voron.Data.Tables;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Optimizations
@@ -14,7 +14,7 @@ namespace FastTests.Voron.Optimizations
         {
         }
 
-        [Fact]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void ShouldWork()
         {
 
