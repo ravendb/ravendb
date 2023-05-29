@@ -1,0 +1,8 @@
+﻿@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.admin-js-console-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: sizes.$gutter;
+}
