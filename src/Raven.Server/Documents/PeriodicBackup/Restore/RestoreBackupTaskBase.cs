@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestoreBackupTaskBase
     {
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Memory.GetLogger<RestoreBackupTaskBase>();
         private readonly Logger _logger;
 
         private readonly ServerStore _serverStore;
@@ -402,8 +403,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we failed to load the database after restore, we don't want to fail the entire restore process since it will delete the database if we throw here
                         result.AddError($"Failed to load the database after restore, {e}");
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to load the database '{databaseName}' after restore", e);
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to load the database '{databaseName}' after restore", e);
                     }
 
                     return result;

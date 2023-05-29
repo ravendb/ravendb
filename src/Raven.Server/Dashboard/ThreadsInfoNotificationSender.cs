@@ -15,9 +15,8 @@ public class ThreadsInfoNotificationSender : BackgroundWorkBase
     private readonly ThreadsUsage _threadsUsage;
     private DateTime _lastSentNotification = DateTime.MinValue;
 
-    public ThreadsInfoNotificationSender(string resourceName,
-        ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
-        : base(resourceName, shutdown)
+    public ThreadsInfoNotificationSender(ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
+        : base(null, shutdown)
     {
         _watchers = watchers;
         _notificationsThrottle = notificationsThrottle;

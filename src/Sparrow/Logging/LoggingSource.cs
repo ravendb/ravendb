@@ -611,7 +611,7 @@ namespace Sparrow.Logging
             return new Logger(this, source, logger);
         }
 
-        public readonly LoggersHolder LoggersHolder;
+        internal readonly LoggersHolder LoggersHolder;
         
         private void BackgroundLogger()
         {

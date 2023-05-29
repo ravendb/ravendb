@@ -14,7 +14,7 @@ namespace Sparrow.Logging
         [ThreadStatic]
         private static LogEntry _logEntry;
 
-        public Logger(SwitchLogger parent, string source, string name)
+        internal Logger(SwitchLogger parent, string source, string name)
             : this(parent.LoggingSource, source, name)
         {
             Parent = parent;
@@ -136,7 +136,7 @@ namespace Sparrow.Logging
 
         protected virtual LogMode? GetOverrideWriteMode()
         {
-            return Parent != null && Parent.IsReset() ? Parent.GetLogMode() : null;
+            return Parent == null || Parent.IsModeOverrode == false ? null : Parent.GetLogMode();
         }
     }
 }

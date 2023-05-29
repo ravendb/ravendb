@@ -10,13 +10,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Json;
+using Raven.Server.Documents.Handlers.Admin;
 using SlowTests.Issues;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
@@ -42,14 +41,7 @@ namespace SlowTests.SparrowTests
             var result = await response.Content.ReadAsStringAsync();
             var loggers = JsonConvert.DeserializeObject<JObject>(result);
             Assert.NotNull(loggers);
-            Assert.True(loggers["Loggers"]["Server"][nameof(Logger.IsInfoEnabled)].Value<bool>());
-
-            //We want the client to be able to get the result of "/admin/loggers" configure it and send it back to "/admin/loggers/set"
-            //We don't want to change generic loggers while they are common to all test
-            loggers["Loggers"].Value<JObject>().Property("Generic").Remove();
-            var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = loggers}), Encoding.UTF8, "application/json");
-            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/loggers/set", data);
-            Assert.Equal(HttpStatusCode.OK, setResponse.StatusCode);
+            Assert.Equal(nameof(LogMode.Information), loggers["Loggers"]["Server"]["LogMode"].Value<string>());
         }
 
         [Fact]
@@ -60,10 +52,15 @@ namespace SlowTests.SparrowTests
 
             var client = store.GetRequestExecutor().HttpClient;
 
-            var configuration = new {Loggers = new {Server = new {LogMode = LogMode.Information}}};
-
-            var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = configuration}), Encoding.UTF8, "application/json");
-            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/loggers/set", data);
+            var configuration = new AdminLogsHandler.SwitchLoggerConfiguration
+            {
+                Loggers = new Dictionary<string, LogMode>
+                {
+                    {"Server", LogMode.Information}
+                }
+            };
+            var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = configuration}, new StringEnumConverter()), Encoding.UTF8, "application/json");
+            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/loggers", data);
 
             Assert.Equal(HttpStatusCode.OK, setResponse.StatusCode);
             Assert.Equal(LogMode.Information, server.Logger.GetLogMode());
@@ -73,10 +70,10 @@ namespace SlowTests.SparrowTests
         public async Task LoggerToggling_WhenAddAndRemoveDatabaseAndIndex_ShouldContainsEquivalentSwitches()
         {
             using var server = GetNewServer();
-            Assert.True(server.Logger.IsReset());
+            Assert.False(server.Logger.IsModeOverrode);
 
             Assert.True(server.Logger.Loggers.TryGet("Databases", out var databasesSwitchLogger));
-            Assert.True(databasesSwitchLogger.IsReset());
+            Assert.False(databasesSwitchLogger.IsModeOverrode);
 
             string databaseName;
             using (var store = GetDocumentStore(new Options {Server = server}))
@@ -86,13 +83,13 @@ namespace SlowTests.SparrowTests
                 await index.ExecuteAsync(store);
 
                 Assert.True(databasesSwitchLogger.Loggers.TryGet(store.Database, out var databaseSwitchLogger));
-                Assert.True(databaseSwitchLogger.IsReset());
+                Assert.False(databaseSwitchLogger.IsModeOverrode);
 
                 Assert.True(databaseSwitchLogger.Loggers.TryGet("Indexes", out var indexesSwitchLogger));
-                Assert.True(indexesSwitchLogger.IsReset());
+                Assert.False(indexesSwitchLogger.IsModeOverrode);
 
                 Assert.True(indexesSwitchLogger.Loggers.TryGet(index.IndexName, out var indexSwitchLogger));
-                Assert.True(indexSwitchLogger.IsReset());
+                Assert.False(indexSwitchLogger.IsModeOverrode);
 
                 await store.Maintenance.SendAsync(new DeleteIndexOperation(index.IndexName));
                 Assert.False(indexesSwitchLogger.Loggers.TryGet(index.IndexName, out _));
@@ -102,7 +99,7 @@ namespace SlowTests.SparrowTests
         }
 
         [Fact]
-        public void LoggerToggling_WhenApplyConfiguration_ShouldSetOnlyConfiguredSwitch()
+        public void LoggerToggling_WhenApplyConfiguration_ShouldSetAllDecentConfiguredSwitches()
         {
             var name = GetTestName();
             var path = NewDataPath(forceCreateDir: true);
@@ -123,29 +120,32 @@ namespace SlowTests.SparrowTests
                 var bLogger = aLogger.GetSubSwitchLogger("B");
                 var cLogger = bLogger.GetSubSwitchLogger("C");
 
-                var configuration1 = new DynamicJsonValue {["Loggers"] = new DynamicJsonValue {["B"] = new DynamicJsonValue {["LogMode"] = LogMode.Information}}};
-                var contest = JsonOperationContext.ShortTermSingleUse();
-                var blittable = contest.ReadObject(configuration1, "JsonDeserializationServer");
-                var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(blittable);
+                var configuration = new AdminLogsHandler.SwitchLoggerConfiguration
+                {
+                    Loggers = new Dictionary<string, LogMode>
+                    {
+                        {"A.B", LogMode.Information}
+                    }
+                };
 
-
-                Assert.True(aLogger.IsReset());
+                Assert.False(aLogger.IsModeOverrode);
                 Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-                Assert.True(cLogger.IsReset());
-                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-
-                Assert.True(bLogger.IsReset());
-                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-
-                configuration.Apply(aLogger);
-
-                Assert.True(aLogger.IsReset());
-                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-                Assert.True(cLogger.IsReset());
+                Assert.False(cLogger.IsModeOverrode);
                 Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
 
-                Assert.False(bLogger.IsReset());
+                Assert.False(bLogger.IsModeOverrode);
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+
+                var (configurationPath, mode) = configuration.Loggers.First();
+                SwitchLoggerConfigurationHelper.ApplyConfiguration(aLogger, SwitchLoggerConfigurationHelper.IterateSwitches(configurationPath).Skip(1), mode);
+
+                Assert.False(aLogger.IsModeOverrode);
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                
+                Assert.True(bLogger.IsModeOverrode);
                 Assert.True(bLogger.IsInfoEnabled);
+                Assert.True(cLogger.IsModeOverrode);
+                Assert.True(cLogger.IsOperationsEnabled || cLogger.IsInfoEnabled);
             }
             finally
             {
@@ -175,7 +175,7 @@ namespace SlowTests.SparrowTests
                 aLogger.SetLoggerMode(LogMode.Information);
                 var bLogger = aLogger.GetSubSwitchLogger("B");
 
-                Assert.False(bLogger.IsReset());
+                Assert.True(bLogger.IsModeOverrode);
                 Assert.True(bLogger.IsInfoEnabled);
             }
             finally
@@ -207,27 +207,26 @@ namespace SlowTests.SparrowTests
                 var bLogger = aLogger.GetSubSwitchLogger("B");
                 var cLogger = bLogger.GetSubSwitchLogger("C");
 
-                Assert.False(aLogger.IsReset());
+                Assert.True(aLogger.IsModeOverrode);
                 Assert.True(aLogger.IsInfoEnabled);
-                Assert.False(bLogger.IsReset());
+                Assert.True(bLogger.IsModeOverrode);
                 Assert.True(bLogger.IsInfoEnabled);
-                Assert.False(cLogger.IsReset());
+                Assert.True(cLogger.IsModeOverrode);
                 Assert.True(cLogger.IsInfoEnabled);
 
-                aLogger.Reset(true);
+                aLogger.ResetRecursively();
 
-                Assert.True(aLogger.IsReset());
+                Assert.False(aLogger.IsModeOverrode);
                 Assert.Equal(LogMode.None, aLogger.GetLogMode());
-                Assert.True(bLogger.IsReset());
+                Assert.False(bLogger.IsModeOverrode);
                 Assert.Equal(LogMode.None, bLogger.GetLogMode());
-                Assert.True(cLogger.IsReset());
+                Assert.False(cLogger.IsModeOverrode);
                 Assert.Equal(LogMode.None, cLogger.GetLogMode());
             }
             finally
             {
                 loggingSource.EndLogging();
             }
-
         }
 
         [Fact]

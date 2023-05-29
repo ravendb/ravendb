@@ -2,9 +2,10 @@
 using System.IO;
 using System.IO.Compression;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
+using NCrontab.Advanced.Extensions;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
@@ -244,7 +245,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        private IDisposable AcquireLockAndGetLoggers(out SwitchLogger generic, out SwitchLogger server)
+        private IDisposable AcquireLocksAndGetLoggers(out SwitchLogger generic, out SwitchLogger server)
         {
             var genericLogger = LoggingSource.Instance.LoggersHolder.Generic;
             var serverLogger = Server.Logger;
@@ -263,82 +264,72 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/loggers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllLoggers()
         {
-            using (AcquireLockAndGetLoggers(out var generic, out var server))
+            using (AcquireLocksAndGetLoggers(out var generic, out var server))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
-
-                lock (generic)
-                lock (server)
+                
+                var djv = new DynamicJsonValue
                 {
-                    var djv = new DynamicJsonValue
-                    {
-                        ["IsInfoEnabled"] = LoggingSource.Instance.IsInfoEnabled,
-                        ["IsOperationsEnabled"] = LoggingSource.Instance.IsOperationsEnabled,
-                        ["Loggers"] = new DynamicJsonValue {[generic.Name] = generic.ToJson(), [server.Name] = server.ToJson()}
-                    };
-                    var json = context.ReadObject(djv, "logs/loggers");
-                    writer.WriteObject(json);
-                }
+                    ["LogMode"] = LoggingSource.Instance.LogAvailability.GetMode(),
+                    ["Loggers"] = new DynamicJsonValue {[generic.Name] = generic.ToJson(), [server.Name] = server.ToJson()}
+                };
+                var json = context.ReadObject(djv, "logs/loggers");
+                writer.WriteObject(json);
             }
         }
 
         [RavenAction("/admin/loggers/reset/all", "GET", AuthorizationStatus.Operator)]
         public Task ResetAllLoggers()
         {
-            using (AcquireLockAndGetLoggers(out var generic, out var server))
+            using (AcquireLocksAndGetLoggers(out var generic, out var server))
             {
-                generic.Reset(true);
-                server.Reset(true);
+                generic.ResetRecursively();
+                server.ResetRecursively();
                 return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/admin/loggers/set", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/loggers", "POST", AuthorizationStatus.Operator)]
         public async Task SetLoggerMode()
         {
-            using (AcquireLockAndGetLoggers(out var generic, out var server))
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var input = await ctx.ReadForMemoryAsync(RequestBodyStream(), "SwitchLoggerConfiguration");
                 if (input.TryGet("Configuration", out BlittableJsonReaderObject json) == false)
                     ThrowRequiredPropertyNameInRequest("Configuration");
-
+            
                 var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(json);
-                if (configuration.Loggers.TryGetValue(generic.Name, out var genericBlittable))
+                using (AcquireLocksAndGetLoggers(out var generic, out var server))
                 {
-                    var genericConfiguration = JsonDeserializationServer.SwitchLoggerConfiguration(genericBlittable);
-                    genericConfiguration.Apply(generic);
-                }
+                    foreach (var (path, mode) in configuration.Loggers)
+                    {
+                        var first = SwitchLoggerConfigurationHelper.IterateSwitches(path).FirstOrDefault();
+                        if(first.IsNullOrWhiteSpace())
+                            throw new InvalidOperationException("Empty path is not allowed");
 
-                if (configuration.Loggers.TryGetValue(server.Name, out var serverBlittable))
-                {
-                    var serverConfiguration = JsonDeserializationServer.SwitchLoggerConfiguration(serverBlittable);
-                    serverConfiguration.Apply(server);
+                        SwitchLogger loggerSwitch;
+                        switch (first)
+                        {
+                            case "Server" :
+                                loggerSwitch = server;
+                                break;
+                            case "Generic" :
+                                loggerSwitch = generic;
+                                break;
+                            default:
+                                continue;
+                        }
+
+                        SwitchLoggerConfigurationHelper.ApplyConfiguration(loggerSwitch, SwitchLoggerConfigurationHelper.IterateSwitches(path).Skip(1), mode);
+                    }
                 }
             }
         }
 
         internal class SwitchLoggerConfiguration
         {
-            public LogMode? LogMode { get; set; }
-            public Dictionary<string, BlittableJsonReaderObject> Loggers { get; set; }
-
-            public void Apply(SwitchLogger switchLogger)
-            {
-                if (LogMode.HasValue)
-                    switchLogger.SetLoggerMode(LogMode.Value);
-
-                if (Loggers != null)
-                {
-                    foreach ((string name, BlittableJsonReaderObject blittable) in Loggers)
-                    {
-                        var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(blittable);
-                        if (switchLogger.Loggers.TryGet(name, out var descendant))
-                            configuration.Apply(descendant);
-                    }
-                }
-            }
+            public Dictionary<string, LogMode> Loggers { get; set; }
         }
     }
 }

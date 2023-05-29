@@ -30,6 +30,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
