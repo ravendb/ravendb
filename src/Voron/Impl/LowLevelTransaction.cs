@@ -657,6 +657,61 @@ namespace Voron.Impl
             return p;
         }
 
+        public Page GetPageHeaderForDebug(long pageNumber)
+        {
+            if (_disposed != TxState.None)
+                ThrowObjectDisposed();
+
+            return GetPageHeaderForDebugInternal(pageNumber);
+        }
+
+        private Page GetPageHeaderForDebugInternal(long pageNumber)
+        {
+            // Check if we can hit the lowest level locality cache.
+            Page p;
+            PageFromScratchBuffer value;
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
+            {
+                Debug.Assert(value != null);
+                PagerState state = null;
+                if (_scratchPagerStates != null)
+                {
+                    var lastUsed = _lastScratchFileUsed;
+                    if (lastUsed.FileNumber == value.ScratchFileNumber)
+                    {
+                        state = lastUsed.State;
+                    }
+                    else
+                    {
+                        state = _scratchPagerStates[value.ScratchFileNumber];
+                        _lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
+                    }
+                }
+
+                p = _env.ScratchBufferPool.ReadPageHeaderForDebug(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
+            }
+            else
+            {
+                var pageFromJournal = _journal.ReadPageHeaderForDebug(this, pageNumber, _scratchPagerStates);
+                if (pageFromJournal != null)
+                {
+                    p = pageFromJournal.Value;
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                }
+                else
+                {
+                    p = new Page(DataPager.AcquirePagePointerHeaderForDebug(this, pageNumber));
+
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+
+                    // since we are getting only the page header, we are skipping the page validation by checksum (for non-encrypted)
+                }
+            }
+
+            return p;
+        }
+
         public void TryReleasePage(long pageNumber)
         {
             if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out _))
