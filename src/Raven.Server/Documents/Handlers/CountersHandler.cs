@@ -385,13 +385,18 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var cgd in _counterGroups)
                 {
+                    var etag = _database.DocumentsStorage.GenerateNextEtag();
+                    var localCv = _database.DocumentsStorage.GetNewChangeVector(context, etag);
                     using (cgd.Values)
+                    using (var lazyCv = context.GetLazyString(localCv))
                     {
+                        cgd.ChangeVector = lazyCv;
                         PutCounters(context, cgd);
                     }
                 }
 
                 UpdateDocumentsMetadata(context);
+
 
                 return _counterGroups.Count;
             }

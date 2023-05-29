@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -789,6 +790,70 @@ namespace SlowTests.Client.Counters
                 }
 
                 EnsureReplicating(storeA, storeB);
+            }
+        }
+
+        [Fact]
+        public async Task CanImportAndReplicateCounters()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                using (var intermediate = Sharding.GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.CountersFor("users/1").Increment("likes", 100);
+                        session.CountersFor("users/1").Increment("dislikes", 200);
+                        session.CountersFor("users/2").Increment("downloads", 500);
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await intermediate.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    await SetupReplicationAsync(intermediate, store2);
+                    await EnsureReplicatingAsync(intermediate, store2);
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(3, stats.CountOfDocuments);
+                    Assert.Equal(2, stats.CountOfCounterEntries);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var dic = await session.CountersFor(user1).GetAllAsync();
+                        Assert.Equal(2, dic.Count);
+                        Assert.Equal(100, dic["likes"]);
+                        Assert.Equal(200, dic["dislikes"]);
+
+                        var val = await session.CountersFor(user2).GetAsync("downloads");
+                        Assert.Equal(500, val);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 
