@@ -47,7 +47,7 @@ namespace Voron.Impl.Paging
             var mmapOptions = copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
             if (DeleteOnClose)
                 mmapOptions |= MmapOptions.DeleteOnClose;
-
+            
             var rc = rvn_create_and_mmap64_file(
                 file.FullPath,
                 initialFileSize.Value,
@@ -57,32 +57,48 @@ namespace Voron.Impl.Paging
                 out _totalAllocationSize,
                 out var errorCode);
 
-            if (rc != FailCodes.Success)
+            try
+            {
+                if (rc != FailCodes.Success)
+                {
+                    try
+                    {
+                        PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_and_mmap64_file failed on {rc} for '{file.FullPath}'");
+                    }
+                    catch (DiskFullException dfEx)
+                    {
+                        var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(file.FullPath);
+                        throw new DiskFullException(file.FullPath, initialFileSize.Value, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                    }
+                }
+
+                NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+
+                NativeMemory.RegisterFileMapping(FileName.FullPath, new IntPtr(baseAddress), _totalAllocationSize, GetAllocatedInBytes);
+
+                var allocationInfo = new PagerState.AllocationInfo
+                {
+                    BaseAddress = (byte*)baseAddress,
+                    Size = _totalAllocationSize,
+                    MappedFile = null
+                };
+            
+                var pager = new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, allocationInfo);
+                SetPagerState(pager);
+            }
+            catch
             {
                 try
                 {
-                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_and_mmap64_file failed on {rc} for '{file.FullPath}'");
+                    Dispose();
                 }
-                catch (DiskFullException dfEx)
+                catch
                 {
-                    var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(file.FullPath);
-                    throw new DiskFullException(file.FullPath, initialFileSize.Value, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                    // ignored
                 }
+
+                throw;
             }
-
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
-            NativeMemory.RegisterFileMapping(FileName.FullPath, new IntPtr(baseAddress), _totalAllocationSize, GetAllocatedInBytes);
-
-            var allocationInfo = new PagerState.AllocationInfo
-            {
-                BaseAddress = (byte*)baseAddress,
-                Size = _totalAllocationSize,
-                MappedFile = null
-            };
-            
-            var pager = new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, allocationInfo);
-            SetPagerState(pager);
         }
 
         protected override bool CanPrefetchQuery()

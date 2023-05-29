@@ -60,28 +60,44 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when opening " + file);
             }
 
-            _totalAllocationSize = GetFileSize();
-
-            if (_totalAllocationSize == 0 && initialFileSize.HasValue)
+            try
             {
-                _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
+                _totalAllocationSize = GetFileSize();
+
+                if (_totalAllocationSize == 0 && initialFileSize.HasValue)
+                {
+                    _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
+                }
+                if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
+                    _totalAllocationSize != GetFileSize())
+                {
+                    _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
+                    PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file.FullPath);
+                }
+
+                if (_isSyncDirAllowed && Syscall.SyncDirectory(file.FullPath) == -1)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    Syscall.ThrowLastError(err, "sync dir for " + file);
+                }
+
+                NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+
+                SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
             }
-            if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
-                _totalAllocationSize != GetFileSize())
+            catch
             {
-                _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file.FullPath);
+                try
+                {
+                    Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                throw;
             }
-
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(file.FullPath) == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "sync dir for " + file);
-            }
-
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
-            SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
         }
 
         private static void ThrowNotSupportedOption(string file)
