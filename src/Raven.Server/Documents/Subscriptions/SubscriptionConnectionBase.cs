@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Subscriptions
         public Task SubscriptionConnectionTask { get; set; }
         private readonly MemoryStream _buffer = new();
 
-        private DisposeOnce<SingleAttempt> _disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
 
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         internal class TestingStuff
         {
-            internal AsyncManualResetEvent PauseConnection;
+            public AsyncManualResetEvent PauseConnection;
         }
 
         protected SubscriptionConnectionBase(AbstractSubscriptionStorage subscriptions, TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer,

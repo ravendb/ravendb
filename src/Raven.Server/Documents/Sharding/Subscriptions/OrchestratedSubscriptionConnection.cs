@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private SubscriptionConnectionsStateOrchestrator _state;
         private readonly ShardedDatabaseContext _databaseContext;
         private OrchestratedSubscriptionProcessor _processor;
-        private IDisposable _tokenRegisterDisposable;
+        private readonly IDisposable _tokenRegisterDisposable;
 
         public OrchestratedSubscriptionConnection(ServerStore serverStore, ShardedDatabaseContext.ShardedSubscriptionsStorage subscriptions,
             TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
