@@ -23,12 +23,12 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     private readonly HashSet<string> _dbIdToRemove;
     private SubscriptionConnectionsStateForShard _state;
 
-    public SubscriptionConnectionForShard(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database) : 
+    public SubscriptionConnectionForShard(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database) :
         base(serverStore, tcpConnection, tcpConnectionDisposable, bufferToCopy, database)
     {
-        _shardedDatabase = tcpConnection.DocumentDatabase as ShardedDocumentDatabase;
+        _shardedDatabase = (ShardedDocumentDatabase)tcpConnection.DocumentDatabase;
         ShardName = tcpConnection.DocumentDatabase.Name;
-        _dbIdToRemove = new HashSet<string>() { _shardedDatabase.ShardedDatabaseId };
+        _dbIdToRemove = new HashSet<string> { _shardedDatabase.ShardedDatabaseId };
     }
 
     protected override StatusMessageDetails GetDefault()
@@ -40,7 +40,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             SubscriptionType = "sharded subscription"
         };
     }
-    
+
     protected override DynamicJsonValue AcceptMessage()
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 need to ensure the sharded workers has the same sub definition. by sending my raft index?");
@@ -68,7 +68,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     {
         if (connection is SubscriptionConnectionForShard shardConnection)
         {
-            var database = connection.TcpConnection.DocumentDatabase as ShardedDocumentDatabase;
+            var database = (ShardedDocumentDatabase)connection.TcpConnection.DocumentDatabase;
             var server = database.ServerStore;
 
             if (connection.Subscription.Revisions)
@@ -89,7 +89,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
 
         await base.UpdateStateAfterBatchSentAsync(context, vector.Order);
 
-        var p = Processor as ShardedDocumentsDatabaseSubscriptionProcessor;
+        var p = (ShardedDocumentsDatabaseSubscriptionProcessor)Processor;
         if (p.Skipped != null)
         {
             for (int i = CurrentBatch.Count - 1; i >= 0; i--)
