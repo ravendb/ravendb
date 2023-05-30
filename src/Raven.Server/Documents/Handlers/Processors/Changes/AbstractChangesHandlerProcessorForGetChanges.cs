@@ -104,7 +104,9 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
             {
                 var segments = new[] { segment1, segment2 };
                 int index = 0;
+#pragma warning disable CA2012
                 var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, token.Token);
+#pragma warning restore CA2012
                 var jsonParserState = new JsonParserState();
                 using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                 {
@@ -115,7 +117,9 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 
                     parser.SetBuffer(segments[index], 0, result.Count);
                     index++;
+#pragma warning disable CA2012
                     receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, token.Token);
+#pragma warning restore CA2012
 
                     while (true)
                     {
@@ -132,7 +136,9 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                                 parser.SetBuffer(segments[index], 0, result.Count);
                                 if (++index >= segments.Length)
                                     index = 0;
+#pragma warning disable CA2012
                                 receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, token.Token);
+#pragma warning restore CA2012
                             }
 
                             builder.FinalizeDocument();

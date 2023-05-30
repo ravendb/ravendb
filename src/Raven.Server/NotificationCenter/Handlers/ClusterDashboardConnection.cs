@@ -70,7 +70,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     var segments = new[] { segment1, segment2 };
                     int index = 0;
+#pragma warning disable CA2012
                     var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
+#pragma warning restore CA2012
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(_readContext, jsonParserState, "cluster-dashboard"))
                     {
@@ -79,7 +81,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                         
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
+#pragma warning disable CA2012
                         receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
+#pragma warning restore CA2012
 
                         while (true)
                         {
@@ -98,7 +102,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     if (++index >= segments.Length)
                                         index = 0;
 
+#pragma warning disable CA2012
                                     receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
+#pragma warning restore CA2012
                                 }
 
                                 builder.FinalizeDocument();

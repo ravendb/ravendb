@@ -154,11 +154,11 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanModifyRespectingUnitOfWork()
+        public async Task CanModifyRespectingUnitOfWork()
         {
             var ctx = JsonOperationContext.ShortTermSingleUse();
             var ms = new MemoryStream(Encoding.UTF8.GetBytes("{\"item\": {\"age\": 2}}"));
-            var obj = ctx.ReadForMemoryAsync(ms, "fo").Result;
+            var obj = await ctx.ReadForMemoryAsync(ms, "fo");
             obj.TryGet("item", out BlittableJsonReaderObject b);
 
             b.Modifications = new DynamicJsonValue(b) { ["name"] = "fa" };

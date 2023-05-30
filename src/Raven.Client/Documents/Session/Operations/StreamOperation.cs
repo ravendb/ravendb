@@ -288,7 +288,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             public bool MoveNext()
             {
-                return AsyncHelpers.RunSync(MoveNextAsync().AsTask);
+                var moveNext = MoveNextAsync().AsTask();
+                return AsyncHelpers.RunSync(() => moveNext);
             }
 
             public void Reset()
@@ -304,7 +305,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             public void Dispose()
             {
-                AsyncHelpers.RunSync(DisposeAsync().AsTask);
+                var dispose = DisposeAsync().AsTask();
+                AsyncHelpers.RunSync(() => dispose);
             }
         }
 

@@ -32,11 +32,8 @@ namespace Raven.Client.Documents.Session
 
             public void Dispose()
             {
-                var dispose = DisposeAsync();
-                if (dispose.IsCompletedSuccessfully)
-                    return;
-
-                AsyncHelpers.RunSync(() => dispose.AsTask());
+                var dispose = DisposeAsync().AsTask();
+                AsyncHelpers.RunSync(() => dispose);
             }
 
             public ValueTask DisposeAsync()

@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<RuleSet Name="Rules for RavenDB" Description="Code analysis rules for RavenDB Client." ToolsVersion="15.0">
+<RuleSet Name="Rules for RavenDB" Description="Code analysis rules for RavenDB Client." ToolsVersion="17.0">
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.NetAnalyzers" RuleNamespace="Microsoft.CodeAnalysis.NetAnalyzers">
+    <Rule Id="CA2012" Action="Warning" />
+  </Rules>
   <Rules AnalyzerId="Raven.CodeAnalysis" RuleNamespace="Raven.CodeAnalysis">
     <Rule Id="RDB0010" Action="None" />
   </Rules>

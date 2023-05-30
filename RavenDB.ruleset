@@ -1,5 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<RuleSet Name="Rules for RavenDB" Description="Code analysis rules for RavenDB." ToolsVersion="15.0">
+<RuleSet Name="Rules for RavenDB" Description="Code analysis rules for RavenDB." ToolsVersion="17.0">
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp.Analyzers" RuleNamespace="Microsoft.CodeAnalysis.CSharp.Analyzers">
+    <Rule Id="RS1022" Action="None" />
+  </Rules>
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.NetAnalyzers" RuleNamespace="Microsoft.CodeAnalysis.NetAnalyzers">
+    <Rule Id="CA2012" Action="Warning" />
+  </Rules>
+  <Rules AnalyzerId="Raven.CodeAnalysis" RuleNamespace="Raven.CodeAnalysis">
+    <Rule Id="RDB0001" Action="None" />
+    <Rule Id="RDB0002" Action="None" />
+    <Rule Id="RDB0003" Action="None" />
+    <Rule Id="RDB0004" Action="None" />
+    <Rule Id="RDB0005" Action="None" />
+    <Rule Id="RDB0010" Action="None" />
+  </Rules>
   <Rules AnalyzerId="xunit.analyzers" RuleNamespace="xunit.analyzers">
     <Rule Id="xUnit1000" Action="None" />
     <Rule Id="xUnit1001" Action="None" />
@@ -46,16 +60,5 @@
     <Rule Id="xUnit2015" Action="None" />
     <Rule Id="xUnit2016" Action="None" />
     <Rule Id="xUnit2017" Action="None" />
-  </Rules>
-  <Rules AnalyzerId="Raven.CodeAnalysis" RuleNamespace="Raven.CodeAnalysis">
-    <Rule Id="RDB0001" Action="None" />
-    <Rule Id="RDB0002" Action="None" />
-    <Rule Id="RDB0003" Action="None" />
-    <Rule Id="RDB0004" Action="None" />
-    <Rule Id="RDB0005" Action="None" />
-    <Rule Id="RDB0010" Action="None" />
-  </Rules>
-  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp.Analyzers" RuleNamespace="Microsoft.CodeAnalysis.CSharp.Analyzers">
-    <Rule Id="RS1022" Action="None" /> <!-- https://github.com/dotnet/roslyn-analyzers/issues/1803 -->
   </Rules>
 </RuleSet>
