@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Text;
 using Raven.Server.Documents.Queries.AST;
@@ -6,7 +6,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
-    public class QueryScanner
+    public struct QueryScanner
     {
         private int _pos;
         private string _q;
@@ -14,10 +14,10 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _tokenStart, _tokenLength;
         public string Input => _q;
 
-        public StringSegment Token => new StringSegment(_q, _tokenStart, _tokenLength);
+        public StringSegment Token => new (_q, _tokenStart, _tokenLength);
 
         public int Position => _pos;
-        public string CurrentToken => _q.Substring(_tokenStart, _tokenLength);
+        public ReadOnlySpan<char> CurrentToken => _q.AsSpan(_tokenStart, _tokenLength);
 
         public override string ToString()
         {

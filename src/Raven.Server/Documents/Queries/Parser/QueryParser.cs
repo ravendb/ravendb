@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private string _fromAlias;
         public const string TimeSeries = "timeseries";
 
-        public QueryScanner Scanner = new QueryScanner();
+        public QueryScanner Scanner;
 
         public void Init(string q)
         {
