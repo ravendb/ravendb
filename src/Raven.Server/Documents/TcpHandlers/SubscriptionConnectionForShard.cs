@@ -121,7 +121,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     {
         var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
         var state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateForShard(DatabaseName, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
-        _subscriptionConnectionsState = state;
+        State = state;
         _state = (SubscriptionConnectionsStateForShard)state;
         return state;
     }

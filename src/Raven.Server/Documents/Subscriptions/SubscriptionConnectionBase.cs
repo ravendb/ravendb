@@ -38,8 +38,8 @@ namespace Raven.Server.Documents.Subscriptions
         where TIncludesCommand : AbstractIncludesCommand
     {
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
-        private static readonly StringSegment DataSegment = new StringSegment("Data");
-        private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
+        private static readonly StringSegment DataSegment = new("Data");
+        private static readonly StringSegment ExceptionSegment = new("Exception");
 
         public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
 
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal SubscriptionWorkerOptions _options;
         internal readonly Logger _logger;
 
-        public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new ConcurrentQueue<string>();
+        public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new();
         internal bool _isDisposed;
         public SubscriptionWorkerOptions Options => _options;
         public SubscriptionException ConnectionException;
@@ -71,18 +71,18 @@ namespace Raven.Server.Documents.Subscriptions
         public readonly SubscriptionStatsCollector Stats;
 
         public Task SubscriptionConnectionTask { get; set; }
-        private MemoryStream _buffer = new MemoryStream();
+        private readonly MemoryStream _buffer = new();
 
         protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
 
-        internal TestingStuff ForTestingPurposes;
+        private TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff();
         }
 
         internal class TestingStuff
@@ -143,8 +143,8 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     _buffer.SetLength(0);
 
-                    if (ForTestingPurposes?.PauseConnection != null)
-                        await ForTestingPurposes.PauseConnection.WaitAsync();
+                    if (_forTestingPurposes?.PauseConnection != null)
+                        await _forTestingPurposes.PauseConnection.WaitAsync();
 
                     var inProgressBatchStats = Stats.CreateInProgressBatchStats();
 
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Subscriptions
                                     }
 
                                     AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
-                                        $"Acknowledging docs processing progress without sending any documents to client."));
+                                        "Acknowledging docs processing progress without sending any documents to client."));
 
                                     Stats.UpdateBatchPerformanceStats(0, false);
 
@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             static void FillNodesAvailabilityReportForState(SubscriptionState subscription, DatabaseTopology topology,
-                Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
+                Dictionary<string, string> databaseTopologyAvailabilityExplanation, List<string> stateGroup, string stateName)
             {
                 foreach (var nodeInGroup in stateGroup)
                 {
@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.Subscriptions
                         rehabMessage = rehabMessage + ". Reason:" + demotionReason;
                     }
 
-                    databaseTopologyAvailabilityExplenation[nodeInGroup] = rehabMessage;
+                    databaseTopologyAvailabilityExplanation[nodeInGroup] = rehabMessage;
                 }
             }
         }
@@ -572,14 +572,14 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (SupportedFeatures.Subscription.Includes == false)
             {
-                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
+                if (Subscription.Includes is { Length: > 0 })
                     throw new SubscriptionInvalidStateException(
                         $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
             }
 
             if (SupportedFeatures.Subscription.CounterIncludes == false)
             {
-                if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
+                if (Subscription.CounterIncludes is { Length: > 0 })
                     throw new SubscriptionInvalidStateException(
                         $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
             }
@@ -743,7 +743,7 @@ namespace Raven.Server.Documents.Subscriptions
                             [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                         });
                         break;
-                    case RachisApplyException commandExecution when commandExecution.InnerException is SubscriptionException:
+                    case RachisApplyException { InnerException: SubscriptionException } commandExecution:
                         await ReportExceptionToClientAsync(commandExecution.InnerException, recursionDepth - 1);
                         break;
                     default:
@@ -990,32 +990,14 @@ namespace Raven.Server.Documents.Subscriptions
             writer.WriteEndObject();
         }
 
-        internal static async Task<bool> FlushBatchIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer,
-            MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int docsToFlush,
-            CancellationToken token = default)
-        {
-            // perform flush for current batch after 1000ms of running or 1 MB
-            if (buffer.Length < Constants.Size.Megabyte && sendingCurrentBatchStopwatch.ElapsedMilliseconds < 1000)
-                return false;
-
-            await FlushDocsToClientAsync(subscriptionId, writer, buffer, tcpConnection, metrics, logger, docsToFlush, endOfBatch: false, token: token);
-            if (logger.IsInfoEnabled)
-            {
-                logger.Info($"Finished flushing a batch with {docsToFlush} documents for subscription {subscriptionId}");
-            }
-
-            return true;
-        }
-
         internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer,
             TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int flushedDocs, bool endOfBatch = false,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
 
-            if (logger != null && logger.IsInfoEnabled)
-                logger.Info(
-                    $"Flushing {flushedDocs} documents for subscription {subscriptionId} sending to {tcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
+            if (logger is { IsInfoEnabled: true })
+                logger.Info($"Flushing {flushedDocs} documents for subscription {subscriptionId} sending to {tcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
 
             await writer.FlushAsync(token);
             var bufferSize = buffer.Length;
