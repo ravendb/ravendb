@@ -48,8 +48,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnection : SubscriptionConnectionBase<DatabaseIncludesCommandImpl>
     {
-        private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
-
         private readonly DocumentDatabase _database;
 
         public long CurrentBatchId;
@@ -63,13 +61,13 @@ namespace Raven.Server.Documents.TcpHandlers
             CurrentBatchId = ISubscriptionConnection.NonExistentBatch;
         }
 
-        protected SubscriptionConnectionsState _subscriptionConnectionsState;
+        protected SubscriptionConnectionsState State;
 
         public SubscriptionConnectionsState GetSubscriptionConnectionState()
         {
             var subscriptions = _database.SubscriptionStorage.Subscriptions;
-            _subscriptionConnectionsState =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
-            return _subscriptionConnectionsState;
+            State =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+            return State;
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
@@ -382,7 +380,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
-        public override Task SendNoopAckAsync() => _subscriptionConnectionsState.SendNoopAck();
+        public override Task SendNoopAckAsync() => State.SendNoopAck();
 
         protected override bool FoundAboutMoreDocs()
         {
@@ -391,7 +389,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var p = Processor as DatabaseSubscriptionProcessor;
                 var globalEtag = p.GetLastItemEtag(context, Subscription.Collection);
-                return globalEtag > _subscriptionConnectionsState.GetLastEtagSent();
+                return globalEtag > State.GetLastEtagSent();
             }
         }
 
@@ -423,8 +421,8 @@ namespace Raven.Server.Documents.TcpHandlers
             LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
             CurrentBatchId = await Processor.RecordBatch(lastChangeVectorSentInThisBatch);
 
-            _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
-                _subscriptionConnectionsState.LastChangeVectorSent,
+            State.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
+                State.LastChangeVectorSent,
                 lastChangeVectorSentInThisBatch);
         }
 
