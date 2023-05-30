@@ -29,8 +29,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
-using Voron.Global;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Subscriptions
         public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
 
         private readonly AbstractSubscriptionStorage _subscriptions;
-        protected readonly ServerStore _serverStore;
+        protected readonly ServerStore ServerStore;
         private readonly IDisposable _tcpConnectionDisposable;
         internal readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
 
@@ -52,7 +52,6 @@ namespace Raven.Server.Documents.Subscriptions
         internal readonly Logger _logger;
 
         public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new();
-        internal bool _isDisposed;
         public SubscriptionWorkerOptions Options => _options;
         public SubscriptionException ConnectionException;
         public long SubscriptionId { get; set; }
@@ -72,6 +71,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public Task SubscriptionConnectionTask { get; set; }
         private readonly MemoryStream _buffer = new();
+
+        private DisposeOnce<SingleAttempt> _disposeOnce;
 
         protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
 
@@ -95,7 +96,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             TcpConnection = tcpConnection;
             _subscriptions = subscriptions;
-            _serverStore = serverStore;
+            ServerStore = serverStore;
             _copiedBuffer = memoryBuffer.Clone(serverStore.ContextPool);
             _tcpConnectionDisposable = tcpConnectionDisposable;
 
@@ -107,8 +108,9 @@ namespace Raven.Server.Documents.Subscriptions
 
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
             Stats = new SubscriptionStatsCollector();
-        }
 
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+        }
 
         private static string ExtractDatabaseNameForLogging(TcpConnectionOptions tcpConnection)
         {
@@ -237,9 +239,9 @@ namespace Raven.Server.Documents.Subscriptions
                     int docsToFlush = 0;
                     string lastChangeVectorSentInThisBatch = null;
 
-                    using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, _buffer))
-                    using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
+                    using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
                     using (clusterOperationContext.OpenReadTransaction())
                     {
                         CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -421,7 +423,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
             catch (IOException)
             {
-                if (_isDisposed == false)
+                if (_disposeOnce.Disposed == false)
                     throw;
 
                 return new SubscriptionConnectionClientMessage { ChangeVector = null, Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification };
@@ -456,35 +458,35 @@ namespace Raven.Server.Documents.Subscriptions
         public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long? registerConnectionDurationInTicks) =>
             await AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks, CancellationTokenSource.Token);
 
-        protected virtual RawDatabaseRecord GetRecord(ClusterOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
+        protected virtual RawDatabaseRecord GetRecord(ClusterOperationContext context) => ServerStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
 
         private async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
         {
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
 
-            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             using (var record = GetRecord(context))
             {
 #pragma warning disable CS0618
-                var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
+                var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
 #pragma warning restore CS0618
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
-                if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
+                if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
-                        $"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
+                        $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
 
-                if (whoseTaskIsIt != _serverStore.NodeTag)
+                if (whoseTaskIsIt != ServerStore.NodeTag)
                 {
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
 
                     string generalState;
-                    RachisState currentState = _serverStore.Engine.CurrentState;
+                    RachisState currentState = ServerStore.Engine.CurrentState;
                     if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
                     {
                         generalState =
-                            $"Current node ({_serverStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
+                            $"Current node ({ServerStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
                     }
                     else
                     {
@@ -506,7 +508,7 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mentor node";
                             }
-                            else if (whoseTaskIsIt != null && whoseTaskIsIt != member)
+                            else if (whoseTaskIsIt != member)
                             {
                                 databaseTopologyAvailabilityExplanation[member] =
                                     "Is a valid member of the topology, but not chosen to be the node running the subscription";
@@ -524,7 +526,7 @@ namespace Raven.Server.Documents.Subscriptions
                     }
 
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
+                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({ServerStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
                         databaseTopologyAvailabilityExplanation, id)
                     { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
@@ -541,15 +543,9 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 foreach (var nodeInGroup in stateGroup)
                 {
-                    var rehabMessage = string.Empty;
-                    if (subscription.MentorNode == nodeInGroup)
-                    {
-                        rehabMessage = $"Although this node is a mentor, it's state is {stateName} and can't run the subscription";
-                    }
-                    else
-                    {
-                        rehabMessage = $"Node's state is {stateName}, can't run subscription";
-                    }
+                    string rehabMessage = subscription.MentorNode == nodeInGroup
+                        ? $"Although this node is a mentor, it's state is {stateName} and can't run the subscription"
+                        : $"Node's state is {stateName}, can't run subscription";
 
                     if (topology.DemotionReasons.TryGetValue(nodeInGroup, out var demotionReason))
                     {
@@ -567,7 +563,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
             {
-                _serverStore.LicenseManager.AssertCanAddConcurrentDataSubscriptions();
+                ServerStore.LicenseManager.AssertCanAddConcurrentDataSubscriptions();
             }
 
             if (SupportedFeatures.Subscription.Includes == false)
@@ -673,14 +669,14 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 try
                                 {
-                                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                                     using (ctx.OpenReadTransaction())
                                     {
                                         // check that the subscription exists on AppropriateNode
-                                        var clusterTopology = _serverStore.GetClusterTopology(ctx);
+                                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
                                         using (var requester = ClusterRequestExecutor.CreateForSingleNode(
                                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                                   _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                                                   ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                         {
                                             await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                         }
@@ -707,7 +703,7 @@ namespace Raven.Server.Documents.Subscriptions
                                 [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                                 {
                                     [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = _serverStore.NodeTag,
+                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = ServerStore.NodeTag,
                                     [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] =
                                         subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
                                     [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
@@ -795,7 +791,7 @@ namespace Raven.Server.Documents.Subscriptions
             var clientType = message.ClientType;
             var subsType = message.SubscriptionType;
 
-            string m = null;
+            string m;
             switch (status)
             {
                 case ConnectionStatus.Create:
@@ -838,7 +834,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public virtual async Task ParseSubscriptionOptionsAsync()
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (BlittableJsonReaderObject subscriptionCommandOptions = await context.ParseToMemoryAsync(
                        TcpConnection.Stream,
                        "subscription options",
@@ -854,7 +850,7 @@ namespace Raven.Server.Documents.Subscriptions
                 context.OpenReadTransaction();
 
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, _options.SubscriptionName);
-                var translation = _serverStore.Cluster.Read(context, subscriptionItemKey);
+                var translation = ServerStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)
                     throw new SubscriptionDoesNotExistException("Cannot find any Subscription Task with name: " + _options.SubscriptionName);
 
@@ -1022,8 +1018,9 @@ namespace Raven.Server.Documents.Subscriptions
             buffer.SetLength(0);
         }
 
-        public virtual void Dispose()
+        protected virtual void DisposeInternal()
         {
+
             using (_copiedBuffer.ReleaseBuffer)
             {
                 try
@@ -1067,6 +1064,11 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             Stats?.Dispose();
+        }
+
+        public void Dispose()
+        {
+            _disposeOnce.Dispose();
         }
     }
 }
