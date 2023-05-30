@@ -90,11 +90,8 @@ namespace Raven.Client.Documents.Subscriptions
 
         public void Dispose(bool waitForSubscriptionTask)
         {
-            var dispose = DisposeAsync(waitForSubscriptionTask);
-            if (dispose.IsCompletedSuccessfully)
-                return;
-
-            AsyncHelpers.RunSync(dispose.AsTask);
+            var dispose = DisposeAsync(waitForSubscriptionTask).AsTask();
+            AsyncHelpers.RunSync(() => dispose);
         }
 
         public ValueTask DisposeAsync() => DisposeAsync(true);
