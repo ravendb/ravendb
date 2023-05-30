@@ -189,7 +189,7 @@ namespace Raven.Server.Rachis
                                     var connection = connectTask.Result;
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures.Cluster, disconnect);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures.Cluster, disconnect, _engine.ClusterLogger);
                                     Interlocked.Exchange(ref _connection, con);
                                     
                                     ClusterTopology topology;

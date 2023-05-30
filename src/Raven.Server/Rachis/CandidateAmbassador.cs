@@ -158,7 +158,7 @@ namespace Raven.Server.Rachis
 
                         Stopwatch sp;
                         _connection?.Dispose();
-                        _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, features, disconnect);
+                        _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, features, disconnect, _engine.ClusterLogger);
 
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {

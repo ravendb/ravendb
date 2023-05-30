@@ -320,6 +320,7 @@ namespace Raven.Server.Rachis
 
         public ClusterContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
+        internal SwitchLogger ClusterLogger;
         internal Logger Log;
 
         private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
@@ -452,6 +453,7 @@ namespace Raven.Server.Rachis
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
+                    ClusterLogger = clusterLogger;
                     Log = clusterLogger.GetLogger(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
@@ -479,7 +481,7 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
 
-                Timeout = new TimeoutEvent(0, "Consensus");
+                Timeout = new TimeoutEvent(0, "Consensus", Log);
                 RandomizeTimeout();
 
                 // if we don't have a topology id, then we are passive

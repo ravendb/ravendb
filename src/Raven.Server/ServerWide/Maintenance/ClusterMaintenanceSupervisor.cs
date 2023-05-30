@@ -286,7 +286,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForParsing))
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForBuffer))
                         using (contextForBuffer.GetMemoryBuffer(out var readBuffer))
-                        using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", singleShot: false))
+                        using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", false, _log))
                         {
                             timeoutEvent.Start(OnTimeout);
                             var unchangedReports = new List<DatabaseStatusReport>();

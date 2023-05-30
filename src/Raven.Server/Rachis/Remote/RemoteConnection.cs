@@ -36,12 +36,14 @@ namespace Raven.Server.Rachis.Remote
         public string Dest => _destTag;
         public TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures Features => _features;
 
-        public RemoteConnection(string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
-            : this(dest: "?", src, term, stream,features, disconnect, caller)
+        public RemoteConnection(string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect,
+            SwitchLogger clusterLogger, [CallerMemberName] string caller = null)
+            : this(dest: "?", src, term, stream,features, disconnect, clusterLogger, caller)
         {
         }
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features,
+            Action disconnect, SwitchLogger clusterLogger, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
@@ -51,7 +53,7 @@ namespace Raven.Server.Rachis.Remote
             _context = JsonOperationContext.ShortTermSingleUse();
             _releaseBuffer = _context.GetMemoryBuffer(out _buffer);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
-            _log = LoggingSource.Instance.LoggersHolder.Generic.GetLogger($"{src} > {dest}");
+            _log = clusterLogger.GetLogger($"{src} > {dest}");
             RegisterConnection(dest, term, caller);
         }
 

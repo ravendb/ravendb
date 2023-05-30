@@ -256,7 +256,7 @@ namespace Tests.Infrastructure
                         features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
                         {
                             MultiTree = true
-                        }, () => tcpClient.Client?.Disconnect(false));
+                        }, () => tcpClient.Client?.Disconnect(false), rachis.ClusterLogger);
 
                     rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
                     {

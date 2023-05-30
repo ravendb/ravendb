@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace Sparrow.Logging;
 
 public class LogAvailability

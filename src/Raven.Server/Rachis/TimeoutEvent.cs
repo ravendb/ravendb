@@ -29,14 +29,14 @@ namespace Raven.Server.Rachis
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
-        public TimeoutEvent(int timeoutPeriod, string name, Logger logger = null) :
+        public TimeoutEvent(int timeoutPeriod, string name, Logger logger) :
             this(timeoutPeriod, name, true, logger)
         {
             
         }
 
 
-        public TimeoutEvent(TimeSpan timeoutPeriod, string name, bool singleShot = true, Logger logger = null) :
+        public TimeoutEvent(TimeSpan timeoutPeriod, string name, bool singleShot, Logger logger) :
             this((int)timeoutPeriod.TotalMilliseconds, name, singleShot, logger)
         {
         }

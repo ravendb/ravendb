@@ -1166,13 +1166,7 @@ namespace Raven.Server.Web.System
                         catch (Exception e)
                         {
                             if (Logger.IsOperationsEnabled)
-                            {
-                                Logger.Operations($"Compaction process failed. " +
-                                                  $"{nameof(compactSettings.DatabaseName)}:\"{compactSettings.DatabaseName}\", " +
-                                                  $"{nameof(compactSettings.Documents)}:\"{compactSettings.Documents}\", " +
-                                                  $"{nameof(compactSettings.Indexes)}:\"{(compactSettings.Indexes != null ? string.Join(", ", compactSettings.Indexes) : null)}\""
-                                    , e);
-                            }
+                                Logger.Operations("Compaction process failed", e);
 
                             throw;
                         }

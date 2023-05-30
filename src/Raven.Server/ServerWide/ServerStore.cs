@@ -3217,7 +3217,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
-                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
+                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect, _server.ClusterLogger);
 
                 _engine.AcceptNewConnection(remoteConnection, remoteEndpoint);
             }

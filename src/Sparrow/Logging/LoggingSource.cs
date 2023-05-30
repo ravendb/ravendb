@@ -243,7 +243,7 @@ namespace Sparrow.Logging
             _keepLogging.Raise();
             _loggingThread = new Thread(BackgroundLogger) { IsBackground = true, Name = _name + " Thread" };
             _loggingThread.Start();
-            if (compress && LogMode != LogMode.None)
+            if (compress)
             {
                 _compressLoggingThread = new Thread(BackgroundLoggerCompress) { IsBackground = true, Name = _name + " Log Compression Thread" };
                 _compressLoggingThread.Start();
