@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -49,7 +47,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         return base.AcceptMessage();
     }
 
-    protected override RawDatabaseRecord GetRecord(ClusterOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
+    protected override RawDatabaseRecord GetRecord(ClusterOperationContext context) => ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
 
     protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
     {
@@ -60,7 +58,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
 
         var result = ChangeVectorUtils.MergeVectors(
             currentLast,
-            ChangeVectorUtils.NewChangeVector(_serverStore.NodeTag, sentDocument.Etag, _shardedDatabase.DbBase64Id),
+            ChangeVectorUtils.NewChangeVector(ServerStore.NodeTag, sentDocument.Etag, _shardedDatabase.DbBase64Id),
             vector.Order);
 
         return result;

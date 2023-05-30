@@ -8,7 +8,6 @@ using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
@@ -41,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
         {
             var subscriptions = _databaseContext.SubscriptionsStorage.Subscriptions;
-            return _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(_serverStore, _databaseContext, subId));
+            return _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(ServerStore, _databaseContext, subId));
         }
 
         public override void FinishProcessing()
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             return new StatusMessageDetails
             {
-                DatabaseName = $"for sharded database '{DatabaseName}' on '{_serverStore.NodeTag}'",
+                DatabaseName = $"for sharded database '{DatabaseName}' on '{ServerStore.NodeTag}'",
                 ClientType = $"'client worker' with IP '{ClientUri}'",
                 SubscriptionType = $"sharded subscription '{_options?.SubscriptionName}', id '{SubscriptionId}'"
             };
@@ -160,15 +159,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
             _tokenRegisterDisposable?.Dispose();
-            base.Dispose();
+
+            base.DisposeInternal();
         }
     }
 }

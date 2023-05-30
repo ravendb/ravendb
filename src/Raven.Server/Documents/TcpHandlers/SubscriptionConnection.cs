@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Esprima;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -21,7 +20,6 @@ using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -66,7 +64,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionConnectionsState GetSubscriptionConnectionState()
         {
             var subscriptions = _database.SubscriptionStorage.Subscriptions;
-            State =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+            State = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
             return State;
         }
 
@@ -81,17 +79,12 @@ namespace Raven.Server.Documents.TcpHandlers
             return patch;
         }
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
             Stats.LastConnectionStats.Complete();
             TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForConnectionEnded(this);
 
-            base.Dispose();
+            base.DisposeInternal();
         }
 
         public struct ParsedSubscription
@@ -123,7 +116,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new NotSupportedException("Subscription cannot specify an update clause");
 
             bool revisions = false;
-            if (q.From.Filter is Queries.AST.BinaryExpression filter)
+            if (q.From.Filter is BinaryExpression filter)
             {
                 switch (filter.Operator)
                 {
@@ -170,8 +163,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 case MethodType.Counters:
                                     QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
 
-                                    if (counterIncludes == null)
-                                        counterIncludes = new List<string>();
+                                    counterIncludes ??= new List<string>();
 
                                     if (me.Arguments.Count > 0)
                                     {
@@ -183,8 +175,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 case MethodType.TimeSeries:
                                     QueryValidator.ValidateIncludeTimeseries(me.Arguments, q.QueryText, null);
 
-                                    if (timeSeriesIncludes == null)
-                                        timeSeriesIncludes = new TimeSeriesIncludesField();
+                                    timeSeriesIncludes ??= new TimeSeriesIncludesField();
 
                                     switch (me.Arguments.Count)
                                     {
@@ -252,8 +243,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             break;
                         default:
-                            if (includes == null)
-                                includes = new List<string>();
+                            includes ??= new List<string>();
 
                             includes.Add(ExtractPathFromExpression(include, q));
                             break;
@@ -466,7 +456,7 @@ namespace Raven.Server.Documents.TcpHandlers
         protected override StatusMessageDetails GetStatusMessageDetails()
         {
             var message = GetDefault();
-            message.DatabaseName = $"{message.DatabaseName} on '{_serverStore.NodeTag}'";
+            message.DatabaseName = $"{message.DatabaseName} on '{ServerStore.NodeTag}'";
             message.ClientType = $"{message.ClientType} with IP '{ClientUri}'";
             message.SubscriptionType = $"{message.SubscriptionType} '{_options?.SubscriptionName}', id '{SubscriptionId}'";
 
