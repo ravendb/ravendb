@@ -193,3 +193,28 @@ select {
         opacity: 0.66 !important;
     }
 }
+
+// box-shadow for modals
+@each $key, $value in $theme-colors {
+    .modal-border.bulge-#{$key} {
+        --bulge-color: #{$value};
+        box-shadow: 0 0 0 3px rgba(var(--bs-body-bg-rgb), 1), 0px -4px 0px 2px var(--bulge-color);
+    }
+}
+
+// custom alerts colors
+@each $key, $value in $theme-colors {
+    $color: mix($text-emphasis-color, $value, 30%);
+    $bg: mix($panel-bg-1, $value, 80%);
+    $border-color: mix($text-emphasis-color, $value, 30%);
+
+    .alert-#{$key} {
+        --#{$prefix}alert-color: #{$color};
+        --#{$prefix}alert-bg: #{$bg};
+        --#{$prefix}alert-border-color: #{$border-color};
+    }
+}
+
+.w-fit-content {
+    width: fit-content;
+}
