@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -55,6 +56,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public bool SkipUntil(char match)
         {
+            
             if (SkipWhitespace() == false)
                 return false;
             for (; _pos < _q.Length; _pos++)
@@ -204,23 +206,30 @@ namespace Raven.Server.Documents.Queries.Parser
             return _q[_pos] == match;
         }
 
-        public bool TryPeek(string match, bool skipWhitespace = true)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryPeek(string match, bool skipWhitespace = true)
         {
+            // After we have skipped all whitespaces, we are ready to read a token.
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
-            if (match.Length + _pos > _q.Length)
+            // We make sure that we have enough string to find this token. 
+            int endPos = _pos + match.Length;
+            if (endPos > _q.Length)
                 return false;
+
+            // We are checking IF there is possibility that the token may be larger.
+            if (endPos < _q.Length)
+            {
+                // We check if there is a whitespace at the end of the match,
+                // if that is not the case we are completely sure it is not a match.
+                if (char.IsLetterOrDigit(match[^1]) &&
+                    char.IsLetterOrDigit(_q[endPos]))
+                    return false;
+            }
 
             if (string.Compare(_q, _pos, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
                 return false;
-
-            if (_pos + match.Length < _q.Length)
-            {
-                if (char.IsLetterOrDigit(match[match.Length - 1]) &&
-                   char.IsLetterOrDigit(_q[_pos + match.Length]))
-                    return false;
-            }
 
             return true;
         }
@@ -235,15 +244,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (match.Length + _pos > _q.Length)
                     return false;
 
-                if (string.Compare(_q, _pos, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
-                    continue;
-
                 if (_pos + match.Length < _q.Length)
                 {
-                    if (char.IsLetterOrDigit(match[match.Length - 1]) &&
+                    if (char.IsLetterOrDigit(match[^1]) &&
                         char.IsLetterOrDigit(_q[_pos + match.Length]))
                         continue;
                 }
+
+                if (string.Compare(_q, _pos, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                    continue;
 
                 return true;
             }
