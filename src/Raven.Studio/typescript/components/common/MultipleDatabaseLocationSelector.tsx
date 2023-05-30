@@ -105,14 +105,23 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                 </>
             ) : (
                 <>
-                    <Checkbox
-                        size="lg"
-                        toggleSelection={toggleAllNodes}
-                        indeterminate={isSomeNodesSelected}
-                        selected={isAllNodesSelected}
-                        title="Select all or none"
-                    />
-
+                    <div className="d-flex align-items-center gap-1">
+                        <Checkbox
+                            size="lg"
+                            toggleSelection={toggleAllNodes}
+                            indeterminate={isSomeNodesSelected}
+                            selected={isAllNodesSelected}
+                            title="Select all or none"
+                        >
+                            <span className="small-label">
+                                {isAllNodesSelected
+                                    ? "Reset selection"
+                                    : isSomeNodesSelected
+                                    ? "Deselect all"
+                                    : "Select all"}
+                            </span>
+                        </Checkbox>
+                    </div>
                     {uniqueNodeTags.map((nodeTag, idx) => {
                         const nodeId = uniqId + idx;
                         return (

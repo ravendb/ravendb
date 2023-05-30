@@ -1,11 +1,12 @@
 ﻿import React, { ReactNode, useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { IndexSharedInfo } from "components/models/indexes";
 import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
 import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
+import IconName from "typings/server/icons";
 
 type operationType = "pause" | "disable" | "start";
 
@@ -40,11 +41,12 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     const { type, indexes, toggle, locations, onConfirm } = props;
 
     const infinitive = getInfinitiveForType(type);
+    const infinitiveLowerCase = infinitive.toLowerCase();
     const icon = getIcon(type);
 
     const [selectedLocations, setSelectedLocations] = useState<databaseLocationSpecifier[]>(() => locations);
 
-    const title = infinitive + " indexing?";
+    const title = "You're about to " + infinitiveLowerCase + " indexing";
 
     const showContextSelector = locations.length > 1;
 
@@ -56,9 +58,26 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     };
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5">
-            <ModalHeader toggle={toggle}>{title}</ModalHeader>
-            <ModalBody className="vstack gap-4">
+        <Modal
+            isOpen
+            toggle={toggle}
+            wrapClassName="bs5"
+            contentClassName={`modal-border bulge-${getColorForType(type)}`}
+            centered
+        >
+            <ModalBody className="vstack gap-4 position-relative">
+                <div className="text-center">
+                    <Icon
+                        icon="index"
+                        color={`${getColorForType(type)}`}
+                        addon={`${infinitiveLowerCase}` as IconName}
+                        className="fs-1"
+                        margin="m-0"
+                    />
+                </div>
+                <div className="position-absolute m-2 end-0 top-0">
+                    <Button close onClick={toggle} />
+                </div>
                 {indexGroups.map((indexGroup, index) => {
                     if (indexGroup.indexes.length === 0) {
                         return;
@@ -66,8 +85,8 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
 
                     return (
                         <div key={"indexGroup" + index}>
-                            <div className="lead mb-2">{indexGroup.title}</div>
-                            <div className="vstack gap-1">
+                            <div className="text-center lead">{indexGroup.title}</div>
+                            <div className="vstack gap-1 my-4">
                                 {indexGroup.indexes.map((index) => (
                                     <div key={index.name} className="d-flex">
                                         <div
@@ -82,7 +101,11 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                                             />
                                             {indexGroup.destinationStatus && (
                                                 <>
-                                                    <Icon icon="arrow-thin-right" margin="mx-1" className="fs-6" />
+                                                    <Icon
+                                                        icon="arrow-thin-right"
+                                                        margin="mx-1"
+                                                        className="fs-6 align-self-center"
+                                                    />
                                                     <Icon
                                                         icon={getStatusIcon(indexGroup.destinationStatus)}
                                                         color={getStatusColor(indexGroup.destinationStatus)}
@@ -95,12 +118,13 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                                     </div>
                                 ))}
                             </div>
+                            <hr className="m-0" />
                         </div>
                     );
                 })}
                 {showContextSelector && (
                     <div>
-                        <h4>Select context:</h4>
+                        <h4>Select context</h4>
                         <MultipleDatabaseLocationSelector
                             locations={locations}
                             selectedLocations={selectedLocations}
@@ -110,10 +134,10 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="secondary" onClick={toggle}>
+                <Button color="link" onClick={toggle} className="text-muted">
                     Cancel
                 </Button>
-                <Button color={getColorForType(type)} onClick={onSubmit}>
+                <Button color={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
                     <Icon icon={icon} /> {infinitive}
                 </Button>
             </ModalFooter>
@@ -203,7 +227,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            <strong className="text-danger">Disabling</strong> indexes:
+                            You&apos;re about to <strong className="text-danger">disable</strong> following indexes
                         </>
                     ),
                     indexes: affectedIndexGrouped.disabling,
@@ -211,7 +235,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                     destinationStatus: "Disabled",
                 },
                 {
-                    title: "Skipping already disabled indexes:",
+                    title: "Skipping already disabled indexes",
                     indexes: affectedIndexGrouped.skipping,
                 },
             ];
@@ -239,7 +263,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            <strong className="text-warning">Pausing</strong> indexes:
+                            You&apos;re about to <strong className="text-warning">pause</strong> following indexes
                         </>
                     ),
                     indexes: affectedIndexGrouped.pausing,
@@ -247,7 +271,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                     destinationStatus: "Paused",
                 },
                 {
-                    title: "Skipping already paused or disabled indexes:",
+                    title: "Skipping already paused or disabled indexes",
                     indexes: affectedIndexGrouped.skipping,
                 },
             ];
@@ -275,7 +299,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            <strong className="text-success">Enabling</strong> indexes:
+                            You&apos;re about to <strong className="text-success">enable</strong> following indexes
                         </>
                     ),
                     indexes: affectedIndexGrouped.enabling,
@@ -285,7 +309,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            <strong className="text-success">Resuming</strong> indexes:
+                            You&apos;re about to <strong className="text-success">resume</strong> following indexes
                         </>
                     ),
                     indexes: affectedIndexGrouped.resuming,
@@ -293,7 +317,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                     destinationStatus: "Running",
                 },
                 {
-                    title: "Skipping already running indexes:",
+                    title: "Skipping already running indexes",
                     indexes: affectedIndexGrouped.skipping,
                 },
             ];
