@@ -152,8 +152,6 @@ namespace Tests.Infrastructure
                 }
 
                 var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000);
-                if (r == null)
-                    WaitForUserToContinueTheTest(dst, debug: false);
                 Assert.NotNull(r);
             }
         }
@@ -273,7 +271,10 @@ namespace Tests.Infrastructure
 
         protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
-            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database, new ReplicationManager.ReplicationOptions());
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database, new ReplicationManager.ReplicationOptions
+            {
+                BreakReplicationOnStart = false
+            });
             await replication.EnsureNoReplicationLoopAsync();
         }
 
