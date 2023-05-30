@@ -8,7 +8,7 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentDatabase _database;
 
-        public DatabaseMetricCacher(DocumentDatabase database)
+        public DatabaseMetricCacher(DocumentDatabase database) : base(database.Logger)
         {
             _database = database;
         }

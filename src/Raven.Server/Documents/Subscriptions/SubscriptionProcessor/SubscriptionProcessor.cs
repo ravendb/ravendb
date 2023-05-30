@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         protected SubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            Logger = LoggingSource.Instance.GetLogger(Database.Name, connection == null ? $"{nameof(TestDocumentsSubscriptionProcessor)}" : $"{nameof(SubscriptionProcessor)}<{connection.Options.SubscriptionName}>");
+            Logger = database.Logger.GetLogger(connection == null ? $"{nameof(TestDocumentsSubscriptionProcessor)}" : $"{nameof(SubscriptionProcessor)}<{connection.Options.SubscriptionName}>");
         }
 
         protected abstract SubscriptionFetcher<T> CreateFetcher();

@@ -226,6 +226,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return null;
         }
 
+        protected override void OnInitialization()
+        {
+            base.OnInitialization();
+            _compiled.Log = Logger;
+        }
+
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);

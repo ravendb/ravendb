@@ -124,6 +124,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             }
         }
 
+        protected override void OnInitialization()
+        {
+            base.OnInitialization();
+            _compiled.Log = Logger;
+        }
+
         private void HandleCounterChange(CounterChange change)
         {
             if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)

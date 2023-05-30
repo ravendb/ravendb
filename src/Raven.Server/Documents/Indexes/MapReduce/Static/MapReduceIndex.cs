@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         protected override void OnInitialization()
         {
             base.OnInitialization();
-
+            _compiled.Log = Logger;
             if (string.IsNullOrWhiteSpace(Definition.OutputReduceToCollection) == false)
             {
                 OutputReduceToCollection = new OutputReduceToCollectionActions(this);

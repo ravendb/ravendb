@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide
 
         public const int DefaultCpuRefreshRateInMs = 1000;
 
-        public ServerMetricCacher(RavenServer server)
+        public ServerMetricCacher(RavenServer server) : base(server.Logger)
         {
             _server = server;
 

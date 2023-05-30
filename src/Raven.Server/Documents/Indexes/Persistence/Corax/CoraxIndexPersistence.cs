@@ -23,7 +23,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public CoraxIndexPersistence(Index index) : base(index)
     {
-        _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
+        _logger = index.Logger;
         bool storeValue = false;
         switch (index.Type)
         {

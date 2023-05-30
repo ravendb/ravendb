@@ -147,6 +147,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
         }
 
+        protected override void OnInitialization()
+        {
+            base.OnInitialization();
+            _compiled.Log = Logger;
+        }
+
         private void HandleTimeSeriesChange(TimeSeriesChange change)
         {
             if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)

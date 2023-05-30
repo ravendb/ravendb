@@ -9,6 +9,12 @@ namespace Raven.Server.Utils
 {
     public class MetricCacher
     {
+        private readonly Logger _logger;
+        protected MetricCacher(Logger logger)
+        {
+            _logger = logger;
+        }
+        
         public class Keys
         {
             private Keys()
@@ -60,7 +66,7 @@ namespace Raven.Server.Utils
 
         public void Register(string key, TimeSpan refreshRate, Func<object> factory, bool asyncRefresh = true)
         {
-            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory, asyncRefresh)) == false)
+            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory, _logger, asyncRefresh)) == false)
                 throw new InvalidOperationException($"Cannot cache '{key}' metric, because it already exists.");
         }
 
@@ -84,10 +90,12 @@ namespace Raven.Server.Utils
             private object _value;
             private long _observedFailureTicks;
             private readonly Logger _logger;
+            private readonly string _key;
 
-            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory, bool asyncRefresh = true)
+            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory, Logger logger, bool asyncRefresh = true)
             {
-                _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
+                _logger = logger;
+                _key = key;
                 _refreshRate = refreshRate;
                 _factory = factory;
                 _asyncRefresh = asyncRefresh;
@@ -101,7 +109,7 @@ namespace Raven.Server.Utils
                     _value = default;
                     if (_logger.IsOperationsEnabled)
                     {
-                        _logger.Operations("Got an error while refreshing value", e);
+                        _logger.Operations($"Got an error while refreshing value for key '{_key}'", e);
                     }
                 }
             }
@@ -173,7 +181,7 @@ namespace Raven.Server.Utils
                         {
                             if (_logger.IsOperationsEnabled)
                             {
-                                _logger.Operations("Got an error while refreshing value", e);
+                                _logger.Operations($"Got an error while refreshing value for key '{_key}'", e);
                             }
                             throw;
                         }
@@ -183,7 +191,7 @@ namespace Raven.Server.Utils
                         {
                             if (_logger.IsOperationsEnabled)
                             {
-                                _logger.Operations("Recovered from error in refreshing value.");
+                                _logger.Operations($"Recovered from error in refreshing value for key '{_key}'.");
                             }
                         }
                         return nextRefresh;

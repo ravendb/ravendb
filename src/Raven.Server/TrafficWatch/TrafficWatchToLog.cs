@@ -14,7 +14,7 @@ namespace Raven.Server.TrafficWatch;
 
 internal class TrafficWatchToLog : IDynamicJson
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("TrafficWatchManager");
+    private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger("TrafficWatchManager");
 
     private TrafficWatchMode _trafficWatchMode;
     private List<string> _databases;

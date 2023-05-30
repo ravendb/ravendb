@@ -182,8 +182,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
-
+        public Logger Log = LoggingSource.Instance.LoggersHolder.Generic;
         
         public int StackSizeInSelectClause { get; set; }
         

@@ -16,7 +16,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 {
     public class PgServer : IDisposable
     {
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<PgServer>("Postgres Server");
+        private readonly Logger _logger; 
 
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
@@ -32,6 +32,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public PgServer(RavenServer server)
         {
             _server = server;
+            _logger = server.Logger.GetLogger<PgServer>();
             _processId = Process.GetCurrentProcess().Id;
             _port = _server.Configuration.Integrations.PostgreSql.Port;
 
@@ -136,6 +137,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     identifier,
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
+                    _logger,
                     _cts.Token);
 
                 await session.Run();

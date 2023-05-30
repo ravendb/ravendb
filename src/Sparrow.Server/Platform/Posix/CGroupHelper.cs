@@ -13,7 +13,7 @@ namespace Sparrow.Server.Platform.Posix;
 
 public abstract class CGroup
 {
-    protected static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(CGroup));
+    protected static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(CGroup));
     
     protected const string PROC_CGROUP_FILENAME = "/proc/self/cgroup";
     protected const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";

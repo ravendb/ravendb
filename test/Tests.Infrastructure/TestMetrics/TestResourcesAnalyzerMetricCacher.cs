@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -12,7 +13,7 @@ namespace Tests.Infrastructure.TestMetrics
         private readonly SmapsReader _smapsReader;
         private readonly TimeSpan _cacheRefreshRate = TimeSpan.FromMilliseconds(25);
 
-        public TestResourcesAnalyzerMetricCacher(ICpuUsageCalculator cpuUsageCalculator)
+        public TestResourcesAnalyzerMetricCacher(ICpuUsageCalculator cpuUsageCalculator) : base(LoggingSource.Instance.GetLogger<TestResourcesAnalyzerMetricCacher>("Test"))
         {
             if (PlatformDetails.RunningOnLinux)
                 _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });

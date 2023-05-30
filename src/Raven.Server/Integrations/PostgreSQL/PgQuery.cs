@@ -15,8 +15,6 @@ namespace Raven.Server.Integrations.PostgreSQL
 {
     public abstract class PgQuery : IDisposable
     {
-        private static Logger _log = LoggingSource.Instance.GetLogger<PgQuery>("Postgres Server");
-
         protected readonly string QueryString;
         public readonly int[] ParametersDataTypes;
         protected readonly bool IsEmptyQuery;
@@ -63,8 +61,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (Exception e)
             {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to create instance of {nameof(PgQuery)}:{Environment.NewLine}{queryText}", e);
+                if (documentDatabase.Logger.IsInfoEnabled)
+                    documentDatabase.Logger.Info($"Failed to create instance of {nameof(PgQuery)}:{Environment.NewLine}{queryText}", e);
 
                 throw;
             }

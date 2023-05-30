@@ -55,6 +55,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return new CountersQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
         }
 
+        protected override void OnInitialization()
+        {
+            base.OnInitialization();
+            _compiled.Log = Logger;
+        }
+
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
             base.SubscribeToChanges(documentDatabase);

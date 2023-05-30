@@ -245,7 +245,7 @@ namespace Sparrow.LowMemory
 
         internal LowMemoryNotification()
         {
-            _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
+            _logger = LoggingSource.Instance.LoggersHolder.Memory.GetLogger<LowMemoryNotification>();
         }
 
         private void MonitorMemoryUsage()

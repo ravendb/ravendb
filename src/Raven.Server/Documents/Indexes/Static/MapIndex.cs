@@ -167,6 +167,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
+        protected override void OnInitialization()
+        {
+            base.OnInitialization();
+            _compiled.Log = Logger;
+        }
+
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)

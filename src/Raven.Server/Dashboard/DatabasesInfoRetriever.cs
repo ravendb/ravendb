@@ -42,7 +42,7 @@ namespace Raven.Server.Dashboard
         private readonly CanAccessDatabase _canAccessDatabase;
         private const string DatabasesInfoKey = "DatabasesInfo";
 
-        public DatabasesInfoRetriever(ServerStore serverStore, CanAccessDatabase canAccessDatabase)
+        public DatabasesInfoRetriever(ServerStore serverStore, CanAccessDatabase canAccessDatabase) : base(serverStore.Server.Logger)
         {
             _serverStore = serverStore;
             _canAccessDatabase = canAccessDatabase;

@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (string.IsNullOrEmpty(_options.SubscriptionName))
                     return;
                 
-                _logger = LoggingSource.Instance.GetLogger(TcpConnection.DocumentDatabase.Name, $"{nameof(SubscriptionConnection)}<{_options.SubscriptionName}>");
+                _logger = TcpConnection.DocumentDatabase.Logger.GetLogger($"{nameof(SubscriptionConnection)}<{_options.SubscriptionName}>");
                 context.OpenReadTransaction();
 
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);

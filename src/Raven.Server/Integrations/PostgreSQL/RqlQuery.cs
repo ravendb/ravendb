@@ -29,12 +29,12 @@ namespace Raven.Server.Integrations.PostgreSQL
         private List<Document> _result;
         private readonly int? _limit;
         private bool _queryWasRun;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
+        private readonly Logger _logger;
 
         ~RqlQuery()
         {
-            if(Logger.IsOperationsEnabled)
-                Logger.Operations($"Query '{QueryString}' wasn't disposed properly.{Environment.NewLine}" +
+            if(_logger.IsOperationsEnabled)
+                _logger.Operations($"Query '{QueryString}' wasn't disposed properly.{Environment.NewLine}" +
                                 $"Query was run: {_queryWasRun}{Environment.NewLine}" +
                                 $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}{Environment.NewLine}");
             Dispose();
@@ -43,7 +43,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
             DocumentDatabase = documentDatabase;
-
+            _logger = documentDatabase.Logger.GetLogger<RqlQuery>();
             _result = null;
             _limit = limit;
         }

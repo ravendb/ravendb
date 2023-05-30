@@ -8,11 +8,8 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public abstract class SubscriptionFetcher<T> : SubscriptionFetcher
     {
-        protected Logger Logger;
-
         protected SubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
-            Logger = LoggingSource.Instance.GetLogger<SubscriptionFetcher<T>>(Database.Name);
         }
 
         protected abstract IEnumerable<T> FetchByEtag();

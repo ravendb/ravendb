@@ -10,7 +10,7 @@ namespace Raven.Server.Utils;
 
 internal static class EchoServer
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
+    private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(EchoServer));
 
     public static void StartEchoSockets(int? echoSocketPort)
     {

@@ -16,7 +16,7 @@ namespace Raven.Server.Utils.MicrosoftLogging;
 
 public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLevel LogLevel)>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingConfiguration));
+    private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<MicrosoftLoggingConfiguration>();
     private const string NotificationKey = "microsoft-configuration-logs-error";
     private const AlertType AlertType = NotificationCenter.Notifications.AlertType.MicrosoftLogsConfigurationLoadError;
     
