@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
 
         private void CreateWarningIfThereAreBlockingTombstones(HashSet<string> tombstoneCollections)
         {
-            var currentBlockingTombstones = new Dictionary<(string, string), long>();
+            var currentBlockingTombstones = new Dictionary<(string Source, string Collection), long>();
             var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             bool needToWarn = false;
 
