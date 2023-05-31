@@ -1,6 +1,6 @@
 ﻿import React, { ChangeEvent } from "react";
 import { DatabaseFilterByStateOption, DatabaseFilterCriteria } from "components/models/databases";
-import { Input } from "reactstrap";
+import { Button, Input } from "reactstrap";
 import { useAppSelector } from "components/store";
 
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
@@ -8,6 +8,7 @@ import "./DatabasesFilter.scss";
 import { InputItem } from "components/models/common";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
+import { Icon } from "components/common/Icon";
 
 type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 
@@ -40,15 +41,33 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
         <div className="d-flex flex-wrap flex-grow gap-3 mb-3">
             <div className="d-flex flex-column flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
-                <Input
-                    type="text"
-                    accessKey="/"
-                    placeholder="e.g. database1"
-                    title="Filter databases (Alt+/)"
-                    value={searchCriteria.name}
-                    onChange={onSearchNameChange}
-                    className="filtering-input"
-                />
+                <div className="clearable-input">
+                    <Input
+                        type="text"
+                        accessKey="/"
+                        placeholder="e.g. database1"
+                        title="Filter databases (Alt+/)"
+                        value={searchCriteria.name}
+                        onChange={onSearchNameChange}
+                        className="filtering-input"
+                    />
+                    {searchCriteria.name && (
+                        <div className="clear-button">
+                            <Button
+                                color="secondary"
+                                size="sm"
+                                onClick={() =>
+                                    setFilterCriteria({
+                                        name: "",
+                                        states: searchCriteria.states,
+                                    })
+                                }
+                            >
+                                <Icon icon="clear" margin="m-0" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
             <div>
                 <MultiCheckboxToggle<DatabaseFilterByStateOption>
