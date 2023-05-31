@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes, Skip = "Corax")]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrorsInCorax(Options options) => SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(
             options,

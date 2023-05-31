@@ -16,7 +16,7 @@ public class RavenDB_18357 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax, Skip = "Corax")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void AutoIndexShouldThrowWhenTryingToIndexComplexObject(Options options)
     {
@@ -68,7 +68,7 @@ public class RavenDB_18357 : RavenTestBase
         Assert.Null(errors);
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax, Skip = "Corax")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void StaticIndexShouldThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereExplicitlySetInDefinition(Options options)
     {

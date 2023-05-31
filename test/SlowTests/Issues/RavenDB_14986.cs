@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "Corax")]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceCorax(Options options) => CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(options, simpleMapReduceErrors =>
         {
