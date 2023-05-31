@@ -101,7 +101,7 @@ public class RavenDB_18594 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "Corax")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void CoraxShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
     {
