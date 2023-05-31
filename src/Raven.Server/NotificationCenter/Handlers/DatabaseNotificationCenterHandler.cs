@@ -6,6 +6,8 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -62,6 +64,16 @@ namespace Raven.Server.NotificationCenter.Handlers
             Database.NotificationCenter.Postpone(id, until);
 
             return NoContent();
+        }
+
+        [RavenAction("/databases/*/debug/slow-writes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task SlowWrites()
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                context.Write(writer, Database.NotificationCenter.SlowWrites.GetSlowIoDetails().ToJson());
+            }
         }
     }
 }

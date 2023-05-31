@@ -511,5 +511,40 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             Default = ServerWide | Databases | LogFile
         }
+
+        [RavenAction("/debug/info-package-analyzer", "GET", AuthorizationStatus.ValidUser, EndpointType.None)]
+        public async Task GetInfoPackageAnalyzer()
+        {
+            if (HttpContext.Request.Query.ContainsKey("file") == false)
+                throw new ArgumentException("'file' is mandatory when using GET /debug/info-package-analyzer");
+
+            var filePath = GetStringQueryString("file", required: false);
+            IDynamicJsonValueConvertible analyzer = null;
+
+            try
+            {
+                Stream fileStream = File.OpenRead(filePath);
+                const string clusterWideFileSuffix = "Cluster Wide.zip";
+
+                if (filePath.EndsWith(clusterWideFileSuffix))
+                    analyzer = await DebugInfoAnalyzer.GetClusterInfo(fileStream);
+                else if (filePath.Contains("Node"))
+                    analyzer = (await DebugInfoAnalyzer.GetNodeInfo(fileStream)).NodeAnalyzerResult;
+
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString("debug-package-analyzer") + ".json";
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.Headers["Content-Type"] = "application/octet-stream";
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, analyzer?.ToJson());
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to create debug info package analyzer");
+            }
+        }
     }
 }
