@@ -50,7 +50,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div data-bind="visible: databaseType() === 'MySQL', with: mySql">
+                            <div data-bind="visible: databaseType() === 'MySQL_MySql_Data' || databaseType() === 'MySQL_MySqlConnector', with: mySql">
                                 <div class="form-group"
                                      data-bind="validationElement: connectionString">
                                     <label class="control-label">
