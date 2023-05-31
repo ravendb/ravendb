@@ -26,7 +26,7 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(Dictionary<(string, string), long> blockingTombstones)
+        public void Add(Dictionary<(string Source, string Collection), long> blockingTombstones)
         {
             BlockingTombstonesDetails details = new BlockingTombstonesDetails(blockingTombstones);
             _notificationCenter.Add(AlertRaised.Create(_database, _title, _msg, AlertType.BlockingTombstones,
@@ -62,12 +62,12 @@ namespace Raven.Server.NotificationCenter
 
         internal class BlockingTombstonesDetails : INotificationDetails
         {
-            public BlockingTombstonesDetails(Dictionary<(string, string), long> blockingTombstones)
+            public BlockingTombstonesDetails(Dictionary<(string Source, string Collection), long> blockingTombstones)
             {
                 BlockingTombstones = blockingTombstones;
             }
 
-            public Dictionary<(string, string), long> BlockingTombstones { get; set; }
+            public Dictionary<(string Source, string Collection), long> BlockingTombstones { get; set; }
 
             public DynamicJsonValue ToJson()
             {
@@ -76,8 +76,8 @@ namespace Raven.Server.NotificationCenter
                 {
                     djv.Add( new DynamicJsonValue
                     {
-                        [nameof(BlockingTombstoneDetails.Source)] = key.Item1,
-                        [nameof(BlockingTombstoneDetails.Collection)] = key.Item2,
+                        [nameof(BlockingTombstoneDetails.Source)] = key.Source,
+                        [nameof(BlockingTombstoneDetails.Collection)] = key.Collection,
                         [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = BlockingTombstones[key]
                     });
                 }
