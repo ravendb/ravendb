@@ -13,7 +13,7 @@ public class RavenDB_19317 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Querying, Skip = "Corax")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void CoraxLowercaseTheTermWhenFieldHasFullTextSearchConfiguration(RavenTestBase.Options options)
     {
