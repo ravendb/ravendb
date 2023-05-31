@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -15,8 +16,8 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.OLAP;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
@@ -1892,7 +1893,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -1942,7 +1943,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2041,12 +2042,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                var database = await GetDatabase(store.Database);
+                var database = await Etl.GetDatabaseFor(store, "orders/1");
                 var timeout = database.DocumentsStorage.Environment.Options.RunningOn32Bits
                     ? _defaultTimeout * 2
                     : _defaultTimeout;
 
-                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout));
+                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout, databaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -2086,7 +2087,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
-                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout));
+                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout, databaseMode));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2174,7 +2175,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).ToList();
 
@@ -2213,7 +2214,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2298,7 +2299,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -2358,7 +2359,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
-                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout, databaseMode));
 
                 files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(5, files.Count);
@@ -2514,11 +2515,24 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             return Etl.AddEtl(store, configuration, connectionString);
         }
 
-        private async Task<string> GetPerformanceStats(string database, TimeSpan timeout)
+        private async Task<string> GetPerformanceStats(string database, TimeSpan timeout, RavenDatabaseMode databaseMode)
         {
-            var documentDatabase = await GetDatabase(database);
-            var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
-            return $"olap etl to local machine did not finish in {timeout.TotalSeconds} seconds. stats : {performanceStats}";
+            IEnumerable<DocumentDatabase> databases = databaseMode switch
+            {
+                RavenDatabaseMode.Single => new[] { await GetDatabase(database) },
+                RavenDatabaseMode.Sharded => await Sharding.GetShardsDocumentDatabaseInstancesFor(database).ToListAsync(),
+                _ => throw new ArgumentOutOfRangeException(nameof(databaseMode), databaseMode, null)
+            };
+
+            var sb = new StringBuilder($"olap etl to local machine did not finish in {timeout.TotalSeconds} seconds.");
+
+            foreach (var documentDatabase in databases)
+            {
+                var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
+                sb.AppendLine($"database '{documentDatabase.Name}' stats : {performanceStats}");
+            }
+
+            return sb.ToString();
         }
 
         private class User
