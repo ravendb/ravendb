@@ -129,6 +129,36 @@
     }
 }
 
+.clearable-input {
+    position: relative;
+
+    .clear-button {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 4px;
+        align-text: center;
+
+        button {
+            flex-grow: 1;
+            border-radius: $gutter;
+            font-size: 0.75em;
+            box-shadow: none;
+            border-width: initial;
+            border-style: none;
+            border-color: initial;
+            border-image: initial;
+
+            &:not(:hover) {
+                background-color: transparent;
+            }
+        }
+    }
+}
+
 // Vertical separator inside the badge
 .badge {
     .vr {

@@ -7,6 +7,7 @@ import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
 import produce from "immer";
+import { Icon } from "components/common/Icon";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -124,15 +125,24 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
             <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
-                <Input
-                    type="text"
-                    accessKey="/"
-                    placeholder="e.g. Orders/ByCompany/*"
-                    title="Filter indexes"
-                    className="filtering-input"
-                    value={filter.searchText}
-                    onChange={(e) => onSearchTextChange(e.target.value)}
-                />
+                <div className="clearable-input">
+                    <Input
+                        type="text"
+                        accessKey="/"
+                        placeholder="e.g. Orders/ByCompany/*"
+                        title="Filter indexes"
+                        className="filtering-input"
+                        value={filter.searchText}
+                        onChange={(e) => onSearchTextChange(e.target.value)}
+                    />
+                    {filter.searchText && (
+                        <div className="clear-button">
+                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                                <Icon icon="clear" margin="m-0" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
             <div>
                 {/* TODO: add selectedItems and setSelectedItems */}
