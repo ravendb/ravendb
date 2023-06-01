@@ -15,7 +15,8 @@
     <Configurations>Debug;Release;Validate</Configurations>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
-    <TieredPGO>True</TieredPGO>
+    <TieredPGO>false</TieredPGO>
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
