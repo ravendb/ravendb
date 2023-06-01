@@ -173,6 +173,13 @@ namespace Raven.Server.Web.System
             using (var processor = new OngoingTasksHandlerProcessorForDeleteOngoingTask(this))
                 await processor.ExecuteAsync();
         }
+        
+        [RavenAction("/databases/*/admin/queue-sink", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public async Task AddQueueSink()
+        {
+            using (var processor = new OngoingTasksHandlerProcessorForAddQueueSink(this))
+                await processor.ExecuteAsync();
+        }
 
         internal static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
         {

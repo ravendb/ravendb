@@ -15,7 +15,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private long _taskId;
-
         protected AbstractOngoingTasksHandlerProcessorForAddEtl([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {

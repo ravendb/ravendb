@@ -956,10 +956,16 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing EtlLoader");
             exceptionAggregator.Execute(() =>
             {
-                // todo djordje: add for queusinkloader
                 EtlLoader?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");
+            
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing QueueSinkLoader");
+            exceptionAggregator.Execute(() =>
+            {
+                QueueSinkLoader?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed QueueSinkLoader");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing Operations");
             exceptionAggregator.Execute(() =>

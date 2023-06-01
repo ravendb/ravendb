@@ -276,9 +276,9 @@ public class QueueSinkProcess : BackgroundWorkBase
             BootstrapServers = Configuration.Connection.KafkaConnectionSettings.BootstrapServers,
             GroupId = GroupId,
             IsolationLevel = IsolationLevel.ReadCommitted,
-            // todo djordje: explain this
+            // we are disabling auto commit option and we are manually commit only messages that are processed successfully
             EnableAutoCommit = false,
-            // todo djordje: add comment why we are using earliste
+            // we are using Earliest option because we want to be able to see messages which are present before consumer is connected
             AutoOffsetReset = AutoOffsetReset.Earliest,
             // todo djordje: add authentication (try to use the same approach like in ETL)
         };
