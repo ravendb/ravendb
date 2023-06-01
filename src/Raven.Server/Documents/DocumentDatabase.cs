@@ -1031,6 +1031,9 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
+                if (IoChanges == null)
+                    return;
+
                 IoChanges.OnIoChange -= CheckWriteRateAndNotifyIfNecessary;
             });
 
@@ -1953,8 +1956,8 @@ namespace Raven.Server.Documents
                         return;
                     break;
             }
-            
-            if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1) 
+
+            if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1)
                 return;
 
             NotificationCenter.SlowWrites.Add(ioChange);
