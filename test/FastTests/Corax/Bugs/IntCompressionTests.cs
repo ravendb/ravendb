@@ -41,7 +41,7 @@ namespace FastTests.Corax.Bugs
 
             var buffer = stackalloc byte[1024];
             int sizeUsed;
-            fixed (long* l = data)
+            fixed (long* l = data.ToArray())
             {
                 (int count, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buffer, 1024);
                 Assert.Equal(data.Length, count);
@@ -72,14 +72,14 @@ namespace FastTests.Corax.Bugs
 
             var data = JsonConvert.DeserializeObject<long[]>(streamReader.ReadToEnd());
 
-            var bufferSize = 9544;
+            var bufferSize = 4238;
             var buf = ElectricFencedMemory.Instance.Allocate(bufferSize);
             try
             {
                 int sizeUsed;
-                fixed (long* l = data)
+                fixed (long* l = data.ToArray())
                 {
-                    (int count,  sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, 9544);
+                    (int count,  sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, 4238);
                     Assert.Equal(data.Length, count);
                     Assert.Equal(bufferSize, sizeUsed);
                 }
