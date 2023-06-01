@@ -55,15 +55,15 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
 
             var fetchedUser1 = session.Load<User>("users/1");
             Assert.NotNull(fetchedUser1);
-            Assert.Equal(fetchedUser1.Id, "users/1");
-            Assert.Equal(fetchedUser1.FirstName, "John");
-            Assert.Equal(fetchedUser1.LastName, "Doe");
+            Assert.Equal("users/1", fetchedUser1.Id);
+            Assert.Equal("John", fetchedUser1.FirstName);
+            Assert.Equal("Doe", fetchedUser1.LastName);
 
             var fetchedUser2 = session.Load<User>("users/2");
             Assert.NotNull(fetchedUser2);
-            Assert.Equal(fetchedUser2.Id, "users/2");
-            Assert.Equal(fetchedUser2.FirstName, "Jane");
-            Assert.Equal(fetchedUser2.LastName, "Smith");
+            Assert.Equal("users/2", fetchedUser2.Id);
+            Assert.Equal("Jane", fetchedUser2.FirstName);
+            Assert.Equal("Smith", fetchedUser2.LastName);
         }
 
         [Fact]
@@ -95,20 +95,19 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
 
             using var session = store.OpenSession();
 
-            // todo djordje: switch actual and expcted
             var fetchedUser1 = session.Load<User>("users/1");
             Assert.NotNull(fetchedUser1);
-            Assert.Equal(fetchedUser1.Id, "users/1");
-            Assert.Equal(fetchedUser1.FirstName, "John");
-            Assert.Equal(fetchedUser1.LastName, "Doe");
-            Assert.Equal(fetchedUser1.FullName, "John Doe");
+            Assert.Equal("users/1", fetchedUser1.Id);
+            Assert.Equal("John", fetchedUser1.FirstName);
+            Assert.Equal("Doe", fetchedUser1.LastName);
+            Assert.Equal("John Doe", fetchedUser1.FullName);
 
             var fetchedUser2 = session.Load<User>("users/2");
             Assert.NotNull(fetchedUser2);
-            Assert.Equal(fetchedUser2.Id, "users/2");
-            Assert.Equal(fetchedUser2.FirstName, "Jane");
-            Assert.Equal(fetchedUser2.LastName, "Smith");
-            Assert.Equal(fetchedUser2.FullName, "Jane Smith");
+            Assert.Equal("users/2", fetchedUser2.Id);
+            Assert.Equal("Jane", fetchedUser2.FirstName);
+            Assert.Equal("Smith", fetchedUser2.LastName);
+            Assert.Equal("Jane Smith", fetchedUser2.FullName);
         }
 
         [Fact]
