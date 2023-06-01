@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Intrinsics;
+using Voron.Util.PFor;
 
 //*************
 // Generated using:
@@ -11,7 +12,7 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
 {
 
   public
-    static Vector256<uint> iunpackFOR0(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static Vector256<uint> iunpackFOR0(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         var outputVec = (Vector256<uint> *)output;
         for (int i = 0; i < 8; ++i)
@@ -26,17 +27,17 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR0(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR0(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         // nothing to do here
     }
 
   public
-    static void ipackFOR1(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR1(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -231,11 +232,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR2(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR2(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -433,11 +434,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR3(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR3(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -640,11 +641,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR4(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR4(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -848,11 +849,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR5(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR5(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -1063,11 +1064,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR6(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR6(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -1281,11 +1282,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR7(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR7(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -1504,11 +1505,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR8(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR8(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -1724,11 +1725,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR9(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR9(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -1955,11 +1956,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR10(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR10(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -2189,11 +2190,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR11(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR11(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -2428,11 +2429,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR12(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR12(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -2668,11 +2669,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR13(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR13(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -2915,11 +2916,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR14(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR14(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -3165,11 +3166,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR15(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR15(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -3420,11 +3421,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR16(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR16(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -3664,11 +3665,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR17(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR17(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -3927,11 +3928,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR18(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR18(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -4193,11 +4194,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR19(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR19(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -4464,11 +4465,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR20(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR20(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -4736,11 +4737,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR21(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR21(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -5015,11 +5016,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR22(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR22(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -5297,11 +5298,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR23(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR23(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -5584,11 +5585,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR24(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR24(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -5868,11 +5869,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR25(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR25(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -6163,11 +6164,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR26(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR26(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -6461,11 +6462,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR27(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR27(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -6764,11 +6765,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR28(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR28(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -7068,11 +7069,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR29(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR29(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -7379,11 +7380,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR30(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR30(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -7693,11 +7694,11 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR31(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR31(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
-        TTransform simdTransform = default;
+        
         var currIn = *input;                                      // __m128i CurrIn = _mm_load_si128(in);
         var inReg = simdTransform.Encode(currIn, ref initOffset); // __m128i InReg = Delta(CurrIn, initOffset);
                                                                   // initOffset = currIn;
@@ -8012,7 +8013,7 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void ipackFOR32(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void ipackFOR32(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         Vector256<uint> outReg;
 
@@ -8239,13 +8240,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR1(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR1(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 1) - 1); // _mm_set1_epi32((1U<<1)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -8442,13 +8443,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR2(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR2(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 2) - 1); // _mm_set1_epi32((1U<<2)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -8647,13 +8648,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR3(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR3(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 3) - 1); // _mm_set1_epi32((1U<<3)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -8860,13 +8861,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR4(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR4(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 4) - 1); // _mm_set1_epi32((1U<<4)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -9069,13 +9070,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR5(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR5(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 5) - 1); // _mm_set1_epi32((1U<<5)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -9292,13 +9293,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR6(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR6(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 6) - 1); // _mm_set1_epi32((1U<<6)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -9517,13 +9518,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR7(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR7(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 7) - 1); // _mm_set1_epi32((1U<<7)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -9750,13 +9751,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR8(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR8(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 8) - 1); // _mm_set1_epi32((1U<<8)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -9967,13 +9968,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR9(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR9(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 9) - 1); // _mm_set1_epi32((1U<<9)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -10210,13 +10211,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR10(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR10(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 10) - 1); // _mm_set1_epi32((1U<<10)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -10455,13 +10456,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR11(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR11(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 11) - 1); // _mm_set1_epi32((1U<<11)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -10708,13 +10709,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR12(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR12(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 12) - 1); // _mm_set1_epi32((1U<<12)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -10957,13 +10958,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR13(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR13(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 13) - 1); // _mm_set1_epi32((1U<<13)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -11220,13 +11221,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR14(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR14(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 14) - 1); // _mm_set1_epi32((1U<<14)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -11485,13 +11486,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR15(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR15(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 15) - 1); // _mm_set1_epi32((1U<<15)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -11758,13 +11759,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR16(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR16(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 16) - 1); // _mm_set1_epi32((1U<<16)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -11991,13 +11992,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR17(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR17(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 17) - 1); // _mm_set1_epi32((1U<<17)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -12274,13 +12275,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR18(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR18(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 18) - 1); // _mm_set1_epi32((1U<<18)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -12559,13 +12560,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR19(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR19(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 19) - 1); // _mm_set1_epi32((1U<<19)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -12852,13 +12853,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR20(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR20(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 20) - 1); // _mm_set1_epi32((1U<<20)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -13141,13 +13142,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR21(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR21(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 21) - 1); // _mm_set1_epi32((1U<<21)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -13444,13 +13445,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR22(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR22(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 22) - 1); // _mm_set1_epi32((1U<<22)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -13749,13 +13750,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR23(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR23(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 23) - 1); // _mm_set1_epi32((1U<<23)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -14062,13 +14063,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR24(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR24(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 24) - 1); // _mm_set1_epi32((1U<<24)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -14359,13 +14360,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR25(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR25(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 25) - 1); // _mm_set1_epi32((1U<<25)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -14682,13 +14683,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR26(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR26(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 26) - 1); // _mm_set1_epi32((1U<<26)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -15007,13 +15008,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR27(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR27(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 27) - 1); // _mm_set1_epi32((1U<<27)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -15340,13 +15341,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR28(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR28(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 28) - 1); // _mm_set1_epi32((1U<<28)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -15669,13 +15670,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR29(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR29(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 29) - 1); // _mm_set1_epi32((1U<<29)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -16012,13 +16013,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR30(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR30(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 30) - 1); // _mm_set1_epi32((1U<<30)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -16357,13 +16358,13 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR31(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR31(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
 
         var inReg = *input;
         Vector256<uint> outReg;
         Vector256<uint> tmp;
-        TTransform simdTransform = default;
+        
         Vector256<uint> mask = Vector256.Create((1U << 31) - 1); // _mm_set1_epi32((1U<<31)-1);
 
         tmp = inReg;                                           // tmp = InReg;
@@ -16710,7 +16711,7 @@ unsafe partial struct SimdPacking<TTransform> where TTransform : struct, ISimdTr
     }
 
   public
-    static void iunpackFOR32(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output)
+    static void iunpackFOR32(Vector256<uint> initOffset, Vector256<uint> *input, Vector256<uint> *output, TTransform simdTransform)
     {
         for (int k = 0; k < 256 / 8; ++k)
         {
