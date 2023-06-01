@@ -625,11 +625,19 @@ namespace Raven.Server.Documents
             return task.Result.DatabaseShutdown.IsCancellationRequested == false;
         }
 
-        public struct DatabaseSearchResult
+        public sealed class DatabaseSearchResult
         {
-            public Task<DocumentDatabase> DatabaseTask;
-            public ShardedDatabaseContext DatabaseContext;
-            public Status DatabaseStatus;
+            public readonly Task<DocumentDatabase> DatabaseTask;
+            public readonly ShardedDatabaseContext DatabaseContext;
+            public readonly Status DatabaseStatus;
+
+            public DatabaseSearchResult(Status databaseStatus, Task<DocumentDatabase> databaseTask, ShardedDatabaseContext databaseContext)
+            {
+                DatabaseStatus = databaseStatus;
+                DatabaseTask = databaseTask;
+                DatabaseContext = databaseContext;
+            }
+
             public enum Status
             {
                 None,
@@ -645,20 +653,12 @@ namespace Raven.Server.Documents
             {
                 if (TryGetResourceStore(databaseName, out var databaseTask))
                 {
-                    return new DatabaseSearchResult
-                    {
-                        DatabaseStatus = DatabaseSearchResult.Status.Database,
-                        DatabaseTask = databaseTask
-                    };
+                    return new DatabaseSearchResult(DatabaseSearchResult.Status.Database, databaseTask, databaseContext: null);
                 }
 
                 if (ShardedDatabasesCache.TryGetValue(databaseName, out var database))
                 {
-                    return new DatabaseSearchResult
-                    {
-                        DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                        DatabaseContext = database.Result
-                    };
+                    return new DatabaseSearchResult(DatabaseSearchResult.Status.Sharded, databaseTask: null, database.Result);
                 }
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -667,30 +667,18 @@ namespace Raven.Server.Documents
                     var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
                     if (databaseRecord == null)
                     {
-                        return new DatabaseSearchResult
-                        {
-                            DatabaseStatus = DatabaseSearchResult.Status.Missing,
-                            DatabaseTask = Task.FromResult((DocumentDatabase)null)
-                        };
+                        return new DatabaseSearchResult(DatabaseSearchResult.Status.Missing, Task.FromResult<DocumentDatabase>(null), databaseContext: null);
                     }
 
                     if (databaseRecord.IsSharded)
                     {
                         var databaseContext = GetOrAddShardedDatabaseContext(databaseName, databaseRecord);
 
-                        return new DatabaseSearchResult
-                        {
-                            DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                            DatabaseContext = databaseContext
-                        };
+                        return new DatabaseSearchResult(DatabaseSearchResult.Status.Sharded, databaseTask: null, databaseContext);
                     }
                 }
 
-                return new DatabaseSearchResult
-                {
-                    DatabaseStatus = DatabaseSearchResult.Status.Database,
-                    DatabaseTask = TryGetOrCreateResourceStore(databaseName)
-                };
+                return new DatabaseSearchResult(DatabaseSearchResult.Status.Database, TryGetOrCreateResourceStore(databaseName), databaseContext: null);
             }
         }
 
@@ -1140,7 +1128,7 @@ namespace Raven.Server.Documents
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null && 
+            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
                                         TryGetDeletionInProgress(databaseRecord.DeletionInProgress, databaseName.ToString(), _serverStore.NodeTag, out var deletionInProgress) &&
                                         deletionInProgress != DeletionInProgressStatus.No;
             if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
@@ -1582,7 +1570,7 @@ namespace Raven.Server.Documents
                 return false;
             }
         }
-        
+
         public class StateChange
         {
             public readonly object Locker = new object();
@@ -1590,7 +1578,7 @@ namespace Raven.Server.Documents
             public readonly string Name;
             public readonly CancellationToken Token;
             public readonly Logger Logger;
-            public readonly Action<DatabaseRecord,long> OnChange;
+            public readonly Action<DatabaseRecord, long> OnChange;
 
             public long LastIndexChange;
 
