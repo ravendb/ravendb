@@ -1,9 +1,23 @@
 <div class="migrate-database">
     <div class="panel padding padding-md" data-bind="visible: $root.activeDatabase().isSharded()">
-        <h2 class="text-warning"><i class="icon-info"></i> Feature not available</h2>
-        <p class="margin-top margin-lg">
-            Migrate data from another database is not available for sharded databases.
-        </p>
+        <div>
+            <div class="empty-set text-center margin-top-sm margin-bottom-sm mx-auto">
+                <i class="icon-disabled text-warning icon-xl m-0"></i>
+                <div class="lead">
+                    <div class="vstack gap-3">
+                        <span>
+                            <div class="rounded-pill badge bg-faded-warning">
+                                Feature not available
+                            </div>
+                        </span>
+                        <span>
+                            Migrate data from another database is not available for
+                            <i class="icon-sharding text-shard m-0"></i> sharded databases
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="panel" data-bind="visible: !$root.activeDatabase().isSharded()">
         <div class="panel-body">
