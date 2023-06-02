@@ -521,6 +521,8 @@ internal class DatabaseRecordBuilder :
         if (sorterDefinitions == null || sorterDefinitions.Length == 0)
             return;
 
+        DatabaseRecord.Sorters ??= new Dictionary<string, SorterDefinition>();
+
         foreach (SorterDefinition sorterDefinition in sorterDefinitions)
             DatabaseRecord.Sorters.Add(sorterDefinition.Name, sorterDefinition);
     }
@@ -530,6 +532,8 @@ internal class DatabaseRecordBuilder :
         if (analyzerDefinitions == null || analyzerDefinitions.Length == 0)
             return;
 
+        DatabaseRecord.Analyzers ??= new Dictionary<string, AnalyzerDefinition>();
+
         foreach (AnalyzerDefinition analyzerDefinition in analyzerDefinitions)
             DatabaseRecord.Analyzers.Add(analyzerDefinition.Name, analyzerDefinition);
     }
@@ -538,6 +542,8 @@ internal class DatabaseRecordBuilder :
     {
         if (indexDefinitions == null || indexDefinitions.Length == 0)
             return;
+
+        DatabaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
 
         foreach (IndexDefinition indexDefinition in indexDefinitions)
             DatabaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
@@ -633,7 +639,7 @@ internal class DatabaseRecordBuilder :
         DatabaseRecord.DatabaseName = databaseName;
     }
 
-    IShardedDatabaseRecordBuilder IShardedTopologyConfigurationBuilder.Orchestrator(OrchestratorTopology topology)
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(OrchestratorTopology topology)
     {
         if (topology == null) 
             throw new ArgumentNullException(nameof(topology));
@@ -643,7 +649,7 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IShardedTopologyConfigurationBuilder.Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder)
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder)
     {
         if (builder == null) 
             throw new ArgumentNullException(nameof(builder));
@@ -652,7 +658,7 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, DatabaseTopology topology)
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, DatabaseTopology topology)
     {
         if (topology == null) 
             throw new ArgumentNullException(nameof(topology));
@@ -664,7 +670,7 @@ internal class DatabaseRecordBuilder :
 
     private DatabaseTopology _shardTopology;
 
-    IShardedDatabaseRecordBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder)
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder)
     {
         if (builder == null) 
             throw new ArgumentNullException(nameof(builder));
@@ -788,13 +794,13 @@ public interface IShardTopologyConfigurationBuilder : ITopologyConfigurationBuil
 
 public interface IShardedTopologyConfigurationBuilder
 {
-    IShardedDatabaseRecordBuilder Orchestrator(OrchestratorTopology topology);
+    IShardedTopologyConfigurationBuilder Orchestrator(OrchestratorTopology topology);
 
-    IShardedDatabaseRecordBuilder Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder);
+    IShardedTopologyConfigurationBuilder Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder);
 
-    IShardedDatabaseRecordBuilder AddShard(int shardNumber, DatabaseTopology topology);
+    IShardedTopologyConfigurationBuilder AddShard(int shardNumber, DatabaseTopology topology);
 
-    IShardedDatabaseRecordBuilder AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder);
+    IShardedTopologyConfigurationBuilder AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder);
 }
 
 public interface IIntegrationConfigurationBuilder
