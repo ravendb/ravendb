@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Sparrow.Compression;
 using Sparrow.Server;
 
 namespace Voron.Util.PFor;
@@ -15,11 +16,11 @@ public unsafe struct FastPForDecoder : IDisposable
     private byte* _metadata;
     private readonly byte* _end;
     private readonly uint* _exceptions;
-    private long _baseline;
     private fixed int _exceptionOffsets[32];
     private readonly int _prefixShiftAmount;
     private readonly ushort _sharedPrefix;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
+    private Vector256<long> _prev;
 
     public FastPForDecoder(ByteStringContext allocator , byte* input, int size)
     {
@@ -27,7 +28,7 @@ public unsafe struct FastPForDecoder : IDisposable
         _end = input + size;
         ref var header = ref Unsafe.AsRef<PForHeader>(input);
         _metadata = input + header.MetadataOffset;
-        _baseline = header.Baseline;
+ 
         if (header.SharedPrefix >= 1 << PrefixSizeBits)
         {
             _sharedPrefix = 0;
@@ -70,6 +71,7 @@ public unsafe struct FastPForDecoder : IDisposable
         }
 
         _input += sizeof(PForHeader);
+        _prev = Vector256.Create(header.Baseline);
 
     }
 
@@ -77,8 +79,9 @@ public unsafe struct FastPForDecoder : IDisposable
     {
         var prefixAmount = _prefixShiftAmount;
         var sharedPrefixMask = Vector256.Create<long>(_sharedPrefix);
-        var prev = Vector256.Create(_baseline);
 
+        var bigDeltaOffsetsBuffer = stackalloc byte*[64];
+        int bigDeltaBufferUsed = 0;
         var buffer = stackalloc uint[256];
         int read = 0;
         while (_metadata < _end && read < outputCount)
@@ -86,19 +89,27 @@ public unsafe struct FastPForDecoder : IDisposable
             Debug.Assert(read + 256 <= outputCount, "We assume a minimum of 256 free spaces");
 
             var numOfBits = *_metadata++;
-
-            if(numOfBits == 255) // either a batch with delta > uint.MaxValue or remainder of less than 256
+            switch (numOfBits)
             {
-                var countOfVarintBatch = *_metadata++;
-                var prevScalar = prev.GetElement(3);
-                for (int i = 0; i < countOfVarintBatch; i++)
-                {
-                    var cur = ReadVarInt64(ref _input) + prevScalar;
-                    output[read++] = cur << _prefixShiftAmount | _sharedPrefix;
-                    prevScalar = cur;
-                }
-                prev = Vector256.Create(prevScalar);
-                continue;
+                case FastPForEncoder.BiggerThanMaxMarker:
+                    bigDeltaOffsetsBuffer[bigDeltaBufferUsed++] = _metadata;
+                    _metadata += 17; // batch location + 16 bytes high bits of the delta
+                    continue;
+                case FastPForEncoder.VarIntBatchMarker:
+                    var countOfVarIntBatch = *_metadata++;
+                    var prevScalar = _prev.GetElement(3);
+                    for (int i = 0; i < countOfVarIntBatch; i++)
+                    {
+                        var cur = VariableSizeEncoding.Read<long>(_input, out var offset);
+                        _input += offset;
+                        cur += prevScalar;
+                        output[read++] = cur << _prefixShiftAmount | _sharedPrefix;
+                        prevScalar = cur;
+                    }
+                    _prev = Vector256.Create(prevScalar);
+                    continue;
+                case > 32 and < FastPForEncoder.BiggerThanMaxMarker:
+                    throw new ArgumentOutOfRangeException("Unknown bits amount: " + numOfBits);
             }
 
             var numOfExceptions = *_metadata++;
@@ -131,17 +142,52 @@ public unsafe struct FastPForDecoder : IDisposable
                 }
             }
 
+            var expectedBufferIndex = -1;
+            var deltaBufferIndex = 0;
+            if (deltaBufferIndex < bigDeltaBufferUsed)
+            {
+                expectedBufferIndex = *bigDeltaOffsetsBuffer[deltaBufferIndex]++;
+            }
+
             for (int i = 0; i + Vector256<uint>.Count <= 256; i += Vector256<uint>.Count)
             {
                 var (a, b) = Vector256.Widen(Vector256.Load(buffer + i).AsInt32());
-                PrefixSumAndStoreToOutput(a);
-                PrefixSumAndStoreToOutput(b);
+                if (expectedBufferIndex == i)
+                {
+                    a |= GetDeltaHighBits();
+                }
+                PrefixSumAndStoreToOutput(a, ref _prev);
+                if (expectedBufferIndex == i + 4)
+                {
+                    b |= GetDeltaHighBits();
+                }
+                PrefixSumAndStoreToOutput(b, ref _prev);
+            }
+            bigDeltaBufferUsed = 0;
+
+            Vector256<long> GetDeltaHighBits()
+            {
+                var highBitsDelta = Vector128.Load(bigDeltaOffsetsBuffer[deltaBufferIndex])
+                    .AsInt32()
+                    .ToVector256();
+                deltaBufferIndex++;
+                if (deltaBufferIndex < bigDeltaBufferUsed)
+                {
+                    expectedBufferIndex = *bigDeltaOffsetsBuffer[deltaBufferIndex]++;
+                }
+                else
+                {
+                    expectedBufferIndex = -1;
+                }
+
+                highBitsDelta = Vector256.Shuffle(highBitsDelta, Vector256.Create(3, 0, 4, 0, 5, 0, 6, 0));
+                return highBitsDelta.AsInt64();
             }
         }
 
         return read;
 
-        void PrefixSumAndStoreToOutput(Vector256<long> cur)
+        void PrefixSumAndStoreToOutput(Vector256<long> cur, ref Vector256<long> prev)
         {
             // doing prefix sum here: https://en.algorithmica.org/hpc/algorithms/prefix/
             cur += Vector256.Shuffle(cur, Vector256.Create(0, 0, 1, 2)) &
@@ -154,35 +200,6 @@ public unsafe struct FastPForDecoder : IDisposable
             cur.Store(output + read);
             read += Vector256<long>.Count;
         }
-    }
-
-    private long ReadVarInt64(ref byte* input)
-    {
-        const int MaxBytesWithoutOverflow = 9;
-        byte byteReadJustNow;
-        ulong result = 0;
-        for (int shift = 0; shift < MaxBytesWithoutOverflow * 7; shift += 7)
-        {
-            byteReadJustNow = *input++;
-            result |= (byteReadJustNow & 0x7Ful) << shift;
-
-            if (byteReadJustNow <= 0x7Fu)
-            {
-                return (long)result; // early exit
-            }
-        }
-
-        // Read the 10th byte. Since we already read 63 bits,
-        // the value of this byte must fit within 1 bit (64 - 63),
-        // and it must not have the high bit set.
-        byteReadJustNow = *input++;
-        if (byteReadJustNow > 0b_1u)
-        {
-            throw new FormatException("Bad 7 bit value");
-        }
-
-        result |= (ulong)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
-        return (long)result;
     }
 
     public void Dispose()
