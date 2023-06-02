@@ -41,6 +41,8 @@
     <None Remove="Corax\Bugs\index-corrupt-log.bin" />
     <EmbeddedResource Include="Corax\Bugs\index-corrupt-log.bin" />
     <None Remove="Voron\PostingLists\WriteTooMuchToBuffer.txt" />
+    <None Remove="Voron\Util\SmallBufferSizeMisleading.txt" />
+    <EmbeddedResource Include="Voron\Util\SmallBufferSizeMisleading.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />

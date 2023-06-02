@@ -186,12 +186,14 @@ public unsafe class FastPForEncoder  : IDisposable
                 case VarIntBatchMarker:
                     var sizeOfVarIntBatch = _metadata[_metadataPos++];
                     var varintSize = WriteLastBatchAsVarIntDelta(sizeOfVarIntBatch, output + sizeUsed, outputSize - sizeUsed);
+                    var expectedMetadataSize = _metadataPos - startingMetadataPosition;
                     if (varintSize == 0 || // couldn't fit the var int buffer
-                        sizeUsed + varintSize + exceptionsRequiredSize + _metadata.Count > outputSize) // wouldn't be able to fit the exceptions & metadata
+                        sizeUsed + varintSize + exceptionsRequiredSize + expectedMetadataSize > outputSize) // wouldn't be able to fit the exceptions & metadata
                     {
                         _metadataPos = batchMetadataStart;
                         goto AfterLoop;
                     }
+
                     _offset += sizeOfVarIntBatch;
                     sizeUsed += varintSize;
                     continue;
@@ -218,8 +220,8 @@ public unsafe class FastPForEncoder  : IDisposable
                 {
                     exceptionsRequiredSize += sizeof(ushort); // size for the number of items here
                 }
-                exceptionsRequiredSize -= BitPacking.RequireSizeSegmented(oldCount, maxNumOfBits);
-                exceptionsRequiredSize += BitPacking.RequireSizeSegmented(numOfExceptions + oldCount, maxNumOfBits);
+                exceptionsRequiredSize -= BitPacking.RequireSizeSegmented(oldCount, exceptionIndex);
+                exceptionsRequiredSize += BitPacking.RequireSizeSegmented(numOfExceptions + oldCount, exceptionIndex);
             }
 
             _metadataPos += numOfExceptions;
