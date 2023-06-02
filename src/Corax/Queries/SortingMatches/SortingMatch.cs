@@ -14,6 +14,7 @@ using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 
 namespace Corax.Queries.SortingMatches;
@@ -148,7 +149,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         where TIterator : struct, ITreeIterator
     {
         private PostingList.Iterator _postListIt;
-        private SimdBufferedReader _smallListReader;
+        private FastPForBufferedReader _smallListReader;
         private TIterator _termsIt;
         private readonly IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
@@ -215,7 +216,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                         case TermIdMask.SmallPostingList:
                             var item = _containerItems[_smallPostingListIndex++];
                             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
-                            _smallListReader = new SimdBufferedReader(_llt.Allocator, item.Address + offset, item.Length - offset);
+                            _smallListReader = new FastPForBufferedReader(_llt.Allocator, item.Address + offset, item.Length - offset);
                             ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                             break;
                         case TermIdMask.PostingList:

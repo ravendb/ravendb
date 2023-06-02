@@ -7,6 +7,7 @@ using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron.Impl;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 using Constants = Voron.Global.Constants;
 
@@ -45,7 +46,7 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public Span<long> Update(LowLevelTransaction tx, ref NativeIntegersList tempList, ref long* additions, ref int additionsCount,
+    public void Update(LowLevelTransaction tx, FastPForEncoder encoder, ref NativeIntegersList tempList, ref long* additions, ref int additionsCount,
         ref long* removals, ref int removalsCount, long maxValidValue)
     {
         var maxAdditionsLimit = new Span<long>(additions, additionsCount).BinarySearch(maxValidValue);
@@ -57,18 +58,20 @@ public readonly unsafe struct PostingListLeafPage
             maxRemovalsLimit = ~maxRemovalsLimit;
       
         if (maxRemovalsLimit == 0 && maxAdditionsLimit == 0)
-            return Span<long>.Empty; // nothing to do
+            return; // nothing to do
         
         tempList.Clear();
 
         if (Header->NumberOfEntries == 0)
         {
-            var written = AppendToNewPage(additions, maxAdditionsLimit);
+            encoder.Encode(additions, maxAdditionsLimit);
+            
+            var written = AppendToNewPage(encoder);
             removals += maxRemovalsLimit;
             removalsCount -= maxRemovalsLimit;
             additions += written;
             additionsCount -= written;
-            return Span<long>.Empty;
+            return;
         }
 
         var tmpPageScope = tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
@@ -105,29 +108,13 @@ public readonly unsafe struct PostingListLeafPage
 
         int entriesCount = 0;
         int sizeUsed = 0;
-        Span<long> remainder = Span<long>.Empty;
+        
+        encoder.Encode(tempList.RawItems, tempList.Count);
+        
         if (tempList.Count > 0)
         {
-            (entriesCount, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(tempList.RawItems, tempList.Count, newPagePtr + PageHeader.SizeOf,
-                Constants.Storage.PageSize - PageHeader.SizeOf);
+            (entriesCount, sizeUsed) = encoder.Write(newPagePtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
             Debug.Assert(entriesCount > 0);
-            if (entriesCount < tempList.Count)
-            {
-                remainder = tempList.Items[entriesCount..];
-            }
-        }
-        // we still have items to add, let's add them as the next item here
-        if (entriesCount == tempList.Count && additionsIdx < additionsCount)
-        {
-            (int secondCount,  int sizeUsedSecond) = SimdBitPacker<SortedDifferentials>.Encode(additions + additionsIdx, additionsCount - additionsIdx,
-                newPagePtr + PageHeader.SizeOf + sizeUsed,
-                Constants.Storage.PageSize - PageHeader.SizeOf - sizeUsed);
-            if (secondCount > 0)
-            {
-                additionsIdx += secondCount;
-                entriesCount += secondCount;
-                sizeUsed += sizeUsedSecond;
-            }
         }
 
         Debug.Assert(sizeUsed < Constants.Storage.PageSize);
@@ -144,8 +131,6 @@ public readonly unsafe struct PostingListLeafPage
         additionsCount -= additionsIdx;
         removals += removalsIdx;
         removalsCount -= removalsIdx;
-
-        return remainder;
         
         void AddItemToList(ref NativeIntegersList list)
         {
@@ -182,17 +167,17 @@ public readonly unsafe struct PostingListLeafPage
         }
     }
     
-      /// <summary>
+     /// <summary>
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public int AppendToNewPage(long* additions, int additionsCount)
+    public int AppendToNewPage(FastPForEncoder encoder)
     {
         PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)_page.Pointer;
         InitLeaf(newHeader);
 
-        (int entriesCount, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(additions, additionsCount, _page.DataPointer,
-            Constants.Storage.PageSize - PageHeader.SizeOf);
+        (int entriesCount, int sizeUsed) = encoder.Write(_page.DataPointer, Constants.Storage.PageSize - PageHeader.SizeOf);
+
         Debug.Assert(entriesCount > 0);
         Debug.Assert(sizeUsed < Constants.Storage.PageSize);
         newHeader->SizeUsed = (ushort)sizeUsed;
@@ -205,11 +190,11 @@ public readonly unsafe struct PostingListLeafPage
 
     public struct Iterator
     {
-        private SimdBufferedReader _reader;
+        private FastPForBufferedReader _reader;
 
         public Iterator(ByteStringContext allocator ,byte* start, int sizeUsed)
         {
-            _reader = new SimdBufferedReader(allocator, start, sizeUsed);
+            _reader = new FastPForBufferedReader(allocator, start, sizeUsed);
         }
 
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
@@ -250,10 +235,10 @@ public readonly unsafe struct PostingListLeafPage
             var buffer = stackalloc long[MinimumSizeOfBuffer];
             // we *copy* the reader to do the search without modifying 
             //  the original position
-            var innerReader = _reader.Reader;
+            var innerReader = _reader.Decoder;
             while (true)
             {
-                var read = innerReader.Fill(buffer, MinimumSizeOfBuffer);
+                var read = innerReader.Read(buffer, MinimumSizeOfBuffer);
                 if (read == 0)
                 {
                     return false; // not found
@@ -270,7 +255,7 @@ public readonly unsafe struct PostingListLeafPage
     private int ReadAllEntries(ByteStringContext context, long* existing, int count)
     {
         int existingCount = 0;
-        var reader = new SimdBufferedReader(context, _page.DataPointer, Header->SizeUsed);
+        var reader = new FastPForBufferedReader(context, _page.DataPointer, Header->SizeUsed);
         while (true) 
         {
             var read = reader.Fill(existing + existingCount, count - existingCount);
@@ -306,20 +291,25 @@ public readonly unsafe struct PostingListLeafPage
         var tmpPtr = tmp.Ptr;
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
         InitLeaf(newHeader);
+
+        var firstDecoder = new FastPForDecoder(allocator, (byte*)first + PageHeader.SizeOf, first->SizeUsed);
+        var secondDecoder = new FastPForDecoder(allocator, (byte*)second + PageHeader.SizeOf, second->SizeUsed);
+        var mergedList = new NativeIntegersList(allocator, first->NumberOfEntries + second->NumberOfEntries);
+
+        firstDecoder.Read(mergedList.RawItems, first->NumberOfEntries);
+        secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, second->NumberOfEntries);
+
+        var encoder = new FastPForEncoder(allocator);
+        var reqSize = encoder.Encode(mergedList.RawItems, mergedList.Capacity);
+        Debug.Assert(reqSize < Constants.Storage.PageSize - PageHeader.SizeOf);
+        encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
         
-        Memory.Copy((byte*)dest + PageHeader.SizeOf,
-            (byte*)first + PageHeader.SizeOf,
-            first->SizeUsed
-            );
-        dest->SizeUsed += first->SizeUsed;
-        dest->NumberOfEntries += first->NumberOfEntries;
-        
-        Memory.Copy((byte*)dest + PageHeader.SizeOf + dest->SizeUsed,
-            (byte*)second + PageHeader.SizeOf,
-            second->SizeUsed
-        );
-        dest->SizeUsed += second->SizeUsed;
-        dest->NumberOfEntries += second->NumberOfEntries;
+        mergedList.Dispose();
+        secondDecoder.Dispose();
+        firstDecoder.Dispose();
+
+        newHeader->SizeUsed = (ushort)reqSize;
+        newHeader->NumberOfEntries = first->NumberOfEntries + second->NumberOfEntries;
 
         Memory.Set((byte*)dest + PageHeader.SizeOf + dest->SizeUsed, 0,
             Constants.Storage.PageSize - (PageHeader.SizeOf + dest->SizeUsed));

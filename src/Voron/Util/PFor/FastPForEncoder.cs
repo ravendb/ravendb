@@ -20,9 +20,9 @@ public unsafe class FastPForEncoder  : IDisposable
     private int _count;
     private int _offset;
     private ushort _sharedPrefix;
-    private List<uint>[] _exceptions = new List<uint>[32];
-    private int[] _exceptionsStart = new int[32];
-    private List<byte> _metadata = new();
+    private readonly List<uint>[] _exceptions = new List<uint>[32];
+    private readonly int[] _exceptionsStart = new int[32];
+    private readonly List<byte> _metadata = new();
     private int _metadataPos;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesOutputScope;
 
@@ -32,15 +32,15 @@ public unsafe class FastPForEncoder  : IDisposable
         _allocator = allocator;
     }
     
-    public void Init(long* entries, int count)
+    public int Encode(long* entries, int count)
     {
         _entries = entries;
         _count = count;
         _offset = 0;
-        for (int i = 0; i < _exceptions.Length; i++)
+        for (int k = 0; k < _exceptions.Length; k++)
         {
-            _exceptions[i]?.Clear();
-            _exceptionsStart[i] = 0;
+            _exceptions[k]?.Clear();
+            _exceptionsStart[k] = 0;
         }
         _metadata.Clear();
         _metadataPos = 0;
@@ -53,17 +53,14 @@ public unsafe class FastPForEncoder  : IDisposable
             _entriesOutput = bs.Ptr;
             _entriesOutputCount = newCount;
         }
-    }
 
-    public int Encode()
-    {
         (_sharedPrefix, var prefixShift) = RemoveSharedPrefix();
 
         var totalSize = sizeof(PForHeader);
         int i = 0;
         var entriesAsInt = (uint*)_entriesOutput;
-        var entries = (long*)_entriesOutput;
-        var prev = Vector256.Create(*entries);
+        var entriesOut = (long*)_entriesOutput;
+        var prev = Vector256.Create(*entriesOut);
         var max = Vector256.Create<long>(uint.MaxValue);
         for (; i + 256 <= _count; i += 256)
         {
@@ -71,7 +68,7 @@ public unsafe class FastPForEncoder  : IDisposable
             int j = 0;
             for (; j < 256; j += Vector256<long>.Count)
             {
-                var cur = Vector256.Load(entries + i + j);
+                var cur = Vector256.Load(entriesOut + i + j);
                 var mixed = Vector256.Shuffle(cur, Vector256.Create(0, 0, 1, 2)) & Vector256.Create(0, -1, -1, -1) |
                             Vector256.Shuffle(prev, Vector256.Create(3, 3, 3, 3)) & Vector256.Create(-1, 0, 0, 0);
                 prev = cur;
@@ -94,10 +91,11 @@ public unsafe class FastPForEncoder  : IDisposable
         if (i < _count)
         {
             var remainder = _count - i;
+            Debug.Assert(remainder is > 0 and < 256);
             _metadata.Add((byte)255); // indication on varint encoded batch
             _metadata.Add((byte)remainder); // remainder batch size
             var prevIdx = Math.Max(0, i - 1);
-            totalSize += ComputeVarintDeltaSize(entries[prevIdx], entries + i, remainder, prefixShift);
+            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx], entriesOut + i, remainder, prefixShift);
         }
 
         for (int j = 2; j < _exceptions.Length; j++)
@@ -119,10 +117,10 @@ public unsafe class FastPForEncoder  : IDisposable
             _metadata.Add((byte)255); // indication on varint encoded batch
             _metadata.Add((byte)128); // count of items to read
             var prevIdx = Math.Max(0, i - 1);
-            totalSize += ComputeVarintDeltaSize(entries[prevIdx], entries + i, 128, prefixShift);
+            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx], entriesOut + i, 128, prefixShift);
             _metadata.Add((byte)255); // another varint enocded batch
             _metadata.Add((byte)128); // second items count
-            totalSize += ComputeVarintDeltaSize(entries[prevIdx + 127], entries + i + 128, 128, prefixShift);
+            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx + 127], entriesOut + i + 128, 128, prefixShift);
         }
     }
 
@@ -140,6 +138,8 @@ public unsafe class FastPForEncoder  : IDisposable
         return size;
     }
 
+    public bool Done => _metadataPos == _metadata.Count;
+
     public (int Count, int SizeUsed) Write(byte* output, int outputSize)
     {
         Debug.Assert(outputSize <= ushort.MaxValue, "Output buffer too large, we use ushort for offsets and don't want to overflow");
@@ -152,7 +152,7 @@ public unsafe class FastPForEncoder  : IDisposable
 
         header.SharedPrefix = _sharedPrefix;
 
-        var baseline = _entries[Math.Max(0, _offset - 1)];
+        var baseline = CurrentBaseline;
         if (header.SharedPrefix < (1 << PrefixSizeBits))
         {
             baseline >>= PrefixSizeBits;
@@ -253,6 +253,8 @@ public unsafe class FastPForEncoder  : IDisposable
 
         return (_offset - oldOffset, sizeUsed);
     }
+
+    public long CurrentBaseline => _entries[Math.Max(0, _offset - 1)];
 
     private int WriteVarintBatch(int count, byte* output, int outputSize)
     {

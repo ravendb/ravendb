@@ -7,10 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Sparrow.Server.Debugging;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 using Xunit;
 using Xunit.Abstractions;
@@ -39,21 +42,24 @@ namespace FastTests.Corax.Bugs
                 67100631044
             };
 
+            using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             var buffer = stackalloc byte[1024];
             int sizeUsed;
             fixed (long* l = data.ToArray())
             {
-                (int count, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buffer, 1024);
+                using var encoder = new FastPForEncoder(allocator);
+                encoder.Encode(l, data.Length); 
+                (int count, sizeUsed) = encoder.Write(buffer, 1024);
                 Assert.Equal(data.Length, count);
             }
             
             
             var output = stackalloc long[256];
             var idx = 0;
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader(buffer, sizeUsed);
+            using var reader = new FastPForDecoder(allocator, buffer, sizeUsed);
             while (true)
             {
-                var read = reader.Fill(output, 256);
+                var read = reader.Read(output, 256);
                 if (read == 0)
                     break;
                 for (int i = 0; i < read; i++, idx++)
@@ -71,6 +77,7 @@ namespace FastTests.Corax.Bugs
             using var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
             var data = JsonConvert.DeserializeObject<long[]>(streamReader.ReadToEnd());
+            using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             var bufferSize = 4238;
             var buf = ElectricFencedMemory.Instance.Allocate(bufferSize);
@@ -79,17 +86,19 @@ namespace FastTests.Corax.Bugs
                 int sizeUsed;
                 fixed (long* l = data.ToArray())
                 {
-                    (int count,  sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, 4238);
+                    using var encoder = new FastPForEncoder(allocator);
+                    encoder.Encode(l, data.Length); 
+                    (int count, sizeUsed) = encoder.Write(buf, 4238);
                     Assert.Equal(data.Length, count);
                     Assert.Equal(bufferSize, sizeUsed);
                 }
                 
                 var output = stackalloc long[256];
                 var idx = 0;
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader(buf, sizeUsed);
+                using var reader = new FastPForDecoder(allocator, buf, sizeUsed);
                 while (true)
                 {
-                    var read = reader.Fill(output, 256);
+                    var read = reader.Read(output, 256);
                     if (read == 0)
                         break;
                     for (int i = 0; i < read; i++)

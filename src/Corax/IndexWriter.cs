@@ -23,6 +23,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 using InvalidOperationException = System.InvalidOperationException;
 
@@ -106,6 +107,8 @@ namespace Corax
             
             public ReadOnlySpan<long> Additions => new(_start, _additions);
 
+            public long* RawAdditions => _start;
+            
             public ReadOnlySpan<long> Removals => new(_end - _removals, _removals);
             
             public ReadOnlySpan<short> AdditionsFrequency => new(_freqStart, _additions);
@@ -891,6 +894,7 @@ namespace Corax
         private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly IndexOperationsDumper _indexDebugDumper;
         private long _lastEntryId;
+        private FastPForEncoder _pForEncoder;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1436,11 +1440,12 @@ namespace Corax
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, containerId);
                 // combine with existing value
                 _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address + pos, smallSet.Length - pos);
+                
+                var decoder = new FastPForDecoder(Transaction.Allocator, smallSet.Address + pos, smallSet.Length - pos);
                 var output = stackalloc long[1024];
                 while (true)
                 {
-                    var read = reader.Fill(output, 1024);
+                    var read = decoder.Read(output, 1024);
                     if (read == 0) 
                         break;
                     EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(output, 1024), read);
@@ -1454,6 +1459,7 @@ namespace Corax
                     }
                     _numberOfModifications -= read;
                 }
+                decoder.Dispose();
             }
             else
             {
@@ -1502,7 +1508,9 @@ namespace Corax
             ProcessDeletes();
 
             Slice[] keys = Array.Empty<Slice>();
-            
+
+            _pForEncoder = new FastPForEncoder(Transaction.LowLevelTransaction.Allocator);
+
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
                 var indexedField = _knownFieldsTerms[fieldId];
@@ -1525,6 +1533,9 @@ namespace Corax
 
                 }
             }
+            
+            _pForEncoder.Dispose();
+            _pForEncoder = null;
             
             if(keys.Length>0)
                 ArrayPool<Slice>.Shared.Return(keys);
@@ -1724,12 +1735,12 @@ namespace Corax
             var buffer = stackalloc long[1024];
             var bufferAsSpan = new Span<long>(buffer, 1024);
             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address + offset, item.Length - offset);
+            var reader = new FastPForDecoder(Transaction.Allocator,item.Address + offset, item.Length - offset);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
             while (true)
             {
-                var read = reader.Fill(buffer, 1024);
+                var read = reader.Read(buffer, 1024);
                 if (read == 0)
                     break;
 
@@ -1774,9 +1785,10 @@ namespace Corax
             }
 
             
-            if (TryEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(entries.RawAdditions, entries.TotalAdditions, tmpBuf, out var encoded) == false)
             {
-                AddNewTermToSet(entries.Additions, out termIdInTree);
+
+                AddNewTermToSet(out termIdInTree);
                 return AddEntriesToTermResult.UpdateTermId;
             }
             
@@ -2001,45 +2013,47 @@ namespace Corax
             }
         }
         
-        private unsafe bool TryEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        private unsafe bool TryEncodingToBuffer(long * additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
         {
-            fixed (long* pAdditions = additions)
+            fixed (byte* pOutput = tmpBuf)
             {
-                fixed (byte* pOutput = tmpBuf)
-                {
-                    var offset = VariableSizeEncoding.Write(pOutput, additions.Length);
-                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(pAdditions, additions.Length, pOutput + offset, tmpBuf.Length - offset);
-                    if (count < additions.Length)
-                    {
-                        encoded = default;
-                        return false;
-                    }
+                var offset = VariableSizeEncoding.Write(pOutput, additionsCount);
 
-                    encoded = tmpBuf[..(sizeUsed + offset)];
-                    return true;
+                var size = _pForEncoder.Encode(additions, additionsCount);
+                if (size >= tmpBuf.Length - offset)
+                {
+
+                    encoded = default;
+                    return false;
                 }
+
+                (int count, int sizeUsed) = _pForEncoder.Write(pOutput + offset, tmpBuf.Length - offset);
+                Debug.Assert(count == additionsCount);
+                Debug.Assert(sizeUsed == size);
+
+                encoded = tmpBuf[..(size + offset)];
+                return true;
             }
         }
 
         private unsafe void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
         {
-            var additions = entries.Additions;
-            
+           
             _numberOfTermModifications += 1;
             Debug.Assert(entries.TotalAdditions > 0, "entries.TotalAdditions > 0");
             // common for unique values (guid, date, etc)
             if (entries.TotalAdditions == 1)
             {
                 entries.AssertPreparationIsNotFinished();
-                termId = EntryIdEncodings.Encode(additions[0], entries.AdditionsFrequency[0], (long)TermIdMask.Single);                
+                termId = EntryIdEncodings.Encode(*entries.RawAdditions, entries.AdditionsFrequency[0], (long)TermIdMask.Single);                
                 return;
             }
 
             entries.PrepareDataForCommiting();
-            if (TryEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(entries.RawAdditions, entries.TotalAdditions, tmpBuf, out var encoded) == false)
             {
                 // too big, convert to a set
-                AddNewTermToSet(additions, out termId);
+                AddNewTermToSet(out termId);
                 return;
             }
 
@@ -2047,7 +2061,8 @@ namespace Corax
             encoded.CopyTo(space);
         }
 
-        private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
+
+        private unsafe void AddNewTermToSet(out long termId)
         {
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
             
@@ -2057,9 +2072,8 @@ namespace Corax
             _largePostingListSet.Add(setId); 
 
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
-            PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
 
-            PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, additions, ReadOnlySpan<long>.Empty);
+            PostingList.Create(Transaction.LowLevelTransaction, ref postingListState, _pForEncoder);
             termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
         }
 

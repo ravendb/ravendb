@@ -9,7 +9,8 @@ namespace Voron.Util.PFor;
 public unsafe struct FastPForDecoder : IDisposable
 {
     private const int PrefixSizeBits = FastPForEncoder.PrefixSizeBits;
-
+    public bool IsValid => _input != null;
+    
     private byte* _input;
     private byte* _metadata;
     private readonly byte* _end;
@@ -133,14 +134,14 @@ public unsafe struct FastPForDecoder : IDisposable
             for (int i = 0; i + Vector256<uint>.Count <= 256; i += Vector256<uint>.Count)
             {
                 var (a, b) = Vector256.Widen(Vector256.Load(buffer + i).AsInt32());
-                WriteToOutput(a);
-                WriteToOutput(b);
+                PrefixSumAndStoreToOutput(a);
+                PrefixSumAndStoreToOutput(b);
             }
         }
 
         return read;
 
-        void WriteToOutput(Vector256<long> cur)
+        void PrefixSumAndStoreToOutput(Vector256<long> cur)
         {
             // doing prefix sum here: https://en.algorithmica.org/hpc/algorithms/prefix/
             cur += Vector256.Shuffle(cur, Vector256.Create(0, 0, 1, 2)) &
