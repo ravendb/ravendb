@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using FastTests.Voron;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 using Voron.Debugging;
+using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,12 +51,58 @@ public class PostingListAddRemoval : StorageTest
         }
     }
 
+
     [Fact]
-    public void CanWorkWhenEntryIdIsBiggerThanInt()
+    public unsafe void CanHandleLargeValues()
+    {
+        List<long> items = ReadNumbersFromResource("Corax.PostingList.AddsBiggerThanInt.txt").ToList();
+        items.Sort();
+
+        // full
+        fixed (long* ll = items.ToArray())
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var e = new FastPForEncoder(bsc);
+            int encodedSize = e.Encode(ll, items.Count);
+            var buffer = new byte[ushort.MaxValue];
+            fixed (byte* b = buffer)
+            {
+                var (count, sizeUsed) = e.Write(b, ushort.MaxValue);
+                Assert.Equal(items.Count, count);
+                Assert.Equal(sizeUsed, encodedSize);
+            }
+        }
+        
+        // partial
+        fixed (long* ll = items.ToArray())
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var e = new FastPForEncoder(bsc);
+            e.Encode(ll, items.Count);
+            var read = 0;
+            int i = 0;
+            while (read < items.Count)
+            {
+                i++;
+                int pageSizeWithoutMetadata = 8128;
+                var buffer = new byte[pageSizeWithoutMetadata];
+                fixed (byte* b = buffer)
+                {
+                    var (count, sizeUsed) = e.Write(b, pageSizeWithoutMetadata);
+                    read += count;
+                    Assert.True(sizeUsed<pageSizeWithoutMetadata);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public unsafe void CanWorkWhenEntryIdIsBiggerThanInt()
     {
         var maxSize = 0;
         List<long> items = ReadNumbersFromResource("Corax.PostingList.AddsBiggerThanInt.txt").ToList();
         items.Sort();
+
         
         maxSize = items.Count;
         using (var wtx = Env.WriteTransaction())

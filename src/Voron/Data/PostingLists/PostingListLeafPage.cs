@@ -109,10 +109,9 @@ public readonly unsafe struct PostingListLeafPage
         int entriesCount = 0;
         int sizeUsed = 0;
         
-        encoder.Encode(tempList.RawItems, tempList.Count);
-        
         if (tempList.Count > 0)
         {
+            encoder.Encode(tempList.RawItems, tempList.Count);
             (entriesCount, sizeUsed) = encoder.Write(newPagePtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
             Debug.Assert(entriesCount > 0);
         }
@@ -294,22 +293,26 @@ public readonly unsafe struct PostingListLeafPage
 
         var firstDecoder = new FastPForDecoder(allocator, (byte*)first + PageHeader.SizeOf, first->SizeUsed);
         var secondDecoder = new FastPForDecoder(allocator, (byte*)second + PageHeader.SizeOf, second->SizeUsed);
-        var mergedList = new NativeIntegersList(allocator, first->NumberOfEntries + second->NumberOfEntries);
+        // using +256 here to ensure that we always have at least 256 available in the buffer
+        var mergedList = new NativeIntegersList(allocator, first->NumberOfEntries + second->NumberOfEntries + 256);
 
-        firstDecoder.Read(mergedList.RawItems, first->NumberOfEntries);
-        secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, second->NumberOfEntries);
+        mergedList.Count += firstDecoder.Read(mergedList.RawItems, mergedList.Capacity);
+        mergedList.Count += secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
 
         var encoder = new FastPForEncoder(allocator);
-        var reqSize = encoder.Encode(mergedList.RawItems, mergedList.Capacity);
-        Debug.Assert(reqSize < Constants.Storage.PageSize - PageHeader.SizeOf);
-        encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
-        
+        int reqSize = 0;
+        if (mergedList.Count > 0)
+        {
+            reqSize = encoder.Encode(mergedList.RawItems, mergedList.Count);
+            Debug.Assert(reqSize < Constants.Storage.PageSize - PageHeader.SizeOf);
+            encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
+        }
         mergedList.Dispose();
         secondDecoder.Dispose();
         firstDecoder.Dispose();
 
         newHeader->SizeUsed = (ushort)reqSize;
-        newHeader->NumberOfEntries = first->NumberOfEntries + second->NumberOfEntries;
+        newHeader->NumberOfEntries =  mergedList.Count;
 
         Memory.Set((byte*)dest + PageHeader.SizeOf + dest->SizeUsed, 0,
             Constants.Storage.PageSize - (PageHeader.SizeOf + dest->SizeUsed));

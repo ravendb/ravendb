@@ -12,7 +12,7 @@ public static unsafe class BitPacking
         int i = 0;
         var fullSize = (int)bit * Vector256<byte>.Count;
         var read = 0;
-        for (; i + 256 < count; i++)
+        for (; i + 256 < count; i += 256)
         {
             var cur = outputBuf + i;
             SimdBitPacking<NoTransform>.Unpack256(0, inputBuf + read, cur, bit);
