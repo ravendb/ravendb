@@ -11,6 +11,7 @@ using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.Containers;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 
 namespace Corax.Queries
@@ -29,7 +30,7 @@ namespace Corax.Queries
         internal Bm25Relevance _bm25Relevance;
         private PostingList.Iterator _set;
         private Container.Item _containerItem;
-        private SimdBufferedReader _containerReader;
+        private FastPForBufferedReader _containerReader;
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
@@ -210,13 +211,13 @@ namespace Corax.Queries
             {
                 // AndWith has to start from the start.
                 _ = VariableSizeEncoding.Read<int>(term._containerItem.Address, out var offset); // discard count here
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader(term._containerItem.Address + offset, term._containerItem.Length - offset);
+                var reader = new FastPForDecoder(term._ctx,term._containerItem.Address + offset, term._containerItem.Length - offset);
                 var decodedMatches = stackalloc long[1024];
                 int bufferIndex = 0;
                 int matchedIndex = 0;
                 while (bufferIndex < matches)
                 {
-                    var read = reader.Fill(decodedMatches, 1024);
+                    var read = reader.Read(decodedMatches, 1024);
                     if (read == 0)
                         break;
 
@@ -252,7 +253,7 @@ namespace Corax.Queries
 
                     }
                 }
-
+                reader.Dispose();
                 End:
                 return matchedIndex;
             }
@@ -273,7 +274,7 @@ namespace Corax.Queries
             }
 
             var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
-            var reader = new SimdBufferedReader(ctx, containerItem.Address + offset, containerItem.Length - offset);
+            var reader = new FastPForBufferedReader(ctx, containerItem.Address + offset, containerItem.Length - offset);
             return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
                 _bm25Relevance = isBoosting 

@@ -1,6 +1,9 @@
 ﻿using System;
 using Sparrow.Compression;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Voron.Data.PostingLists;
+using Voron.Util.PFor;
 using Voron.Util.Simd;
 using Xunit;
 using Xunit.Abstractions;
@@ -135,19 +138,21 @@ public class SimdCompressionEncodingTests : NoDisposalNeeded
     {
         var buffer = stackalloc byte[10000];
         var entries = stackalloc long[1024];
-
+        using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         int sizeUsed;
         fixed (long* l = Data)
         {
-            (int count, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, Data.Length, buffer, 10000);
-            Assert.Equal(count, Data.Length);
+            using var encoder = new FastPForEncoder(allocator);
+            encoder.Encode(l, Data.Length);
+            (int count, sizeUsed) = encoder.Write(buffer, 10_000);
+            Assert.Equal(Data.Length, count);
         }
 
-        var reader = new SimdBitPacker<SortedDifferentials>.Reader(buffer, sizeUsed);
+        using var reader = new FastPForDecoder(allocator, buffer, sizeUsed);
         int idx = 0;
         while (true)
         {
-            var read = reader.Fill(entries, 1024);
+            var read = reader.Read(entries, 1024);
             if (read == 0)
                 break;
             for (int i = 0; i < read; i++)

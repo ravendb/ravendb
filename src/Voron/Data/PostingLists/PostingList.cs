@@ -9,6 +9,7 @@ using Sparrow.Server.Utils.VxSort;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util.PFor;
 
 namespace Voron.Data.PostingLists
 {
@@ -56,6 +57,20 @@ namespace Voron.Data.PostingLists
             state.BranchPages = 0;
             state.LeafPages = 1;
             state.RootPage = newPage.PageNumber;
+        }
+        
+        public static void Create(LowLevelTransaction tx, ref PostingListState state, FastPForEncoder encoder)
+        {
+            var newPage = tx.AllocatePage(1);
+            PostingListLeafPage postingListLeafPage = new PostingListLeafPage(newPage);
+            PostingListLeafPage.InitLeaf(postingListLeafPage.Header);
+            state.RootObjectType = RootObjectType.Set;
+            state.Depth = 1;
+            state.BranchPages = 0;
+            state.LeafPages = 1;
+            state.RootPage = newPage.PageNumber;
+            
+            
         }
 
         public List<long> DumpAllValues()
@@ -358,6 +373,7 @@ namespace Voron.Data.PostingLists
             _additions.Sort();
             _removals.Sort();
 
+            var encoder = new FastPForEncoder(_llt.Allocator);
             var tempList = new NativeIntegersList(_llt.Allocator, _additions.Count + _removals.Count);
             
             var additionsCount = _additions.Count;
@@ -382,21 +398,12 @@ namespace Voron.Data.PostingLists
 
                 _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
 
-                var extras = leafPage.Update(_llt, ref tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
+                leafPage.Update(_llt, encoder, ref tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
-                if (extras.Length > 0) // we overflow and need to split excess to additional pages
+                if (encoder.Done == false) // we overflow and need to split excess to additional pages
                 {
-                    AddNewPageForTheExtras(extras);
-                }
-                else if (additionsCount > 0 && additions[0] < limit) // we don't have any more space but more new items in the range 
-                {
-                    int idx = new Span<long>(additions, additionsCount).BinarySearch(limit);
-                    if (idx < 0)
-                        idx = ~idx;
-                    AddNewPageForTheExtras(new Span<long>(additions, idx));
-                    additionsCount -= idx;
-                    additions += idx;
+                    AddNewPageForTheExtras(encoder);
                 }
                 else if (hadRemovals && _len > 1 && leafPage.SpaceUsed < Constants.Storage.PageSize / 2)
                 {
@@ -434,6 +441,7 @@ namespace Voron.Data.PostingLists
             }
             
             tempList.Dispose();
+            encoder.Dispose();
         }
         
         private static int GetSiblingIndex(in PostingListCursorState parent)
@@ -515,24 +523,17 @@ namespace Voron.Data.PostingLists
             MergeSiblingsAtParent();
         }
 
-        private void AddNewPageForTheExtras(Span<long> extras)
+        private void AddNewPageForTheExtras(FastPForEncoder encoder)
         {
-            fixed (long* b = extras)
+            while (encoder.Done == false)
             {
-                long* buffer = b;
-                var count = extras.Length;
-                while (count > 0)
-                {
-                    long first = *buffer;
-                    var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
-                    PostingListLeafPage.InitLeaf(newPage.Header);
-                    _state.LeafPages++;
-                    var written = newPage.AppendToNewPage(buffer, count);
-                    _state.NumberOfEntries += newPage.Header->NumberOfEntries;
-                    AddToParentPage(first, newPage.Header->PageNumber);
-                    buffer += written;
-                    count -= written;
-                }
+                var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
+                PostingListLeafPage.InitLeaf(newPage.Header);
+                _state.LeafPages++;
+                var first = encoder.CurrentBaseline;
+                newPage.AppendToNewPage(encoder);
+                _state.NumberOfEntries += newPage.Header->NumberOfEntries;
+                AddToParentPage(first, newPage.Header->PageNumber);
             }
         }
 

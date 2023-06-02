@@ -7,6 +7,7 @@ using Voron;
 using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,12 +54,13 @@ namespace FastTests.Voron.Sets
             var tempList = new NativeIntegersList(bsc);
             fixed (long* p = span)
             {
+                using var encoder = new FastPForEncoder(bsc);
                 var len = span.Length;
                 var rp = p;
                 long* rr = null;
                 var zero = 0;
-                var extras = leaf.Update(_llt,ref tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
-                Assert.Equal(0, extras.Length);
+                leaf.Update(_llt, encoder,ref tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
+                Assert.True(encoder.Done);
                 Assert.Equal(0, len);
                 Assert.Equal((long)(p+ span.Length), (long)rp);
             }
@@ -89,12 +91,13 @@ namespace FastTests.Voron.Sets
             var tempList = new NativeIntegersList(bsc);
             fixed (long* p = additions)
             {
+                using var encoder = new FastPForEncoder(bsc);
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0, extras.Length);
+                leaf.Update(_llt, encoder, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.True(encoder.Done);
                 Assert.Equal(0, pl);
             }
             
@@ -103,12 +106,13 @@ namespace FastTests.Voron.Sets
             Span<long> removals = list; // now remove
             fixed (long* p = removals)
             {
+                using var encoder = new FastPForEncoder(bsc);
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
-                Assert.Equal(0, extras.Length);
+                leaf.Update(_llt, encoder, ref tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
+                Assert.True(encoder.Done);
                 Assert.Equal(0, pl);
                 Assert.Empty(leaf.GetDebugOutput());
             }
@@ -140,24 +144,27 @@ namespace FastTests.Voron.Sets
 
             fixed (long* p = additions)
             {
+                using var encoder = new FastPForEncoder(bsc);
+
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0, extras.Length);
+                leaf.Update(_llt, encoder, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.True(encoder.Done);
                 Assert.Equal(0, pl);
             }
             additions = new long[] { 24 };
             
             fixed (long* p = additions)
             {
+                using var encoder = new FastPForEncoder(bsc);
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0,extras.Length);
+                leaf.Update(_llt,encoder, ref tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.True(encoder.Done);
                 Assert.Equal(0, pl);
             }
 
