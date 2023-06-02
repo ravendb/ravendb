@@ -79,7 +79,7 @@ namespace FastTests.Corax.Bugs
             var data = JsonConvert.DeserializeObject<long[]>(streamReader.ReadToEnd());
             using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            var bufferSize = 4238;
+            var bufferSize = 2610;
             var buf = ElectricFencedMemory.Instance.Allocate(bufferSize);
             try
             {
@@ -88,7 +88,7 @@ namespace FastTests.Corax.Bugs
                 {
                     using var encoder = new FastPForEncoder(allocator);
                     encoder.Encode(l, data.Length); 
-                    (int count, sizeUsed) = encoder.Write(buf, 4238);
+                    (int count, sizeUsed) = encoder.Write(buf, 2610);
                     Assert.Equal(data.Length, count);
                     Assert.Equal(bufferSize, sizeUsed);
                 }

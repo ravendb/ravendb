@@ -530,7 +530,7 @@ namespace Voron.Data.PostingLists
                 var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
                 PostingListLeafPage.InitLeaf(newPage.Header);
                 _state.LeafPages++;
-                var first = encoder.CurrentBaseline;
+                var first = encoder.NextValueToEncode;
                 newPage.AppendToNewPage(encoder);
                 _state.NumberOfEntries += newPage.Header->NumberOfEntries;
                 AddToParentPage(first, newPage.Header->PageNumber);
