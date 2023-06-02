@@ -76,6 +76,8 @@ namespace Voron.Data.PostingLists
             if (encoder.Done == false) // we overflow and need to split excess to additional pages
             {
                 var self = new PostingList(tx, Slices.Empty, state);
+                self.FindPageFor(0);
+                self.CreateRootPage();
                 self.AddNewPageForTheExtras(encoder);
                 state = self._state;
             }

@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
+    <EmbeddedResource Include="Voron\Util\WriteTooMuchToBuffer.txt" />
     <None Remove="Corax\Bugs\access_violation.json.gz" />
     <None Remove="Corax\Bugs\Corax.Set.Adds.txt" />
     <None Remove="Voron\CompactTrees\RavenDB-19703.replay" />
@@ -39,6 +40,7 @@
     <EmbeddedResource Include="Corax\Bugs\index-log.bin" />
     <None Remove="Corax\Bugs\index-corrupt-log.bin" />
     <EmbeddedResource Include="Corax\Bugs\index-corrupt-log.bin" />
+    <None Remove="Voron\PostingLists\WriteTooMuchToBuffer.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />
