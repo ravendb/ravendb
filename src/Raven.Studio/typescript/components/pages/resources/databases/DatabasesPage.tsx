@@ -93,7 +93,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
     return (
         <>
             <StickyHeader>
-                <div className="d-flex flex-wrap gap-3 align-items-center">
+                <div className="d-flex flex-wrap gap-3 align-items-end">
                     {canCreateNewDatabase && (
                         <UncontrolledDropdown>
                             <ButtonGroup className="rounded-group">
