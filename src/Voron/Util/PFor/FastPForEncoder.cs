@@ -11,12 +11,15 @@ namespace Voron.Util.PFor;
 
 public unsafe class FastPForEncoder  : IDisposable
 {
+    public const byte VarIntBatchMarker = 255;
+    public const byte BiggerThanMaxMarker = 254;
+    
     private readonly ByteStringContext _allocator;
     internal const int PrefixSizeBits = 10;
 
     private long* _entries;
     private byte* _entriesOutput;
-    private long _entriesOutputCount = 0;
+    private long _entriesOutputSize;
     private int _count;
     private int _offset;
     private ushort _sharedPrefix;
@@ -37,24 +40,25 @@ public unsafe class FastPForEncoder  : IDisposable
         _entries = entries;
         _count = count;
         _offset = 0;
+        _metadataPos = 0;
+        
         for (int k = 0; k < _exceptions.Length; k++)
         {
             _exceptions[k]?.Clear();
             _exceptionsStart[k] = 0;
         }
         _metadata.Clear();
-        _metadataPos = 0;
-
-        if (_entriesOutputCount < count)
+        
+        if (_entriesOutputSize < count)
         {
             var newCount = Math.Max(256, BitOperations.RoundUpToPowerOf2((uint)count));
             _entriesOutputScope.Dispose();
             _entriesOutputScope = _allocator.Allocate((int)newCount * sizeof(long), out ByteString bs);
             _entriesOutput = bs.Ptr;
-            _entriesOutputCount = newCount;
+            _entriesOutputSize = newCount;
         }
 
-        (_sharedPrefix, var prefixShift) = RemoveSharedPrefix();
+        _sharedPrefix = RemoveSharedPrefix();
 
         var totalSize = sizeof(PForHeader);
         int i = 0;
@@ -75,27 +79,25 @@ public unsafe class FastPForEncoder  : IDisposable
                 var delta = cur - mixed;
 
                 if (Vector256.GreaterThanAny(delta, max))
-                    goto UnlikelyGreaterThanUintMax; // should be *rare*
+                {
+                    HandleDeltaGreaterThanMax(j, delta);
+                }
 
-                var deltaInts = Vector256.Narrow(delta.AsUInt64(), Vector256<ulong>.Zero);
+                var deltaInts = Vector256.Shuffle(delta.AsUInt32(), Vector256.Create(0u,2,4,6,0,0,0,0));
                 deltaInts.Store(entriesAsInt);
                 // we write 8 values, but increment by 4, so we'll overwrite it next op
                 entriesAsInt += Vector256<long>.Count;
             }
             totalSize += ProcessBlock(blockStart);
-            continue;
-
-            UnlikelyGreaterThanUintMax:
-            UnlikelyEncodeBatchUsingVarint();
         }
         if (i < _count)
         {
             var remainder = _count - i;
             Debug.Assert(remainder is > 0 and < 256);
-            _metadata.Add((byte)255); // indication on varint encoded batch
-            _metadata.Add((byte)remainder); // remainder batch size
+            _metadata.Add(VarIntBatchMarker);
+            _metadata.Add((byte)remainder); 
             var prevIdx = Math.Max(0, i - 1);
-            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx], entriesOut + i, remainder, prefixShift);
+            totalSize += ComputeVarIntDeltaSize(entriesOut[prevIdx], entriesOut + i, remainder);
         }
 
         for (int j = 2; j < _exceptions.Length; j++)
@@ -103,38 +105,43 @@ public unsafe class FastPForEncoder  : IDisposable
             var item = _exceptions[j];
             if (item == null || item.Count == 0)
                 continue;
-            totalSize += BitPacking.RequireSizeSegmented(item.Count, j);
+            int exceptionSize = BitPacking.RequireSizeSegmented(item.Count, j);
+            totalSize += sizeof(ushort);// size of the exception
+            totalSize += exceptionSize;
         }
 
         totalSize += _metadata.Count;
         _metadataPos = 0;
         return totalSize;
-
-        void UnlikelyEncodeBatchUsingVarint()
+        
+        void HandleDeltaGreaterThanMax(int batchOffset, Vector256<long> delta)
         {
-            // this is not efficient, but we assume that it will be *quite* rare
-            // we encode this using _two_ metadata entries 
-            _metadata.Add((byte)255); // indication on varint encoded batch
-            _metadata.Add((byte)128); // count of items to read
-            var prevIdx = Math.Max(0, i - 1);
-            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx], entriesOut + i, 128, prefixShift);
-            _metadata.Add((byte)255); // another varint enocded batch
-            _metadata.Add((byte)128); // second items count
-            totalSize += ComputeVarintDeltaSize(entriesOut[prevIdx + 127], entriesOut + i + 128, 128, prefixShift);
+            // we expect this to be *rare*, so not trying to optimize this in any special way
+            Span<uint> deltaHighBuffer = stackalloc uint[8];
+            var highAndLow = Vector256.Shuffle(delta.AsUInt32(), Vector256.Create(0u, 2, 4, 6, 1, 3, 5, 7));
+            highAndLow.StoreUnsafe(ref deltaHighBuffer[0]);
+
+            _metadata.Add(BiggerThanMaxMarker);
+            _metadata.Add((byte)batchOffset);
+            Span<byte> asBytes = MemoryMarshal.AsBytes(deltaHighBuffer);
+            for (int j = 0; j < 16; j++)
+            {
+                _metadata.Add(asBytes[i]);
+            }
         }
     }
 
-    private static int ComputeVarintDeltaSize(long previous, long* buffer, int count, int shift)
+    private static int ComputeVarIntDeltaSize(long previous, long* buffer, int count)
     {
-        previous >>>= shift;
         var size = 0;
         for (int i = 0; i < count; i++)
         {
-            var cur = buffer[i] >>> shift;
-            size += (64 - BitOperations.LeadingZeroCount((ulong)(cur - previous) | 1) + 6) / 7;
+            var cur = buffer[i] ;
+            ulong num = (ulong)(cur - previous) | 1;
+            int sizeVarInt = (64 - BitOperations.LeadingZeroCount(num) + 6) / 7;
+            size += sizeVarInt;
             previous = cur;
         }
-
         return size;
     }
 
@@ -152,7 +159,7 @@ public unsafe class FastPForEncoder  : IDisposable
 
         header.SharedPrefix = _sharedPrefix;
 
-        var baseline = CurrentBaseline;
+        var baseline = _entries[Math.Max(0, _offset - 1)];
         if (header.SharedPrefix < (1 << PrefixSizeBits))
         {
             baseline >>= PrefixSizeBits;
@@ -170,38 +177,48 @@ public unsafe class FastPForEncoder  : IDisposable
             var batchMetadataStart = _metadataPos;
             var numOfBits = _metadata[_metadataPos++];
 
-            if (numOfBits == 255) // varint batch
+            switch (numOfBits)
             {
-                var sizeOfVarintBatch = _metadata[_metadataPos++];
-                var used = WriteVarintBatch(sizeOfVarintBatch, output + sizeUsed, outputSize - sizeUsed);
-                if (used == 0)
-                {
-                    _metadataPos = batchMetadataStart;
-                    break;
-                }
-                _offset += sizeOfVarintBatch;
-                sizeUsed += used;
-                continue;
+                case BiggerThanMaxMarker:
+                    // nothing to do, doesn't impact writes 
+                    _metadataPos += 17; // batch offset + 16 bytes
+                    continue;
+                case VarIntBatchMarker:
+                    var sizeOfVarIntBatch = _metadata[_metadataPos++];
+                    var used = WriteLastBatchAsVarIntDelta(sizeOfVarIntBatch, output + sizeUsed, outputSize - sizeUsed);
+                    if (used == 0)
+                    {
+                        _metadataPos = batchMetadataStart;
+                        break;
+                    }
+                    _offset += sizeOfVarIntBatch;
+                    sizeUsed += used;
+                    continue;
+                case > 32 and < BiggerThanMaxMarker:
+                    throw new ArgumentOutOfRangeException("Invalid bits value: " + numOfBits);
             }
 
             var numOfExceptions = _metadata[_metadataPos++];
 
             var reqSize = numOfBits * Vector256<byte>.Count;
 
+            ref var exceptionCountRef = ref exceptionsCounts[0];
+            var amountToAddToException = 0;
+            
             if (numOfExceptions > 0)
             {
                 var maxNumOfBits = _metadata[_metadataPos++];
                 var exceptionIndex = maxNumOfBits - numOfBits;
                 var oldCount = exceptionsCounts[exceptionIndex];
-                var newCount = oldCount + numOfExceptions;
-                exceptionsCounts[exceptionIndex] = newCount;
+                amountToAddToException = numOfExceptions;
+                exceptionCountRef = ref exceptionsCounts[exceptionIndex];
+                
                 if (oldCount == 0)
                 {
                     exceptionsRequiredSize += sizeof(ushort); // size for the number of items here
                 }
-
                 exceptionsRequiredSize -= BitPacking.RequireSizeSegmented(oldCount, maxNumOfBits);
-                exceptionsRequiredSize += BitPacking.RequireSizeSegmented(newCount, maxNumOfBits);
+                exceptionsRequiredSize += BitPacking.RequireSizeSegmented(numOfExceptions + oldCount, maxNumOfBits);
             }
 
             _metadataPos += numOfExceptions;
@@ -217,6 +234,7 @@ public unsafe class FastPForEncoder  : IDisposable
                 output + sizeUsed, numOfBits, new MaskEntries((1u << numOfBits) - 1));
             sizeUsed += reqSize;
             _offset += 256;
+            exceptionCountRef += amountToAddToException;
         }
 
         uint bitmap = 0;
@@ -236,7 +254,8 @@ public unsafe class FastPForEncoder  : IDisposable
             span = span[exceptionStart..(exceptionStart + count)];
             fixed (uint* b = span)
             {
-                sizeUsed += BitPacking.PackSegmented(b, span.Length, output + sizeUsed, (uint)numOfBits);
+                int size = BitPacking.PackSegmented(b, span.Length, output + sizeUsed, (uint)numOfBits);
+                sizeUsed += size;
             }
             _exceptionsStart[numOfBits] += count;
         }
@@ -254,12 +273,12 @@ public unsafe class FastPForEncoder  : IDisposable
         return (_offset - oldOffset, sizeUsed);
     }
 
-    public long CurrentBaseline => _entries[Math.Max(0, _offset - 1)];
+    public long NextValueToEncode => _entries[Math.Min(_offset, _count-1)];
 
-    private int WriteVarintBatch(int count, byte* output, int outputSize)
+    private int WriteLastBatchAsVarIntDelta(int count, byte* output, int outputSize)
     {
         Debug.Assert(count <= 256);
-        var buffer = stackalloc byte[256 * 10]; // 10 bytes per max int64 varint
+        var buffer = stackalloc byte[256 * 10]; // 10 bytes per max int64 var int
 
         var shift = _sharedPrefix >= 1 << PrefixSizeBits ? 0 : 10;
         var prevIdx = Math.Max(0, _offset - 1);
@@ -292,21 +311,19 @@ public unsafe class FastPForEncoder  : IDisposable
         var (bestB, maxB, exceptionCount) = FindBestBitWidths(currentEntries);
         _metadata.Add((byte)bestB);
         _metadata.Add((byte)exceptionCount);
+
         if (exceptionCount > 0)
         {
             _metadata.Add((byte)maxB);
-        }
-
-        uint maxVal = 1u << bestB;
-        ref var exceptionBuffer = ref _exceptions[maxB - bestB];
-
-        for (int j = 0; j < 256; j++)
-        {
-            if (currentEntries[j] >= maxVal)
+            uint maxVal = 1u << bestB;
+            for (int j = 0; j < 256; j++)
             {
-                var exList = _exceptions[maxB - bestB] ??= new();
-                exList.Add(currentEntries[j] >>> bestB);
-                _metadata.Add((byte)j);
+                if (currentEntries[j] >= maxVal)
+                {
+                    var exList = _exceptions[maxB - bestB] ??= new();
+                    exList.Add(currentEntries[j] >>> bestB);
+                    _metadata.Add((byte)j);
+                }
             }
         }
 
@@ -318,13 +335,13 @@ public unsafe class FastPForEncoder  : IDisposable
         const int blockSize = 256;
         const int exceptionOverhead = 8;
 
-        var freqs = stackalloc int[33];
+        var frequencies = stackalloc int[33];
         for (int i = 0; i < blockSize; i++)
         {
-            freqs[32 - BitOperations.LeadingZeroCount(entries[i])]++;
+            frequencies[32 - BitOperations.LeadingZeroCount(entries[i])]++;
         }
         var bestBitWidth = 32;
-        while (freqs[bestBitWidth] == 0 && bestBitWidth > 0)
+        while (frequencies[bestBitWidth] == 0 && bestBitWidth > 0)
         {
             bestBitWidth--;
         }
@@ -336,7 +353,7 @@ public unsafe class FastPForEncoder  : IDisposable
 
         for (var curBitWidth = bestBitWidth - 1; curBitWidth >= 0; curBitWidth--)
         {
-            var currentExceptions = freqs[curBitWidth + 1];
+            var currentExceptions = frequencies[curBitWidth + 1];
             exceptionsCount += currentExceptions;
 
             var curCost = exceptionsCount * exceptionOverhead +
@@ -355,7 +372,7 @@ public unsafe class FastPForEncoder  : IDisposable
     }
 
 
-    private (ushort Prefix, int Shift) RemoveSharedPrefix()
+    private ushort RemoveSharedPrefix()
     {
         var maskScalar = (1L << PrefixSizeBits) - 1;
         var mask = Vector256.Create<long>(maskScalar);
@@ -383,12 +400,12 @@ public unsafe class FastPForEncoder  : IDisposable
             output[i] = cur >>> PrefixSizeBits;
         }
 
-        return ((ushort)prefixScalar, 10);
+        return (ushort)prefixScalar;
 
-        (ushort, int) NoSharedPrefix()
+        ushort NoSharedPrefix()
         {
             Unsafe.CopyBlock(_entriesOutput, _entries, (uint)(sizeof(long) * _count));
-            return (ushort.MaxValue, 0); // invalid value, since > 10 bits
+            return ushort.MaxValue; // invalid value, since > 10 bits
         }
 
     }
