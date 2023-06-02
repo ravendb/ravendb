@@ -100,35 +100,52 @@ namespace Voron.Impl.Paging
                     new Win32Exception(lastWin32ErrorCode));
             }
 
-            _fileInfo = new FileInfo(file.FullPath);
-
-            var streamAccessType = access == Win32NativeFileAccess.GenericRead
-                 ? FileAccess.Read
-                 : FileAccess.ReadWrite;
-
-            _fileStream = SafeFileStream.Create(_handle, streamAccessType);
-
-            _totalAllocationSize = _fileInfo.Length;
-
-            if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
-                (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
-                (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
+            try
             {
-                var fileLength = _fileStream.Length;
-                if ((fileLength == 0) && initialFileSize.HasValue)
-                    fileLength = initialFileSize.Value;
 
-                if ((_fileStream.Length == 0) || (fileLength % AllocationGranularity != 0))
+                _fileInfo = new FileInfo(file.FullPath);
+
+                var streamAccessType = access == Win32NativeFileAccess.GenericRead
+                    ? FileAccess.Read
+                    : FileAccess.ReadWrite;
+
+                _fileStream = SafeFileStream.Create(_handle, streamAccessType);
+
+                _totalAllocationSize = _fileInfo.Length;
+
+                if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
+                    (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
+                    (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
                 {
-                    fileLength = NearestSizeToAllocationGranularity(fileLength);
+                    var fileLength = _fileStream.Length;
+                    if ((fileLength == 0) && initialFileSize.HasValue)
+                        fileLength = initialFileSize.Value;
 
-                    SetFileLength(_handle, fileLength, file.FullPath);
+                    if ((_fileStream.Length == 0) || (fileLength % AllocationGranularity != 0))
+                    {
+                        fileLength = NearestSizeToAllocationGranularity(fileLength);
+
+                        SetFileLength(_handle, fileLength, file.FullPath);
+                    }
+                    _totalAllocationSize = fileLength;
                 }
-                _totalAllocationSize = fileLength;
-            }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-            SetPagerState(CreatePagerState());
+                NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+                SetPagerState(CreatePagerState());
+            }
+            catch
+            {
+                try
+                {
+                    Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                throw;
+            }
         }
 
         private static void ThrowNotSupportedOption(string file)

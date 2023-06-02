@@ -656,7 +656,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 using var newVer = doc.Data.Clone(context);
                                 // now we save it again, and a side effect of that is syncing all the attachments
                                 context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newVer, lastModifiedTicks,
-                                    flags: doc.Flags);
+                                    flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
                             }
                         }
                     }

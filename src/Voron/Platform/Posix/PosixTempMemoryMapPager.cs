@@ -44,21 +44,38 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "Cannot open " + FileName);
             }
-            DeleteOnClose = true;
 
-            SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
-
-            if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
+            try
             {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "Got SysPageSize <= 0 for " + FileName);
+                DeleteOnClose = true;
+
+                SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+
+                if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    Syscall.ThrowLastError(err, "Got SysPageSize <= 0 for " + FileName);
+                }
+
+                _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
+                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName.FullPath);
+
+                NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+                SetPagerState(CreatePagerState());
             }
+            catch
+            {
+                try
+                {
+                    Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
 
-            _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName.FullPath);
-
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-            SetPagerState(CreatePagerState());
+                throw;
+            }
         }
 
         protected override bool CanPrefetchQuery()
