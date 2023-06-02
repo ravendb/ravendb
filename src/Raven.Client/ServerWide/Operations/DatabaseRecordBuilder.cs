@@ -36,6 +36,7 @@ internal class DatabaseRecordBuilder :
     IOrchestratorTopologyConfigurationBuilder,
     IShardTopologyConfigurationBuilder
 {
+    private DatabaseTopology _shardTopology;
     public DatabaseRecord DatabaseRecord { get; } = new();
 
     IBackupConfigurationBuilder IBackupConfigurationBuilder.AddPeriodicBackup(PeriodicBackupConfiguration configuration)
@@ -250,7 +251,7 @@ internal class DatabaseRecordBuilder :
 
     IShardedDatabaseRecordBuilder IDatabaseRecordBuilderInitializer.Sharded(string databaseName, Action<IShardedTopologyConfigurationBuilder> builder)
     {
-        if (builder == null) 
+        if (builder == null)
             throw new ArgumentNullException(nameof(builder));
 
         WithName(databaseName);
@@ -323,6 +324,18 @@ internal class DatabaseRecordBuilder :
 
         DatabaseRecord.Integrations ??= new IntegrationConfigurations();
         DatabaseRecord.Integrations.PostgreSql = configuration;
+
+        return this;
+    }
+
+    IOrchestratorTopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IOrchestratorTopologyConfigurationBuilder>.AddNode(string nodeTag)
+    {
+        if (string.IsNullOrEmpty(nodeTag))
+            throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
+
+        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        DatabaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
+        DatabaseRecord.Sharding.Orchestrator.Topology.Members.Add(nodeTag);
 
         return this;
     }
@@ -477,6 +490,65 @@ internal class DatabaseRecordBuilder :
     IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.Disabled()
     {
         HandleDisabled();
+        return this;
+    }
+
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(OrchestratorTopology topology)
+    {
+        if (topology == null)
+            throw new ArgumentNullException(nameof(topology));
+
+        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        DatabaseRecord.Sharding.Orchestrator.Topology = topology;
+        return this;
+    }
+
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder)
+    {
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+        return this;
+    }
+
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, DatabaseTopology topology)
+    {
+        if (topology == null)
+            throw new ArgumentNullException(nameof(topology));
+
+        DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
+        DatabaseRecord.Sharding.Shards.Add(shardNumber, topology);
+        return this;
+    }
+
+    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder)
+    {
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        _shardTopology = new DatabaseTopology();
+        try
+        {
+            builder(this);
+
+            DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
+            DatabaseRecord.Sharding.Shards.Add(shardNumber, _shardTopology);
+        }
+        finally
+        {
+            _shardTopology = null;
+        }
+
+        return this;
+    }
+
+    IShardTopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IShardTopologyConfigurationBuilder>.AddNode(string nodeTag)
+    {
+        if (string.IsNullOrEmpty(nodeTag))
+            throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
+
+        _shardTopology.Members.Add(nodeTag);
         return this;
     }
 
@@ -637,79 +709,6 @@ internal class DatabaseRecordBuilder :
     {
         ResourceNameValidator.AssertValidDatabaseName(databaseName);
         DatabaseRecord.DatabaseName = databaseName;
-    }
-
-    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(OrchestratorTopology topology)
-    {
-        if (topology == null) 
-            throw new ArgumentNullException(nameof(topology));
-
-        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-        DatabaseRecord.Sharding.Orchestrator.Topology = topology;
-        return this;
-    }
-
-    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.Orchestrator(Action<IOrchestratorTopologyConfigurationBuilder> builder)
-    {
-        if (builder == null) 
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-        return this;
-    }
-
-    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, DatabaseTopology topology)
-    {
-        if (topology == null) 
-            throw new ArgumentNullException(nameof(topology));
-
-        DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
-        DatabaseRecord.Sharding.Shards.Add(shardNumber, topology);
-        return this;
-    }
-
-    private DatabaseTopology _shardTopology;
-
-    IShardedTopologyConfigurationBuilder IShardedTopologyConfigurationBuilder.AddShard(int shardNumber, Action<IShardTopologyConfigurationBuilder> builder)
-    {
-        if (builder == null) 
-            throw new ArgumentNullException(nameof(builder));
-
-        _shardTopology = new DatabaseTopology();
-        try
-        {
-            builder(this);
-
-            DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
-            DatabaseRecord.Sharding.Shards.Add(shardNumber, _shardTopology);
-        }
-        finally
-        {
-            _shardTopology = null;
-        }
-
-        return this;
-    }
-
-    IOrchestratorTopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IOrchestratorTopologyConfigurationBuilder>.AddNode(string nodeTag)
-    {
-        if (string.IsNullOrEmpty(nodeTag)) 
-            throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
-
-        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-        DatabaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-        DatabaseRecord.Sharding.Orchestrator.Topology.Members.Add(nodeTag);
-
-        return this;
-    }
-
-    IShardTopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IShardTopologyConfigurationBuilder>.AddNode(string nodeTag)
-    {
-        if (string.IsNullOrEmpty(nodeTag)) 
-            throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
-
-        _shardTopology.Members.Add(nodeTag);
-        return this;
     }
 }
 
