@@ -62,15 +62,23 @@ namespace Voron.Data.PostingLists
         public static void Create(LowLevelTransaction tx, ref PostingListState state, FastPForEncoder encoder)
         {
             var newPage = tx.AllocatePage(1);
-            PostingListLeafPage postingListLeafPage = new PostingListLeafPage(newPage);
-            PostingListLeafPage.InitLeaf(postingListLeafPage.Header);
+            PostingListLeafPage leafPage = new PostingListLeafPage(newPage);
+            PostingListLeafPage.InitLeaf(leafPage.Header);
             state.RootObjectType = RootObjectType.Set;
             state.Depth = 1;
             state.BranchPages = 0;
             state.LeafPages = 1;
             state.RootPage = newPage.PageNumber;
-            
-            
+
+            leafPage.AppendToNewPage(encoder);
+            state.NumberOfEntries += leafPage.Header->NumberOfEntries;;
+
+            if (encoder.Done == false) // we overflow and need to split excess to additional pages
+            {
+                var self = new PostingList(tx, Slices.Empty, state);
+                self.AddNewPageForTheExtras(encoder);
+                state = self._state;
+            }
         }
 
         public List<long> DumpAllValues()
