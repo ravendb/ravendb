@@ -114,7 +114,7 @@ export function DatabasesSelectActions({
     };
 
     return (
-        <div className="position-relative">
+        <div className="position-relative mt-3">
             <Checkbox
                 selected={selectionState === "AllSelected"}
                 indeterminate={selectionState === "SomeSelected"}
