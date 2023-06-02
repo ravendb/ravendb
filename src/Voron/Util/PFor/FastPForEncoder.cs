@@ -185,14 +185,15 @@ public unsafe class FastPForEncoder  : IDisposable
                     continue;
                 case VarIntBatchMarker:
                     var sizeOfVarIntBatch = _metadata[_metadataPos++];
-                    var used = WriteLastBatchAsVarIntDelta(sizeOfVarIntBatch, output + sizeUsed, outputSize - sizeUsed);
-                    if (used == 0)
+                    var varintSize = WriteLastBatchAsVarIntDelta(sizeOfVarIntBatch, output + sizeUsed, outputSize - sizeUsed);
+                    if (varintSize == 0 || // couldn't fit the var int buffer
+                        sizeUsed + varintSize + exceptionsRequiredSize + _metadata.Count > outputSize) // wouldn't be able to fit the exceptions & metadata
                     {
                         _metadataPos = batchMetadataStart;
-                        break;
+                        goto AfterLoop;
                     }
                     _offset += sizeOfVarIntBatch;
-                    sizeUsed += used;
+                    sizeUsed += varintSize;
                     continue;
                 case > 32 and < BiggerThanMaxMarker:
                     throw new ArgumentOutOfRangeException("Invalid bits value: " + numOfBits);
@@ -236,6 +237,7 @@ public unsafe class FastPForEncoder  : IDisposable
             _offset += 256;
             exceptionCountRef += amountToAddToException;
         }
+        AfterLoop:
 
         uint bitmap = 0;
         header.ExceptionsOffset = checked((ushort)sizeUsed);

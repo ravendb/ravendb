@@ -116,7 +116,7 @@ public readonly unsafe struct PostingListLeafPage
             Debug.Assert(entriesCount > 0);
         }
 
-        Debug.Assert(sizeUsed < Constants.Storage.PageSize);
+        Debug.Assert(sizeUsed <= Constants.Storage.PageSize - PageHeader.SizeOf);
         newHeader->SizeUsed = (ushort)sizeUsed;
         newHeader->NumberOfEntries = entriesCount;
         // clear the parts we aren't using
