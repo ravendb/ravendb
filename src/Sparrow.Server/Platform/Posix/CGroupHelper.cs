@@ -15,14 +15,17 @@ public abstract class CGroup
 {
     protected static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(CGroup));
     
-    protected const string PROC_CGROUP_FILENAME = "/proc/self/cgroup";
-    protected const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";
+    public const string PROC_SELF_CGROUP_FILENAME = "/proc/self/cgroup";
+    public const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";
+    public const string PROC_CGROUPS_FILENAME = "/proc/cgroups";
 
     protected abstract string MemoryLimitFileName { get; } 
     protected abstract string MemoryUsageFileName { get; } 
     protected abstract string MaxMemoryUsageFileName { get; }
 
     private Lazy<CachedPath> _groupPathForMemory;
+
+    private bool _memoryDisabled;
 
     private class CachedPath
     {
@@ -152,7 +155,18 @@ public abstract class CGroup
         }
     }
 
-    protected abstract string FindCGroupPathForMemory();
+    private string FindCGroupPathForMemory()
+    {
+        if (_memoryDisabled)
+            return null;
+        
+        if(IsControllerGroupsAvailable("memory"))
+            return FindCGroupPathForMemoryInternal();
+
+        _memoryDisabled = true;
+        return null;
+    }
+    protected abstract string FindCGroupPathForMemoryInternal();
     
     //51 34 0:46 / /sys/fs/cgroup/hugetlb rw,nosuid,nodev,noexec,relatime shared:27 - cgroup cgroup rw,hugetlb
     private static readonly Regex FindHierarchyMountReg = new Regex(@"^(?:\S+\s+){3}(?<mountroot>\S+)\s+(?<mountpath>\S+).* - (?<filesystemType>\S+)\s+\S+\s+(?:(?<options>[^,]+),?)+$", RegexOptions.Compiled);
@@ -180,6 +194,26 @@ public abstract class CGroup
         return mountPath + toAppend;
     }
 
+    //memory	0	205	1
+    //cpu 2       232     1
+    private static readonly Regex FindControllerGroupsAvailability = new Regex(@"^(?<subsys_name>[\w|_]+)\s+(?<hierarchy>\d+)\s+(?<num_cgroups>\d+)\s+(?<enabled>[1|0])$", RegexOptions.Compiled);
+    private bool IsControllerGroupsAvailable(string subsysName)
+    {
+        var result = false;
+        foreach (string line in File.ReadLines(PROC_CGROUPS_FILENAME))
+        {
+            var match = FindControllerGroupsAvailability.Match(line);
+            if(match.Success == false)
+                continue;
+
+            if(match.Groups["subsys_name"].Value.Equals(subsysName) == false)
+                continue;
+
+            result = match.Groups["enabled"].Value == "1";
+        }
+        return result;
+    }
+    
     protected delegate bool CheckSpecialValues(string textValue, out long? value);
     private static long? ReadMemoryValueFromFile(string fileName, CheckSpecialValues checkSpecialValues)
     {
@@ -192,6 +226,11 @@ public abstract class CGroup
 
         return result;
     }
+
+    #region for_test
+    public bool ForTestIsControllerMemoryGroupsAvailable() => IsControllerGroupsAvailable("memory");
+    public string ForTestFindCGroupPathForMemory() => FindCGroupPathForMemoryInternal();
+    #endregion
 }
 
 public class CGroupV1 : CGroup
@@ -200,7 +239,7 @@ public class CGroupV1 : CGroup
     protected override string MemoryUsageFileName => "memory.usage_in_bytes";
     protected override string MaxMemoryUsageFileName => "memory.max_usage_in_bytes";
 
-    protected override string FindCGroupPathForMemory()
+    protected override string FindCGroupPathForMemoryInternal()
     {
         return FindCGroupPath(l => l.Contains("memory"));
     }
@@ -231,7 +270,7 @@ public class CGroupV1 : CGroup
     private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+:(?:(?<subsystem_list>[^,:]+),?)+:(?<path>.*)$", RegexOptions.Compiled);
     private static string FindCGroupPathForSubsystem(Predicate<IEnumerable<string>> isSubSystem)
     {
-        foreach (var line in File.ReadLines(PROC_CGROUP_FILENAME))
+        foreach (var line in File.ReadLines(PROC_SELF_CGROUP_FILENAME))
         {
             var match = FindCGroupPathForSubsystemReg.Match(line);
             if(match.Success == false)
@@ -255,7 +294,7 @@ public class CGroupV2 : CGroup
     protected override string MemoryUsageFileName => "memory.current";
     protected override string MaxMemoryUsageFileName => "memory.peak";
     
-    protected override string FindCGroupPathForMemory() => FindCGroupPath();
+    protected override string FindCGroupPathForMemoryInternal() => FindCGroupPath();
     
     private static string FindCGroupPath()
     {
@@ -280,7 +319,7 @@ public class CGroupV2 : CGroup
     private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+::(?<path>.*)$", RegexOptions.Compiled);
     private static string FindCGroupPathForSubsystem()
     {
-        foreach (var line in File.ReadLines(PROC_CGROUP_FILENAME))
+        foreach (var line in File.ReadLines(PROC_SELF_CGROUP_FILENAME))
         {
             var match = FindCGroupPathForSubsystemReg.Match(line);
             if(match.Success == false)
@@ -323,7 +362,7 @@ public class UnidentifiedCGroup : CGroup
         _errorMessage = errorMessage;
     }
 
-    protected override string FindCGroupPathForMemory()
+    protected override string FindCGroupPathForMemoryInternal()
     {
         if (_lastLog + TimeSpan.FromMinutes(10) < DateTime.UtcNow)
         {
