@@ -305,6 +305,32 @@
     }
 }
 
+.align-self-start {
+    align-self: start;
+}
+
+.hstack {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    align-self: stretch;
+}
+
+.vstack {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-self: stretch;
+}
+
+.gap-1 { gap: @gutter-xxs; }
+.gap-2 { gap: @gutter-xs; }
+.gap-3 { gap: @gutter-sm; }
+.gap-4 { gap: @gutter; }
+.gap-5 { gap: @gutter-md; }
+.gap-6 { gap: @gutter-lg; }
+.gap-7 { gap: @gutter-xl; }
+
 .flex-vertical {
     display: flex;
     flex-direction: column;

@@ -23,20 +23,20 @@
         </div>
         <div class="flex-grow slidein-style" data-bind="with: editedIdentityItem">
             <form class="flex-form" autocomplete="off">
-                <div class="panel padding padding-lg margin-left">
+                <div class="panel padding margin-left">
                     <div class="panel-body">
                         <div>
                             <h3 data-bind="text: $root.isNewIdentity() ? `Add New Identity` : `Edit Identity Value`"></h3>
                         </div>
-                        <div class="margin-top">
-                            <div class="form-group margin-top" data-bind="validationElement: prefix">
+                        <div>
+                            <div class="margin-top" data-bind="validationElement: prefix">
                                 <label for="prefix" class="control-label">Prefix</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" data-bind="textInput: prefix, disable: !$root.isNewIdentity()"
                                            id="prefix" placeholder="Enter the Document ID Prefix">
                                 </div>
                             </div>
-                            <div class="form-group margin-top" data-bind="validationElement: value">
+                            <div class="margin-top" data-bind="validationElement: value">
                                 <label for="value" class="control-label">Value</label>
                                 <div class="flex-grow">
                                     <input type="number" min="0" class="form-control" data-bind="numericInput: value"

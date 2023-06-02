@@ -1,5 +1,5 @@
 <div class="flex-vertical absolute-fill content-margin admin-logs">
-    <div class="form-inline">
+    <div class="form-inline hstack gap-4 flex-wrap">
         <div class="btn-group-label" data-label="Log on this view" role="group">
             <button class="btn btn-primary" data-bind="click: pauseLogs, visible: liveClient">
                 <i class="icon-pause"></i> <span>Pause</span>
@@ -74,7 +74,7 @@
                 <label for="onlyErrors"><small>Show errors only</small></label>
             </div>
         </div>
-        <div class="btn-group-label margin-left" data-label="Logs on disk" role="group">
+        <div class="btn-group-label" data-label="Logs on disk" role="group">
             <div class="btn-group dropdown-menu-right">
                 <button class="btn btn-info dropdown-toggle" id="js-settings-btn" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
                     <i class="icon-config"></i><span>Settings</span>
