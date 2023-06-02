@@ -217,20 +217,23 @@ class editIndex extends viewModelBase {
         });
         
         this.searchEngineConfiguration.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
-            let valueToUpdate: Raven.Client.Documents.Indexes.SearchEngineType = "Lucene";
+            const valueToUpdate: Raven.Client.Documents.Indexes.SearchEngineType = "Lucene";
             
+            /* 
             if ((engine === "Corax") || (!engine && this.defaultSearchEngine() === "Corax")) {
                 valueToUpdate = "Corax";
             }
+             */
 
             this.editedIndex().searchEngine(valueToUpdate);
         }) 
     }
     
     static formatEngine(engine: Raven.Client.Documents.Indexes.SearchEngineType) {
+        /*
         if (engine === "Corax") {
             return engine + " - experimental";
-        }
+        }*/
         return engine;
     }
 

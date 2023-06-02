@@ -141,7 +141,7 @@ class indexFieldOptions {
 
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
     isLucene: KnockoutComputed<boolean>;
-    isCorax: KnockoutComputed<boolean>;
+    // isCorax: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -228,21 +228,23 @@ class indexFieldOptions {
         let changeInProgress = false;
 
         this.isLucene = ko.pureComputed(() => this.searchEngine() === "Lucene");
-        this.isCorax = ko.pureComputed(() => this.searchEngine() === "Corax");
+        // this.isCorax = ko.pureComputed(() => this.searchEngine() === "Corax");
         
         this.searchEngine.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
             if (!changeInProgress) {
                 changeInProgress = true;
 
                 if (this.isDefaultFieldOptions()) {
+                    /*
                     if (engine === "Corax") {
                         this.storage(indexFieldOptions.globalEngineDefaults(engine));
-                    }
+                    }*/
                     this.parent().storage(indexFieldOptions.globalEngineDefaults(engine));
                 } else {
+                    /*
                     if (engine === "Corax") {
                         this.storage(null);
-                    }
+                    }*/
                 }
                 
                 changeInProgress = false;
@@ -283,7 +285,7 @@ class indexFieldOptions {
         this.highlighting.subscribe(() => {
             if (!changeInProgress) {
                 const newValue = this.highlighting();
-                const notCorax = this.searchEngine() !== "Corax";
+                const notCorax = true; // this.searchEngine() !== "Corax";
 
                 changeInProgress = true;
                 
@@ -530,8 +532,8 @@ class indexFieldOptions {
             indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
     
-    static globalEngineDefaults(engine: Raven.Client.Documents.Indexes.SearchEngineType) {
-        return engine === "Corax" ? "Yes" : "No";
+    static globalEngineDefaults(engine: Raven.Client.Documents.Indexes.SearchEngineType): "No" {
+        return "No"; // engine === "Corax" ? "Yes" : "No";
     }
 
     static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
