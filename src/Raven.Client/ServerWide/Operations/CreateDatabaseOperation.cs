@@ -25,6 +25,21 @@ namespace Raven.Client.ServerWide.Operations
             _replicationFactor = databaseRecord.Topology?.ReplicationFactor > 0 ? databaseRecord.Topology.ReplicationFactor : 1;
         }
 
+        public CreateDatabaseOperation(Action<IDatabaseRecordBuilderInitializer> builder)
+        {
+            if (builder == null) 
+                throw new ArgumentNullException(nameof(builder));
+
+            var instance = new DatabaseRecordBuilder();
+            builder(instance);
+
+            var databaseRecord = instance.DatabaseRecord;
+
+            ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
+            _databaseRecord = databaseRecord;
+            _replicationFactor = databaseRecord.Topology?.ReplicationFactor > 0 ? databaseRecord.Topology.ReplicationFactor : 1;
+        }
+
         public CreateDatabaseOperation(DatabaseRecord databaseRecord, int replicationFactor)
         {
             if (databaseRecord == null)
