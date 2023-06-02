@@ -35,192 +35,164 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <h2 className="on-base-background">
                         General Database Stats
                         <Button color="link" target="_blank" href={rawJsonUrl} title="Show raw output">
-                            <Icon icon="link" margin="m-0" />
+                            <Icon icon="json" margin="m-0" />
                         </Button>
                     </h2>
                 </Col>
             </Row>
             <Card className="stats-list p-4">
-                <Row>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="documents" /> <span>Documents Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfDocuments.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                <div className="stats-item">
+                    <Icon icon="documents" margin="m-0" />
+                    <div className="name">
+                        <span>Documents Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfDocuments.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="new-counter" />
-                                <span>Counters Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfCounterEntries.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="new-counter" margin="m-0" />
+                    <div className="name">
+                        <span>Counters Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfCounterEntries.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="attachment" />
-                                <span>Attachments Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfAttachments.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="attachment" margin="m-0" />
+                    <div className="name">
+                        <span>Attachments Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfAttachments.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="indexing" />
-                                <span>Indexes Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfIndexes.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="indexing" margin="m-0" />
+                    <div className="name">
+                        <span>Indexes Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(stats, (x) => x.CountOfIndexes.toLocaleString(), defaultLoadingText)}
+                            </span>
                         </div>
-                    </Col>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="revisions" />
-                                <span>Revisions Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfRevisionDocuments.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="revisions" margin="m-0" />
+                    <div className="name">
+                        <span>Revisions Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfRevisionDocuments.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="conflicts" />
-                                <span>Conflicts Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfDocumentsConflicts.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="conflicts" margin="m-0" />
+                    <div className="name">
+                        <span>Conflicts Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfDocumentsConflicts.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="zombie" />
-                                <span>Tombstones Count</span>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfTombstones.toLocaleString(),
-                                            defaultLoadingText
-                                        )}
-                                    </span>
-                                </div>
-                            </LazyLoad>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="zombie" margin="m-0" />
+                    <div className="name">
+                        <span>Tombstones Count</span>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfTombstones.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col sm="6" lg="4" xl="3">
-                        <div className="stats-item">
-                            <div className="name">
-                                <Icon icon="timeseries-settings" />
-                                <span>Time Series Segments Count</span>
-                                <span id="js-timeseries-segments">
-                                    <Icon icon="info" color="info" margin="ms-1" />
-                                </span>
-                                <UncontrolledPopover
-                                    target="js-timeseries-segments"
-                                    placement="right"
-                                    trigger="hover"
-                                    container="js-timeseries-segments"
-                                >
-                                    <div className="p-3">
-                                        <div className="mb-2">
-                                            <strong>Time series</strong> data is stored within <strong>segments</strong>
-                                            . Each segment contains consecutive entries from the same time series.
-                                        </div>
-                                        <div>
-                                            Segments&apos; maximum size is 2KB. Segments are added as needed when the
-                                            number of entries grows, or when a certain amount of time has passed since
-                                            the last entry.
-                                        </div>
-                                    </div>
-                                </UncontrolledPopover>
-                            </div>
-                            <LazyLoad active={!stats}>
-                                <div className="value">
-                                    <span>
-                                        {conditionalRender(
-                                            stats,
-                                            (x) => x.CountOfTimeSeriesSegments,
-                                            defaultLoadingText
-                                        )}
-                                    </span>
+                    </LazyLoad>
+                </div>
+                <div className="stats-item">
+                    <Icon icon="timeseries-settings" margin="m-0" />
+                    <div className="name">
+                        <span>Time Series Segments Count</span>
+                        <span id="js-timeseries-segments">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </span>
+                        <UncontrolledPopover
+                            target="js-timeseries-segments"
+                            placement="right"
+                            trigger="hover"
+                            container="js-timeseries-segments"
+                        >
+                            <div className="p-3">
+                                <div className="mb-2">
+                                    <strong>Time series</strong> data is stored within <strong>segments</strong>. Each
+                                    segment contains consecutive entries from the same time series.
                                 </div>
-                            </LazyLoad>
+                                <div>
+                                    Segments&apos; maximum size is 2KB. Segments are added as needed when the number of
+                                    entries grows, or when a certain amount of time has passed since the last entry.
+                                </div>
+                            </div>
+                        </UncontrolledPopover>
+                    </div>
+                    <LazyLoad active={!stats}>
+                        <div className="value">
+                            <span>
+                                {conditionalRender(
+                                    stats,
+                                    (x) => x.CountOfTimeSeriesSegments.toLocaleString(),
+                                    defaultLoadingText
+                                )}
+                            </span>
                         </div>
-                    </Col>
-                </Row>
+                    </LazyLoad>
+                </div>
             </Card>
         </div>
     );

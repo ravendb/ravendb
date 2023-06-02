@@ -7,6 +7,11 @@
     }
 
     .stats-list {
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        display: grid;
+        column-gap: 6rem;
+        row-gap: 1rem;
+        border-radius: $gutter-xs;
         .title {
             margin-bottom: $gutter-sm;
 
@@ -17,15 +22,12 @@
 
         .stats-item {
             display: flex;
-            align-items: baseline;
-            margin-left: -$gutter-xs;
-            margin-right: -$gutter-xs;
-            padding-left: $gutter-xs;
-            padding-right: $gutter-xs;
-            padding-top: $gutter-xs;
-            padding-bottom: $gutter-xxs;
+            align-items: center;
+            padding: $gutter-xs;
             position: relative;
             transition: background-color 0.1s ease;
+            gap: $gutter-xs;
+            border-radius: $gutter-xxs;
 
             &:hover {
                 background-color: $panel-bg-2;
@@ -37,12 +39,12 @@
             }
 
             .value {
-                font-size: 18px;
+                font-size: 16px;
                 color: $text-emphasis-color;
-                text-align: center;
-                width: 130px;
+                text-align: right;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                min-width: 120px;
 
                 &.long {
                     width: auto;
