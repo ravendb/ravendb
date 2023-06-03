@@ -45,6 +45,8 @@
     <EmbeddedResource Include="Voron\Util\SmallBufferSizeMisleading.txt" />
     <None Remove="Voron\Util\SmallBufferMisleading2.txt" />
     <EmbeddedResource Include="Voron\Util\SmallBufferMisleading2.txt" />
+    <None Remove="Voron\Util\GreaterThan42B.txt" />
+    <EmbeddedResource Include="Voron\Util\GreaterThan42B.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />

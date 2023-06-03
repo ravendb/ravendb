@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Raven.Client.Documents.Linq.Indexing;
+using System.Linq;
+using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron.Data.Containers;
@@ -16,39 +17,36 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
     {
     }
     
-    [Fact]
-    public void CanRespectBufferBoundaryForBuffer()
+    [Theory]
+    [InlineData("SmallBufferSizeMisleading")]
+    [InlineData("GreaterThan42B")]
+    [InlineData("SmallBufferMisleading2")]
+    public void CanRoundTripSmallContainer(string name)
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using var encoder = new FastPForEncoder(bsc);
-        var array = ReadNumbers("SmallBufferSizeMisleading");
+        var array = ReadNumbers(name);
 
-        fixed(byte* buffer = new byte[Container.MaxSizeInsideContainerPage])
-        fixed (long* l = array)
+        fixed (byte* buffer = new byte[Container.MaxSizeInsideContainerPage])
         {
-            var size = encoder.Encode(l, array.Length);
-            Assert.True(size < Container.MaxSizeInsideContainerPage);
-            (int count, int sizeUsed) = encoder.Write(buffer, Container.MaxSizeInsideContainerPage);
-            Assert.True(sizeUsed <= Container.MaxSizeInsideContainerPage);
-            Assert.Equal(array.Length, count);
-        }
-    }
+            int size;
+            fixed (long* l = array)
+            {
+                size = encoder.Encode(l, array.Length);
+                Assert.True(size < Container.MaxSizeInsideContainerPage);
+                (int count, int sizeUsed) = encoder.Write(buffer, Container.MaxSizeInsideContainerPage);
+                Assert.True(sizeUsed <= Container.MaxSizeInsideContainerPage);
+                Assert.Equal(array.Length, count);
+            }
 
-    [Fact]
-    public void CanRespectBufferBoundaryForBuffer2()
-    {
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        using var encoder = new FastPForEncoder(bsc);
-        var array = ReadNumbers("SmallBufferMisleading2");
-
-        fixed(byte* buffer = new byte[Container.MaxSizeInsideContainerPage])
-        fixed (long* l = array)
-        {
-            var size = encoder.Encode(l, array.Length);
-            Assert.True(size < Container.MaxSizeInsideContainerPage);
-            (int count, int sizeUsed) = encoder.Write(buffer, Container.MaxSizeInsideContainerPage);
-            Assert.True(sizeUsed <= Container.MaxSizeInsideContainerPage);
-            Assert.Equal(array.Length, count);
+            var output = new long[Bits.PowerOf2(array.Length)];
+            using var decoder = new FastPForDecoder(bsc, buffer, size);
+            fixed (long* o = output)
+            {
+                int read = decoder.Read(o, output.Length);
+                Assert.Equal(read, array.Length);
+                Assert.Equal(array, output.Take(read));
+            }
         }
     }
     
