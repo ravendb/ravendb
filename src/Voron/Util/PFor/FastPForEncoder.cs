@@ -137,7 +137,7 @@ public unsafe class FastPForEncoder  : IDisposable
         {
             // we expect this to be *rare*, so not trying to optimize this in any special way
             Span<uint> deltaHighBuffer = stackalloc uint[8];
-            var highAndLow = Vector256.Shuffle(delta.AsUInt32(), Vector256.Create(0u, 2, 4, 6, 1, 3, 5, 7));
+            var highAndLow = Vector256.Shuffle(delta.AsUInt32(), Vector256.Create(1u, 3, 5, 7, 0, 2, 4, 6));
             highAndLow.StoreUnsafe(ref deltaHighBuffer[0]);
 
             _metadata.Add(BiggerThanMaxMarker);
@@ -145,7 +145,7 @@ public unsafe class FastPForEncoder  : IDisposable
             Span<byte> asBytes = MemoryMarshal.AsBytes(deltaHighBuffer);
             for (int j = 0; j < 16; j++)
             {
-                _metadata.Add(asBytes[i]);
+                _metadata.Add(asBytes[j]);
             }
         }
     }

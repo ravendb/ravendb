@@ -180,7 +180,8 @@ public unsafe struct FastPForDecoder : IDisposable
                     expectedBufferIndex = -1;
                 }
 
-                highBitsDelta = Vector256.Shuffle(highBitsDelta, Vector256.Create(3, 0, 4, 0, 5, 0, 6, 0));
+                // the last 4 elements are known zero, so no need to AND with zero
+                highBitsDelta = Vector256.Shuffle(highBitsDelta, Vector256.Create(7, 0, 7, 1, 7, 2, 7, 3));
                 return highBitsDelta.AsUInt64();
             }
         }
