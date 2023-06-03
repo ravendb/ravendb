@@ -151,7 +151,7 @@ public unsafe struct FastPForDecoder : IDisposable
 
             for (int i = 0; i + Vector256<uint>.Count <= 256; i += Vector256<uint>.Count)
             {
-                var (a, b) = Vector256.Widen(Vector256.Load(buffer + i).AsInt32());
+                var (a, b) = Vector256.Widen(Vector256.Load(buffer + i));
                 if (expectedBufferIndex == i)
                 {
                     a |= GetDeltaHighBits();
@@ -165,7 +165,7 @@ public unsafe struct FastPForDecoder : IDisposable
             }
             bigDeltaBufferUsed = 0;
 
-            Vector256<long> GetDeltaHighBits()
+            Vector256<ulong> GetDeltaHighBits()
             {
                 var highBitsDelta = Vector128.Load(bigDeltaOffsetsBuffer[deltaBufferIndex])
                     .AsInt32()
@@ -181,14 +181,15 @@ public unsafe struct FastPForDecoder : IDisposable
                 }
 
                 highBitsDelta = Vector256.Shuffle(highBitsDelta, Vector256.Create(3, 0, 4, 0, 5, 0, 6, 0));
-                return highBitsDelta.AsInt64();
+                return highBitsDelta.AsUInt64();
             }
         }
 
         return read;
 
-        void PrefixSumAndStoreToOutput(Vector256<long> cur, ref Vector256<long> prev)
+        void PrefixSumAndStoreToOutput(Vector256<ulong> curUl, ref Vector256<long> prev)
         {
+            var cur = curUl.AsInt64();
             // doing prefix sum here: https://en.algorithmica.org/hpc/algorithms/prefix/
             cur += Vector256.Shuffle(cur, Vector256.Create(0, 0, 1, 2)) &
                    Vector256.Create(0, -1, -1, -1);

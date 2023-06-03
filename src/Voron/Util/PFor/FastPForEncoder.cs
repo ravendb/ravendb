@@ -34,9 +34,28 @@ public unsafe class FastPForEncoder  : IDisposable
     {
         _allocator = allocator;
     }
-    
+
+    [Conditional("DEBUG")]
+    private static void AssertIsSorted(long* entries, int count)
+    {
+        if (count <= 1)
+        {
+            // If there are 0 or 1 elements, it is considered sorted
+            return;
+        }
+
+        for (int i = 0; i < count - 1; i++)
+        {
+            Debug.Assert(entries[i] >= 0);
+            if (entries[i] > entries[i + 1])
+            {
+                throw new InvalidOperationException("The entries are not sorted.");
+            }
+        }
+    }    
     public int Encode(long* entries, int count)
     {
+        AssertIsSorted(entries, count);
         _entries = entries;
         _count = count;
         _offset = 0;
