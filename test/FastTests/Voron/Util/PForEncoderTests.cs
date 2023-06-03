@@ -35,6 +35,24 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
     }
 
     [Fact]
+    public void CanRespectBufferBoundaryForBuffer2()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var encoder = new FastPForEncoder(bsc);
+        var array = ReadNumbers("SmallBufferMisleading2");
+
+        fixed(byte* buffer = new byte[Container.MaxSizeInsideContainerPage])
+        fixed (long* l = array)
+        {
+            var size = encoder.Encode(l, array.Length);
+            Assert.True(size < Container.MaxSizeInsideContainerPage);
+            (int count, int sizeUsed) = encoder.Write(buffer, Container.MaxSizeInsideContainerPage);
+            Assert.True(sizeUsed <= Container.MaxSizeInsideContainerPage);
+            Assert.Equal(array.Length, count);
+        }
+    }
+    
+    [Fact]
     public void CanRespectBufferBoundaryForPage()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

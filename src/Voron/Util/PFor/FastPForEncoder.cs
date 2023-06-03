@@ -231,16 +231,19 @@ public unsafe class FastPForEncoder  : IDisposable
             {
                 var maxNumOfBits = _metadata[_metadataPos++];
                 var exceptionIndex = maxNumOfBits - numOfBits;
-                var oldCount = exceptionsCounts[exceptionIndex];
-                amountToAddToException = numOfExceptions;
-                exceptionCountRef = ref exceptionsCounts[exceptionIndex];
-                
-                if (oldCount == 0)
+                if (exceptionIndex > 1)
                 {
-                    exceptionsRequiredSize += sizeof(ushort); // size for the number of items here
+                    var oldCount = exceptionsCounts[exceptionIndex];
+                    amountToAddToException = numOfExceptions;
+                    exceptionCountRef = ref exceptionsCounts[exceptionIndex];
+                
+                    if (oldCount == 0)
+                    {
+                        exceptionsRequiredSize += sizeof(ushort); // size for the number of items here
+                    }
+                    exceptionsRequiredSize -= BitPacking.RequireSizeSegmented(oldCount, exceptionIndex);
+                    exceptionsRequiredSize += BitPacking.RequireSizeSegmented(numOfExceptions + oldCount, exceptionIndex);
                 }
-                exceptionsRequiredSize -= BitPacking.RequireSizeSegmented(oldCount, exceptionIndex);
-                exceptionsRequiredSize += BitPacking.RequireSizeSegmented(numOfExceptions + oldCount, exceptionIndex);
             }
 
             _metadataPos += numOfExceptions;
