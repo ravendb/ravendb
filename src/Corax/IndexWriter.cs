@@ -18,6 +18,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
@@ -1618,19 +1619,16 @@ namespace Corax
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
                 if (entries.HasChanges() == false)
                     continue;
-                
-                long termId;
-                ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                
-                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
-                
-                
+
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
                     SetRange(_additionsForTerm, entries.Additions);
                     SetRange(_removalsForTerm, entries.Removals);
                 }
-                
+
+                long termId;
+                ReadOnlySpan<byte> termsSpan = term.AsSpan();
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
                 {

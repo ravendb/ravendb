@@ -392,20 +392,23 @@ public unsafe class CompactKey : IDisposable
         _currentKeyIdx = Invalid;
     }
 
-    public int CompareEncodedWithCurrent(byte* nextEntryPtr, int nextEntryLength)
+    public int CompareEncodedWithCurrent(byte* nextEntryPtr, int nextEntryLengthInBits)
     {
         if (Dictionary == Invalid)
             throw new VoronErrorException("The dictionary is not set.");
 
         if (_currentKeyIdx == Invalid)
-            return CompareEncodedWith(nextEntryPtr, nextEntryLength, Dictionary);
+            return CompareEncodedWith(nextEntryPtr, nextEntryLengthInBits, Dictionary);
 
         // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
         byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-        int length = *((int*)encodedStartPtr);
+        int lengthInBits = *((int*)encodedStartPtr);
+
+        var length = Bits.ToBytes(lengthInBits);
+        var nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
 
         var result = AdvMemory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
-        return result == 0 ? length - nextEntryLength : result;
+        return result == 0 ? lengthInBits - nextEntryLengthInBits : result;
     }
 
     public int CompareEncodedWith(byte* nextEntryPtr, int nextEntryLengthInBits, long dictionaryId)

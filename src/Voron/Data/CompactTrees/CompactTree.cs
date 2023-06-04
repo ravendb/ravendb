@@ -1148,8 +1148,8 @@ namespace Voron.Data.CompactTrees
         {
             long containerDiff = DecodeKey(state.Page.Pointer + state.EntriesOffsetsPtr[position]);
             var containerId = DecodeKeyFromPage(ref state, containerDiff);
-            GetEncodedKeyPtr(containerId, out var lastEntryFromPreviousPage, out _, out var sizeInBits);
-            return encodedKey.CompareEncodedWithCurrent(lastEntryFromPreviousPage, sizeInBits);
+            GetEncodedKeyPtr(containerId, out var ptr, out _, out var sizeInBits);
+            return encodedKey.CompareEncodedWithCurrent(ptr, sizeInBits);
         }
 
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
