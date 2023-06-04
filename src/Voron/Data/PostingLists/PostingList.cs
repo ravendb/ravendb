@@ -380,8 +380,8 @@ namespace Voron.Data.PostingLists
 
         public void PrepareForCommit()
         {
-            _additions.Sort();
-            _removals.Sort();
+            _additions.SortAndRemoveDuplicates();
+            _removals.SortAndRemoveDuplicates();
 
             var encoder = new FastPForEncoder(_llt.Allocator);
             var tempList = new NativeIntegersList(_llt.Allocator, _additions.Count + _removals.Count);
