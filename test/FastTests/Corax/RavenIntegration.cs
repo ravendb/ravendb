@@ -3,10 +3,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,6 +19,65 @@ public class RavenIntegration : RavenTestBase
 {
     public RavenIntegration(ITestOutputHelper output) : base(output)
     {
+    }
+    
+      
+   [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"from Docs where BoostFactor > 5.0 order by NonExist"})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"from Docs where BoostFactor > 5.0 order by NonExist  as alphanumeric "})]
+    public void FieldHasNoTerms(Options options, string query)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Doc(){Id = "1", BoostFactor = 10});
+            session.Store(new Doc(){Id = "2", BoostFactor = 20});
+            session.SaveChanges();
+
+            var hasNoImpactOnOrder = session.Advanced.RawQuery<Doc>(query).WaitForNonStaleResults().ToList();
+            Assert.Equal("1", hasNoImpactOnOrder[0].Id);
+            Assert.Equal("2", hasNoImpactOnOrder[1].Id);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void AutoIndexCanOrderByFieldThatExistsOnlyInSpecificDocument(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        InsertDocuments();
+
+
+        using var session = store.OpenSession();
+
+        
+        //In case of AutoIndexes this should work, in static index we can reproduce the issue with `CreateField` API
+        var orderByClauseQuery = session.Advanced.RawQuery<object>("from TestCollection where Name = 'Maciej' order by OrderByClause").ToList();
+
+        void InsertDocuments()
+        {
+            var requestExecutor = store.GetRequestExecutor();
+            
+            //Has OrderByClause
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var reader = context.ReadObject(new DynamicJsonValue()
+                {
+                    ["@metadata"] = new DynamicJsonValue() {["@collection"] = "TestCollection"}, ["Name"] = "Maciej", ["OrderByClause"] = "1"
+                }, "num");
+                requestExecutor.Execute(new PutDocumentCommand(requestExecutor.Conventions, "d1", null, reader), context);
+            }
+
+            //OrderByClause doesn't exist
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var reader = context.ReadObject(new DynamicJsonValue()
+                {
+                    ["@metadata"] = new DynamicJsonValue() {["@collection"] = "TestCollection"}, ["Name"] = "Maciej",
+                }, "num2");
+                requestExecutor.Execute(new PutDocumentCommand(requestExecutor.Conventions, "d2", null, reader), context);
+            }
+        }
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
