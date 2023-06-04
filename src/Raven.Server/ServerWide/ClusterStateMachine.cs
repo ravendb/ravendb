@@ -1760,7 +1760,7 @@ namespace Raven.Server.ServerWide
                         if (addDatabaseCommand.Record.IsSharded == false)
                             return addDatabaseCommand.Record.Topology.Members;
 
-                        if (addDatabaseCommand.Record.Sharding == null || addDatabaseCommand.Record.Sharding.BucketRanges == null || addDatabaseCommand.Record.Sharding.BucketRanges.Count == 0)
+                        if (addDatabaseCommand.Record.Sharding?.BucketRanges == null || addDatabaseCommand.Record.Sharding.BucketRanges.Count == 0)
                             throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.Sharding.BucketRanges)}");
 
                         return addDatabaseCommand.Record.Sharding.Orchestrator.Topology.Members;
@@ -1950,6 +1950,8 @@ namespace Raven.Server.ServerWide
                 if (propertyNames.Length == 0)
                     return;
 
+                var shouldUpdateServerWideBackups = false;
+
                 foreach (var propertyName in propertyNames)
                 {
                     if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
@@ -1958,10 +1960,46 @@ namespace Raven.Server.ServerWide
                     if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
                         continue;
 
+                    configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.BackupType), out BackupType backupType);
+                    if (addDatabaseCommand.Record.IsSharded && backupType == BackupType.Snapshot)
+                    {
+                        // sharded database are excluded from server-wide snapshot backups
+                        // add the database name to 'ExcludedDatabases' list
+
+                        serverWideBackups.Modifications ??= new DynamicJsonValue(serverWideBackups);
+                        configurationBlittable.Modifications ??= new DynamicJsonValue(configurationBlittable);
+
+                        if (configurationBlittable.TryGet(nameof(IServerWideTask.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases))
+                        {
+                            excludedDatabases.Modifications ??= new DynamicJsonArray();
+                            excludedDatabases.Modifications.Add(addDatabaseCommand.Name);
+                        }
+                        else
+                        {
+                            configurationBlittable.Modifications[nameof(IServerWideTask.ExcludedDatabases)] =
+                                new DynamicJsonArray(new[] { addDatabaseCommand.Name });
+                        }
+
+                        serverWideBackups.Modifications[propertyName] = configurationBlittable;
+                        shouldUpdateServerWideBackups = true;
+
+                        continue;
+                    }
+
                     var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
                     PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
                     addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
                     hasChanges = true;
+                }
+
+                if (shouldUpdateServerWideBackups)
+                {
+                    using (serverWideBackups)
+                    {
+                        serverWideBackups = context.ReadObject(serverWideBackups, ServerWideConfigurationKey.Backup);
+                    }
+
+                    PutValueDirectly(context, ServerWideConfigurationKey.Backup, serverWideBackups, index);
                 }
             }
 
@@ -4092,7 +4130,7 @@ namespace Raven.Server.ServerWide
                             newBackups.Add(periodicBackupConfiguration.ToJson());
                             periodicBackupTaskId = periodicBackupConfiguration.TaskId;
                         }
-                        else if(isBackupToEditFound == false)
+                        else if (isBackupToEditFound == false)
                         {
                             continue;
                         }

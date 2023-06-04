@@ -15,8 +15,10 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -554,6 +556,66 @@ namespace SlowTests.Sharding.Backup
                 }
 
                 Assert.Single(dates);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task ServerWideSnapshotBackupShouldExcludeShardedDbs()
+        {
+            DoNotReuseServer();
+
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            using (var store3 = GetDocumentStore())
+            {
+                const string name = "test";
+                await store1.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    FullBackupFrequency = "* * * * *",
+                    Disabled = true,
+                    Name = name
+                }));
+
+                foreach (var store in new[] { store1, store2, store3 })
+                {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    if (databaseRecord.IsSharded)
+                    {
+                        Assert.Equal(0, databaseRecord.PeriodicBackups.Count);
+                        continue;
+                    }
+
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                    Assert.Equal($"Server Wide Backup, {name}", databaseRecord.PeriodicBackups[0].Name);
+                }
+
+                // add new databases
+                using (var store4 = Sharding.GetDocumentStore())
+                using (var store5 = GetDocumentStore())
+                {
+                    // sharded db should be excluded 
+                    var databaseRecord = await store4.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store4.Database));
+                    Assert.Equal(0, databaseRecord.PeriodicBackups.Count);
+
+                    // non-sharded db should not be excluded 
+                    databaseRecord = await store4.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store5.Database));
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                    Assert.Equal($"Server Wide Backup, {name}", databaseRecord.PeriodicBackups[0].Name);
+
+                    // validate ExcludedDatabases list in server-wide config
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var serverWideBackups = Server.ServerStore.Cluster.Read(context, ClusterStateMachine.ServerWideConfigurationKey.Backup);
+                        Assert.True(serverWideBackups.TryGet(name, out BlittableJsonReaderObject configuration));
+
+                        var serverWideConfig = JsonDeserializationCluster.ServerWideBackupConfiguration(configuration);
+                        Assert.Equal(2, serverWideConfig.ExcludedDatabases.Length);
+                        Assert.Contains(store2.Database, serverWideConfig.ExcludedDatabases);
+                        Assert.Contains(store4.Database, serverWideConfig.ExcludedDatabases);
+                    }
+                }
             }
         }
 
