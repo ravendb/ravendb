@@ -151,6 +151,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private PostingList.Iterator _postListIt;
         private FastPForBufferedReader _smallListReader;
         private TIterator _termsIt;
+        private readonly long _min;
+        private readonly long _max;
         private readonly IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
 
@@ -164,9 +166,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
         private readonly PageLocator _pageLocator;
 
-        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TIterator it)
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TIterator it, long min, long max)
         {
             _termsIt = it;
+            _min = min;
+            _max = max;
             _termsIt.Reset();
             _llt = llt;
             _searcher = searcher;
@@ -211,17 +215,23 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                     switch (termType)
                     {
                         case TermIdMask.Single:
-                            sortedIds[currentIdx++] = EntryIdEncodings.GetContainerId(postingListId);
+                            long entryId = EntryIdEncodings.GetContainerId(postingListId);
+                            if(entryId >= _min && entryId <= _max)
+                                sortedIds[currentIdx++] = entryId;
                             break;
                         case TermIdMask.SmallPostingList:
                             var item = _containerItems[_smallPostingListIndex++];
                             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
+                            var start = FastPForDecoder.ReadStart(item.Address + offset);
+                            if(start > _max)
+                                continue;
                             _smallListReader = new FastPForBufferedReader(_llt.Allocator, item.Address + offset, item.Length - offset);
                             ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                             break;
                         case TermIdMask.PostingList:
                             var postingList = _searcher.GetPostingList(postingListId);
                             _postListIt = postingList.Iterate();
+                            _postListIt.Seek(_min);
                             ReadLargePostingList(sortedIds, ref currentIdx);
                             break;
                         default:
@@ -260,7 +270,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
         {
-            if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false)
+            if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || 
+                sortedIds[read-1] > _max)
                 _postListIt = default;
             currentIdx += read;
         }
@@ -271,13 +282,15 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 var read = _smallListReader.Fill(pSortedIds + currentIdx, count - currentIdx);
                 EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(pSortedIds + currentIdx, read), read);
-                currentIdx += read;
                 if (read == 0)
                 {
                     _smallListReader.Dispose();
                     _smallListReader = default;
                     break;
                 }
+                if (pSortedIds[currentIdx + read - 1] < _min)
+                    continue;
+                currentIdx += read;
             }
         }
 
@@ -304,7 +317,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
-        var reader = GetReader(ref match);
+        var reader = GetReader(ref match, allMatches[0], allMatches[^1]);
         while (match._results.Count < maxResults)
         {
             var read = reader.Read(sortedIdBuffer);
@@ -332,27 +345,27 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         indexesScope.Dispose();
         
         
-        SortedIndexReader<TDirection> GetReader(ref SortingMatch<TInner> match)
+        SortedIndexReader<TDirection> GetReader(ref SortingMatch<TInner> match, long min, long max)
         {
             if (typeof(TDirection) == typeof(CompactTree.ForwardIterator) ||
                 typeof(TDirection) == typeof(CompactTree.BackwardIterator))
             {
                 var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
             }
 
             if (typeof(TDirection) == typeof(Lookup<long>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<long>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetLongTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
             }
 
             if (typeof(TDirection) == typeof(Lookup<double>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<double>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetDoubleTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
             }
 
             throw new NotSupportedException(typeof(TDirection).FullName);
