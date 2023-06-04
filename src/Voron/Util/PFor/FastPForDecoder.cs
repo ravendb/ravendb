@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Voron.Data.PostingLists;
 
 namespace Voron.Util.PFor;
 
@@ -11,7 +12,8 @@ public unsafe struct FastPForDecoder : IDisposable
 {
     private const int PrefixSizeBits = FastPForEncoder.PrefixSizeBits;
     public bool IsValid => _input != null;
-    
+
+    private readonly ByteStringContext _allocator;
     private byte* _input;
     private byte* _metadata;
     private readonly byte* _end;
@@ -22,8 +24,9 @@ public unsafe struct FastPForDecoder : IDisposable
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
     private Vector256<long> _prev;
 
-    public FastPForDecoder(ByteStringContext allocator , byte* input, int size)
+    public FastPForDecoder(ByteStringContext allocator, byte* input, int size)
     {
+        _allocator = allocator;
         _input = input;
         _end = input + size;
         ref var header = ref Unsafe.AsRef<PForHeader>(input);
@@ -80,8 +83,7 @@ public unsafe struct FastPForDecoder : IDisposable
         var prefixAmount = _prefixShiftAmount;
         var sharedPrefixMask = Vector256.Create<long>(_sharedPrefix);
 
-        var bigDeltaOffsetsBuffer = stackalloc byte*[64];
-        int bigDeltaBufferUsed = 0;
+        var bigDeltaOffsets = new NativeIntegersList(_allocator, -1);
         var buffer = stackalloc uint[256];
         int read = 0;
         while (_metadata < _end && read < outputCount)
@@ -92,8 +94,12 @@ public unsafe struct FastPForDecoder : IDisposable
             switch (numOfBits)
             {
                 case FastPForEncoder.BiggerThanMaxMarker:
-                    bigDeltaOffsetsBuffer[bigDeltaBufferUsed++] = _metadata;
-                    _metadata += 17; // batch location + 16 bytes high bits of the delta
+                    bigDeltaOffsets.Add((long)_metadata);
+                    // we don't need to worry about block fit, because we are ensured that we have at least
+                    // 256 items to read into the output here, and these marker are for the next blcok
+                    
+                    // batch location + 16 bytes high bits of the delta
+                    _metadata += 17;
                     continue;
                 case FastPForEncoder.VarIntBatchMarker:
                     var countOfVarIntBatch = *_metadata++;
@@ -143,10 +149,9 @@ public unsafe struct FastPForDecoder : IDisposable
             }
 
             var expectedBufferIndex = -1;
-            var deltaBufferIndex = 0;
-            if (deltaBufferIndex < bigDeltaBufferUsed)
+            if (bigDeltaOffsets.Count > 0)
             {
-                expectedBufferIndex = *bigDeltaOffsetsBuffer[deltaBufferIndex]++;
+                expectedBufferIndex = *(byte*)bigDeltaOffsets.First;
             }
 
             for (int i = 0; i + Vector256<uint>.Count <= 256; i += Vector256<uint>.Count)
@@ -163,17 +168,16 @@ public unsafe struct FastPForDecoder : IDisposable
                 }
                 PrefixSumAndStoreToOutput(b, ref _prev);
             }
-            bigDeltaBufferUsed = 0;
+            bigDeltaOffsets.Clear();
 
             Vector256<ulong> GetDeltaHighBits()
             {
-                var highBitsDelta = Vector128.Load(bigDeltaOffsetsBuffer[deltaBufferIndex])
-                    .AsInt32()
-                    .ToVector256();
-                deltaBufferIndex++;
-                if (deltaBufferIndex < bigDeltaBufferUsed)
+                var ptr = (byte*)bigDeltaOffsets.Pop() + 1;
+                var highBitsDelta = Vector128.Load(ptr)
+                    .AsInt32().ToVector256();
+                if (bigDeltaOffsets.Count > 0)
                 {
-                    expectedBufferIndex = *bigDeltaOffsetsBuffer[deltaBufferIndex]++;
+                    expectedBufferIndex = *(byte*)bigDeltaOffsets.First;
                 }
                 else
                 {

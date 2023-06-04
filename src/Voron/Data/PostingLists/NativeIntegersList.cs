@@ -21,7 +21,10 @@ public unsafe struct NativeIntegersList : IDisposable
         _releaseItems = default;
         Count = 0;
         Capacity = 0;
-        GrowListUnlikely(initialCapacity);
+        if (initialCapacity != -1)
+        {
+            GrowListUnlikely(initialCapacity);
+        }
     }
 
     public void Add(ReadOnlySpan<long> values)
@@ -87,4 +90,13 @@ public unsafe struct NativeIntegersList : IDisposable
         Count = 0;
     }
 
+    public long First => *RawItems;
+    
+    public long Pop()
+    {
+        var val = *RawItems;
+        RawItems++;
+        Count--;
+        return val;
+    }
 }
