@@ -283,7 +283,7 @@ namespace Voron.Data.Containers
                 Memory.Copy(tmpPtr + entryOffset, p, entrySize);
             }
 
-            tmpOffsetsPtr = tmpPtr + PageHeader.SizeOf + (sizeof(ItemMetadata) * tmpHeader.NumberOfOffsets - 1);
+            tmpOffsetsPtr = tmpPtr + PageHeader.SizeOf + (sizeof(ItemMetadata) * (tmpHeader.NumberOfOffsets - 1) );
             while (tmpHeader.NumberOfOffsets > 0)
             {
                 ref var tmpOffset = ref Unsafe.AsRef<ItemMetadata>(tmpOffsetsPtr);
@@ -336,7 +336,12 @@ namespace Voron.Data.Containers
                 return overflowPage.PageNumber * Constants.Storage.PageSize; 
             }
 
-            var activePage = llt.ModifyPage(rootContainer.GetNextFreePage());
+            var p = rootContainer.GetNextFreePage();
+            var activePage = llt.ModifyPage(p);
+            if((p == 698 || p == 699) && size == 1062)
+            {
+                Console.WriteLine();
+            }
             var container = new Container(activePage);
             
             var (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
@@ -381,8 +386,9 @@ namespace Voron.Data.Containers
             Header.FloorOfData -= (ushort)reqSize;
             Header.FloorOfData &= 0xFF_FC; // ensure 4 bytes alignment
             if (pos == Header.NumberOfOffsets)
+            {
                 Header.NumberOfOffsets++;
-
+            }
             int entryStartOffset = Header.FloorOfData;
             ref ItemMetadata item = ref MetadataFor(pos);
             Debug.Assert(item.IsFree);
