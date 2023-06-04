@@ -212,4 +212,9 @@ public unsafe struct FastPForDecoder : IDisposable
     {
         _exceptionsScope.Dispose();
     }
+
+    public static long ReadStart(byte* p)
+    {
+        return ((PForHeader*)p)->Baseline;
+    }
 }
