@@ -1591,6 +1591,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     DocumentQuery.SuggestUsing(suggestionAsObject as SuggestionBase);
                     break;
+                case nameof(LinqExtensions.Skip):
+                    VisitQueryableMethodCall(expression);
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
@@ -3782,8 +3785,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitSkip(ConstantExpression constantExpression)
         {
-            //Don't have to worry about the cast failing, the Skip() extension method only takes an int
-            DocumentQuery.Skip((int)constantExpression.Value);
+            if (constantExpression.Value.GetType() == typeof(int))
+                DocumentQuery.Skip((int)constantExpression.Value);
+            else
+                DocumentQuery.Skip((long)constantExpression.Value);
         }
 
         private void VisitTake(ConstantExpression constantExpression)
