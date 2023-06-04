@@ -322,7 +322,19 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         {
             var read = reader.Read(sortedIdBuffer);
             if (read == 0)
+            {
+                // there are no more results from the index, but we may have records that don't *have* an entry here
+                // in that case, we add them to the results in arbitrary order
+                for (int i = 0; i < allMatches.Length; i++)
+                {
+                    if(allMatches[i] < 0) // meaning, it was already matched by the SortHelper
+                        continue;
+                    match._results.Add(allMatches[i]);
+                    if (match._results.Count >= maxResults)
+                        break;
+                }
                 break;
+            }
             var sortedIds = sortedIdBuffer[..read];
             var indexes = indexesBuffer[..read];
             // we effectively permute the indexes as well as the sortedIds to get a sorted list to compare
@@ -334,7 +346,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             indexes = indexes[..read];
             indexes.Sort();
             // now get the *actual* matches in their sorted order
-            for (int i = 0; i < indexes.Length; i++)
+            for (int i = 0; i < indexes.Length && match._results.Count < maxResults; i++)
             {
                 match._results.Add(sortedIds[(int)indexes[i]]);
             }
