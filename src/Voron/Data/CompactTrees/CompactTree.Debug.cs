@@ -164,12 +164,8 @@ unsafe partial class CompactTree
             if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Decoded key is not equal to the previous decoded key");
 
-            Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
-
             if (lastDecodedKey.SequenceCompareTo(decodedKey) > 0 || lastEncodedKey.SequenceCompareTo(encodedKey) > 0)
             {
-                Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
-
                 decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
                 dictionary.Decode(encodeKeyLengthInBits, encodedKey, ref decodedKey);
 
