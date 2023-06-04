@@ -1107,7 +1107,17 @@ namespace Voron.Data.Lookups
         [Conditional("DEBUG")]
         public void Render()
         {
-            DebugStuff.RenderAndShow((Lookup<long>)(object)this);
+            switch (this)
+            {
+                case Lookup<long> l:
+                    DebugStuff.RenderAndShow(l);
+                    break;
+                case Lookup<double> d:
+                    DebugStuff.RenderAndShow(d);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown type: " + this);
+            }
         }
 
         
