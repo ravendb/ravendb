@@ -20,6 +20,7 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
     [Theory]
     [InlineData("SmallBufferSizeMisleading")]
     [InlineData("GreaterThan42B")]
+    [InlineData("GreaterThan42B-Truncated")] // this ensures the >4.2B is on the last varint block
     [InlineData("SmallBufferMisleading2")]
     public void CanRoundTripSmallContainer(string name)
     {
