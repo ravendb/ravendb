@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -60,6 +59,7 @@ namespace Raven.Server.Web.System
                 BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                 BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+                BackupConfigurationHelper.UpdateExcludedDatabasesIfNeeded(configuration, ServerStore);
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
