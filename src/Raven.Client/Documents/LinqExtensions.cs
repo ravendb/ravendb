@@ -1489,6 +1489,17 @@ namespace Raven.Client.Documents
             return ravenQueryInspector.GetAsyncDocumentQuery();
         }
 
+        public static IRavenQueryable<T> Skip<T>(this IQueryable<T> source, long count)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(count)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Expression ConvertExpressionIfNecessary<T>(IQueryable<T> source)
         {
