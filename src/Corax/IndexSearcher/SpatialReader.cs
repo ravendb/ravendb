@@ -17,7 +17,8 @@ public struct SpatialReader : IDisposable
     {
         _fst = entriesToSpatialTree.FixedTreeFor(name, sizeof(double) + sizeof(double));
     }
-    
+
+    public bool IsValid => _fst != null;
     
     public unsafe bool TryGetSpatialPoint(long id, out (double Lat, double Lng) coords)
     {

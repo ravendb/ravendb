@@ -181,6 +181,11 @@ namespace Corax.Queries.SortingMatches;
             UnmanagedSpan* batchTerms,
             bool descending)
         {
+            if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
+            {
+                match._results.Add(batchResults);
+                return;
+            }
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer());
@@ -230,8 +235,16 @@ namespace Corax.Queries.SortingMatches;
             for (int i = 0; i < buffer.Length; i++)
             {
                 long l = 0;
-                Memory.Copy(&l, batchTerms[i].Address + 1 /* skip metadata byte */, 
-                    Math.Min(6, batchTerms[i].Length - 1));
+                if (batchTerms[i].Address != null)
+                {
+                    Memory.Copy(&l, batchTerms[i].Address + 1 /* skip metadata byte */,
+                        Math.Min(6, batchTerms[i].Length - 1));
+                }
+                else
+                {
+                    l = -1 >>> 16; // effectively move to the end
+                }
+
                 l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
                 long sortKey = l | (uint)i;
                 if (isDescending)
@@ -326,6 +339,11 @@ namespace Corax.Queries.SortingMatches;
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
+            if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
+            {
+                match._results.Add(batchResults);
+                return;
+            }
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
             for (int i = 0; i < indexes.Length; i++)
@@ -347,7 +365,12 @@ namespace Corax.Queries.SortingMatches;
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
-        {              
+        {
+            if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
+            {
+                match._results.Add(batchResults);
+                return;
+            }
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
             var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
             for (int i = 0; i < indexes.Length; i++)
@@ -393,6 +416,11 @@ namespace Corax.Queries.SortingMatches;
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
+            if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
+            {
+                match._results.Add(batchResults);
+                return;
+            }
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
@@ -436,6 +464,11 @@ namespace Corax.Queries.SortingMatches;
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
+            if (_reader.IsValid == false) // field does not exist, so arbitrary sort order, whatever query said goes
+            {
+                match._results.Add(batchResults);
+                return;
+            }
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchResults.Length; i++)
             {
