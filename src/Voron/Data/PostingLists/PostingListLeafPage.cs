@@ -291,13 +291,22 @@ public readonly unsafe struct PostingListLeafPage
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
         InitLeaf(newHeader);
 
-        var firstDecoder = new FastPForDecoder(allocator, (byte*)first + PageHeader.SizeOf, first->SizeUsed);
-        var secondDecoder = new FastPForDecoder(allocator, (byte*)second + PageHeader.SizeOf, second->SizeUsed);
         // using +256 here to ensure that we always have at least 256 available in the buffer
         var mergedList = new NativeIntegersList(allocator, first->NumberOfEntries + second->NumberOfEntries + 256);
 
-        mergedList.Count += firstDecoder.Read(mergedList.RawItems, mergedList.Capacity);
-        mergedList.Count += secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
+        if (first->SizeUsed > 0)
+        {
+            var firstDecoder = new FastPForDecoder(allocator, (byte*)first + PageHeader.SizeOf, first->SizeUsed);
+            mergedList.Count += firstDecoder.Read(mergedList.RawItems, mergedList.Capacity);
+            firstDecoder.Dispose();
+        }
+
+        if (second->SizeUsed > 0)
+        {
+            var secondDecoder = new FastPForDecoder(allocator, (byte*)second + PageHeader.SizeOf, second->SizeUsed);
+            mergedList.Count += secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
+            secondDecoder.Dispose();
+        }
 
         var encoder = new FastPForEncoder(allocator);
         int reqSize = 0;
@@ -308,8 +317,6 @@ public readonly unsafe struct PostingListLeafPage
             encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
         }
         mergedList.Dispose();
-        secondDecoder.Dispose();
-        firstDecoder.Dispose();
 
         newHeader->SizeUsed = (ushort)reqSize;
         newHeader->NumberOfEntries =  mergedList.Count;

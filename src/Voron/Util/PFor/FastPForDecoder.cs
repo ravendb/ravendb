@@ -26,6 +26,8 @@ public unsafe struct FastPForDecoder : IDisposable
 
     public FastPForDecoder(ByteStringContext allocator, byte* input, int size)
     {
+        if (size <= sizeof(PForHeader)) throw new ArgumentOutOfRangeException(nameof(size));
+        
         _allocator = allocator;
         _input = input;
         _end = input + size;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Server;
 
 namespace Voron.Util.PFor;
@@ -20,7 +21,7 @@ public unsafe struct FastPForBufferedReader : IDisposable
     public FastPForBufferedReader(ByteStringContext allocator, byte* p, int len)
     {
         _allocator = allocator;
-        Decoder = new(_allocator,p, len);
+        Decoder = len > 0 ? new FastPForDecoder(_allocator, p, len) : default;
         _buffer = null;
         _usedBuffer = 0;
         _bufferIdx = 0;
@@ -28,7 +29,7 @@ public unsafe struct FastPForBufferedReader : IDisposable
 
     public int Fill(long* matches, int count)
     {
-        while (true)
+        while (Decoder.IsValid)
         {
             if (_bufferIdx != _usedBuffer)
             {
@@ -57,6 +58,8 @@ public unsafe struct FastPForBufferedReader : IDisposable
             var sizeAligned = count & ~255;
             return Decoder.Read(matches, sizeAligned);
         }
+
+        return 0;
     }
 
     public void Dispose()
