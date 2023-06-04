@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 
 namespace Voron.Data.PostingLists;
 
@@ -68,12 +69,12 @@ public unsafe struct NativeIntegersList : IDisposable
         _releaseItems.Dispose();
     }
 
-    public void Sort()
+    public void SortAndRemoveDuplicates()
     {
         if (Count <= 1)
             return;
         
-        Sparrow.Server.Utils.VxSort.Sort.Run(RawItems, Count);
+        Count = Sorting.SortAndRemoveDuplicates(RawItems, Count);
     }
 
     public int MoveTo(Span<long> matches)
