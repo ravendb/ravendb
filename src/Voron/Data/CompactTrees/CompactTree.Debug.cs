@@ -123,7 +123,7 @@ unsafe partial class CompactTree
 
         var lastEncodedKey = GetEncodedKeySpan(ref current, 0, out var lastEncodedKeyLengthInBits, out var l);
         
-        Span<byte> lastDecodedKeyBuffer = stackalloc byte[1024];
+        Span<byte> lastDecodedKeyBuffer = stackalloc byte[4096];
         Span<byte> lastDecodedKey = lastDecodedKeyBuffer;
 
         if (lastEncodedKey.Length != 0)
@@ -131,9 +131,9 @@ unsafe partial class CompactTree
             dictionary.Decode(lastEncodedKeyLengthInBits, lastEncodedKey, ref lastDecodedKey);
         }
 
-        Span<byte> decodedKeyBuffer = stackalloc byte[1024];
-        Span<byte> decodedKeyBuffer2 = stackalloc byte[1024];
-        Span<byte> reencodeKeyBuffer = stackalloc byte[1024];
+        Span<byte> decodedKeyBuffer = stackalloc byte[4096];
+        Span<byte> decodedKeyBuffer2 = stackalloc byte[4096];
+        Span<byte> reencodeKeyBuffer = stackalloc byte[4096];
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {
             var encodedKey = GetEncodedKeySpan(ref current, i, out var encodeKeyLengthInBits, out l);

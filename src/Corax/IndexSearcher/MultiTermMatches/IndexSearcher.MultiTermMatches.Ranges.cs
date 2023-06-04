@@ -156,7 +156,7 @@ public partial class IndexSearcher
         return MultiTermMatch.Create(new MultiTermMatch<TermRangeProvider<TLow, THigh>>(field, _transaction.Allocator, new TermRangeProvider<TLow, THigh>(this, terms, field, low, high)));
     }
 
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice fieldLong, long low, long high, bool isNegated)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool isNegated)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -164,7 +164,8 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        var set = _fieldsTree?.LookupFor<long>(fieldLong);
+        field = field.GetNumericFieldMetadata<long>(Allocator);
+        var set = _fieldsTree?.LookupFor<long>(field.FieldName);
 
         return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, field, low, high)));
     }
