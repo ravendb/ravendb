@@ -245,12 +245,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </RichPanelSelect>
                             )}
 
-                            <RichPanelName className="max-width-heading">
+                            <RichPanelName>
                                 {canNavigateToDatabase ? (
                                     <a
                                         href={documentsUrl}
                                         className={classNames(
-                                            "d-block text-truncate",
                                             { "link-disabled": db.currentNode.isBeingDeleted },
                                             { "link-shard": db.sharded }
                                         )}

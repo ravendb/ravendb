@@ -44,7 +44,7 @@ interface RichPanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
 export function RichPanelHeader(props: RichPanelHeaderProps) {
     const { children, className, ...rest } = props;
     return (
-        <CardHeader className={classNames("rich-panel-header", className)} {...rest}>
+        <CardHeader className={classNames("rich-panel-header gap-2", className)} {...rest}>
             {children}
         </CardHeader>
     );
@@ -95,7 +95,7 @@ interface RichPanelNameProps {
 export function RichPanelName(props: RichPanelNameProps) {
     const { children, className, ...rest } = props;
     return (
-        <h3 className={classNames("m-0 me-4 flex-grow-1", className)} {...rest}>
+        <h3 className={classNames("rich-panel-name", className)} {...rest}>
             {children}
         </h3>
     );
