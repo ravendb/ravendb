@@ -18,7 +18,7 @@ public class RavenDB_18594 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex(Options options)
     {
         using var store = GetDocumentStore(options);

@@ -96,7 +96,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Search(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

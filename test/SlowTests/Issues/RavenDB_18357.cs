@@ -51,7 +51,7 @@ public class RavenDB_18357 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -98,7 +98,7 @@ public class RavenDB_18357 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndFieldIsNotIndexed(Options options)
     {
         using var store = GetDocumentStore(options);
