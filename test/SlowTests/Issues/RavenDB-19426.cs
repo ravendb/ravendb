@@ -14,7 +14,7 @@ public class RavenDB_19426 : RavenTestBase
     private const string DocName = "doc/1";
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void UpdateItemWithSameTermsInAdditionAndRemoval(Options options)
     {
         var store = GetDocumentStore(options);
@@ -48,7 +48,7 @@ public class RavenDB_19426 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DeletionOfItemFromFanoutIndexReturnsCorrectCountOfTerms(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -79,7 +79,7 @@ public class RavenDB_19426 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUpdateEmptyValueForSingleString(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -102,7 +102,7 @@ public class RavenDB_19426 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUpdateEmptyValueForListOfString(Options options)
     {
         using var store = GetDocumentStore(options);
