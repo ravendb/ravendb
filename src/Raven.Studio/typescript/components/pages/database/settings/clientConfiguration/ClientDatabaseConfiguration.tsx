@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Form, Col, Button, Row, Spinner, Input, InputGroupText, InputGroup, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
@@ -17,10 +17,9 @@ import appUrl = require("common/appUrl");
 import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
 import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
 import { tryHandleSubmit } from "components/utils/common";
-import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
-import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
+
 import classNames from "classnames";
-import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
+import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
 
 interface ClientDatabaseConfigurationProps {
@@ -60,21 +59,17 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         });
     };
 
-    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+    const leftRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
         label: "Use server config",
-        value: "server",
+        value: false,
         iconName: "server",
     };
 
-    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+    const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
         label: "Use database config",
-        value: "database",
+        value: true,
         iconName: "database",
     };
-
-    const [radioToggleSelectedValue, setRadioToggleSelectedValue] = useState(leftRadioToggleItem.value);
-
-    formValues.overrideConfig = radioToggleSelectedValue === "database";
 
     const onRefresh = async () => {
         reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false));
@@ -109,78 +104,6 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     )}
                                     Save
                                 </Button>
-
-                                {globalConfig && (
-                                    <>
-                                        <span id="EffectiveConfiguration" className="ms-1 p-2 cursor-pointer text-info">
-                                            <Icon icon="config" />
-                                            See effective configuration
-                                        </span>
-
-                                        <UncontrolledPopover
-                                            target="EffectiveConfiguration"
-                                            placement="bottom"
-                                            trigger="hover"
-                                            container="PopoverContainer"
-                                        >
-                                            <div className="bs5">
-                                                <h5 className="px-3 mt-3 mb-2 text-center">
-                                                    Effective configuration for
-                                                </h5>
-                                                <div className="text-primary my-2 text-center">
-                                                    <Icon icon="database" />
-                                                    {db.name}
-                                                </div>
-                                                <PropSummary className="pb-2">
-                                                    <PropSummaryItem className="border-0">
-                                                        <PropSummaryName>Identity parts separator</PropSummaryName>
-                                                        <PropSummaryValue color="info">
-                                                            {getIdentityPartsSeparatorEffectiveValue(
-                                                                formValues,
-                                                                globalConfig
-                                                            )}
-                                                        </PropSummaryValue>
-                                                    </PropSummaryItem>
-                                                    <PropSummaryItem>
-                                                        <PropSummaryName>
-                                                            Max number of requests per session
-                                                        </PropSummaryName>
-                                                        <PropSummaryValue color="info">
-                                                            {getMaximumNumberOfRequestsEffectiveValue(
-                                                                formValues,
-                                                                globalConfig
-                                                            )}
-                                                        </PropSummaryValue>
-                                                    </PropSummaryItem>
-                                                    <PropSummaryItem>
-                                                        <PropSummaryName>Load Balance Behavior</PropSummaryName>
-                                                        <PropSummaryValue color="info">
-                                                            {getLoadBalancerEffectiveValue(formValues, globalConfig)}
-                                                        </PropSummaryValue>
-                                                    </PropSummaryItem>
-                                                    <PropSummaryItem>
-                                                        <PropSummaryName>Seed</PropSummaryName>
-                                                        <PropSummaryValue color="info">
-                                                            {getLoadBalancerSeedEffectiveValue(
-                                                                formValues,
-                                                                globalConfig
-                                                            )}
-                                                        </PropSummaryValue>
-                                                    </PropSummaryItem>
-                                                    <PropSummaryItem>
-                                                        <PropSummaryName>Read Balance Behavior</PropSummaryName>
-                                                        <PropSummaryValue color="info">
-                                                            {getReadBalanceBehaviorEffectiveValue(
-                                                                formValues,
-                                                                globalConfig
-                                                            )}
-                                                        </PropSummaryValue>
-                                                    </PropSummaryItem>
-                                                </PropSummary>
-                                            </div>
-                                        </UncontrolledPopover>
-                                    </>
-                                )}
                             </div>
 
                             {canNavigateToServerSettings() && (
@@ -195,20 +118,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
                         {globalConfig && (
                             <div className="mt-4 mb-3">
-                                {formValues.overrideConfig && formValues.overrideConfig}
                                 <div className="hstack justify-content-center">
                                     <FormRadioToggleWithIcon
                                         name="overrideConfig"
                                         control={control}
                                         leftItem={leftRadioToggleItem}
                                         rightItem={rightRadioToggleItem}
-                                        // selectedValue={radioToggleSelectedValue}
-                                        // setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
                                     />
                                 </div>
-                                {/* <FormSwitch control={control} name="overrideConfig" color="primary">
-                                    Override server configuration
-                                </FormSwitch> */}
                             </div>
                         )}
 
@@ -635,62 +552,5 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
             </div>
             <div id="PopoverContainer"></div>
         </Form>
-    );
-}
-
-function getIdentityPartsSeparatorEffectiveValue(
-    formValues: ClientConfigurationFormData,
-    globalConfig: ClientConfigurationFormData
-) {
-    return (
-        (formValues.overrideConfig && formValues.identityPartsSeparatorValue) ||
-        globalConfig?.identityPartsSeparatorValue ||
-        "'/' (Default)"
-    );
-}
-
-function getMaximumNumberOfRequestsEffectiveValue(
-    formValues: ClientConfigurationFormData,
-    globalConfig: ClientConfigurationFormData
-) {
-    return (
-        (formValues.overrideConfig && formValues.maximumNumberOfRequestsValue) ||
-        globalConfig?.maximumNumberOfRequestsValue ||
-        "30 (Default)"
-    );
-}
-
-function getLoadBalancerEffectiveValue(
-    formValues: ClientConfigurationFormData,
-    globalConfig: ClientConfigurationFormData
-) {
-    return (
-        (formValues.overrideConfig && formValues.loadBalancerEnabled && formValues.loadBalancerValue) ||
-        (globalConfig?.loadBalancerEnabled && globalConfig?.loadBalancerValue) ||
-        "None (Default)"
-    );
-}
-
-function getLoadBalancerSeedEffectiveValue(
-    formValues: ClientConfigurationFormData,
-    globalConfig: ClientConfigurationFormData
-) {
-    if (formValues.overrideConfig && formValues.loadBalancerEnabled) {
-        if (formValues.loadBalancerValue === "None") return "Not set";
-        else if (formValues.loadBalancerSeedEnabled) {
-            return formValues.loadBalancerSeedValue || "0 (Default)";
-        }
-    }
-    return globalConfig?.loadBalancerSeedValue || "0 (Default)";
-}
-
-function getReadBalanceBehaviorEffectiveValue(
-    formValues: ClientConfigurationFormData,
-    globalConfig: ClientConfigurationFormData
-) {
-    return (
-        (formValues.overrideConfig && formValues.readBalanceBehaviorEnabled && formValues.readBalanceBehaviorValue) ||
-        (globalConfig?.readBalanceBehaviorEnabled && globalConfig?.readBalanceBehaviorValue) ||
-        "None (Default)"
     );
 }
