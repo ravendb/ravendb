@@ -45,7 +45,7 @@ public class RavenDB_19843 : RavenTestBase
                 var results = session.Query<DtoWithDate>()
                     .OrderByDescending(x => x.CreationTime).ToList();
                 
-                if (options.SearchEngineMode is RavenSearchEngineMode.Lucene && configEnabled)
+                if (configEnabled)
                     Assert.Equal(null, results[2].CreationTime);
                 else
                     Assert.Equal(null, results[0].CreationTime);
