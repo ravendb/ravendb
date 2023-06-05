@@ -267,7 +267,7 @@ if (this['@metadata']['@collection'] != 'Orders')
     loadToPeople({Name: this.Name})"
                     , applyToAllDocuments: true);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 3);
 
                 using (var session = src.OpenSession())
                 {
