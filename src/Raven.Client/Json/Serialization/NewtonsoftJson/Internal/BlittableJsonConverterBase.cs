@@ -138,7 +138,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             if (document.Modifications == null)
                 document.Modifications = new DynamicJsonValue(document);
 
-            document.Modifications.Remove(identityProperty.Name);
+            document.Modifications.Remove(conventions.GetConvertedPropertyNameFor(identityProperty));
             return true;
         }
 
