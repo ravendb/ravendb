@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System.Linq;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -40,12 +41,75 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                var changeVector = context.GetChangeVector(item.ChangeVector).Order;
-                var order = _database.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
-                order = order.MergeOrderWith(changeVector, context);
-                item.ChangeVector = context.GetChangeVector(changeVector.Version, order.Order).AsString();
+                var changeVector = context.GetChangeVector(item.ChangeVector);
+                var dbId = _database.DbBase64Id;
 
-                return order;
+                if ((changeVector.IsSingle && changeVector.Contains(dbId)) ||
+                    changeVector.Order.Contains(dbId) ||
+                    changeVector.Version.Contains(dbId))
+                {
+                    // this item already exists in storage
+                    // was sent directly back from replication (in case of bidirectional replication) or changed in the destination
+                    // either way, since the dbId exists in the item's change vector we can safely return without updating
+                    return changeVector.Order;
+                }
+
+                if (HasConflicts(context, item, changeVector))
+                    return changeVector.Order;
+
+                var shouldUpdateDatabaseCv = true;
+                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+
+                if (current.IsNullOrEmpty == false)
+                {
+                    var dbIdsFromDestCv = ChangeVector.ExtractDbIdsFromChangeVector(changeVector.Order);
+                    if (dbIdsFromDestCv != null &&
+                        dbIdsFromDestCv.Any(x => current.Order.Contains(x)))
+                    {
+                        // the destination dbId already exists in the database change vector
+                        // so we can avoid generating a new database change vector
+                        shouldUpdateDatabaseCv = false;
+                    }
+                }
+
+                var etag = _database.DocumentsStorage.GenerateNextEtag();
+
+                if (shouldUpdateDatabaseCv)
+                    context.LastDatabaseChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, etag);
+
+                if (changeVector.IsSingle)
+                {
+                    var version = changeVector.Version;
+                    var order = changeVector.UpdateOrder(_database.ServerStore.NodeTag, dbId, etag, context);
+                    item.ChangeVector = context.GetChangeVector(version, order);
+                }
+                else
+                {
+                    item.ChangeVector = changeVector.UpdateOrder(_database.ServerStore.NodeTag, dbId, etag, context);
+                }
+
+                return changeVector.Order;
+            }
+
+            private static bool HasConflicts(DocumentsOperationContext context, ReplicationBatchItem item, ChangeVector changeVector)
+            {
+                // we only care about documents 
+                if (item is DocumentReplicationItem doc == false ||
+                    doc.Flags.Contain(DocumentFlags.Revision) ||
+                    doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                    return false;
+
+                var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, doc.Id);
+
+                // document or tombstone doesn't exist - no conflict 
+                if (result.Missing)
+                    return false;
+
+                var existingChangeVector = result.Document != null ?
+                    context.GetChangeVector(result.Document.ChangeVector) :
+                    context.GetChangeVector(result.Tombstone.ChangeVector);
+
+                return ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.Conflict;
             }
         }
     }

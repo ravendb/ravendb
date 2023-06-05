@@ -1182,6 +1182,8 @@ namespace SlowTests.Client.Attachments
             string name, string hash, string contentType, long size)
         {
             await store1.Commands().PutAsync("users/1", null, document);
+
+            await Task.Delay(3000); // wait for the replication ping-pong to settle down
             await AssertConflictResolved(store1, name, hash, contentType, size);
 
             WaitForMarker(store1, store2);

@@ -272,6 +272,25 @@ public class ChangeVector
         return newChangeVector.SerializeVector();
     }
 
+    public static List<string> ExtractDbIdsFromChangeVector(ChangeVector changeVector)
+    {
+        return ExtractDbIdsFromChangeVector(changeVector.Order.AsString());
+    }
+
+    public static List<string> ExtractDbIdsFromChangeVector(string changeVector)
+    {
+        if (string.IsNullOrEmpty(changeVector))
+            return null;
+
+        var dbIds = new List<string>();
+        var cvs = changeVector.ToChangeVectorList();
+
+        foreach (var entry in cvs)
+            dbIds.Add(entry.DbId);
+
+        return dbIds;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureValid()
     {

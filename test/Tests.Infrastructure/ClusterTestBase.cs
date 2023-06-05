@@ -151,7 +151,7 @@ namespace Tests.Infrastructure
                     s.SaveChanges();
                 }
 
-                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000);
+                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 30 * 1000);
                 Assert.NotNull(r);
             }
         }

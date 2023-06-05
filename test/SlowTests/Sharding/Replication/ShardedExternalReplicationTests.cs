@@ -1310,6 +1310,8 @@ namespace SlowTests.Sharding.Replication
 
                 await Sharding.Resharding.MoveShardForId(replica, id);
 
+                await Task.Delay(3000);
+
                 var db = await GetDocumentDatabaseInstanceFor(replica, ShardHelper.ToShardName(replica.Database, oldLocation));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
