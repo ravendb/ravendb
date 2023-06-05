@@ -252,7 +252,9 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
         switch (type)
         {
             case nameof(TopologyChange):
-                var topologyChange = TopologyChange.FromJson(change);
+                change.TryGet("Value", out BlittableJsonReaderObject value);
+                var topologyChange = TopologyChange.FromJson(value);
+
                 var requestExecutor = RequestExecutor;
                 if (requestExecutor != null)
                 {
