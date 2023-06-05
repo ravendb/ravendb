@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Form, Col, Button, Row, Spinner, Input, InputGroupText, InputGroup, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
@@ -195,19 +195,20 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
                         {globalConfig && (
                             <div className="mt-4 mb-3">
+                                {formValues.overrideConfig && formValues.overrideConfig}
                                 <div className="hstack justify-content-center">
-                                    <RadioToggleWithIcon
+                                    <FormRadioToggleWithIcon
                                         name="overrideConfig"
-                                        // control={control}
+                                        control={control}
                                         leftItem={leftRadioToggleItem}
                                         rightItem={rightRadioToggleItem}
-                                        selectedValue={radioToggleSelectedValue}
-                                        setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
+                                        // selectedValue={radioToggleSelectedValue}
+                                        // setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
                                     />
                                 </div>
-                                <FormSwitch control={control} name="overrideConfig" color="primary">
+                                {/* <FormSwitch control={control} name="overrideConfig" color="primary">
                                     Override server configuration
-                                </FormSwitch>
+                                </FormSwitch> */}
                             </div>
                         )}
 
