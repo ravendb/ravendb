@@ -4087,6 +4087,7 @@ namespace Raven.Server.ServerWide
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object perDbState)>();
 
             var allServerWideBackupNames = GetSeverWideBackupNames(context);
+            var shouldUpdateServerWideBackups = false;
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -4095,7 +4096,26 @@ namespace Raven.Server.ServerWide
                     var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
                     using (oldDatabaseRecord)
                     {
-                        var databaseName = key.Substring(dbKey.Length);
+                        var databaseName = key[dbKey.Length..];
+
+                        if (ShouldExcludeDatabase(serverWideBackupConfiguration, oldDatabaseRecord, databaseName))
+                        {
+                            serverWideBlittable.Modifications ??= new DynamicJsonValue(serverWideBlittable);
+                            if (serverWideBlittable.TryGet(nameof(IServerWideTask.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases))
+                            {
+                                excludedDatabases.Modifications ??= new DynamicJsonArray();
+                                excludedDatabases.Modifications.Add(databaseName);
+                            }
+                            else
+                            {
+                                serverWideBlittable.Modifications[nameof(IServerWideTask.ExcludedDatabases)] =
+                                    new DynamicJsonArray(new[] { databaseName });
+                            }
+
+                            shouldUpdateServerWideBackups = true;
+                            continue;
+                        }
+
                         var newBackups = new DynamicJsonArray();
 
                         var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
@@ -4143,7 +4163,33 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            if (shouldUpdateServerWideBackups)
+            {
+                var allServerWideBackups = Read(context, ServerWideConfigurationKey.Backup);
+                allServerWideBackups.Modifications = new DynamicJsonValue(allServerWideBackups)
+                {
+                    [serverWideBackupConfiguration.Name] = serverWideBlittable
+                };
+
+                using (allServerWideBackups)
+                {
+                    allServerWideBackups = context.ReadObject(allServerWideBackups, ServerWideConfigurationKey.Backup);
+                }
+
+                PutValueDirectly(context, ServerWideConfigurationKey.Backup, allServerWideBackups, index);
+            }
+
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
+        private static bool ShouldExcludeDatabase(ServerWideBackupConfiguration configuration, BlittableJsonReaderObject databaseRecord, string databaseName)
+        {
+            return configuration.BackupType == BackupType.Snapshot &&
+                   databaseRecord.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject shadingConfig) &&
+                   shadingConfig != null &&
+                   shadingConfig.TryGet(nameof(Client.ServerWide.Sharding.ShardingConfiguration.Shards), out BlittableJsonReaderObject shards) 
+                   && shards?.Count > 0 &&
+                   configuration.IsExcluded(databaseName) == false;
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)
