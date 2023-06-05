@@ -3,7 +3,7 @@ import classNames from "classnames";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 
-export interface RadioToggleWithIconInputItem<T extends string | number = string> {
+export interface RadioToggleWithIconInputItem<T extends string | number | boolean = string> {
     label: string | ReactNode | ReactNode[];
     value: T;
     iconName: IconName;
