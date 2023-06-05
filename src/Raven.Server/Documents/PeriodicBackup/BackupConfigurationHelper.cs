@@ -43,27 +43,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             configuration.LocalSettings.FolderPath = pathResult.FolderPath;
         }
 
-        public static void UpdateExcludedDatabasesIfNeeded(ServerWideBackupConfiguration configuration, ServerStore serverStore)
-        {
-            if (configuration.BackupType != BackupType.Snapshot)
-                return;
-
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var excludes = new HashSet<string>(configuration.ExcludedDatabases, StringComparer.OrdinalIgnoreCase);
-                var dbs = serverStore.Cluster.GetAllRawDatabases(context);
-
-                foreach (var db in dbs)
-                {
-                    if (db.IsSharded)
-                        excludes.Add(db.DatabaseName);
-                }
-
-                configuration.ExcludedDatabases = excludes.ToArray();
-            }
-        }
-
         public static ActualPathResult GetActualFullPath(ServerStore serverStore, string folderPath)
         {
             var pathResult = new ActualPathResult();
