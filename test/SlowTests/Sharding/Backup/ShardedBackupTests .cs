@@ -222,7 +222,7 @@ namespace SlowTests.Sharding.Backup
                 // define server wide backup
                 await store1.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
                 {
-                    FullBackupFrequency = "* * * * *",
+                    FullBackupFrequency = "0 0 1 1 *",
                     Disabled = false,
                     LocalSettings = new LocalSettings
                     {
@@ -234,8 +234,20 @@ namespace SlowTests.Sharding.Backup
                 var backupsDone = await Sharding.Backup.WaitForBackupToComplete(store1);
                 var backupsDone2 = await Backup.WaitForBackupToComplete(store2);
 
-                Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(2)));
-                Assert.True(WaitHandle.WaitAll(backupsDone2, TimeSpan.FromMinutes(2)));
+                foreach (var store in new[] { store1, store2 })
+                {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+
+                    var taskId = databaseRecord.PeriodicBackups[0].TaskId;
+                    if (databaseRecord.IsSharded)
+                        await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+                    else
+                        await Backup.RunBackupAsync(Server, taskId, store, isFullBackup: true);
+                }
+
+                Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(1)));
+                Assert.True(WaitHandle.WaitAll(backupsDone2, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(2, dirs.Length);
