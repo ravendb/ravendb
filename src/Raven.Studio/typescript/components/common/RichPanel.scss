@@ -58,7 +58,7 @@
     }
 
     .rich-panel-header {
-        padding: 0;
+        padding: bs5variables.$gutter-xs bs5variables.$gutter-sm;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -70,15 +70,35 @@
             min-height: auto;
         }
 
-        .rich-panel-info {
-            .max-width-heading {
-                max-width: 640px;
+        .rich-panel-name {
+            margin: 0;
+            flex-grow: 1;
+            word-break: break-all;
+
+            @media (min-width: map-get(bs5variables.$grid-breakpoints, "sm")) {
+                width: 350px;
+                min-width: 350px;
+                a {
+                    white-space: nowrap;
+                    max-width: 100%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    display: inline-block;
+                }
             }
         }
 
-        .rich-panel-info,
+        .rich-panel-info {
+            flex-grow: 1;
+        }
+        .rich-panel-info {
+            // padding: bs5variables.$gutter-xs bs5variables.$gutter-sm;
+            display: flex;
+            align-items: self-start;
+        }
+
         .rich-panel-actions {
-            padding: bs5variables.$gutter-xs bs5variables.$gutter-sm;
+            margin-left: auto;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -86,8 +106,7 @@
 
         .rich-panel-actions {
             justify-content: end;
-            flex-grow: 1;
-            gap: sizes.$gutter-sm;
+            gap: sizes.$gutter-xs;
         }
     }
 
