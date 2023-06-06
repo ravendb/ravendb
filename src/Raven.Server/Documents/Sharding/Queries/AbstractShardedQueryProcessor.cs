@@ -320,9 +320,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             {
                 modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
             }
-            
-            var limit = ((Query.Limit ?? 0) + (Query.Offset ?? 0)) * (long)RequestHandler.DatabaseContext.ShardCount;
 
+            var limit = ((Query.Limit ?? 0) + (Query.Offset ?? 0));
             if (limit == 0)
                 limit = Query.Start + Query.PageSize;
             
