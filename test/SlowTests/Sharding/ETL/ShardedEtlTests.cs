@@ -801,7 +801,6 @@ person.addCounter(loadCounter('down'));
 
                 for (int i = 0; i < 10; i++)
                 {
-
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"blah at {i}");
 
                     mre.Set();
@@ -1637,19 +1636,24 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 Assert.True(ordersCount == numberOfOrders, await AddDebugInfoOnFailure(store, numberOfOrders, ordersCount));
 
-                var orderLinesCount = (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
-                Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder,
-                    await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
-
-                for (int i = 0; i < numberOfOrders; i++)
+                var orderLinesCount = await WaitForValueAsync(async () =>
                 {
-                    using (var session = store.OpenSession())
+                    EnsureNonStaleElasticResults(client);
+                    return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                }, expectedVal: numberOfOrders * numberOfLinesPerOrder, timeout: 30_000);
+
+                Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder, await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < numberOfOrders; i++)
                     {
                         session.Delete("orders/" + i);
-                        session.SaveChanges();
                     }
-                }
 
+                    session.SaveChanges();
+                }
+                
                 var ordersCountAfterDelete = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
@@ -1658,7 +1662,12 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 Assert.True(ordersCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, ordersCountAfterDelete));
 
-                var orderLinesCountAfterDelete = (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                var orderLinesCountAfterDelete = await WaitForValueAsync(async () =>
+                {
+                    EnsureNonStaleElasticResults(client);
+                    return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                }, expectedVal: 0, timeout: 30_000);
+
                 Assert.True(orderLinesCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, orderLinesCountAfterDelete));
             }
         }
