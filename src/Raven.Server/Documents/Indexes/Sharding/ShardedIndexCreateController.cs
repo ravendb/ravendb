@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.ServerWide;
@@ -76,12 +75,6 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
 
         if (string.IsNullOrEmpty(definition.OutputReduceToCollection) == false)
             throw new NotSupportedInShardingException("Index with output reduce to collection is not supported in sharding.");
-        
-        var databaseConfiguration = GetDatabaseConfiguration();
-        var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // already compiled in base method
-
-        if (instance.HasBoostedFields)
-            throw new NotSupportedInShardingException("Index with boosted fields is not supported in sharding.");
     }
 
     protected override void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
