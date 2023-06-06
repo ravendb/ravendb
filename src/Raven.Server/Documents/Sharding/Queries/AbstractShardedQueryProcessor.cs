@@ -320,9 +320,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             {
                 modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
             }
-
+            
             var limit = ((Query.Limit ?? 0) + (Query.Offset ?? 0)) * (long)RequestHandler.DatabaseContext.ShardCount;
 
+            if (limit == 0)
+                limit = Query.Start + Query.PageSize;
+            
             if (limit > int.MaxValue) // overflow
                 limit = int.MaxValue;
 
@@ -412,7 +415,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     {
         var queryChanges = QueryChanges.None;
 
-        if (Query.Offset is > 0)
+        if (Query.Offset is > 0 || Query.Start > 0)
             queryChanges |= QueryChanges.RewriteForPaging;
 
         
