@@ -1994,7 +1994,7 @@ namespace Raven.Server.ServerWide
 
                 if (shouldUpdateServerWideBackups)
                 {
-                    using (serverWideBackups)
+                    using (var old = serverWideBackups)
                     {
                         serverWideBackups = context.ReadObject(serverWideBackups, ServerWideConfigurationKey.Backup);
                     }
@@ -4171,7 +4171,7 @@ namespace Raven.Server.ServerWide
                     [serverWideBackupConfiguration.Name] = serverWideBlittable
                 };
 
-                using (allServerWideBackups)
+                using (var old = allServerWideBackups)
                 {
                     allServerWideBackups = context.ReadObject(allServerWideBackups, ServerWideConfigurationKey.Backup);
                 }
