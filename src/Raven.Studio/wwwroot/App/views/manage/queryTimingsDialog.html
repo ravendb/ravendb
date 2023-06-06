@@ -1,0 +1,40 @@
+<div class="modal-dialog modal-lg timings-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true" title="Click to close">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Query Timings</h4>
+        </div>
+        <div class="modal-body">
+            <div class="panel-body js-timings-container timings" style="height: 350px; width: 850px">
+                <div class="toggle toggle-right">
+                    <input id="log-scale" class="styled" type="checkbox" data-bind="checked: timingsGraph.useLogScale">
+                    <label for="log-scale" class="properties-label">
+                        Use logarithmic scale
+                    </label>
+                </div>
+               
+                <div class="legend" data-bind="with: timingsGraph.rootNode">
+                    <div class="legend-item" data-bind="template: { name: 'timing-item-template' }">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel" title="Click to close">Close</button>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="timing-item-template">
+    <div class="timing-legend-item">
+        <i data-bind="attr: { 'class': 'item-rect ' + $root.timingsGraph.getColorClass(name) }"></i>
+        <span class="name" data-bind="text: name"></span>
+        <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+    </div>
+    <div data-bind="foreach: children">
+        <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">
+        </div>
+    </div>
+</script>
