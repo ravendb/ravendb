@@ -1,13 +1,12 @@
 ﻿using System.Text;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -109,4 +108,6 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
         return result;
     }
+    
+    internal override void AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved() => throw new NotSupportedInShardingException($"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled.");
 }
