@@ -1,5 +1,5 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
-import React from "react";
+import React, { useState } from "react";
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
@@ -21,7 +21,7 @@ function formatUptime(uptime: string) {
 export function DatabaseDistribution(props: DatabaseDistributionProps) {
     const { db } = props;
     const sharded = db.sharded;
-
+    const [hoveredShardNumber, setHoveredShardNumber] = useState<number | null>(null);
     const dbState = useAppSelector(selectDatabaseState(db.name));
 
     return (
@@ -68,6 +68,8 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     </div>
                 );
 
+                const shardNumber = localState.location.shardNumber;
+
                 const nodesToUse = db.sharded
                     ? (db as ShardedDatabaseSharedInfo).shards[localState.location.shardNumber].nodes
                     : db.nodes;
@@ -80,6 +82,12 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     <DistributionItem
                         key={genUtils.formatLocation(localState.location)}
                         loading={localState.status === "idle" || localState.status === "loading"}
+                        className={classNames("distribution-item pb-2", {
+                            [`shard-${localState.location.shardNumber}`]: sharded && shardNumber != null,
+                            hovered: sharded ? shardNumber === hoveredShardNumber : false,
+                        })}
+                        onMouseEnter={() => setHoveredShardNumber(localState.location.shardNumber)}
+                        onMouseLeave={() => setHoveredShardNumber(null)}
                     >
                         {sharded && shard}
                         <div className={classNames("node", { top: !sharded })}>
