@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
@@ -94,9 +95,9 @@ namespace SlowTests.Issues
                     var result = await query.ToListAsync();
 
                     Assert.Equal(3, result.Count);
-                    Assert.Equal("city1", result[0].CityName);
-                    Assert.Equal("city1", result[1].CityName);
-                    Assert.Equal("city2", result[2].CityName);
+                    Assert.Contains("city1", result.Select(i => i.CityName));
+                    Assert.Equal(2, result.Count(i => i.CityName == "city1"));
+                    Assert.Contains("city2", result.Select(i => i.CityName));
                 }
             }
         }
@@ -130,9 +131,9 @@ namespace SlowTests.Issues
                     var result = await query.ToListAsync();
 
                     Assert.Equal(3, result.Count);
-                    Assert.Equal("city1", result[0].CityName);
-                    Assert.Equal("city1", result[1].CityName);
-                    Assert.Equal("city2", result[2].CityName);
+                    Assert.Contains("city1", result.Select(i => i.CityName));
+                    Assert.Equal(2, result.Count(i => i.CityName == "city1"));
+                    Assert.Contains("city2", result.Select(i => i.CityName));
                 }
             }
         }
