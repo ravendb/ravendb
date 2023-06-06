@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Form, Col, Button, Row, Spinner, Input, InputGroupText, InputGroup, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
@@ -17,7 +17,6 @@ import appUrl = require("common/appUrl");
 import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
 import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
 import { tryHandleSubmit } from "components/utils/common";
-
 import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
@@ -43,6 +42,12 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const formValues = useClientConfigurationFormController(control, setValue);
 
+    useEffect(() => {
+        if (formState.isSubmitSuccessful) {
+            reset(formValues);
+        }
+    }, [formState.isSubmitSuccessful, reset, formValues]);
+
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
         if (!globalConfigResult) {
@@ -55,20 +60,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         tryHandleSubmit(async () => {
             await manageServerService.saveClientConfiguration(ClientConfigurationUtils.mapToDto(formData, false), db);
-            reset(null, { keepValues: true });
         });
-    };
-
-    const leftRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
-        label: "Use server config",
-        value: false,
-        iconName: "server",
-    };
-
-    const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
-        label: "Use database config",
-        value: true,
-        iconName: "database",
     };
 
     const onRefresh = async () => {
@@ -554,3 +546,15 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         </Form>
     );
 }
+
+const leftRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
+    label: "Use server config",
+    value: false,
+    iconName: "server",
+};
+
+const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
+    label: "Use database config",
+    value: true,
+    iconName: "database",
+};
