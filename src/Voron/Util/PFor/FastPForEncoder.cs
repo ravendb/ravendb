@@ -23,8 +23,8 @@ public unsafe class FastPForEncoder  : IDisposable
     private int _count;
     private int _offset;
     private ushort _sharedPrefix;
-    private readonly List<uint>[] _exceptions = new List<uint>[32];
-    private readonly int[] _exceptionsStart = new int[32];
+    private readonly List<uint>[] _exceptions = new List<uint>[33];
+    private readonly int[] _exceptionsStart = new int[33];
     private readonly List<byte> _metadata = new();
     private int _metadataPos;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesOutputScope;
