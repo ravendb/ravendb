@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Replication
 
             _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
                                            parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                           _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
+                                           _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
 
             _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
             _context = new ByteStringContext(SharedMultipleUseFlag.None);
