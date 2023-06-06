@@ -53,10 +53,11 @@ internal static class CoraxQueryBuilder
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
         public readonly bool HasBoost;
+        public readonly IndexReadOperationBase IndexReadOperation;
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -78,6 +79,7 @@ internal static class CoraxQueryBuilder
                 : null;
             HasBoost = index.HasBoostedFields | query.Metadata.HasBoost;
             Allocator = allocator;
+            IndexReadOperation = indexReadOperation;
         }
     }
 
@@ -1040,8 +1042,12 @@ internal static class CoraxQueryBuilder
         if (orderByFields == null)
         {
             if (builderParameters.HasBoost && index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved)
+            {
+                builderParameters.IndexReadOperation?.AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved();
                 return new[] {new OrderMetadata(true, MatchCompareFieldType.Score)};
-                return null;
+            }
+
+            return null;
         }
 
         int sortIndex = 0;

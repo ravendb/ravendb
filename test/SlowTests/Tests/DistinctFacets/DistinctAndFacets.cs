@@ -9,6 +9,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -93,6 +94,7 @@ namespace SlowTests.Tests.DistinctFacets
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetDistinctResult(Options options)
         {
+            TurnOffAutoScoreSortingForSharding(options);
             using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
@@ -116,6 +118,7 @@ namespace SlowTests.Tests.DistinctFacets
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetDistinctResult_WithPaging(Options options)
         {
+            TurnOffAutoScoreSortingForSharding(options);
             using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
@@ -140,6 +143,7 @@ namespace SlowTests.Tests.DistinctFacets
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void DistinctResult_WithFacets_ShouldThrow(Options options)
         {
+            TurnOffAutoScoreSortingForSharding(options);
             using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
@@ -160,6 +164,17 @@ namespace SlowTests.Tests.DistinctFacets
 
                     Assert.Equal("Aggregation query can select only facets while it got DistinctToken token", ex.Message);
                 }
+            }
+        }
+
+        private static void TurnOffAutoScoreSortingForSharding(Options options)
+        {
+            if (options.DatabaseMode is RavenDatabaseMode.Sharded)
+            {
+                options.ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)] = false.ToString();
+                };
             }
         }
     }

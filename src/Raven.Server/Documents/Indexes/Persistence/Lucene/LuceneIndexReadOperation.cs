@@ -617,6 +617,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved == false || query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
+                AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved();
                 sort = SortByFieldScore;
                 return null;
             }
@@ -727,7 +728,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             sort = new Sort(sortArray);
             return new ReturnSort(sortArray);
         }
-
+        
         private readonly struct ReturnSort : IDisposable
         {
             private readonly ArraySegment<SortField> _sortArray;

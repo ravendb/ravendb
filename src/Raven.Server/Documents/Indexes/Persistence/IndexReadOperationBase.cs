@@ -37,6 +37,10 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract long EntriesCount();
 
+        internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved()
+        {
+        }
+        
         public abstract IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
             Func<string, SpatialField> getSpatialField, CancellationToken token);

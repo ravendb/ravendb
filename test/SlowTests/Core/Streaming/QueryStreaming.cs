@@ -33,11 +33,16 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanStreamQueryResults_Lucene(Options options) => CanStreamQueryResults<Users_ByName>(options);
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void CanStreamQueryResults_Lucene_Sharded(Options options) => CanStreamQueryResults<Users_ByName_WithoutBoosting>(options);
+
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamQueryResults_Corax(Options options) => CanStreamQueryResults<Users_ByName_WithoutBoosting>(options);
         
         private void CanStreamQueryResults<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
@@ -154,19 +159,25 @@ namespace SlowTests.Core.Streaming
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanStreamQueryResultsWithQueryStatistic_Corax(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName_WithoutBoosting>(options, "Users/ByName/WithoutBoosting");
+        public void CanStreamQueryResultsWithQueryStatistic_Corax(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName_WithoutBoosting>(options);
 
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanStreamQueryResultsWithQueryStatistic_Lucene(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName>(options, "Users/ByName");
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanStreamQueryResultsWithQueryStatistic_Lucene(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName>(options);
         
-        private void CanStreamQueryResultsWithQueryStatistics<TIndex>(Options options, string indexName) where TIndex : AbstractIndexCreationTask, new()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void CanStreamQueryResultsWithQueryStatistic_Lucene_Sharded(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName_WithoutBoosting>(options);
+        
+        private void CanStreamQueryResultsWithQueryStatistics<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
             {
-                new TIndex().Execute(store);
-
+                var index = new TIndex();
+                index.Execute(store);
+                var indexName = index.IndexName;
+                
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 100; i++)
@@ -214,20 +225,27 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Lucene(Options options) =>
-            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName>(options, "Users/ByName");
+            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName>(options);
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Lucene_Sharded(Options options) =>
+            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName_WithoutBoosting>(options);
         
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Corax(Options options) =>
-            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName_WithoutBoosting>(options, "Users/ByName/WithoutBoosting");
+            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName_WithoutBoosting>(options);
 
-        private async Task CanStreamQueryResultsWithQueryStatisticsAsync<TIndex>(Options options, string indexName) where TIndex : AbstractIndexCreationTask, new()
+        private async Task CanStreamQueryResultsWithQueryStatisticsAsync<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
             {
-                new TIndex().Execute(store);
+                var index = new TIndex();
+                await index.ExecuteAsync(store);
+                var indexName = index.IndexName;
 
                 using (var session = store.OpenAsyncSession())
                 {

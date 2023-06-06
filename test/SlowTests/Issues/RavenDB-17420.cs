@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Linq.Indexing;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,6 +25,13 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_use_boost_on_in_query(Options options)
         {
+            if (options.DatabaseMode is RavenDatabaseMode.Sharded)
+            {
+                options.ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)] = false.ToString();
+                };
+            }
             using var store = GetDocumentStore(options);
 
             using (var s = store.OpenSession())

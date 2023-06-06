@@ -3,6 +3,8 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Exceptions.Sharding;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -135,6 +137,27 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal("Oren", users[1].FirstName);
                 }
             }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryWillThrowWhenIndexHasBoostingAndAutomaticallySortingByScoreIsNotDisable(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            using var session = store.OpenSession();
+            session.Store(new User()
+            {
+                FirstName = "Maciej",
+                LastName = "Kowalski"
+            });
+            session.SaveChanges();
+            new UsersByName().Execute(store);
+            Indexes.WaitForIndexing(store);
+
+            var ex = Assert.Throws<NotSupportedInShardingException>(() => session.Query<User, UsersByName>().ToList());
+            Assert.Contains(
+                $"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled.",
+                ex.Message);
         }
     }
 }

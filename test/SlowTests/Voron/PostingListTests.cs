@@ -129,7 +129,6 @@ public class PostingListTests : StorageTest
             var tree = rtx.OpenPostingList("test");
             var it = tree.Iterate();
             Assert.True(it.Seek(0));
-            bool movedNext = true;
             Span<long> buffer = stackalloc long[256];
             var bufIdx = 0;
             Assert.True(it.Fill(buffer, out var read));
