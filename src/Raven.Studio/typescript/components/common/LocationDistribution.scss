@@ -2,6 +2,7 @@
 
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
 
 .location-distribution {
     display: grid;
@@ -62,7 +63,7 @@
         background-color: colors.$panel-bg-2-var;
         border-radius: sizes.$gutter-xs;
         border: sizes.$border-width solid transparent;
-        transition: background-color 0.2s;
+        transition: all 0.33s cubic-bezier(0.4, 0, 0.2, 1);
 
         & > div {
             padding-left: sizes.$gutter-xs;
@@ -87,6 +88,10 @@
             i {
                 color: var(--icon-color);
             }
+        }
+        &.hovered {
+            transition: none;
+            box-shadow: bs5variables.$box-shadow-sm, 0 0 20px 0 inset rgba(colors.$shard-color, 0.2);
         }
     }
 }
