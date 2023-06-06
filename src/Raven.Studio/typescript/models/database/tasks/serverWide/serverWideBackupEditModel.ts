@@ -17,7 +17,7 @@ class serverWideBackupEditModel extends periodicBackupConfiguration {
 
         super(databaseName, dto, serverLimits, encryptedDatabase, isServerWide);
 
-        this.excludeInfo(new serverWideExcludeModel(dto.ExcludedDatabases));
+        this.excludeInfo(new serverWideExcludeModel(dto.ExcludedDatabases, this.isSnapshot));
 
         this.initObservablesServerWide();
         this.initValidationServerWide();
