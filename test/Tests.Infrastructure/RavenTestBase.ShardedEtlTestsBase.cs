@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,8 +27,8 @@ public partial class RavenTestBase
                 throw new ArgumentOutOfRangeException(nameof(count));
 
             var mre = new ManualResetEventSlim();
-            var confirmations = new HashSet<int>();
-
+            var confirmations = new ConcurrentDictionary<int, byte>();
+            
             foreach (var task in dbs)
             {
                 var shard = task.Result;
@@ -36,7 +37,7 @@ public partial class RavenTestBase
                 {
                     if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
                     {
-                        confirmations.Add(shard.ShardNumber);
+                        confirmations.TryAdd(shard.ShardNumber, 0);
                         if (confirmations.Count == count)
                             mre.Set();
                     }
