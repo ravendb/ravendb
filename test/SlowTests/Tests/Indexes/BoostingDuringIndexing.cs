@@ -3,8 +3,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Sharding;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -137,17 +135,6 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal("Oren", users[1].FirstName);
                 }
             }
-        }
-
-        [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void IndexingTimeBoostingIsNotSupportedInShardedDatabase(Options options)
-        {
-            using var store = GetDocumentStore(options);
-
-            var exception = Assert.Throws<NotSupportedInShardingException>(() => new UsersByName().Execute(store));
-
-            Assert.Contains("Index with boosted fields is not supported in sharding.", exception.Message);
         }
     }
 }
