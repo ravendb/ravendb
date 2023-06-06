@@ -80,7 +80,7 @@ class spatialQueryMap extends viewModelBase {
             const numberOfMarkersInLayer = markers.length;
             
             const controlLayerText = `<span>Point fields: <span class="number-of-markers pull-right padding padding-xs">${numberOfMarkersInLayer}</span></span>
-                                      <div class='margin-left'>
+                                      <div class='margin-left-sm'>
                                           <span>${genUtils.escapeHtml(markersLayer.latitudeProperty)}</span><br>
                                           <span>${genUtils.escapeHtml(markersLayer.longitudeProperty)}</span>
                                       </div>`;
