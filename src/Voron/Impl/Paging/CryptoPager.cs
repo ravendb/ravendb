@@ -240,13 +240,13 @@ namespace Voron.Impl.Paging
             return buffer.Pointer;
         }
 
-        public override byte* AcquirePagePointerHeaderForDebug(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        public override T AcquirePagePointerHeaderForDebug<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             var state = GetTransactionState(tx);
             if (state.TryGetValue(pageNumber, out var buffer))
-                return buffer.Pointer;
+                return *(T*)buffer.Pointer;
 
-            return Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
+            return Inner.AcquirePagePointerHeaderForDebug<T>(tx, pageNumber, pagerState);
         }
 
         public override void TryReleasePage(IPagerLevelTransactionState tx, long page)

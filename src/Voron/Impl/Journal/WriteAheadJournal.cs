@@ -507,7 +507,7 @@ namespace Voron.Impl.Journal
             return null;
         }
 
-        public Page? ReadPageHeaderForDebug(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
+        public T? ReadPageHeaderForDebug<T>(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates) where T : unmanaged
         {
             // read transactions have to read from journal snapshots
             if (tx.Flags == TransactionFlags.Read)
@@ -517,10 +517,7 @@ namespace Voron.Impl.Journal
                 {
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
                     {
-                        var page = _env.ScratchBufferPool.ReadPageHeaderForDebug(tx, value.ScratchNumber, value.ScratchPage, scratchPagerStates[value.ScratchNumber]);
-
-                        Debug.Assert(page.PageNumber == pageNumber);
-
+                        var page = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(tx, value.ScratchNumber, value.ScratchPage, scratchPagerStates[value.ScratchNumber]);
                         return page;
                     }
                 }
@@ -536,10 +533,7 @@ namespace Voron.Impl.Journal
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {
                     // ReSharper disable once RedundantArgumentDefaultValue
-                    var page = _env.ScratchBufferPool.ReadPageHeaderForDebug(tx, value.ScratchNumber, value.ScratchPage, pagerState: null);
-
-                    Debug.Assert(page.PageNumber == pageNumber);
-
+                    var page = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(tx, value.ScratchNumber, value.ScratchPage, pagerState: null);
                     return page;
                 }
             }

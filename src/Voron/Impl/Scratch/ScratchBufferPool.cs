@@ -6,13 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
-using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
@@ -389,12 +387,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPageHeaderForDebug(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null)
+        public T ReadPageHeaderForDebug<T>(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null) where T : unmanaged
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.ReadPageHeaderForDebug(tx, p, pagerState);
+            return bufferFile.ReadPageHeaderForDebug<T>(tx, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
