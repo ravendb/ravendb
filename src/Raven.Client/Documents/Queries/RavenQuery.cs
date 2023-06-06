@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
-using Sparrow;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -14,6 +14,40 @@ namespace Raven.Client.Documents.Queries
         }
 
         public static IEnumerable<T> Load<T>(IEnumerable<string> ids)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static bool? Include(string path)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static T Include<T>(string path)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static T Include<T>(Expression<Func<T, string>> path)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static bool IncludeTimeSeries(object documentInstance, string name)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static bool IncludeCounter(object documentInstance, string name)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static bool IncludeCounters(object documentInstance, string[] nameList)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+        public static bool IncludeAllCounters(object documentInstance)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }

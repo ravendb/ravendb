@@ -1008,6 +1008,137 @@ namespace Raven.Client.Util
             }
         }
 
+        public class IncludeDocumentSupport : JavascriptConversionExtension
+        {
+            public readonly string _alias;
+
+            public IncludeDocumentSupport(string inputAlias)
+            {
+                _alias = inputAlias;
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.Include))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+
+                if (methodCallExpression.Arguments.Count != 1)
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+
+                //if not a lambda expression then
+                if (methodCallExpression.Arguments[0].Type.BaseType.Name.Contains("LambdaExpression") == false)
+                {
+                    using (writer.Operation(methodCallExpression))
+                    {
+                        var arg = methodCallExpression.Arguments[0];
+
+                        if (arg is ConstantExpression { Value: string docName })
+                        {
+                            writer.Write("includes.document(");
+                            writer.Write(docName);
+                            writer.Write(")");
+                            return;
+                        }
+
+                        throw new NotSupportedException(
+                            $"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
+                    }
+                }
+
+                //if got here then it's lambda expression then call alias and 
+                using (writer.Operation(methodCallExpression))
+                {
+                    var arg = methodCallExpression.Arguments[0];
+
+                    if (arg is UnaryExpression { Operand: LambdaExpression { Body: BinaryExpression { Left: MethodCallExpression mce } } })
+                    {
+                        var objReplace = (MemberExpression)mce.Object;
+                        var replaceExpression = Expression.Parameter(objReplace.Expression.Type, _alias);
+                        var objReplace1 = objReplace.Update(replaceExpression);
+                        var curmce = mce.Update(objReplace1, mce.Arguments);
+                        writer.Write("includes.document(");
+                        context.Visitor.Visit(curmce);
+                        writer.Write(")");
+                        return;
+                    }
+
+                    if (arg is UnaryExpression { Operand: LambdaExpression arg2 })
+                    {
+                        var targetExpression = (MemberExpression)arg2.Body;
+                        var replaceExpression = Expression.Parameter(targetExpression.Expression.Type, _alias);
+                        targetExpression = targetExpression.Update(replaceExpression);
+
+                        writer.Write("includes.document(");
+                        context.Visitor.Visit(targetExpression);
+                        writer.Write(")");
+                        return;
+                    }
+
+                    throw new NotSupportedException(
+                        $"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
+                }
+            }
+        }
+
+        public class IncludeCountersAndTimeSeriesSupport : JavascriptConversionExtension
+        {
+            public static readonly IncludeCountersAndTimeSeriesSupport Instance = new IncludeCountersAndTimeSeriesSupport();
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression == null)
+                    return;
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+
+                var methodName = methodCallExpression.Method.Name;
+                bool isIncludeAllCounters = methodName == nameof(RavenQuery.IncludeAllCounters);
+                var hasCounters = methodName == nameof(RavenQuery.IncludeCounter) ||
+                                  methodName == nameof(RavenQuery.IncludeCounters) ||
+                                  isIncludeAllCounters;
+
+                var hasTimeSeries = methodName == nameof(RavenQuery.IncludeTimeSeries);
+
+                if (hasCounters == false && hasTimeSeries == false)
+                    return;
+
+                var expectedArgsCount = isIncludeAllCounters ? 1 : 2;
+                if (methodCallExpression.Arguments.Count != expectedArgsCount)
+                    return;
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write(hasCounters ? "includes.counters(" : "includes.timeseries(");
+                    bool addComma = expectedArgsCount > 1;
+                    for (var i = 0; i < expectedArgsCount; i++)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        if (addComma)
+                        {
+                            writer.Write(",");
+                        }
+
+                        addComma = false;
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();

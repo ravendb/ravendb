@@ -2759,6 +2759,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void SelectMemberAccess(Expression body)
         {
+            if (_declareBuilder != null)
+            {
+                AddReturnStatementToOutputFunction(body);
+                return;
+            }
+
             var memberExpression = ((MemberExpression)body);
 
             var selectPath = GetSelectPath(memberExpression);
@@ -2979,6 +2985,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
+        private static readonly Regex IsDiscard = new Regex(@"^_+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private void HandleLoad(Expression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js, StringBuilder wrapper)
         {
@@ -3129,11 +3136,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            if (js.StartsWith("includes."))
+            {
+                if (IsDiscard.IsMatch(name) == false)
+                {
+                    throw new InvalidOperationException($"Wrong syntax, 'RavenQuery.Include()' works only with discard variable. Current variable is called '{name}'.");
+                }
+
+                HandleFunctionBody(name, js, isInclude: true);
+            }
+            else
+            {
+                HandleFunctionBody(name, js, isInclude: false);
+            }
+        }
+
+        void HandleFunctionBody(string name, string js, bool isInclude = false)
+        {
             _declareBuilder ??= new StringBuilder();
-            _declareBuilder.Append('\t')
-                .Append("var ").Append(name)
-                .Append(" = ").Append(js).Append(';')
-                .Append(Environment.NewLine);
+            _declareBuilder.Append('\t');
+            if (isInclude == false)
+                _declareBuilder.Append("var ").Append(name).Append(" = ");
+            _declareBuilder.Append(js).Append(';').Append(Environment.NewLine);
         }
 
         private static void AddPropertyToWrapperObject(string name, string js, StringBuilder wrapper)
@@ -3232,7 +3256,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
 
                     AddJsProjection(name, field.Expression, sb, index != 0);
-
                 }
                 sb.Append(" }");
             }
@@ -3244,7 +3267,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 
                 sb.Append(script);
             }
-
             return sb.ToString();
         }
 
@@ -3277,6 +3299,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
+                new JavascriptConversionExtensions.IncludeDocumentSupport(FromAlias),
+                JavascriptConversionExtensions.IncludeCountersAndTimeSeriesSupport.Instance,
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,

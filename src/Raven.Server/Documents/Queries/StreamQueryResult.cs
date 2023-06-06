@@ -56,11 +56,15 @@ namespace Raven.Server.Documents.Queries
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
         {
+            if (includeCountersCommand.Results == null)
+                return;
             throw new NotSupportedException();
         }
 
         public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
         {
+            if (includeTimeSeriesCommand.Results == null)
+                return;
             throw new NotSupportedException();
         }
 

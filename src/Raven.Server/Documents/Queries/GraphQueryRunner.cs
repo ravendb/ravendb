@@ -134,6 +134,7 @@ namespace Raven.Server.Documents.Queries
                     IncludeDocumentsCommand idc = null;
                     IncludeRevisionsCommand  irc = null;
                     IncludeCompareExchangeValuesCommand icevc = null;
+
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
                         await HandleResultsWithoutSelectAsync(queryContext.Documents, qr.Matches, final, token.Token);
@@ -146,7 +147,6 @@ namespace Raven.Server.Documents.Queries
                         icevc = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
                         irc = new IncludeRevisionsCommand(database: Database, context: queryContext.Documents, query.Metadata.RevisionIncludes);
 
-                        
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,
                             Database,
@@ -157,7 +157,9 @@ namespace Raven.Server.Documents.Queries
                             fieldsToFetch,
                             idc,
                             icevc,
-                            irc);
+                            irc,
+                            includeTimeSeriesCommand: null,
+                            includeCountersCommand: null);
 
                         HashSet<ulong> alreadySeenProjections = null;
                         if (q.IsDistinct)

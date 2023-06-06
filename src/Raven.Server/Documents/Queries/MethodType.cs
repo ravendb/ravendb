@@ -44,7 +44,7 @@
         Timings,
 
         Counters,
-        
+
         Revisions,
 
         TimeSeries,

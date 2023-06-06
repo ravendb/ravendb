@@ -32,8 +32,10 @@ namespace Raven.Server.Documents.Queries.Results
             FieldsToFetch fieldsToFetch,
             IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand,
-            IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, SearchEngineType.Lucene, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+            IncludeRevisionsCommand includeRevisionsCommand,
+            IncludeTimeSeriesCommand includeTimeSeriesCommand,
+            IncludeCountersCommand includeCountersCommand)
+            : base(database, query, queryTimings, SearchEngineType.Lucene, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, includeTimeSeriesCommand, includeCountersCommand)
         {
             _graphQuery = graphQuery;
             _context = context;
