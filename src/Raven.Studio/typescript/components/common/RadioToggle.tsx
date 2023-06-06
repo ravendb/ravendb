@@ -27,7 +27,7 @@ export function RadioToggleWithIcon<T extends string | number = string>({
     className,
 }: RadioToggleWithIconProps<T>) {
     useEffect(() => {
-        if (!selectedValue) {
+        if (selectedValue == null) {
             setSelectedValue(leftItem.value);
         }
     }, [leftItem.value, selectedValue, setSelectedValue]);

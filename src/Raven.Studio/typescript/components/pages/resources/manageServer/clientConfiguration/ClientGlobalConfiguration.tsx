@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Form, Col, Button, Card, Row, Spinner, InputGroup, InputGroupText } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
@@ -32,10 +32,15 @@ export default function ClientGlobalConfiguration() {
     const popovers = useClientConfigurationPopovers();
     const formValues = useClientConfigurationFormController(control, setValue);
 
+    useEffect(() => {
+        if (formState.isSubmitSuccessful) {
+            reset(formValues);
+        }
+    }, [formState.isSubmitSuccessful, reset, formValues]);
+
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
             await manageServerService.saveGlobalClientConfiguration(ClientConfigurationUtils.mapToDto(formData, true));
-            reset(null, { keepValues: true });
         });
     };
 

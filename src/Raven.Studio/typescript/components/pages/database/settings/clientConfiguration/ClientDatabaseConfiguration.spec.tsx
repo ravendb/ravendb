@@ -5,20 +5,20 @@ import { composeStories } from "@storybook/react";
 
 const { WithGlobalConfiguration, WithoutGlobalConfiguration } = composeStories(stories);
 
-const seeEffectiveConfigurationText = "See effective configuration";
+const serverConfigurationText = "Server Configuration";
 
 describe("ClientDatabaseConfiguration", function () {
     it("can render with global config", async () => {
         const { screen } = rtlRender(<WithGlobalConfiguration />);
 
         expect(await screen.findByText(/Save/)).toBeInTheDocument();
-        expect(screen.queryByText(seeEffectiveConfigurationText)).toBeInTheDocument();
+        expect(screen.queryByText(serverConfigurationText)).toBeInTheDocument();
     });
 
     it("can render without global config", async () => {
         const { screen } = rtlRender(<WithoutGlobalConfiguration />);
 
         expect(await screen.findByText(/Save/)).toBeInTheDocument();
-        expect(screen.queryByText(seeEffectiveConfigurationText)).not.toBeInTheDocument();
+        expect(screen.queryByText(serverConfigurationText)).not.toBeInTheDocument();
     });
 });
