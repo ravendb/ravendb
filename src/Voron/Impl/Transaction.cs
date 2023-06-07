@@ -156,7 +156,14 @@ namespace Voron.Impl
             }
         }
 
-        public Lookup<TKey> LookupFor<TKey>(Slice name) where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+        public Lookup<TKey> LookupFor<TKey>(string name) where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
+        {
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
+            {
+                return LookupFor<TKey>(nameSlice);
+            }
+        }
+        public Lookup<TKey> LookupFor<TKey>(Slice name) where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }

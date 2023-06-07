@@ -1409,14 +1409,14 @@ namespace Voron.Data.BTrees
 
         
         public Lookup<TKey> LookupFor<TKey>(string key)
-            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
             return LookupFor<TKey>(keySlice);
         }
         
         public Lookup<TKey> LookupFor<TKey>(Slice key)
-            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             if (_prepareLocator == null)
                 _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
