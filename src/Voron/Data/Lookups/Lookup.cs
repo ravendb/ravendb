@@ -2,22 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
-using System.Runtime.Intrinsics.X86;
-using System.Text;
 using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
+using System.Linq;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
-using Voron.Data.Containers;
-using Voron.Data.PostingLists;
 using Voron.Debugging;
-using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 
@@ -70,21 +61,21 @@ namespace Voron.Data.Lookups
             var keyLen = buffer[0] >> 4;
             var valLen = buffer[0] & 0xF;
             long k = 0, v = 0;
-            Memory.Copy(&k, buffer+1, keyLen);
-            Memory.Copy(&v, buffer+1 + keyLen, valLen);
+            Memory.Copy(&k, buffer + 1, keyLen);
+            Memory.Copy(&v, buffer + 1 + keyLen, valLen);
             key = ToKey(Unzag(k, header->KeysBase));
             val = Unzag(v, header->ValuesBase);
             return 1 + keyLen + valLen;
 
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long Unzag(long l, long baseline)
         {
-            long unzag = (l & 1) == 0 ? l >>> 1 :(l >>> 1) ^ -1;
+            long unzag = (l & 1) == 0 ? l >>> 1 : (l >>> 1) ^ -1;
             return unzag + baseline;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetEntryBuffer(ref CursorState state, int pos, out byte* buffer)
         {
@@ -93,14 +84,14 @@ namespace Voron.Data.Lookups
             var valLen = buffer[0] & 0xF;
             return keyLen + valLen + 1;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetEntrySize(ref CursorState state, int pos)
         {
             var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
             return GetEntrySize(buffer);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetEntrySize(byte* buffer)
         {
@@ -108,7 +99,7 @@ namespace Voron.Data.Lookups
             var valLen = buffer[0] & 0xF;
             return keyLen + valLen + 1;
         }
-           
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static TKey GetKey(ref CursorState state, int pos)
         {
@@ -120,16 +111,17 @@ namespace Voron.Data.Lookups
         private static TKey GetKey(LookupPageHeader* header, byte* buffer)
         {
             var keyLen = buffer[0] >> 4;
-            long k = ReadBackward(buffer + 1, keyLen); 
-            
+            long k = ReadBackward(buffer + 1, keyLen);
+
             k = Unzag(k, header->KeysBase);
             return ToKey(k);
         }
-           
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long ReadBackward(byte* b, int len)
         {
-            if (len == 0) return 0;
+            if (len == 0)
+                return 0;
             var shift = 8 - len;
             // this is safe to do, we are always *at least* 64 bytes from the page header
             var l = Unsafe.ReadUnaligned<long>(ref b[-shift]);
@@ -146,7 +138,7 @@ namespace Voron.Data.Lookups
                 return (TKey)(object)BitConverter.Int64BitsToDouble(k);
             throw new NotSupportedException(typeof(TKey).FullName);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long ToLong(TKey k)
         {
@@ -165,10 +157,10 @@ namespace Voron.Data.Lookups
             var keyLen = buffer[0] >> 4;
             var valLen = buffer[0] & 0xF;
             long v = ReadBackward(buffer + 1 + keyLen, valLen);
-            
+
             return Unzag(v, state.Header->ValuesBase);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetKeyAndValue(ref CursorState state, int pos, out TKey key, out long value)
         {
@@ -176,7 +168,7 @@ namespace Voron.Data.Lookups
             var keyLen = buffer[0] >> 4;
             var valLen = buffer[0] & 0xF;
             long k = ReadBackward(buffer + 1, keyLen);
-            long v = ReadBackward(buffer + 1 + keyLen, valLen); 
+            long v = ReadBackward(buffer + 1 + keyLen, valLen);
             key = ToKey(Unzag(k, state.Header->KeysBase));
             value = Unzag(v, state.Header->ValuesBase);
         }
@@ -198,10 +190,10 @@ namespace Voron.Data.Lookups
             public int LastSearchPosition;
 
             public LookupPageHeader* Header => (LookupPageHeader*)Page.Pointer;
-            
-            public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer+ PageHeader.SizeOf, Header->NumberOfEntries);
+
+            public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer + PageHeader.SizeOf, Header->NumberOfEntries);
             public ushort* EntriesOffsetsPtr => (ushort*)(Page.Pointer + PageHeader.SizeOf);
-            
+
             public int ComputeFreeSpace()
             {
                 var usedSpace = PageHeader.SizeOf + sizeof(ushort) * Header->NumberOfEntries;
@@ -225,16 +217,16 @@ namespace Voron.Data.Lookups
                     $"{nameof(LastSearchPosition)} : {LastSearchPosition} - {Header->NumberOfEntries} entries, {Header->Lower}..{Header->Upper}";
             }
         }
-        
+
         private Lookup(Slice name, Tree parent)
         {
             Name = name.Clone(parent.Llt.Allocator, ByteStringType.Immutable);
             _parent = parent;
         }
 
-        public Slice Name 
-        { 
-            get; 
+        public Slice Name
+        {
+            get;
         }
 
         private readonly Tree _parent;
@@ -312,13 +304,13 @@ namespace Voron.Data.Lookups
             return true;
         }
 
- 
+
         public bool TryRemove(TKey key)
         {
             FindPageFor(key, ref _internalCursor);
             return RemoveFromPage(allowRecurse: true);
         }
-        
+
         public bool TryRemove(TKey key, out long value)
         {
             FindPageFor(key, ref _internalCursor);
@@ -339,7 +331,7 @@ namespace Voron.Data.Lookups
             state.LastMatch = 0;
             RemoveFromPage(allowRecurse);
         }
-        
+
         private bool RemoveFromPage(bool allowRecurse)
         {
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -354,12 +346,12 @@ namespace Voron.Data.Lookups
 
             state.Header->FreeSpace += (ushort)(sizeof(ushort) + len);
             state.Header->Lower -= sizeof(short); // the upper will be fixed on defrag
-            
+
             Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
             Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
             entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
-            
+
             if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
             {
                 _state.NumberOfEntries--;
@@ -380,7 +372,7 @@ namespace Voron.Data.Lookups
 
             VerifySizeOf(ref state);
             return true;
-        }                
+        }
 
         private void MaybeMergeEntries(ref CursorState destinationState)
         {
@@ -402,7 +394,7 @@ namespace Voron.Data.Lookups
                     };
                     FreePageFor(ref sourceState, ref destinationState);
                 }
-                return ;
+                return;
             }
 
             var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -412,7 +404,7 @@ namespace Voron.Data.Lookups
             };
 
             if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
-                return ; // cannot merge leaf & branch pages
+                return; // cannot merge leaf & branch pages
 
             var destinationPage = destinationState.Page;
             var destinationHeader = destinationState.Header;
@@ -445,25 +437,25 @@ namespace Voron.Data.Lookups
             Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
                         sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
                         (sourceHeader->NumberOfEntries - sourceKeysCopied) * sizeof(ushort));
-            
+
             // We update the entries offsets on the source page, now that we have moved the entries.
             var oldLower = sourceHeader->Lower;
-            sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));            
+            sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));
             if (sourceHeader->NumberOfEntries == 0) // emptied the sibling entries
             {
                 parent.LastSearchPosition++;
                 FreePageFor(ref destinationState, ref sourceState);
-                return ;
+                return;
             }
 
             sourceHeader->FreeSpace += (ushort)(sourceMovedLength + (sourceKeysCopied * sizeof(ushort)));
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
-            
+
 
             PopPage(ref _internalCursor);
-            
+
             // we aren't _really_ removing, so preventing merging of parents
             RemoveFromPage(allowRecurse: false, parent.LastSearchPosition + 1);
 
@@ -489,34 +481,34 @@ namespace Voron.Data.Lookups
                 {
                     return false; // done moving entries
                 }
-               
+
                 sourceMovedLength += originalEntrySize;
-                
+
                 // We will update the entries offsets in the receiving page.
                 destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
                 destinationHeader->Upper -= (ushort)requiredSize;
                 destinationHeader->Lower += sizeof(ushort);
                 entries[sourceKeysCopied] = destinationHeader->Upper;
-                
+
                 // We are going to be storing in the following format:
                 // [ keySizeInBits: ushort | key: sequence<byte> | value: varint ]
                 var entryPos = destinationPage.Pointer + destinationHeader->Upper;
-                Memory.Copy(entryPos, entryBuffer, requiredSize);                                                                
-                
+                Memory.Copy(entryPos, entryBuffer, requiredSize);
+
                 Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
 
                 return true;
             }
-      
+
             bool MoveEntryAsIs(ref CursorState destinationState, Span<ushort> entries)
             {
                 // We get the encoded key and value from the sibling page
                 var len = GetEntryBuffer(ref sourceState, sourceKeysCopied, out var buffer);
-                
+
                 // If we don't have enough free space in the receiving page, we move on. 
                 if (len + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
                     return false; // done moving entries
-                
+
                 sourceMovedLength += len;
                 // We will update the entries offsets in the receiving page.
                 destinationHeader->FreeSpace -= (ushort)(len + sizeof(ushort));
@@ -525,7 +517,7 @@ namespace Voron.Data.Lookups
                 entries[sourceKeysCopied] = destinationHeader->Upper;
 
                 Memory.Copy(destinationPage.Pointer + destinationHeader->Upper, buffer, len);
-                
+
                 Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
                 return true;
             }
@@ -535,7 +527,7 @@ namespace Voron.Data.Lookups
         {
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
             DecrementPageNumbers(ref stateToDelete);
-          
+
             if (parent.Header->NumberOfEntries == 2)
             {
                 // let's reduce the height of the tree entirely...
@@ -575,7 +567,7 @@ namespace Voron.Data.Lookups
         public void Add(TKey key, long value)
         {
             FindPageFor(key, ref _internalCursor);
-            
+
             AddToPage(key, value);
         }
 
@@ -583,11 +575,11 @@ namespace Voron.Data.Lookups
         private void AddToPage(TKey key, long value)
         {
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
-            
+
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
             var entryBufferPtr = stackalloc byte[EncodingBufferSize];
-            var requiredSize = EncodeEntry(state.Header, key, value, entryBufferPtr); 
+            var requiredSize = EncodeEntry(state.Header, key, value, entryBufferPtr);
 
             if (state.LastSearchPosition >= 0) // update
             {
@@ -637,7 +629,7 @@ namespace Voron.Data.Lookups
                     SplitPage(key, value);
                     // a page split may cause us to do a search and reset the existing container id
                     //DebugStuff.RenderAndShow(this);
-                   return;
+                    return;
                 }
             }
 
@@ -668,7 +660,7 @@ namespace Voron.Data.Lookups
             // We are going to be storing in the following format:
             // [ keySizeInBits: ushort | key: sequence<byte> | value: varint ]
             byte* writePos = state.Page.Pointer + state.Header->Upper;
-  
+
             Unsafe.CopyBlockUnaligned(writePos, entryBufferPtr, (uint)requiredSize);
             newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
             //VerifySizeOf(ref state);
@@ -679,7 +671,7 @@ namespace Voron.Data.Lookups
             if (_internalCursor._pos == 0) // need to create a root page
             {
                 // We are going to be creating a root page with our first trained dictionary. 
-                CreateRootPage(currentCauseForSplit,valueForSplit);
+                CreateRootPage(currentCauseForSplit, valueForSplit);
             }
 
             // We create the new dictionary 
@@ -688,10 +680,10 @@ namespace Voron.Data.Lookups
             var page = _llt.AllocatePage(1);
             var header = (LookupPageHeader*)page.Pointer;
             header->PageFlags = state.Header->PageFlags;
-            header->Lower = PageHeader.SizeOf ;
+            header->Lower = PageHeader.SizeOf;
             header->Upper = Constants.Storage.PageSize;
             header->FreeSpace = Constants.Storage.PageSize - PageHeader.SizeOf;
-       
+
             if (header->PageFlags.HasFlag(LookupPageFlags.Branch))
             {
                 _state.BranchPages++;
@@ -707,7 +699,7 @@ namespace Voron.Data.Lookups
             PopPage(ref _internalCursor); // add to parent
 
             SearchInCurrentPage(splitKey, ref _internalCursor._stk[_internalCursor._pos]);
-            
+
             AddToPage(splitKey, page.PageNumber);
 
             VerifySizeOf(ref state);
@@ -717,17 +709,16 @@ namespace Voron.Data.Lookups
         {
             var newPageState = new CursorState { Page = page };
             var entryBufferPtr = stackalloc byte[EncodingBufferSize];
+            newPageState.Header->KeysBase = ToLong(causeForSplit);
+            newPageState.Header->ValuesBase = valueForSplit;
+
 
             // sequential write up, no need to actually split
             int numberOfEntries = state.Header->NumberOfEntries;
             if (numberOfEntries == state.LastSearchPosition && state.LastMatch > 0)
             {
                 newPageState.LastSearchPosition = 0; // add as first
-                
-                newPageState.Header->KeysBase = ToLong(causeForSplit);
-                newPageState.Header->ValuesBase = valueForSplit;
-                
-                var entryLength = EncodeEntry(newPageState.Header, causeForSplit, valueForSplit, entryBufferPtr); 
+                var entryLength = EncodeEntry(newPageState.Header, causeForSplit, valueForSplit, entryBufferPtr);
                 AddEntryToPage(ref newPageState, entryLength, entryBufferPtr);
                 return causeForSplit;
             }
@@ -736,23 +727,21 @@ namespace Voron.Data.Lookups
             int entriesCopied = 0;
             int sizeCopied = 0;
             ushort* offsets = newPageState.EntriesOffsetsPtr;
-            (int i, TKey minKey, long minVal) = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state);
-            newPageState.Header->KeysBase = ToLong(minKey);
-            newPageState.Header->ValuesBase = minVal;
-            
+            int i = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state, ref newPageState);
+
             for (; i < numberOfEntries; i++)
             {
                 DecodeEntry(ref state, i, out var key, out var val);
 
-                var entryLength = EncodeEntry(newPageState.Header, key, val, entryBufferPtr); 
+                var entryLength = EncodeEntry(newPageState.Header, key, val, entryBufferPtr);
 
                 newPageState.Header->Lower += sizeof(ushort);
                 newPageState.Header->Upper -= (ushort)entryLength;
                 newPageState.Header->FreeSpace -= (ushort)(entryLength + sizeof(ushort));
                 sizeCopied += entryLength + sizeof(ushort);
-                
+
                 Debug.Assert(sizeCopied <= Constants.Storage.PageSize - PageHeader.SizeOf);
-                
+
                 offsets[entriesCopied++] = newPageState.Header->Upper;
                 Memory.Copy(page.Pointer + newPageState.Header->Upper, entryBufferPtr, entryLength);
             }
@@ -763,19 +752,19 @@ namespace Voron.Data.Lookups
             DefragPage(_llt, ref state); // need to ensure that we have enough space to add the new entry in the source page
 
             ref CursorState updatedPageState = ref newPageState; // start with the new page
-            int position = state.Header->NumberOfEntries-1;
+            int position = state.Header->NumberOfEntries - 1;
             var curKey = GetKey(ref state, position);
             if (causeForSplit.CompareTo(curKey) < 0)
             {
                 // the new entry belong on the *old* page
                 updatedPageState = ref state;
             }
-            
+
             SearchInCurrentPage(causeForSplit, ref updatedPageState);
             Debug.Assert(updatedPageState.LastSearchPosition < 0, "There should be no updates here");
             updatedPageState.LastSearchPosition = ~updatedPageState.LastSearchPosition;
             {
-                var entryLength = EncodeEntry(updatedPageState.Header, causeForSplit, valueForSplit, entryBufferPtr); 
+                var entryLength = EncodeEntry(updatedPageState.Header, causeForSplit, valueForSplit, entryBufferPtr);
                 Debug.Assert(updatedPageState.Header->Upper - updatedPageState.Header->Lower >= entryLength + sizeof(ushort));
                 AddEntryToPage(ref updatedPageState, entryLength, entryBufferPtr);
             }
@@ -785,29 +774,30 @@ namespace Voron.Data.Lookups
             return GetKey(ref newPageState, 0);
         }
 
-        private static (int Index, TKey MinKey, long MinVal) FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
+        private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state, ref CursorState newPageState)
         {
             int sizeUsed = 0;
             var halfwaySizeMark = (Constants.Storage.PageSize - PageHeader.SizeOf - state.Header->FreeSpace) / 2;
             int numberOfEntries = state.Header->NumberOfEntries;
-            var minKey = TKey.MaxValue;
-            var minVal = long.MaxValue;
+            var buffer = stackalloc byte[EncodingBufferSize];
+
             // here we have to guard against wildly unbalanced page structure, if the first 6 entries are 1KB each
             // and we have another 100 entries that are a byte each, if we split based on entry count alone, we'll 
             // end up unbalanced, so we compute the halfway mark based on the _size_ of the entries, not their count
             for (int i = numberOfEntries - 1; i >= 0; i--)
             {
-                var len = DecodeEntry(ref state, i, out var key, out var val);
-                var cost =  len + sizeof(ushort);
+                DecodeEntry(ref state, i, out var key, out var val);
+                var len = EncodeEntry(newPageState.Header, key, val, buffer);
+                var cost = len + sizeof(ushort);
                 if (sizeUsed + cost > halfwaySizeMark)
-                    return (i, minKey, minVal);
-                minKey = TKey.Min(minKey, key);
-                minVal = long.Min(minVal, val);
+                    return i + 1;
+
                 sizeUsed += cost;
             }
-            // we should never reach here, but let's have a reasonable default
-            Debug.Assert(false, "How did we reach here?");
-            return (numberOfEntries/2, minKey, minVal);
+            Debug.Assert(false, "Should never happen");
+
+            // but let's try to be reasonable about it, we'll move 25% of the entries, should always fit
+            return numberOfEntries / 2 + numberOfEntries / 4; 
         }
 
         [Conditional("DEBUG")]
@@ -848,19 +838,19 @@ namespace Voron.Data.Lookups
 
             // we'll copy the current page and reuse it, to avoid changing the root page number
             var page = _llt.AllocatePage(1);
-            
+
             long cpy = page.PageNumber;
             Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
             page.PageNumber = cpy;
 
             Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
             state.Header->PageFlags = LookupPageFlags.Branch;
-            state.Header->Lower =  PageHeader.SizeOf + sizeof(ushort);
-            state.Header->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf );
+            state.Header->Lower = PageHeader.SizeOf + sizeof(ushort);
+            state.Header->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf);
             state.Header->KeysBase = ToLong(k);
             state.Header->ValuesBase = v;
 
-            
+
             var pageNumberBufferPtr = stackalloc byte[EncodingBufferSize];
             var size = EncodeEntry(state.Header, TKey.MinValue, cpy, pageNumberBufferPtr);
 
@@ -892,7 +882,7 @@ namespace Voron.Data.Lookups
         }
 
         private static void DefragPage(LowLevelTransaction llt, ref CursorState state)
-        {                     
+        {
             using (llt.GetTempPage(Constants.Storage.PageSize, out var tmpPage))
             {
                 // Ensure we clean up the page.               
@@ -902,10 +892,10 @@ namespace Voron.Data.Lookups
                 // We copy just the header and start working from there.
                 var tmpHeader = (CompactPageHeader*)tmpPtr;
                 *tmpHeader = *(CompactPageHeader*)state.Page.Pointer;
-                                
+
                 Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
                 Debug.Assert(tmpHeader->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
-                
+
                 // We reset the data pointer                
                 tmpHeader->Upper = Constants.Storage.PageSize;
 
@@ -1027,7 +1017,7 @@ namespace Voron.Data.Lookups
             state.Page = _llt.GetPage(nextPage);
             cstate._len++;
         }
-        
+
         private void SearchInCurrentPage(TKey key, ref CursorState state, int bot = 0)
         {
             Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
@@ -1044,14 +1034,14 @@ namespace Voron.Data.Lookups
                 goto NotFound;
             }
             int top = length;
-            
+
             while (top > 1)
             {
                 int mid = top / 2;
 
                 curKey = GetKey(header, pagePtr + @base[bot + mid]);
 
-                match = key.CompareTo(curKey); 
+                match = key.CompareTo(curKey);
 
                 if (match >= 0)
                     bot += mid;
@@ -1061,7 +1051,7 @@ namespace Voron.Data.Lookups
 
             curKey = GetKey(header, pagePtr + @base[bot]);
 
-            match = key.CompareTo(curKey); 
+            match = key.CompareTo(curKey);
 
             if (match == 0)
             {
@@ -1070,12 +1060,12 @@ namespace Voron.Data.Lookups
                 return;
             }
 
-            NotFound:
+        NotFound:
             state.LastMatch = match > 0 ? 1 : -1;
             state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
         }
 
-    
+
         private static int DictionaryOrder(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
         {
             // Bed - Tree: An All-Purpose Index Structure for String Similarity Search Based on Edit Distance
@@ -1131,7 +1121,7 @@ namespace Voron.Data.Lookups
             }
         }
 
-        
+
         /// <summary>
         /// Optimized to reduce the cost of traversing the tree
         /// Assumes that matches are sorted 
@@ -1146,12 +1136,12 @@ namespace Voron.Data.Lookups
                 SearchInCurrentPage(keys[i], ref state);
                 if (state.LastMatch == 0) // found the value
                 {
-                    terms[i] = GetValue(ref state, 
+                    terms[i] = GetValue(ref state,
                         // limit the search on the _next_ call on this page
                         state.LastSearchPosition);
                     continue;
                 }
-                
+
                 // didn't find the value, need to check if this is on this page by
                 // checking if this is meant to go *after* the last value in the page
                 if (~state.LastSearchPosition < state.Header->NumberOfEntries)
