@@ -29,7 +29,8 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                     <>
                                         <NodeSetItem key={locationId}>
                                             <Label htmlFor={locationId}>
-                                                <Icon icon="node" color="node" /> {location.nodeTag}
+                                                <Icon icon="node" color="node" title={"Node " + location.nodeTag} />
+                                                {location.nodeTag}
                                                 <div className="d-flex justify-content-center">
                                                     <Radio
                                                         id={locationId}
@@ -52,22 +53,24 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
 
                         return (
                             <div key={nodeId}>
-                                <NodeSet color="shard" className="my-1">
-                                    <Card className="d-flex justify-content-center">
-                                        <NodeSetLabel color="node" icon="node">
-                                            {nodeTag}
-                                        </NodeSetLabel>
-                                    </Card>
-
+                                <NodeSet className="my-1">
+                                    <NodeSetLabel color="node" icon="node" title={"Node " + nodeTag}>
+                                        {nodeTag}
+                                    </NodeSetLabel>
+                                    <div className="node-set-separator" />
                                     <NodeSetList>
                                         {locations
                                             .filter((x) => x.nodeTag === nodeTag)
                                             .map((location) => {
                                                 const shardId = nodeId + "-shard-" + location.shardNumber;
                                                 return (
-                                                    <Label key={shardId} htmlFor={shardId}>
-                                                        <NodeSetItem color="shard" icon="shard">
-                                                            {location.shardNumber}
+                                                    <NodeSetItem color="shard">
+                                                        <Label
+                                                            key={shardId}
+                                                            htmlFor={shardId}
+                                                            title={"Shard " + location.shardNumber}
+                                                        >
+                                                            <Icon icon="shard" color="shard" /> {location.shardNumber}
                                                             <div className="d-flex justify-content-center">
                                                                 <Radio
                                                                     id={shardId}
@@ -78,8 +81,8 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                                                     color="shard"
                                                                 />
                                                             </div>
-                                                        </NodeSetItem>
-                                                    </Label>
+                                                        </Label>
+                                                    </NodeSetItem>
                                                 );
                                             })}
                                     </NodeSetList>

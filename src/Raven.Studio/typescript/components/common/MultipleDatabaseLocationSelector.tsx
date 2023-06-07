@@ -268,7 +268,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                 return (
                                                     <NodeSetItem key={uniqueKey}>
                                                         <Label htmlFor={uniqueKey} title={"Shard " + shardNumber}>
-                                                            <Icon icon="shard" color="shard" title="Orchestrator" />
+                                                            <Icon icon="shard" color="shard" />
                                                             {shardNumber}
                                                             <div className="d-flex justify-content-center">
                                                                 <Checkbox
