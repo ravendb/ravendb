@@ -1,42 +1,33 @@
-﻿import React, { ReactNode, useState, useEffect, useRef, Children } from "react";
-
+﻿import React, { ReactNode } from "react";
 import "./AboutView.scss";
 import { Icon } from "./Icon";
-
+import { Button, PopoverBody, UncontrolledPopover } from "reactstrap";
+import classNames from "classnames";
+import useId from "components/hooks/useId";
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
     className?: string;
 }
 
-import { Button } from "reactstrap";
-import classNames from "classnames";
-
 const AboutView = (props: AboutViewProps) => {
     const { children, className } = props;
-    const [isOpen, setIsOpen] = useState(false);
-    const ref = useRef(null);
-
-    const toggle = () => setIsOpen(!isOpen);
-
-    const handleClickOutside = (event: MouseEvent) => {
-        if (ref.current && !ref.current.contains(event.target)) {
-            setIsOpen(false);
-        }
-    };
-
-    useEffect(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
+    const popoverId = useId("aboutView");
 
     return (
-        <div className={classNames("about-view", className)} ref={ref}>
-            <Button color="info" size="sm" active={isOpen} onClick={toggle}>
+        <div className={classNames(className)}>
+            <Button color="info" id={popoverId} size="sm">
                 <Icon icon="info" /> About This View
             </Button>
-            {isOpen && <div className="p-4 about-view-dropdown">{children}</div>}
+
+            <UncontrolledPopover
+                placement="bottom"
+                target={popoverId}
+                trigger="legacy"
+                className="bs5 about-view-dropdown"
+                offset={[-175, 10]}
+            >
+                <PopoverBody className="p-4">{children}</PopoverBody>
+            </UncontrolledPopover>
         </div>
     );
 };
