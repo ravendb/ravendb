@@ -23,35 +23,43 @@ public class PostingListSize : StorageTest
     public unsafe void CanManagePageSplit2()
     {
         var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.page-base64.txt"));
-        // we are reproducing a scenario here in the worst possible way, but simply *copying* the raw bytes into the page
-        // this is done because we aren't sure _how_ we gotten to this state. Note that changing the behavior / structure of lookup may mess up
-        // this test, but that is probably not likely, since the format should be backward compatible. 
-        byte[] data = Convert.FromBase64String(reader.ReadToEnd());
-        long rootPage;
-        using( var tx = Env.WriteTransaction())
+        while (true)
         {
-            var list = tx.LookupFor<long>("test");
-            rootPage = list.State.RootPage;
-            tx.Commit();
-        }
-
-        using (var tx = Env.WriteTransaction())
-        {
-            // raw copying of the data to the page, bypassing the actual logic
-            fixed (byte* b = data)
+            string line = reader.ReadLine();
+            if (line == null) break;
+            
+            // we are reproducing a scenario here in the worst possible way, but simply *copying* the raw bytes into the page
+            // this is done because we aren't sure _how_ we gotten to this state. Note that changing the behavior / structure of lookup may mess up
+            // this test, but that is probably not likely, since the format should be backward compatible. 
+            byte[] data = Convert.FromBase64String(line);
+            long rootPage;
+            using( var tx = Env.WriteTransaction())
             {
-                Page modifyPage = tx.LowLevelTransaction.ModifyPage(rootPage);
-                Unsafe.CopyBlock(modifyPage.Pointer,b, 8192);
-                modifyPage.PageNumber = rootPage; // we overwrote that
+                var list = tx.LookupFor<long>("test");
+                rootPage = list.State.RootPage;
                 tx.Commit();
             }
-        }
 
-        using( var tx = Env.WriteTransaction())
-        {
-            var list = tx.LookupFor<long>("test");
-            list.Add(16778, 634961079220000000);
-            tx.Commit();
+            using (var tx = Env.WriteTransaction())
+            {
+                // raw copying of the data to the page, bypassing the actual logic
+                fixed (byte* b = data)
+                {
+                    Page modifyPage = tx.LowLevelTransaction.ModifyPage(rootPage);
+                    Unsafe.CopyBlock(modifyPage.Pointer,b, 8192);
+                    modifyPage.PageNumber = rootPage; // we overwrote that
+                    tx.Commit();
+                }
+            }
+            
+            var parts = reader.ReadLine()!.Split(' ');
+
+            using( var tx = Env.WriteTransaction())
+            {
+                var list = tx.LookupFor<long>("test");
+                list.Add(long.Parse(parts[0]), long.Parse(parts[1]));
+                tx.Commit();
+            }
         }
     }
 
