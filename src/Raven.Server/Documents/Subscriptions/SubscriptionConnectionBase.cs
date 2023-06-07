@@ -78,6 +78,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         private TestingStuff _forTestingPurposes;
 
+        private Task<SubscriptionConnectionClientMessage> _lastReplyFromClientTask;
+
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (_forTestingPurposes != null)
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Subscriptions
             TcpConnection = tcpConnection;
             _subscriptions = subscriptions;
             ServerStore = serverStore;
-            _copiedBuffer = memoryBuffer.Clone(serverStore.ContextPool);
+            _copiedBuffer = memoryBuffer.Clone(tcpConnection.ContextPool);
             _tcpConnectionDisposable = tcpConnectionDisposable;
 
             DatabaseName = database;
@@ -137,7 +139,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             using (Processor = CreateProcessor(this))
             {
-                var replyFromClientTask = GetReplyFromClientAsync();
+                var replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
 
                 AfterProcessorCreation();
 
@@ -925,7 +927,7 @@ namespace Raven.Server.Documents.Subscriptions
                         break;
                     }
 
-                    replyFromClientTask = GetReplyFromClientAsync();
+                    replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
 
@@ -1031,7 +1033,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     // ignored
                 }
-
+                
                 try
                 {
                     _tcpConnectionDisposable?.Dispose();
@@ -1049,11 +1051,24 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     // ignored
                 }
-
-
+                
                 try
                 {
                     CancellationTokenSource.Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                try
+                {
+                    if (_lastReplyFromClientTask is {IsCompleted: false})
+                    {
+                        // it's supposed this task will fail here since we disposed all resources used by connection
+                        // but we must wait for it before we release _copiedBuffer
+                        _lastReplyFromClientTask.Wait();
+                    } 
                 }
                 catch
                 {
