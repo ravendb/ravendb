@@ -659,6 +659,7 @@ namespace Voron.Impl
         {
             if (pageNumber == null)
             {
+                EnsureNotCurrentlyHoldingRootObjectsOpen();
                 pageNumber = _freeSpaceHandling.TryAllocateFromFreeSpace(this, numberOfPages);
                 if (pageNumber == null) // allocate from end of file
                 {
@@ -667,6 +668,15 @@ namespace Voron.Impl
                 }
             }
             return AllocatePage(numberOfPages, pageNumber.Value, previousPage, zeroPage);
+        }
+
+        [Conditional("DEBUG")]
+        private void EnsureNotCurrentlyHoldingRootObjectsOpen()
+        {
+            using (new Tree.DirectAddScope(RootObjects))
+            {
+                // this ensures that we'll get consistent errors for RavenDB-20647
+            }
         }
 
         public Page AllocateOverflowRawPage(long overflowSize, out int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)

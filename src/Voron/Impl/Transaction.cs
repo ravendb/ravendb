@@ -200,8 +200,12 @@ namespace Voron.Impl
             var existing = LowLevelTransaction.RootObjects.Read(name);
             if (existing == null)
             {
-                using var _ = LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(PostingListState), out var p);
-                PostingList.Create(this.LowLevelTransaction, ref MemoryMarshal.AsRef<PostingListState>(new Span<byte>(p, sizeof(PostingListState))));
+                var state = new PostingListState();
+                PostingList.Create(this.LowLevelTransaction, ref state);
+                using (LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(PostingListState), out var p))
+                {
+                    Unsafe.Copy(p, ref state);
+                }
                 existing = LowLevelTransaction.RootObjects.Read(name);
             }
  
