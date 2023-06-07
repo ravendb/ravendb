@@ -673,6 +673,8 @@ namespace Voron.Impl
         [Conditional("DEBUG")]
         private void EnsureNotCurrentlyHoldingRootObjectsOpen()
         {
+            if (RootObjects == null)
+                return;
             using (new Tree.DirectAddScope(RootObjects))
             {
                 // this ensures that we'll get consistent errors for RavenDB-20647
