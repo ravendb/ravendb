@@ -30,6 +30,9 @@ using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Utils;
 using Xunit;
 using Raven.Server.Documents;
+using System.Text;
+using Newtonsoft.Json;
+using Tests.Infrastructure;
 
 namespace FastTests
 {
@@ -299,6 +302,33 @@ namespace FastTests
                 if (record.IsSharded)
                     databaseName = await _parent.Sharding.GetShardDatabaseNameForDocAsync(store, docId);
                 return await _parent.GetDocumentDatabaseInstanceFor(store, databaseName);
+            }
+
+            public async Task<string> GetEtlDebugInfo(string database, TimeSpan timeout, RavenDatabaseMode databaseMode = RavenDatabaseMode.Single)
+            {
+                IEnumerable<DocumentDatabase> databases = databaseMode switch
+                {
+                    RavenDatabaseMode.Single => new[] { await _parent.GetDatabase(database) },
+                    RavenDatabaseMode.Sharded => await _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database).ToListAsync(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(databaseMode), databaseMode, null)
+                };
+
+                var sb = new StringBuilder($"ETL did not finish in {timeout.TotalSeconds} seconds.");
+
+                foreach (var documentDatabase in databases)
+                {
+                    var performanceStats = GetEtlPerformanceStatsForDatabase(documentDatabase);
+                    sb.AppendLine($"database '{documentDatabase.Name}' stats : {performanceStats}");
+                }
+
+                return sb.ToString();
+            }
+
+            public string GetEtlPerformanceStatsForDatabase(DocumentDatabase database)
+            {
+                var process = database.EtlLoader.Processes.First();
+                var stats = process.GetPerformanceStats();
+                return string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject));
             }
 
             public void Dispose()

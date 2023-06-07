@@ -176,12 +176,11 @@ loadToOrders(partitionBy(key),
         }
 
 
-        private static async Task<string> GetPerformanceStats(RavenServer server, string database, TimeSpan timeout)
+        private async Task<string> GetPerformanceStats(RavenServer server, string database, TimeSpan timeout)
         {
             var documentDatabase = await GetDatabase(server, database);
-            var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
+            var performanceStats = Etl.GetEtlPerformanceStatsForDatabase(documentDatabase);
             return $"olap etl to local machine did not finish in {timeout.TotalSeconds} seconds. stats : {performanceStats}";
         }
-
     }
 }
