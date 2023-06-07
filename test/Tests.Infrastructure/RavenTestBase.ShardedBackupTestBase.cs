@@ -28,11 +28,11 @@ namespace FastTests;
 
 public partial class RavenTestBase
 {
-    public class ShardedBackupTestsBase
+    public class ShardedBackupTestBase
     {
         internal readonly RavenTestBase _parent;
 
-        public ShardedBackupTestsBase(RavenTestBase parent)
+        public ShardedBackupTestBase(RavenTestBase parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }

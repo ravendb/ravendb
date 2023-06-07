@@ -10,11 +10,11 @@ namespace FastTests;
 
 public partial class RavenTestBase
 {
-    public class ShardedEtlTestsBase
+    public class ShardedEtlTestBase
     {
         internal readonly RavenTestBase _parent;
 
-        public ShardedEtlTestsBase(RavenTestBase parent)
+        public ShardedEtlTestBase(RavenTestBase parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
@@ -66,7 +66,6 @@ public partial class RavenTestBase
 
             return list;
         }
-
 
         public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
