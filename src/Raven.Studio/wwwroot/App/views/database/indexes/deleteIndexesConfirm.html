@@ -7,7 +7,7 @@
             </button>
         </div>
         <div class="modal-body force-text-wrap">
-            <p data-bind="html: subTitleHtml"></p>
+            <p data-bind="visible: indexesInfoForDelete?.length > 0, html: subTitleHtml"></p>
             <ul data-bind="foreach: indexesInfoForDelete" style="max-height: 200px; overflow-y: auto;">
                 <li class="padding padding-xs">
                     <strong data-bind="text: indexName"></strong>
@@ -15,6 +15,12 @@
                         <span data-bind="visible: referenceCollection, text: '(Reduce Results Collections: ' + reduceOutputCollection + ', ' + referenceCollection + ')'" class="margin-left margin-left-sm"></span>
                         <span data-bind="visible: !referenceCollection, text: '(Reduce Results Collection: ' + reduceOutputCollection + ')'" class="margin-left margin-left-sm"></span>
                     </small>
+                </li>
+            </ul>
+            <p data-bind="visible: lockedIndexNames?.length > 0">Skipping locked indexes:</p>
+            <ul data-bind="foreach: lockedIndexNames" style="max-height: 200px; overflow-y: auto;">
+                <li class="padding padding-xs">
+                    <strong data-bind="text: $data"></strong>
                 </li>
             </ul>
             <hr data-bind="visible: showWarning">

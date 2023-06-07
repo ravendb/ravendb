@@ -3,18 +3,21 @@ import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
+import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
 class indexInfoForDelete {
     indexName: string;
     reduceOutputCollection: string;
     referenceCollection: string;
+    lockMode: IndexLockMode;
 
     readonly referenceCollectionExtension = "/References";
     
-    constructor(indexName: string, reduceOutputCollection: string, hasPatternForReduceOutputCollection: boolean) {
+    constructor(indexName: string, reduceOutputCollection: string, hasPatternForReduceOutputCollection: boolean, lockMode: IndexLockMode) {
         this.indexName = indexName;
         this.reduceOutputCollection = reduceOutputCollection;
         this.referenceCollection = hasPatternForReduceOutputCollection ? reduceOutputCollection + this.referenceCollectionExtension : "";
+        this.lockMode = lockMode;
     }
 }
 
@@ -23,7 +26,7 @@ interface IndexToDelete {
     name: KnockoutObservable<string> | string;
     reduceOutputCollectionName: KnockoutObservable<string> | string;
     patternForReferencesToReduceOutputCollection: KnockoutObservable<string> | string;
-    
+    lockMode: KnockoutObservable<IndexLockMode> | IndexLockMode;
 }
 
 class deleteIndexesConfirm extends dialogViewModelBase {
@@ -36,6 +39,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     deleteTask = $.Deferred<boolean>();
 
     indexesInfoForDelete = Array<indexInfoForDelete>();
+    lockedIndexNames = Array<string>();
 
     private indexes: IndexToDelete[];
 
@@ -50,8 +54,23 @@ class deleteIndexesConfirm extends dialogViewModelBase {
             throw new Error("Indexes must not be null or empty.");
         }
         
-        this.indexesInfoForDelete = indexes.map(x => new indexInfoForDelete(ko.unwrap(x.name), ko.unwrap(x.reduceOutputCollectionName), !!ko.unwrap(x.patternForReferencesToReduceOutputCollection)));
+        const allIndexes = indexes
+            .map(x => new indexInfoForDelete(
+                ko.unwrap(x.name),
+                ko.unwrap(x.reduceOutputCollectionName),
+                !!ko.unwrap(x.patternForReferencesToReduceOutputCollection),
+                ko.unwrap(x.lockMode)
+            ));
 
+        allIndexes.forEach(index => {
+            if (index.lockMode === "LockedError" || index.lockMode === "LockedIgnore") {
+                this.lockedIndexNames.push(index.indexName);
+                return;
+            }
+
+            this.indexesInfoForDelete.push(index);
+        })
+        
         if (this.indexesInfoForDelete.length === 1) {
             this.title = "Delete index?";
             this.subTitleHtml = `You're deleting index:`;
@@ -72,7 +91,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
                 if (this.indexesInfoForDelete.length > 1) {
                     messagePublisher.reportSuccess("Successfully deleted " + this.indexesInfoForDelete.length + " indexes!");
                 }
-                this.deleteTask.resolve(true);
+                this.deleteTask.resolve(true, this.indexesInfoForDelete.map(x => x.indexName));
             })
             .fail(() => this.deleteTask.reject());
 
