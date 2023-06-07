@@ -328,6 +328,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 scope.Write(path, fieldId, dynamicJson.BlittableJson, ref entryWriter);
                 break;
 
+            case ValueType.Dictionary:
             case ValueType.ConvertToJson:
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
