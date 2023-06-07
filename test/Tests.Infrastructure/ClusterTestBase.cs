@@ -1261,17 +1261,22 @@ namespace Tests.Infrastructure
             {
                 historyEntry.TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup);
                 fullBackup.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime fullBackupCreatedAt);
+                fullBackup.TryGet(BackupHistoryEntry.IdPropertyName, out string fullBackupId);
+
 
                 Assert.True(dict.TryAdd((fullBackupCreatedAt, true), JsonDeserializationClient.BackupHistoryEntry(fullBackup)),
                     $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={fullBackupCreatedAt} already exists in Dictionary");
+                Assert.Equal(fullBackupId, fullBackupCreatedAt.Ticks.ToString());
 
                 historyEntry.TryGet(nameof(BackupHistory.IncrementalBackups), out BlittableJsonReaderArray increments);
                 foreach (BlittableJsonReaderObject increment in increments)
                 {
                     increment.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime incrementCreatedAt);
+                    increment.TryGet(BackupHistoryEntry.IdPropertyName, out string incrementId);
 
                     Assert.True(dict.TryAdd((incrementCreatedAt, false), JsonDeserializationClient.BackupHistoryEntry(increment)),
                         $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={incrementCreatedAt} already exists in Dictionary");
+                    Assert.Equal(incrementId, incrementCreatedAt.Ticks.ToString());
                 }
             }
 

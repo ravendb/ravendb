@@ -9,6 +9,7 @@ public class BackupHistoryEntry : IDynamicJsonValueConvertible
 {
     public string GenerateItemKey() => $"values/{DatabaseName}/backup-history/{TaskId}";
     public static string GenerateItemPrefix(string databaseName) => $"values/{databaseName}/backup-history/";
+    public const string IdPropertyName = "Id";
 
     public BackupType BackupType { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -24,6 +25,7 @@ public class BackupHistoryEntry : IDynamicJsonValueConvertible
     {
         return new DynamicJsonValue
         {
+            [IdPropertyName] = CreatedAt.Ticks.ToString(),
             [nameof(BackupType)] = BackupType,
             [nameof(CreatedAt)] = CreatedAt,
             [nameof(DatabaseName)] = DatabaseName,
