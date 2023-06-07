@@ -39,21 +39,22 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
     protected void ApplyPaging(ref TCombinedResult result, QueryTimingsScope scope)
     {
         QueryTimingsScope pagingScope = null;
-        Query.Offset ??= Query.Start;
-        Query.Limit ??= Query.PageSize;
+        
+        var queryOffset = Query.Offset is null && Query.Limit is null ? Query.Start : Query.Offset ?? 0;
+        var queryLimit = Query.Offset is null && Query.Limit is null ? Query.PageSize : Query.Limit ?? long.MaxValue;
         
         
         
-        if (Query.Offset is > 0)
+        if (queryOffset > 0)
         {
             using (GetPagingScope())
             {
-                var count = Math.Min(result.Results.Count, Math.Min(Query.Offset ?? 0, int.MaxValue));
+                var count = Math.Min(result.Results.Count, Math.Min(queryOffset, int.MaxValue));
                 result.Results.RemoveRange(0, (int)count);
             }
         }
 
-        var limit = Math.Min(Query.Limit ?? long.MaxValue, Query.FilterLimit ?? long.MaxValue);
+        var limit = Math.Min(queryLimit, Query.FilterLimit ?? long.MaxValue);
         if (result.Results.Count > limit)
         {
             using (GetPagingScope())
