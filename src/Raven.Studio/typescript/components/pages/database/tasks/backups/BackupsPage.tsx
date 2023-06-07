@@ -275,7 +275,7 @@ export function BackupsPage(props: BackupsPageProps) {
         <div className="flex-grow-1 flex-stretch-items">
             <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (
-                    <div className="flex-shrink-0 hstack gap-4 mb-4">
+                    <div className="flex-shrink-0 hstack gap-2 mb-4">
                         <Button
                             onClick={navigateToRestoreDatabase}
                             title="Navigate to creating a new database from a backup"

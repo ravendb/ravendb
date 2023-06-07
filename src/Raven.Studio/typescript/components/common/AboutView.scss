@@ -1,35 +1,11 @@
 ﻿@use "Content/scss/bs5variables";
 
-.about-view {
-    display: inline-block;
-    position: relative;
-
-    @keyframes slide-in {
-        from {
-            opacity: 0;
-            transform: translateY(0) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(bs5variables.$gutter-xxs) scale(1);
-        }
-    }
-
-    .about-view-dropdown {
-        position: absolute;
-        z-index: bs5variables.$zindex-dropdown;
-        transform-origin: right top;
-        width: 500px;
-        max-width: 90vw;
-        right: 0;
-        font-size: bs5variables.$font-size-sm;
-        backdrop-filter: blur(25px);
-        background-color: rgba(var(--bs-body-bg-rgb), 0.85);
-
-        animation: slide-in 150ms bs5variables.$global-easing;
-        animation-fill-mode: forwards;
-        color: bs5variables.$text-color-var;
-        box-shadow: bs5variables.$box-shadow, 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2);
-        border-radius: bs5variables.$border-radius-lg;
-    }
+.about-view-dropdown .popover {
+    width: 500px;
+    max-width: 90vw;
+    font-size: bs5variables.$font-size-sm;
+    border: none;
+    color: bs5variables.$text-color-var;
+    box-shadow: bs5variables.$box-shadow, 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2);
+    border-radius: bs5variables.$border-radius-lg;
 }
