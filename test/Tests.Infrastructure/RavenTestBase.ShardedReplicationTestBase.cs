@@ -42,6 +42,23 @@ public partial class RavenTestBase
             }
         }
 
+        public async Task EnsureReplicatingAsyncForShardedDestination(IDocumentStore src, IDocumentStore dst)
+        {
+            var sharding = await _parent.Sharding.GetShardingConfigurationAsync(dst);
+            foreach (var shardNumber in sharding.Shards.Keys)
+            {
+                var id = $"marker/{Guid.NewGuid()}${_parent.Sharding.GetRandomIdForShard(sharding, shardNumber)}";
+
+                using (var s = src.OpenSession())
+                {
+                    s.Store(new { }, id);
+                    s.SaveChanges();
+                }
+
+                Assert.NotNull(await _parent.Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 30 * 1000));
+            }
+        }
+
         public class ShardedReplicationManager : IReplicationManager
         {
             public readonly Dictionary<int, ReplicationManager> ShardReplications;
