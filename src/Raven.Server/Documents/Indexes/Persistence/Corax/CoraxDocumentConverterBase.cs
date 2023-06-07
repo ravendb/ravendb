@@ -382,7 +382,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.Lucene:
                 throw new NotSupportedException("The Lucene value type is not supported by Corax. You can change index type into Lucene.");
             default:
-                throw new NotImplementedException();
+                throw new NotSupportedException(valueType + " is not a supported type for indexing");
         }
     }
 
