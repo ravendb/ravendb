@@ -53,12 +53,10 @@ namespace Raven.Client.Documents.Queries.Timings
 
         public DynamicJsonValue ToJson()
         {
-            const string timings = "Timings";
-            DynamicJsonValue djv = new();
-            djv[timings] = new DynamicJsonValue
+            DynamicJsonValue djv = new DynamicJsonValue
             {
                 [nameof(DurationInMs)] = DurationInMs,
-                [timings] = InnerToJson(Timings)
+                [nameof(Timings)] = InnerToJson(Timings)
             };
 
             return djv;
@@ -74,9 +72,7 @@ namespace Raven.Client.Documents.Queries.Timings
                     {
                         [nameof(DurationInMs)] = kvp.Value.DurationInMs
                     };
-                    if (kvp.Value.Timings != null)
-                        innerJson[timings] = InnerToJson(kvp.Value.Timings);
-
+                    innerJson[nameof(Timings)] = InnerToJson(kvp.Value.Timings);
                     json[kvp.Key] = innerJson;
                 }
 
