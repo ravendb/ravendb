@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var token = CreateTimeLimitedBackgroundOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
-            bool includeForceCreated = GetBoolValueQueryString("includeForceCreated", required: true) ?? true;
+            bool includeForceCreated = GetBoolValueQueryString("includeForceCreated", required: true) ?? false;
 
             var t = Database.Operations.AddOperation(
                 Database,

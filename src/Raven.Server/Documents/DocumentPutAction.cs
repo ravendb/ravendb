@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flagsBeforeVersion, oldDoc, oldChangeVector,
                                 collectionName))
                         {
-                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue); // = flagsBeforeVersion
+                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
 
                             _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
