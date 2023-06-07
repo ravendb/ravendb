@@ -777,27 +777,26 @@ namespace Voron.Data.Lookups
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state, ref CursorState newPageState)
         {
             int sizeUsed = 0;
-            var halfwaySizeMark = (Constants.Storage.PageSize - PageHeader.SizeOf - state.Header->FreeSpace) / 2;
+            var halfwaySizeMark = Constants.Storage.PageSize / 2;
             int numberOfEntries = state.Header->NumberOfEntries;
             var buffer = stackalloc byte[EncodingBufferSize];
 
             // here we have to guard against wildly unbalanced page structure, if the first 6 entries are 1KB each
             // and we have another 100 entries that are a byte each, if we split based on entry count alone, we'll 
             // end up unbalanced, so we compute the halfway mark based on the _size_ of the entries, not their count
-            for (int i = numberOfEntries - 1; i >= 0; i--)
+
+            int i = numberOfEntries - 1;
+            for (; i >= numberOfEntries/2; i--)
             {
                 DecodeEntry(ref state, i, out var key, out var val);
                 var len = EncodeEntry(newPageState.Header, key, val, buffer);
                 var cost = len + sizeof(ushort);
                 if (sizeUsed + cost > halfwaySizeMark)
-                    return i + 1;
+                    break;
 
                 sizeUsed += cost;
             }
-            Debug.Assert(false, "Should never happen");
-
-            // but let's try to be reasonable about it, we'll move 25% of the entries, should always fit
-            return numberOfEntries / 2 + numberOfEntries / 4; 
+            return i;
         }
 
         [Conditional("DEBUG")]

@@ -1162,7 +1162,8 @@ namespace Voron.Data.CompactTrees
             // here we have to guard against wildly unbalanced page structure, if the first 6 entries are 1KB each
             // and we have another 100 entries that are a byte each, if we split based on entry count alone, we'll 
             // end up unbalanced, so we compute the halfway mark based on the _size_ of the entries, not their count
-            for (int i = numberOfEntries - 1; i >= 0; i--)
+            int i = numberOfEntries - 1;
+            for (; i >= numberOfEntries/2; i--)
             {
                 DecodeEntry(state.Page.Pointer + state.EntriesOffsetsPtr[i], out var keyDiff, out var v);
                 var currentKeyId = DecodeKeyFromPage(ref state, keyDiff);
@@ -1170,12 +1171,11 @@ namespace Voron.Data.CompactTrees
                 int len = EncodeEntry(EncodeKeyToPage(newContainerBase, currentKeyId), v, buffer);
                 var cost =  len + sizeof(ushort);
                 if (sizeUsed + cost > halfwaySizeMark)
-                    return i;
+                    break;
                 sizeUsed += cost;
             }
-            // we should never reach here, but let's have a reasonable default
-            Debug.Assert(false, "How did we reach here?");
-            return numberOfEntries / 2;
+
+            return i;
         }
 
         [Conditional("DEBUG")]
