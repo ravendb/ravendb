@@ -429,7 +429,7 @@ namespace Raven.Client.Documents.Changes
             json[nameof(Type)] = Type;
             
             if(QueryTimings != null)
-                json[nameof(QueryTimings)] = QueryTimings.ToJson();
+                json[nameof(QueryTimings)] = QueryTimings;
 
             return json;
         }
