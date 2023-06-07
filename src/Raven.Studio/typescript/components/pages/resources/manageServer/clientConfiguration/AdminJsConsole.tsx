@@ -54,7 +54,7 @@ export default function AdminJSConsole() {
                                         </p>
                                         <hr />
                                         <div className="small-label mb-2">useful links</div>
-                                        <a href="https://ravendb.net/docs/article-page/5.4/csharp/studio/server/debug/admin-js-console#console-view">
+                                        <a href="https://ravendb.net/l/IBUJ7M/6.0/Csharp">
                                             <Icon icon="newtab" /> Docs - Admin JS Console
                                         </a>
                                     </Col>
@@ -131,7 +131,7 @@ export default function AdminJSConsole() {
                                         height="300px"
                                     />
                                 </div>
-                                <div className="align-self-end">
+                                <div className="run-script-button">
                                     <Button color="primary" size="lg" className="px-4 py-2">
                                         <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
                                         <div className="kbd">

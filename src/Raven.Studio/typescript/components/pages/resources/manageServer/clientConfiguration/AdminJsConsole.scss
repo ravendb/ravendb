@@ -3,6 +3,16 @@
 
 .admin-js-console-grid {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr;
     gap: sizes.$gutter;
+
+    @media (min-width: sizes.$screen-lg) {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .run-script-button {
+        grid-column-end: -1;
+        align-self: end;
+        margin-left: auto;
+    }
 }
