@@ -24,7 +24,7 @@ using Voron.Impl;
 namespace Voron.Data.Lookups
 {
     public sealed unsafe partial class Lookup<TKey> : IPrepareForCommit
-        where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+        where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
     {
         static Lookup()
         {
@@ -621,7 +621,6 @@ namespace Voron.Data.Lookups
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
-                // we are *not* checking if we need to re-compress here, we already did with FindPageFor()
                 bool splitAnyways = true;
                 if (state.Header->FreeSpace >= requiredSize + sizeof(short) &&
                     // at the same time, we need to avoid spending too much time doing de-frags
@@ -692,10 +691,7 @@ namespace Voron.Data.Lookups
             header->Lower = PageHeader.SizeOf ;
             header->Upper = Constants.Storage.PageSize;
             header->FreeSpace = Constants.Storage.PageSize - PageHeader.SizeOf;
-            
-            header->KeysBase = ToLong(currentCauseForSplit);
-            header->ValuesBase = valueForSplit;
-            
+       
             if (header->PageFlags.HasFlag(LookupPageFlags.Branch))
             {
                 _state.BranchPages++;
@@ -727,6 +723,10 @@ namespace Voron.Data.Lookups
             if (numberOfEntries == state.LastSearchPosition && state.LastMatch > 0)
             {
                 newPageState.LastSearchPosition = 0; // add as first
+                
+                newPageState.Header->KeysBase = ToLong(causeForSplit);
+                newPageState.Header->ValuesBase = valueForSplit;
+                
                 var entryLength = EncodeEntry(newPageState.Header, causeForSplit, valueForSplit, entryBufferPtr); 
                 AddEntryToPage(ref newPageState, entryLength, entryBufferPtr);
                 return causeForSplit;
@@ -736,8 +736,10 @@ namespace Voron.Data.Lookups
             int entriesCopied = 0;
             int sizeCopied = 0;
             ushort* offsets = newPageState.EntriesOffsetsPtr;
-            int i = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state);
-
+            (int i, TKey minKey, long minVal) = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state);
+            newPageState.Header->KeysBase = ToLong(minKey);
+            newPageState.Header->ValuesBase = minVal;
+            
             for (; i < numberOfEntries; i++)
             {
                 DecodeEntry(ref state, i, out var key, out var val);
@@ -748,11 +750,15 @@ namespace Voron.Data.Lookups
                 newPageState.Header->Upper -= (ushort)entryLength;
                 newPageState.Header->FreeSpace -= (ushort)(entryLength + sizeof(ushort));
                 sizeCopied += entryLength + sizeof(ushort);
+                
+                Debug.Assert(sizeCopied <= Constants.Storage.PageSize - PageHeader.SizeOf);
+                
                 offsets[entriesCopied++] = newPageState.Header->Upper;
                 Memory.Copy(page.Pointer + newPageState.Header->Upper, entryBufferPtr, entryLength);
             }
             state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
             state.Header->FreeSpace += (ushort)(sizeCopied);
+            Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
             DefragPage(_llt, ref state); // need to ensure that we have enough space to add the new entry in the source page
 
@@ -779,24 +785,29 @@ namespace Voron.Data.Lookups
             return GetKey(ref newPageState, 0);
         }
 
-        private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
+        private static (int Index, TKey MinKey, long MinVal) FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
         {
             int sizeUsed = 0;
-            var halfwaySizeMark = (Constants.Storage.PageSize - state.Header->FreeSpace) / 2;
+            var halfwaySizeMark = (Constants.Storage.PageSize - PageHeader.SizeOf - state.Header->FreeSpace) / 2;
             int numberOfEntries = state.Header->NumberOfEntries;
+            var minKey = TKey.MaxValue;
+            var minVal = long.MaxValue;
             // here we have to guard against wildly unbalanced page structure, if the first 6 entries are 1KB each
             // and we have another 100 entries that are a byte each, if we split based on entry count alone, we'll 
             // end up unbalanced, so we compute the halfway mark based on the _size_ of the entries, not their count
-            for (int i =0; i < numberOfEntries; i++)
+            for (int i = numberOfEntries - 1; i >= 0; i--)
             {
-                var len = GetEntrySize(ref state, i);
-                sizeUsed += len;
-                if (sizeUsed >= halfwaySizeMark)
-                    return i;
+                var len = DecodeEntry(ref state, i, out var key, out var val);
+                var cost =  len + sizeof(ushort);
+                if (sizeUsed + cost > halfwaySizeMark)
+                    return (i, minKey, minVal);
+                minKey = TKey.Min(minKey, key);
+                minVal = long.Min(minVal, val);
+                sizeUsed += cost;
             }
             // we should never reach here, but let's have a reasonable default
             Debug.Assert(false, "How did we reach here?");
-            return numberOfEntries / 2;
+            return (numberOfEntries/2, minKey, minVal);
         }
 
         [Conditional("DEBUG")]

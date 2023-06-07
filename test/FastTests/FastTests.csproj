@@ -48,6 +48,10 @@
     <EmbeddedResource Include="Voron\Util\SmallBufferMisleading2.txt" />
     <None Remove="Voron\Util\GreaterThan42B.txt" />
     <EmbeddedResource Include="Voron\Util\GreaterThan42B.txt" />
+    <None Remove="Corax\Bugs\PostListSplit.txt" />
+    <EmbeddedResource Include="Corax\Bugs\PostListSplit.txt" />
+    <None Remove="Corax\Bugs\page-base64.txt" />
+    <EmbeddedResource Include="Corax\Bugs\page-base64.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />

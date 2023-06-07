@@ -363,7 +363,7 @@ namespace Voron.Debugging
         
         [Conditional("DEBUG")]
         public static void RenderAndShow<TKey>(Lookup<TKey> tree, string message = null)
-            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             var headerData = $"{tree.State}";
             if (!string.IsNullOrWhiteSpace(message))
@@ -374,7 +374,7 @@ namespace Voron.Debugging
         
         [Conditional("DEBUG")]
         public static void RenderAndShowTCompactTree<TKey>(Lookup<TKey>  tree, long startPageNumber, string headerData = null)
-            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             RenderHtmlTreeView(writer =>
             {
@@ -388,7 +388,7 @@ namespace Voron.Debugging
         }
         
         private static unsafe void RenderPageInternal<TKey>(Lookup<TKey>  tree, Page page, TextWriter sw, string text, bool open)
-            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>, INumber<TKey>
         {
             var header = (CompactPageHeader*)page.Pointer;
             sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
