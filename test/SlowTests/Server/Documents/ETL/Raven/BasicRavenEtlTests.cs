@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -83,7 +84,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void WithDocumentPrefix(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task WithDocumentPrefix(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -132,14 +133,17 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                WaitForValue(() =>
+                var timeout = 30_000;
+                var etlReachedDestination = WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
                         var user = session.Load<User>("users/1-A,Chicago");
                         return user != null;
                     }
-                }, true);
+                }, true, timeout);
+
+                Assert.True(etlReachedDestination, await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(timeout), srcDbMode));
 
                 string secondaryId; 
                 using (var session = dest.OpenSession())
@@ -161,14 +165,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                WaitForValue(() =>
+                etlReachedDestination = WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
                         return session.Advanced.Exists("users/1-A,Chicago") == false && 
                                session.Advanced.Exists(secondaryId) == false;
                     }
-                }, true);
+                }, true, timeout);
+
+                Assert.True(etlReachedDestination, await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(timeout), srcDbMode));
 
                 using (var session = dest.OpenSession())
                 {
