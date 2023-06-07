@@ -390,11 +390,11 @@ export function useIndexesPage(database: database, stale: boolean) {
         if (indexes.length > 0) {
             const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
             app.showBootstrapDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask.done((deleted: boolean) => {
-                if (deleted) {
+            deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
+                if (succeed) {
                     dispatch({
                         type: "DeleteIndexes",
-                        indexNames: indexes.map((x) => x.name),
+                        indexNames: deletedIndexNames,
                     });
                 }
             });
