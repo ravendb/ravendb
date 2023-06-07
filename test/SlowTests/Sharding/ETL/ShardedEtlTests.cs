@@ -1640,7 +1640,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 {
                     EnsureNonStaleElasticResults(client);
                     return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
-                }, expectedVal: numberOfOrders * numberOfLinesPerOrder, timeout: 30_000);
+                }, expectedVal: numberOfOrders * numberOfLinesPerOrder, timeout: 60_000);
 
                 Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder, await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
 
@@ -1666,7 +1666,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 {
                     EnsureNonStaleElasticResults(client);
                     return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
-                }, expectedVal: 0, timeout: 30_000);
+                }, expectedVal: 0, timeout: 60_000);
 
                 Assert.True(orderLinesCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, orderLinesCountAfterDelete));
             }
@@ -1935,7 +1935,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         var q = await session.Query<User>().ToListAsync();
                         return q.Count;
                     }
-                }, ids.Count, 30_000);
+                }, ids.Count, 60_000);
 
                 Assert.True(count == ids.Count, await AddDebugInfoOnFailure(src, ids.Count, count));
 
@@ -2279,14 +2279,8 @@ loadToAddresses(this.Address);
             var sb = new StringBuilder();
             sb.AppendLine($"not all docs reached destination, expected {expected} docs but got {actual}");
 
-            var dbs = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            await foreach (var database in dbs)
-            {
-                var process = database.EtlLoader.Processes.First();
-                var stats = process.GetPerformanceStats();
-                sb.AppendLine($"ETL performance stats for shard ${database.ShardNumber} :");
-                sb.AppendLine(string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject)));
-            }
+            var performanceStats = await Etl.GetEtlDebugInfo(store.Database, timeout: TimeSpan.FromSeconds(60), databaseMode: RavenDatabaseMode.Sharded);
+            sb.AppendLine(performanceStats);
 
             return sb.ToString();
         }

@@ -335,7 +335,7 @@ loadToOrders(partitionBy(key), orderData);
                         ? TimeSpan.FromMinutes(2)
                         : TimeSpan.FromMinutes(1);
 
-                    Assert.True(etlDone.Wait(timeout), $"olap etl to s3 did not finish in {timeout.TotalMinutes} minutes. stats : {GetPerformanceStats(database)}");
+                    Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout));
 
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
@@ -411,12 +411,6 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        internal static string GetPerformanceStats(DocumentDatabase database)
-        {
-            var process = database.EtlLoader.Processes.First();
-            var stats = process.GetPerformanceStats();
-            return string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject));
-        }
 
         [AmazonS3Fact]
         public async Task CanModifyPartitionColumnName()

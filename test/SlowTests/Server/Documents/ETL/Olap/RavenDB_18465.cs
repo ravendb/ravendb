@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -10,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -80,7 +77,7 @@ loadTo(""Orders"", partitionBy(key),
                 var result = Etl.AddEtl(store, configuration, connectionString);
 
                 var timeout = TimeSpan.FromMinutes(1);
-                Assert.True(etlDone.Wait(timeout), await AddDebugInfoOnFailure(store.Database, timeout, options.DatabaseMode));
+                Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout, options.DatabaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: LocalTests.AllFilesPattern, SearchOption.AllDirectories);
                 var expected = options.DatabaseMode == RavenDatabaseMode.Single ? 2 : 6;
@@ -143,26 +140,6 @@ loadTo(""Orders"", partitionBy(key),
 
                 await session.SaveChangesAsync();
             }
-        }
-
-        private async Task<string> AddDebugInfoOnFailure(string database, TimeSpan timeout, RavenDatabaseMode databaseMode)
-        {
-            IEnumerable<DocumentDatabase> databases = databaseMode switch
-            {
-                RavenDatabaseMode.Single => new[] { await GetDatabase(database) },
-                RavenDatabaseMode.Sharded => await Sharding.GetShardsDocumentDatabaseInstancesFor(database).ToListAsync(),
-                _ => throw new ArgumentOutOfRangeException(nameof(databaseMode), databaseMode, null)
-            };
-
-            var sb = new StringBuilder($"OLAP ETL batch did not complete in {timeout.TotalSeconds} seconds.");
-
-            foreach (var documentDatabase in databases)
-            {
-                var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
-                sb.AppendLine($"database '{documentDatabase.Name}' stats : {performanceStats}");
-            }
-
-            return sb.ToString();
         }
     }
 
