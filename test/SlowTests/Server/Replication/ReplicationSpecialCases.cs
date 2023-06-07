@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
@@ -1325,7 +1324,7 @@ namespace SlowTests.Server.Replication
                 };
 
                 await SetupReplicationAsync(source, destination);
-                await EnsureReplicatingAsync(source, destination);
+                await Sharding.Replication.EnsureReplicatingAsyncForShardedDestination(source, destination);
 
                 var outgoingFailureInfo = sourceDb.ReplicationLoader.OutgoingFailureInfo.ToList();
                 Assert.Equal(1, outgoingFailureInfo.Count);
