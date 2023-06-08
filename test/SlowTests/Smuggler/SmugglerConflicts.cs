@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
@@ -209,9 +210,14 @@ namespace SlowTests.Smuggler
                     }))
                     {
                         await SetupReplicationAsync(store2, store3);
-                        WaitForDocument(store3, "people/1-A");
 
-                        var stats = await GetDatabaseStatisticsAsync(store3);
+                        DatabaseStatistics stats = null;
+                        await WaitForValueAsync(async () =>
+                        {
+                            stats = await GetDatabaseStatisticsAsync(store3);
+                            return stats.CountOfDocuments;
+                        }, expectedVal: 7);
+
                         Assert.Equal(7, stats.CountOfDocuments);
                         Assert.Equal(0, stats.CountOfDocumentsConflicts);
                         Assert.Equal(0, stats.CountOfConflicts);
