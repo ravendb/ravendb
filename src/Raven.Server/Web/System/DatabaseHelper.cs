@@ -104,6 +104,11 @@ namespace Raven.Server.Web.System
                         topology.ValidateTopology(ShardHelper.ToShardName(record.DatabaseName, shardNumber));
                     }
                 }
+
+                if (record.Sharding?.Orchestrator?.Topology?.Count > 0)
+                {
+                    record.Sharding.Orchestrator.Topology.ValidateTopology(record.DatabaseName);
+                }
             }
             else
             {

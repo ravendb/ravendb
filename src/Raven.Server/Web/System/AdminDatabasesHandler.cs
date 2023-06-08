@@ -451,7 +451,7 @@ namespace Raven.Server.Web.System
             {
                 databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
                 databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-                SetReplicationFactor(databaseRecord.Sharding.Orchestrator.Topology, clusterTopology, replicationFactor);
+                UpdateDatabaseTopology(databaseRecord.Sharding.Orchestrator.Topology, clusterTopology, replicationFactor, clusterTransactionId);
 
                 foreach (var (shardNumber, databaseTopology) in databaseRecord.Sharding.Shards)
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);

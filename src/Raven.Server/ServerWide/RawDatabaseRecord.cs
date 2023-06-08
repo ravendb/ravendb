@@ -344,7 +344,7 @@ namespace Raven.Server.ServerWide
                 return Topology.ClusterTransactionIdBase64;
 
             Debug.Assert(Sharding.Shards.All(s => s.Value.ClusterTransactionIdBase64.Equals(Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64)));
-            return Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64;
+            return Sharding.Orchestrator.Topology.ClusterTransactionIdBase64;
         }
 
         private DatabaseStateStatus? _databaseState;
