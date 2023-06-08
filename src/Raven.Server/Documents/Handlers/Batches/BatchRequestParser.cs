@@ -21,6 +21,7 @@ using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Strings;
 using Sparrow.Utils;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -146,17 +147,7 @@ namespace Raven.Server.Documents.Handlers.Batches
         private static unsafe bool ReadClusterTransactionProperty(JsonParserState state)
         {
             return state.CurrentTokenType == JsonParserToken.String &&
-                   state.StringSize == nameof(TransactionMode).Length &&
-                   GetLongFromStringBuffer(state) == 8386654079495008852 && // Transact
-                   *(int*)(state.StringBuffer + sizeof(long)) == 1299083113 && // ionM
-                   *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 25711 && // od
-                   *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long GetLongFromStringBuffer(JsonParserState state)
-        {
-            return *(long*)state.StringBuffer;
+                   "TransactionMode"u8.CompareConstant(state.StringBuffer, state.StringSize);
         }
 
         public async Task<CommandData> ReadSingleCommand(
@@ -743,139 +734,120 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 2:
-                    if (*(short*)state.StringBuffer != 25673)
-                    {
-                        if (*(short*)state.StringBuffer == 28500)
-                            return CommandPropertyName.To;
+                    if ("Id"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.Id;
+                    if ("To"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.To;
 
-                        return CommandPropertyName.NoSuchProperty;
-                    }
-                    return CommandPropertyName.Id;
+                    return CommandPropertyName.NoSuchProperty;
 
                 case 3:
-                    if (*(short*)state.StringBuffer != 25673 || state.StringBuffer[2] != (byte)'s')
-                        return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.Ids;
 
+                    if ("Ids"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.Ids;
+                    
+                    return CommandPropertyName.NoSuchProperty;
                 case 8:
-                    if (*(long*)state.StringBuffer == 8318823012450529091)
+                    if ("Document"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.Document;
+
+                    if ("Counters"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
-                    if (*(long*)state.StringBuffer != 8389754676633104196)
-                        return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.Document;
+
+                    return CommandPropertyName.NoSuchProperty;
 
                 case 4:
-                    if (*(int*)state.StringBuffer == 1701869908)
+                    if ("Type"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.Type;
-                    if (*(int*)state.StringBuffer == 1701667150)
+                    if ("Name"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.Name;
-                    if (*(int*)state.StringBuffer == 1836020294)
+                    if ("From"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.From;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 5:
-                    if (*(int*)state.StringBuffer == 1668571472 &&
-                        state.StringBuffer[4] == (byte)'h')
-                        return CommandPropertyName.Patch;
-                    if (*(int*)state.StringBuffer == 1701080649 &&
-                        state.StringBuffer[4] == (byte)'x')
+                    if ("Index"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.Index;
+                    if ("Patch"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.Patch;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 10:
-                    if (*(long*)state.StringBuffer == 8676578743001572425 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 25701)
+                    if ("IdPrefixed"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.IdPrefixed;
 
-                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 29541)
+                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.TimeSeries;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 11:
-                    if (*(long*)state.StringBuffer == 6085610378508529475 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 28793 &&
-                        state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'e')
+                    if ("ContentType"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
-                    if (*(long*)state.StringBuffer == 7302135340735752259 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
+                    if ("ChangeVector"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.ChangeVector;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 7:
-                    if (*(int*)state.StringBuffer == 1836020294 &&
-                        *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
-                        state.StringBuffer[6] == (byte)'l')
+                    if ("FromEtl"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 13:
-                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1231974249 &&
-                        state.StringBuffer[12] == (byte)'d')
+                    if ("DestinationId"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationId;
-                    if (*(long*)state.StringBuffer == 5509149626205105987 && *(int*)(state.StringBuffer + sizeof(long)) == 1952935525 && state.StringBuffer[12] == (byte)'h')
+
+                    if ("ContentLength"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.ContentLength;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 14:
-                    if (*(int*)state.StringBuffer == 1668571472 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
-                        return CommandPropertyName.PatchIfMissing;
-
-                    if (*(int*)state.StringBuffer == 1970562386 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
+                    if ("ReturnDocument"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.ReturnDocument;
 
-                    if (*(int*)state.StringBuffer == 1635021889 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
+                    if ("PatchIfMissing"u8.CompareConstant(state.StringBuffer))
+                        return CommandPropertyName.PatchIfMissing;
+
+                    if ("AttachmentType"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.AttachmentType;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:
-                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1315860329 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28001 &&
-                        state.StringBuffer[14] == (byte)'e')
+                    if ("DestinationName"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationName;
-                    if (*(long*)state.StringBuffer == 7370533815693177411 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1936943437 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28265 &&
-                        state.StringBuffer[14] == (byte)'g')
+
+                    if ("CreateIfMissing"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:
-                    if (*(long*)state.StringBuffer == 7809644627822735951 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7302135340735752259 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1919906915)
+                    if ("OriginalChangeVector"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.OriginalChangeVector;
+
                     return CommandPropertyName.NoSuchProperty;
 
 
                 case 29:
-                    if (*(long*)state.StringBuffer == 8531315664536891206 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
-                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8247308551402910817 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 1734702177 &&
-                        state.StringBuffer[28] == (byte)'y')
+                    if ("ForceRevisionCreationStrategy"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.ForceRevisionCreationStrategy;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 9:
-                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
-                        state.StringBuffer[8] == (byte)'h')
+                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.JsonPatch;
+
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
@@ -887,8 +859,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 6:
-                    if (*(int*)state.StringBuffer == 1868981570 &&
-                        *(short*)(state.StringBuffer + sizeof(int)) == 25970)
+                    if ("Before"u8.CompareConstant(state.StringBuffer))
                         return ForceRevisionStrategy.Before;
 
                     ThrowInvalidProperty(state, ctx);
@@ -909,9 +880,10 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 8:
-                    if (*(long*)state.StringBuffer == 8389754676633104196)
+                    if ("Document"u8.CompareConstant(state.StringBuffer))
                         return AttachmentType.Document;
-                    if (*(long*)state.StringBuffer == 7957695010998478162)
+
+                    if ("Revision"u8.CompareConstant(state.StringBuffer))
                         return AttachmentType.Revision;
 
                     ThrowInvalidProperty(state, ctx);
@@ -932,105 +904,81 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 3:
-                    if (*(short*)state.StringBuffer == 21840 &&
-                        state.StringBuffer[2] == (byte)'T')
+                    if ("PUT"u8.CompareConstant(state.StringBuffer))
                         return CommandType.PUT;
+
                     break;
 
                 case 5:
-                    if (*(int*)state.StringBuffer == 1129595216 &&
-                        state.StringBuffer[4] == (byte)'H')
+                    if ("PATCH"u8.CompareConstant(state.StringBuffer))
                         return CommandType.PATCH;
-                    break;
 
+                    break;
                 case 6:
-                    if (*(int*)state.StringBuffer == 1162626372 &&
-                        *(short*)(state.StringBuffer + 4) == 17748)
+                    if ("DELETE"u8.CompareConstant(state.StringBuffer))
                         return CommandType.DELETE;
                     break;
 
                 case 8:
-                    if (*(long*)state.StringBuffer == 8318823012450529091)
+                    if ("Counters"u8.CompareConstant(state.StringBuffer))
                         return CommandType.Counters;
                     break;
                 case 9:
-                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
-                        state.StringBuffer[8] == (byte)'h')
+                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
                         return CommandType.JsonPatch;
                     break;
                 case 10:
-                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                    *(short*)(state.StringBuffer + sizeof(long)) == 29541)
+                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
                         return CommandType.TimeSeries;
 
-                    if (*(long*)state.StringBuffer == 6071222181947531586 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 18499)
+                    if ("BatchPATCH"u8.CompareConstant(state.StringBuffer))
                         return CommandType.BatchPATCH;
                     break;
 
                 case 13:
-                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1431336046 &&
-                        state.StringBuffer[sizeof(long) + sizeof(int)] == (byte)'T')
+                    if ("AttachmentPUT"u8.CompareConstant(state.StringBuffer))
                         return CommandType.AttachmentPUT;
                     break;
 
                 case 14:
-                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1866691429)
+                    if ("TimeSeriesCopy"u8.CompareConstant(state.StringBuffer))
                         return CommandType.TimeSeriesCopy;
 
-                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 22864)
+                    if ("AttachmentCOPY"u8.CompareConstant(state.StringBuffer))
                         return CommandType.AttachmentCOPY;
 
-                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1330476142 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 17750)
+                    if ("AttachmentMOVE"u8.CompareConstant(state.StringBuffer))
                         return CommandType.AttachmentMOVE;
+
                     break;
 
                 case 16:
-                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
+                    if ("AttachmentDELETE"u8.CompareConstant(state.StringBuffer))
                         return CommandType.AttachmentDELETE;
                     break;
 
                 case 18:
-                    if (*(long*)state.StringBuffer == 5000528724088418115 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 5793150219460305784 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 21589)
+                    if ("CompareExchangePUT"u8.CompareConstant(state.StringBuffer))
                         return CommandType.CompareExchangePUT;
                     break;
 
                 case 20:
-                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7947001131039880037 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1953654131)
+                    if ("TimeSeriesBulkInsert"u8.CompareConstant(state.StringBuffer))
                         return CommandType.TimeSeriesBulkInsert;
 
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
 
                 case 21:
-                    if (*(long*)state.StringBuffer == 5000528724088418115 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 4928459091005170552 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1413827653 &&
-                        state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'E')
+                    if ("CompareExchangeDELETE"u8.CompareConstant(state.StringBuffer))
                         return CommandType.CompareExchangeDELETE;
 
-                    if (*(long*)state.StringBuffer == 8531315664536891206 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
-                        state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
+                    if ("ForceRevisionCreation"u8.CompareConstant(state.StringBuffer))
                         return CommandType.ForceRevisionCreation;
                     break;
 
                 case 24:
-                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7946997866664784741 &&
-                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8319395793566265955)
+                    if ("TimeSeriesWithIncrements"u8.CompareConstant(state.StringBuffer))
                         return CommandType.TimeSeriesWithIncrements;
                     break;
             }

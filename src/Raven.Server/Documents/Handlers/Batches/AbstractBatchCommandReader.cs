@@ -17,6 +17,7 @@ using Raven.Server.Smuggler;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Strings;
 
 namespace Raven.Server.Documents.Handlers.Batches;
 
@@ -118,9 +119,12 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
             if (state.CurrentTokenType != JsonParserToken.String)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
-
-            if (BatchRequestParser.GetLongFromStringBuffer(state) != 8314892176759549763) // Commands
-                BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
+            
+            unsafe
+            {
+                if ("Commands"u8.CompareConstant(state.StringBuffer, state.StringSize) == false)
+                    BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
+            }
 
             while (parser.Read() == false)
                 await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
