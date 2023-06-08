@@ -35,7 +35,7 @@ public partial class IndexSearcher
         {
             numericalField = field.GetNumericFieldMetadata<long>(_transaction.Allocator);
             _fieldsTree
-                ?.LookupFor<long>(numericalField.FieldName)
+                ?.LookupFor<Int64LookupKey>(numericalField.FieldName)
                 ?.TryGetValue((long)(object)term, out containerId);
 
         }
@@ -43,7 +43,7 @@ public partial class IndexSearcher
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
              _fieldsTree
-                 ?.LookupFor<double>(numericalField.FieldName)
+                 ?.LookupFor<DoubleLookupKey>(numericalField.FieldName)
                 ?.TryGetValue((double)(object)term, out containerId);
         }
 
@@ -65,9 +65,9 @@ public partial class IndexSearcher
     
     public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
     
-    public Lookup<long> GetLongTermsFor(Slice name) =>_fieldsTree?.LookupFor<long>(name);
+    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) =>_fieldsTree?.LookupFor<Int64LookupKey>(name);
     
-    public Lookup<double> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<double>(name);
+    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<DoubleLookupKey>(name);
 
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {

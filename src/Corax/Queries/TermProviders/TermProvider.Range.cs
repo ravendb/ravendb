@@ -124,7 +124,7 @@ namespace Corax.Queries
     public unsafe struct TermNumericRangeProvider<TLow, THigh, TVal> : ITermProvider
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
-        where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>, INumber<TVal>
+        where TVal : struct, ILookupKey
     {
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
@@ -166,7 +166,7 @@ namespace Corax.Queries
             
             if (typeof(TLow) == typeof(Range.Exclusive))
             {
-                if (wasFirst && key == _low)
+                if (wasFirst && key.IsEqual(_low))
                 {
                     return Next(out term);
                 }

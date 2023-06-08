@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
 using Voron;
+using Voron.Data.Lookups;
 using Range = Corax.Queries.Range;
 
 namespace Corax;
@@ -165,9 +166,9 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         field = field.GetNumericFieldMetadata<long>(Allocator);
-        var set = _fieldsTree?.LookupFor<long>(field.FieldName);
+        var set = _fieldsTree?.LookupFor<Int64LookupKey>(field.FieldName);
 
-        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, field, low, high)));
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, Int64LookupKey>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, Int64LookupKey>(this, set, field, low, high)));
     }
 
     private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool isNegated)
@@ -179,8 +180,8 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         field = field.GetNumericFieldMetadata<double>(Allocator);
-        var set = _fieldsTree?.LookupFor<double>(field.FieldName);
+        var set = _fieldsTree?.LookupFor<DoubleLookupKey>(field.FieldName);
             
-        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, double>(this, set, field, low, high)));
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, DoubleLookupKey>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, DoubleLookupKey>(this, set, field, low, high)));
     }
 }
