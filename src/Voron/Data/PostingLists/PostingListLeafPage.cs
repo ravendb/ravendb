@@ -289,6 +289,7 @@ public readonly unsafe struct PostingListLeafPage
         var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
         var tmpPtr = tmp.Ptr;
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
+        newHeader->PageNumber = dest->PageNumber;
         InitLeaf(newHeader);
 
         // using +256 here to ensure that we always have at least 256 available in the buffer
