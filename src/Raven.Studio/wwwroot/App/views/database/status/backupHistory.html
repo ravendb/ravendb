@@ -1,0 +1,28 @@
+<div class="flex-vertical absolute-fill content-margin">
+    <div class="flex-horizontal flex-wrap nospacing flex-noshrink">
+        <div class="flex-horizontal flex-wrap margin-bottom margin-sm">
+            <div>
+                <button class="btn btn-primary" data-bind="click: refresh">
+                    <i class="icon-refresh"></i> <span>Refresh</span>
+                </button>
+            </div>
+        </div>
+        <div class="flex-grow"></div>
+        <div>
+            <small class="padding padding-xs margin-left" title="Go to Backup Tasks View">
+                <a data-bind="attr: { href: backupsViewUrl }"><i class="icon-link"></i> Backup Tasks</a>
+            </small>
+        </div>
+    </div>
+
+    <div class="flex-grow">
+        <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-backup-history'"></virtual-grid>
+    </div>
+</div>
+
+<script type="text/html" id="empty-backup-history">
+    No entries for now.
+</script>
+
+<div class="tooltip json-preview lg js-backup-history-tooltip" style="opacity: 0">
+</div>

@@ -23,6 +23,15 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.ioStats
         }),
         new leafMenuItem({
+            route: 'databases/status/backup/history',
+            moduleId: require('viewmodels/database/status/backupHistory'),
+            title: 'Backup History',
+            tooltip: "Backup History",
+            nav: true,
+            css: 'icon-storage', //tODO: backup history
+            dynamicHash: appUrls.statusBackupHistory
+        }),
+        new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: require('viewmodels/database/status/storageReport'),
             title: 'Storage Report',

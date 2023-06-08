@@ -435,6 +435,8 @@ namespace TypingsGenerator
 
             // ongoing tasks - backup
             scripter.AddType(typeof(OngoingTaskBackup));
+            scripter.AddType(typeof(BackupResult));
+            scripter.AddType(typeof(BackupHistoryEntry));
             scripter.AddType(typeof(PeriodicBackupConfiguration));
             scripter.AddType(typeof(PeriodicBackupConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));

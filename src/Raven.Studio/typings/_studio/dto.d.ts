@@ -870,6 +870,14 @@ interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinate
     PopupContent: document;
 }
 
+interface BackupHistoryItem extends Raven.Client.Documents.Operations.Backups.BackupHistoryEntry {
+    Id: string;
+}
+
+interface BackupHistoryResponse {
+    BackupHistory: Array<{ FullBackup: BackupHistoryItem; IncrementalBackups: BackupHistoryItem[] }>;
+}
+
 interface indexHistoryCommandResult {
     Index: string;
     History: Raven.Client.ServerWide.IndexHistoryEntry[];

@@ -283,6 +283,11 @@ class backups extends viewModelBase {
         const url = appUrl.forDatabases("restore");
         router.navigate(url);
     }
+
+    navigateToBackupHistory() {
+        const url = appUrl.forStatusBackupHistory(this.activeDatabase());
+        router.navigate(url);
+    }
 }
 
 export = backups;

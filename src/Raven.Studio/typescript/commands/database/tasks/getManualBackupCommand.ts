@@ -8,7 +8,6 @@ class getManualBackupCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult> {
-
         const args = {
             taskId: 0,
             name: this.dbName

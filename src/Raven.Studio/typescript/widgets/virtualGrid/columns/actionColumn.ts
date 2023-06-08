@@ -18,7 +18,7 @@ class actionColumn<T extends object> implements virtualColumn {
     protected gridController: virtualGridController<T>;
 
     header: string;
-    private buttonText: (item: T) => string;
+    private readonly buttonText: (item: T) => string;
     width: string;
     extraClass: string;
 
