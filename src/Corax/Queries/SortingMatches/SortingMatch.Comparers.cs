@@ -168,7 +168,7 @@ namespace Corax.Queries.SortingMatches;
     private struct EntryComparerByTerm : IEntryComparer, IComparer<UnmanagedSpan>
     {
         private CompactKeyComparer _cmpTerm;
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
         
@@ -321,7 +321,7 @@ namespace Corax.Queries.SortingMatches;
 
     private struct EntryComparerByLong : IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
         {
@@ -360,7 +360,7 @@ namespace Corax.Queries.SortingMatches;
         
     private struct EntryComparerByDouble : IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
 
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
@@ -401,7 +401,7 @@ namespace Corax.Queries.SortingMatches;
     {
         private TermsReader _reader;
         private long _dictionaryId;
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
 

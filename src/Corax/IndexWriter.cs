@@ -403,7 +403,7 @@ namespace Corax
         private readonly Dictionary<long, long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
-        private Lookup<long> _entryIdToOffset;
+        private Lookup<Int64LookupKey> _entryIdToOffset;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
 
@@ -445,7 +445,7 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _entryIdToOffset = Transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
+            _entryIdToOffset = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
@@ -468,7 +468,7 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _entryIdToOffset = Transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
+            _entryIdToOffset = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
 
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
             _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
@@ -1591,7 +1591,7 @@ namespace Corax
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
-            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.Name); 
+            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.Name); 
 
             _entriesAlreadyAdded.Clear();
          
@@ -1905,8 +1905,8 @@ namespace Corax
 
         private void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.LookupFor<long>(indexedField.NameLong);
-            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.NameLong); 
+            var fieldTree = fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
+            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameLong); 
 
             _entriesAlreadyAdded.Clear();
             
@@ -1944,7 +1944,7 @@ namespace Corax
             }
         }
 
-        private void UpdateEntriesForTerm(EntriesModifications entries, Lookup<long> entriesToTerms, long term)
+        private void UpdateEntriesForTerm(EntriesModifications entries, Lookup<Int64LookupKey> entriesToTerms, long term)
         {
             SetRange(_additionsForTerm, entries.Additions);
             SetRange(_removalsForTerm, entries.Removals);
@@ -1952,7 +1952,7 @@ namespace Corax
             InsertEntriesForTerm(entriesToTerms, term);
         }
 
-        private void InsertEntriesForTerm(Lookup<long> entriesToTerms, long term) 
+        private void InsertEntriesForTerm(Lookup<Int64LookupKey> entriesToTerms, long term) 
         {
             foreach (long removal in _removalsForTerm)
             {
@@ -1972,8 +1972,8 @@ namespace Corax
 
         private void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.LookupFor<long>(indexedField.NameDouble);
-            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.NameDouble); 
+            var fieldTree = fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble);
+            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble); 
 
             _entriesAlreadyAdded.Clear();
             foreach (var (term, entries) in indexedField.Doubles)

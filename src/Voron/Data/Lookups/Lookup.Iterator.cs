@@ -5,11 +5,11 @@ using Voron.Data.CompactTrees;
 
 namespace Voron.Data.Lookups
 {
-    unsafe partial class Lookup<TKey>
+    unsafe partial class Lookup<TLookupKey>
     {
         public struct ForwardIterator : ITreeIterator
         {
-            private Lookup<TKey> _tree;
+            private Lookup<TLookupKey> _tree;
             private IteratorCursorState _cursor;
 
             public ForwardIterator()
@@ -20,11 +20,11 @@ namespace Voron.Data.Lookups
             
             public void Init<T>(T tree)
             {
-                _tree = (Lookup<TKey>)(object)tree;
+                _tree = (Lookup<TLookupKey>)(object)tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
             }
 
-            public void Seek(TKey key)
+            public void Seek(TLookupKey key)
             {
                 _tree.FindPageFor(key, ref _cursor);
 
@@ -49,7 +49,7 @@ namespace Voron.Data.Lookups
                 }
             }
             
-            public int FillKeys(Span<TKey> results)
+            public int FillKeys(Span<long> results)
             {
                 if (_cursor._pos < 0)
                     return 0;
@@ -62,7 +62,7 @@ namespace Voron.Data.Lookups
                         var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
                         for (int i = 0; i < read; i++)
                         {
-                            results[i] = GetKey(ref state, state.LastSearchPosition++);
+                            results[i] = GetKeyData(ref state, state.LastSearchPosition++);
                         }
                         return read;
                     }
@@ -123,7 +123,7 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            public bool MoveNext(out TKey key, out long value)
+            public bool MoveNext(out TLookupKey key, out long value)
             {
                 if (_cursor._pos < 0)
                 {
@@ -138,7 +138,8 @@ namespace Voron.Data.Lookups
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
-                        GetKeyAndValue(ref  state, state.LastSearchPosition, out key, out value);
+                        GetKeyAndValue(ref  state, state.LastSearchPosition, out var keyData, out value);
+                        key = TLookupKey.FromLong<TLookupKey>(keyData);
                         state.LastSearchPosition++;
                         return true;
                     }
@@ -154,16 +155,16 @@ namespace Voron.Data.Lookups
     
         public struct BackwardIterator : ITreeIterator
         {
-            private Lookup<TKey> _tree;
+            private Lookup<TLookupKey> _tree;
             private IteratorCursorState _cursor;
 
             public void Init<T>(T tree)
             {
-                _tree = (Lookup<TKey>)(object)tree;
+                _tree = (Lookup<TLookupKey>)(object)tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
             }
 
-            public void Seek(TKey key)
+            public void Seek(TLookupKey key)
             {
                 _tree.FindPageFor(key, ref _cursor);
 
@@ -244,7 +245,7 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            public bool MoveNext(out TKey key, out long value)
+            public bool MoveNext(out TLookupKey key, out long value)
             {
                 if (_cursor._pos < 0)
                 {
@@ -258,7 +259,8 @@ namespace Voron.Data.Lookups
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition >= 0) // same page
                     {
-                        GetKeyAndValue(ref  state, state.LastSearchPosition, out key, out value);
+                        GetKeyAndValue(ref  state, state.LastSearchPosition, out var keyData, out value);
+                        key = TLookupKey.FromLong<TLookupKey>(keyData);
 
                         state.LastSearchPosition--;
                         return true;

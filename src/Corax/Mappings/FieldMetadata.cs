@@ -30,13 +30,14 @@ public readonly struct FieldMetadata
 
         if (typeof(T) == typeof(Slice))
             return this;
-        
-        if (typeof(T) == typeof(long))
+
+        else if (typeof(T) == typeof(long))
             Slice.From(allocator, $"{FieldName}-L", ByteStringType.Immutable, out numericTree);
 
-        if (typeof(T) == typeof(double))
+        else if (typeof(T) == typeof(double))
             Slice.From(allocator, $"{FieldName}-D", ByteStringType.Immutable, out numericTree);
-        
+        else
+            throw new NotSupportedException(typeof(T).FullName);
         
         return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer);
     }

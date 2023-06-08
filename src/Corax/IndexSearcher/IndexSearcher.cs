@@ -58,7 +58,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Tree _fieldsTree;
     private readonly Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
-    private readonly Lookup<long> _entryIdToOffset;
+    private readonly Lookup<Int64LookupKey> _entryIdToOffset;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -72,7 +72,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _entryIdToOffset = _transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
@@ -82,7 +82,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _entryIdToOffset = _transaction.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
     }
 
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
@@ -454,9 +454,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
  
-    public Lookup<long> EntriesToTermsReader(Slice name)
+    public Lookup<Int64LookupKey> EntriesToTermsReader(Slice name)
     {
-        return _entriesToTermsTree?.LookupFor<long>(name);
+        return _entriesToTermsTree?.LookupFor<Int64LookupKey>(name);
     }
 
     

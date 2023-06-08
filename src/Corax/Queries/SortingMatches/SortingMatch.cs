@@ -57,8 +57,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
                 MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
-                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<long>.ForwardIterator, Lookup<long>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<double>.ForwardIterator, Lookup<double>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
                 MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
@@ -366,15 +366,15 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
             }
 
-            if (typeof(TDirection) == typeof(Lookup<long>.ForwardIterator) ||
-                typeof(TDirection) == typeof(Lookup<long>.BackwardIterator))
+            if (typeof(TDirection) == typeof(Lookup<Int64LookupKey>.ForwardIterator) ||
+                typeof(TDirection) == typeof(Lookup<Int64LookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetLongTermsFor(entryCmp.GetSortFieldName(ref match));
                 return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
             }
 
-            if (typeof(TDirection) == typeof(Lookup<double>.ForwardIterator) ||
-                typeof(TDirection) == typeof(Lookup<double>.BackwardIterator))
+            if (typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.ForwardIterator) ||
+                typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetDoubleTermsFor(entryCmp.GetSortFieldName(ref match));
                 return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);

@@ -17,7 +17,7 @@ namespace Corax;
 public unsafe struct TermsReader : IDisposable
 {
     private readonly LowLevelTransaction _llt;
-    private readonly Lookup<long> _lookup;
+    private readonly Lookup<Int64LookupKey> _lookup;
     private readonly CompactKeyCacheScope _xKeyScope, _yKeyScope;
 
     private const int CacheSize = 64;
@@ -32,7 +32,7 @@ public unsafe struct TermsReader : IDisposable
         bs.Clear();
         _lastPage = new();
         _cache = ((long, UnmanagedSpan)*)bs.Ptr;
-        _lookup = entriesToTermsTree.LookupFor<long>(name);
+        _lookup = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
     }

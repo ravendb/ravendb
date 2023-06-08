@@ -6,6 +6,7 @@ using FastTests.Voron;
 using Lucene.Net.Search.Function;
 using Raven.Client.Documents.Linq.Indexing;
 using Voron;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +36,7 @@ public class PostingListSize : StorageTest
             long rootPage;
             using( var tx = Env.WriteTransaction())
             {
-                var list = tx.LookupFor<long>("test");
+                var list = tx.LookupFor<Int64LookupKey>("test");
                 rootPage = list.State.RootPage;
                 tx.Commit();
             }
@@ -56,7 +57,7 @@ public class PostingListSize : StorageTest
 
             using( var tx = Env.WriteTransaction())
             {
-                var list = tx.LookupFor<long>("test");
+                var list = tx.LookupFor<Int64LookupKey>("test");
                 list.Add(long.Parse(parts[0]), long.Parse(parts[1]));
                 tx.Commit();
             }
@@ -69,7 +70,7 @@ public class PostingListSize : StorageTest
     {
         var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.PostListSplit.txt"));
         using var tx = Env.WriteTransaction();
-        var list = tx.LookupFor<long>("test");
+        var list = tx.LookupFor<Int64LookupKey>("test");
 
         while (true)
         {

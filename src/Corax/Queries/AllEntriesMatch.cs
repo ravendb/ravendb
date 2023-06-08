@@ -16,7 +16,7 @@ namespace Corax.Queries
     public struct AllEntriesMatch : IQueryMatch
     {
         private readonly long _count;
-        private Lookup<long>.ForwardIterator _entriesPagesIt;
+        private Lookup<Int64LookupKey>.ForwardIterator _entriesPagesIt;
 
         public bool DoNotSortResults()
         {
@@ -28,10 +28,10 @@ namespace Corax.Queries
             _count = searcher.NumberOfEntries;
             if (_count == 0)
             {
-                _entriesPagesIt = new Lookup<long>.ForwardIterator();
+                _entriesPagesIt = new Lookup<Int64LookupKey>.ForwardIterator();
                 return;
             }
-            _entriesPagesIt = tx.LookupFor<long>(Constants.IndexWriter.EntryIdToOffsetSlice).Iterate();
+            _entriesPagesIt = tx.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice).Iterate();
             _entriesPagesIt.Reset();
         }
 
