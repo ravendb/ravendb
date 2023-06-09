@@ -68,6 +68,11 @@ public struct DoubleLookupKey : ILookupKey
     {
     }
 
+    public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        return ToString();
+    }
+
     public int CompareTo<T>(T l) where T : ILookupKey
     {
         if (typeof(T) != typeof(DoubleLookupKey))

@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow.Server.Strings;
 using Voron.Data.Lookups;
 
 namespace Voron.Data.CompactTrees
@@ -75,26 +77,8 @@ namespace Voron.Data.CompactTrees
                     key = default;
                     return false;
                 }
-                key = keyData.Key;
+                key = keyData.GetKey(_tree._inner);
                 return true;
-            }
-        }
-
-        public FuzzIterator FuzzyIterate(Slice term, float providerDistance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public class FuzzIterator
-        {
-            public void Seek(Slice currentTermSlice)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool MoveNext(out CompactKey o, out long o1, out float f)
-            {
-                throw new NotImplementedException();
             }
         }
     }

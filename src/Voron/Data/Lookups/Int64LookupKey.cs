@@ -67,6 +67,11 @@ public struct Int64LookupKey : ILookupKey
     {
     }
 
+    public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        return ToString();
+    }
+
     public Int64LookupKey(long value)
     {
         Value = value;

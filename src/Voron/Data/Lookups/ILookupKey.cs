@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.Contracts;
+using Voron.Impl;
 
 namespace Voron.Data.Lookups;
 
@@ -21,4 +22,6 @@ public interface ILookupKey
     void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey;
 
     void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey;
+
+    string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey;
 }

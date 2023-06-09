@@ -33,7 +33,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public unsafe struct CompactKeyLookup : ILookupKey
     {
-        public readonly CompactKey Key;
+        public CompactKey Key;
         public long ContainerId;
 
         public CompactKeyLookup(CompactKey key)
@@ -65,21 +65,61 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public static long MinValue => 0;
 
-        public int CompareTo<T>(Lookup<T> parent, long l) where T : struct, ILookupKey
+        public CompactKey GetKey<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
-            var keyItem = Container.Get(parent.Llt, l);
-            int remainderInBits = *keyItem.Address >> 4;
-            var encodedKeyLen = keyItem.Length - 1;
-            var encodedKeyLengthInBits = encodedKeyLen * 8 - remainderInBits;
-            var encodedKeyPtr = keyItem.Address + 1;
+            if (Key != null)
+                return Key;
+            var llt = parent.Llt;
 
-            var match = Key.CompareEncodedWithCurrent(encodedKeyPtr, encodedKeyLengthInBits);
+            byte* keyPtr;
+            int keyLenInBits;
+            if (ContainerId == 0)
+            {
+                keyPtr = null;
+                keyLenInBits = 0;
+            }
+            else
+            {
+                GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
+            }
+            Key = new CompactKey(llt);
+
+            Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
+            return Key;
+        }
+        
+        public int CompareTo<T>(Lookup<T> parent, long currentKeyId) where T : struct, ILookupKey
+        {
+            byte* keyPtr;
+            int keyLengthInBits;
+            if (currentKeyId == 0)
+            {
+                keyPtr = null;
+                keyLengthInBits = 0;
+            }
+            else
+            {
+                GetEncodedKey(parent.Llt, currentKeyId, out keyLengthInBits, out keyPtr);
+            }
+
+            var k = GetKey(parent);
+            
+            var match = k.CompareEncodedWithCurrent(keyPtr, keyLengthInBits);
             if (match == 0)
             {
-                ContainerId = l;
+                ContainerId = currentKeyId;
             }
 
             return match;
+        }
+
+        private static void GetEncodedKey(LowLevelTransaction llt, long l, out int encodedKeyLengthInBits, out byte* encodedKeyPtr) 
+        {
+            var keyItem = Container.Get(llt, l);
+            int remainderInBits = *keyItem.Address >> 4;
+            var encodedKeyLen = keyItem.Length - 1;
+            encodedKeyLengthInBits = encodedKeyLen * 8 - remainderInBits;
+            encodedKeyPtr = keyItem.Address + 1;
         }
 
         public void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey
@@ -96,6 +136,11 @@ public sealed partial class CompactTree : IPrepareForCommit
         public void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
             DecrementTermReferenceCount(parent.Llt, ContainerId, ref parent.State);
+        }
+
+        public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
+        {
+            return GetKey(parent).ToString();
         }
 
         public override string ToString()
@@ -201,7 +246,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         AssertValueAndKeySize(key, value);
         var lookup = new CompactKeyLookup(key);
-        _inner.Add(lookup, value);
+        _inner.Add(ref lookup, value);
 
         return lookup.ContainerId;
     }
@@ -224,20 +269,23 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public static CompactTree InternalCreate(Tree parent, Slice name)
     {
+        Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
         var existing = parent.Read(name);
         if (existing == null)
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
+            
+            // This will be created a single time and stored in the root page.                 
+            var dictionaryId = PersistentDictionary.CreateDefault(llt);
+            long containerId = Container.Create(llt);
+            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
         }
-
-        // This will be created a single time and stored in the root page.                 
-        var dictionaryId = PersistentDictionary.CreateDefault(llt);
-        long containerId = Container.Create(llt);
-
-
-        var inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
+        else
+        {
+            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name);
+        }
 
         return new CompactTree(inner);
     }
@@ -264,7 +312,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         CompactKeyLookup compactKeyLookup = new CompactKeyLookup(key);
-        var result = _inner.TryGetValue(compactKeyLookup, out value);
+        var result = _inner.TryGetValue(ref compactKeyLookup, out value);
         termContainerId = compactKeyLookup.ContainerId;
         return result;
     }
@@ -286,12 +334,13 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         var compactKey = new CompactKey(_inner.Llt);
         compactKey.Set(key);
-        return _inner.TryGetValue(new CompactKeyLookup(compactKey), out oldValue);
+        compactKey.ChangeDictionary(_inner.State.DictionaryId);
+        return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);
     }
 
     public void InitializeStateForTryGetNextValue()
     {
-        _inner.InitializeStateForTryGetNextValue();
+        _inner.InitializeCursorState();
     }
 
     public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyCacheScope cacheScope)
@@ -301,7 +350,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         encodedKey.ChangeDictionary(_inner.State.DictionaryId);
 
         var lookup = new CompactKeyLookup(encodedKey);
-        var result = _inner.TryGetNextValue(lookup, out value);
+        var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;
     }
@@ -310,6 +359,6 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public List<(string, long)> AllEntriesIn(long p) => 
         _inner.AllEntriesIn(p)
-            .Select(x=>(x.Item1.Key.ToString(), x.Item2))
+            .Select(x=>(x.Item1.GetKey(_inner).ToString(), x.Item2))
             .ToList();
 }
