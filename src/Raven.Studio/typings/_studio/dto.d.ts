@@ -872,6 +872,7 @@ interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinate
 
 interface BackupHistoryItem extends Raven.Client.Documents.Operations.Backups.BackupHistoryEntry {
     Id: string;
+    TaskName: string;
 }
 
 interface BackupHistoryResponse {
