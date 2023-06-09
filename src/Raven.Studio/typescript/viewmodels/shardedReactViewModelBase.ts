@@ -1,6 +1,7 @@
 ﻿import shardViewModelBase from "viewmodels/shardViewModelBase";
 import React from "react";
 import database from "models/resources/database";
+import { getDirtyFlagForReact } from "common/reactViewModelUtils";
 
 abstract class shardedReactViewModelBase extends shardViewModelBase {
 
@@ -25,17 +26,21 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
 
-        this.reactOptions = this.createReactOptions(this.reactView, {
+        const reactDirtyFlag = getDirtyFlagForReact(this.dirtyFlag);
+        const reactProps = {
             ...args,
             database: this.db,
             location: this.location,
-        });
+        };
+
+        this.reactOptions = this.createReactOptions(this.reactView, reactProps, reactDirtyFlag);
     }
 
-    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps) {
+    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps, dirtyFlag?: KoToReactDirtyFlag) {
         return ko.pureComputed(() => ({
             component,
-            props
+            props,
+            dirtyFlag
         }));
     }
 }

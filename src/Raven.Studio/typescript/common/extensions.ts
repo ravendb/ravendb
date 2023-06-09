@@ -4,10 +4,11 @@ import listView = require("widgets/listView/listView");
 import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessManager = require("common/shell/accessManager");
-import React from "react";
+import { createElement } from "react";
 import { createRoot, Root } from "react-dom/client";
 import store from "components/store";
-import { Provider } from "react-redux";
+import { Provider as ReduxProvider, ProviderProps as ReduxProviderProps } from "react-redux";
+import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 
 class extensions {
     static install() {
@@ -229,13 +230,12 @@ class extensions {
                 const options = ko.unwrap(valueAccessor());
 
                 if (options && options.component) {
-                    // eslint-disable-next-line
                     const root = createRoot(element);
-                    const inner = React.createElement(options.component, options.props);
-                    // eslint-disable-next-line react/no-children-prop
-                    const wrapper = React.createElement(Provider, { store: store, children: inner });
-                    root.render(wrapper);
-                    
+                    const component = createElement(options.component, options.props);
+                    const dirtyFlagWrapper = createElement(DirtyFlagProvider, options.dirtyFlag, component);
+                    const reduxWrapper = createElement(ReduxProvider, { store: store } as ReduxProviderProps, dirtyFlagWrapper);
+
+                    root.render(reduxWrapper);
                     $(element).data("root", root);
                 }
             }

@@ -19,6 +19,7 @@ import { useAppSelector } from "components/store";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -117,16 +118,18 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 </div>
             </StickyHeader>
             <div className="content-margin">
-                {db.isSharded() ? (
-                    <React.Fragment key="sharded-db">
-                        <OrchestratorsGroup db={dbSharedInfo} />
-                        {(dbSharedInfo as ShardedDatabaseSharedInfo).shards.map((shard) => {
-                            return <ShardsGroup key={shard.name} db={shard} />;
-                        })}
-                    </React.Fragment>
-                ) : (
-                    <NodeGroup key="non-sharded-db" db={dbSharedInfo} />
-                )}
+                <SortableModeCounterProvider>
+                    {db.isSharded() ? (
+                        <React.Fragment key="sharded-db">
+                            <OrchestratorsGroup db={dbSharedInfo} />
+                            {(dbSharedInfo as ShardedDatabaseSharedInfo).shards.map((shard) => {
+                                return <ShardsGroup key={shard.name} db={shard} />;
+                            })}
+                        </React.Fragment>
+                    ) : (
+                        <NodeGroup key="non-sharded-db" db={dbSharedInfo} />
+                    )}
+                </SortableModeCounterProvider>
             </div>
         </>
     );
