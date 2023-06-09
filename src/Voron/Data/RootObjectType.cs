@@ -8,10 +8,9 @@
         FixedSizeTree = 3,
         ObsoleteValue = 4, // used to be PrefixTree, never used in prod 
         Table = 5,
-        CompactTree = 6,
+        Lookup = 6,
         Set = 7,
         Container = 8,
         PersistentDictionary = 9,
-        Lookup = 10
     }
 }
