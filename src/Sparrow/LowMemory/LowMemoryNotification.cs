@@ -45,7 +45,7 @@ namespace Sparrow.LowMemory
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
         private DateTime _lastLoggedLowMemory = DateTime.MinValue;
-        private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(3);
 
         private readonly TimeSpan _lohCompactionInterval = TimeSpan.FromMinutes(15);
         private DateTime _lastLohCompactionRequest = DateTime.MinValue;
