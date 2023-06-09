@@ -14,13 +14,17 @@ using Voron.Impl;
 namespace Voron.Data.CompactTrees;
 
 /// <summary>
-/// The compact tree is effectively a map[long,long] internally
+/// The compact tree is conceptually a sorted_map[string,long]. It is built on top of 
+/// lookup, which is a sorted_map[long,long].
+/// 
 /// We support map[string,long] using *external* storage of the keys, holding on
 /// only to the location of the external key storage inside the tree itself.
 /// 
 /// A term may appear on multiple pages at the same time (if it is used as the split key in the structure
-/// That means that we have may have multiple references to it. A term may *also* appear multiple times using
-/// different dictionaries. We treat those as separate keys, however. They'll compare equal and work correctly, of course. 
+/// That means that we have may have multiple references to it.
+///
+/// The CompactTree doesn't have any storage behavior and is behaving just like a lookup. However, it *is*
+/// managing the associated terms.  
 /// </summary>
 public sealed partial class CompactTree : IPrepareForCommit
 {
