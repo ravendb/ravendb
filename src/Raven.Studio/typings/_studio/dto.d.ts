@@ -949,15 +949,14 @@ interface StudioDatabasesResponse {
     Orchestrators: StudioOrchestratorState[];
 }
 
-interface KoToReactDirtyFlag {
-    koIsDirty: () => boolean;
-    koSetIsDirty: (isDirty: boolean) => void;
+interface ReactDirtyFlag {
+    setIsDirty: (isDirty: boolean) => void;
 }
 
 interface ReactInKnockoutOptions<T> {
     component: T;
     props?: Parameters<typeof T>[0];
-    dirtyFlag?: KoToReactDirtyFlag;
+    dirtyFlag?: ReactDirtyFlag;
 }
 
 type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;

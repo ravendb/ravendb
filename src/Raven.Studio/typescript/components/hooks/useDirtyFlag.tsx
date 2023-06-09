@@ -1,27 +1,20 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 
-interface DirtyFlag {
-    isDirty: boolean;
-    setIsDirty: (isDirty: boolean) => void;
+const DirtyFlagContext = createContext<ReactDirtyFlag>(null);
+
+export function DirtyFlagProvider({ setIsDirty, children }: ReactDirtyFlag & { children: React.ReactNode }) {
+    return <DirtyFlagContext.Provider value={{ setIsDirty }}>{children}</DirtyFlagContext.Provider>;
 }
 
-const DirtyFlagContext = createContext<DirtyFlag>(null);
+export const useDirtyFlag = (isDirty: boolean) => {
+    const { setIsDirty } = useContext(DirtyFlagContext);
 
-export function DirtyFlagProvider(props: KoToReactDirtyFlag & { children: React.ReactNode }) {
-    const { koIsDirty, koSetIsDirty, children } = props;
+    useEffect(() => {
+        if (isDirty) {
+            setIsDirty(true);
+            return;
+        }
 
-    const [isDirty, setIsDirty] = useState(koIsDirty());
-
-    const setIsDirtyForKoAndReact = (x: boolean) => {
-        koSetIsDirty(x);
-        setIsDirty(x);
-    };
-
-    return (
-        <DirtyFlagContext.Provider value={{ isDirty, setIsDirty: setIsDirtyForKoAndReact }}>
-            {children}
-        </DirtyFlagContext.Provider>
-    );
-}
-
-export const useDirtyFlag = () => useContext(DirtyFlagContext);
+        setIsDirty(false);
+    }, [isDirty, setIsDirty]);
+};

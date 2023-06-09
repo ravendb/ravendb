@@ -1,5 +1,5 @@
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 interface SortableModeCounter {
     counter: number;
@@ -20,16 +20,7 @@ export function SortableModeCounterProvider({ children }: { children: React.Reac
 
 export function useSortableModeCounter(): Pick<SortableModeCounter, "setCounter"> {
     const { counter, setCounter } = useContext(SortableModeCounterContext);
-    const { setIsDirty } = useDirtyFlag();
-
-    useEffect(() => {
-        if (counter === 0) {
-            setIsDirty(false);
-            return;
-        }
-
-        setIsDirty(true);
-    }, [counter, setIsDirty]);
+    useDirtyFlag(counter !== 0);
 
     return {
         setCounter,
