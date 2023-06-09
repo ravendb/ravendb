@@ -1,12 +1,11 @@
 ﻿import React from "react";
 import viewModelBase from "viewmodels/viewModelBase";
-import database from "models/resources/database";
+import { getDirtyFlagForReact } from "common/reactViewModelUtils";
 
 abstract class reactViewModelBase extends viewModelBase {
 
     view = { default: `<div class="react-container" data-bind="react: reactOptions"></div>` };
 
-    private readonly db?: database;
     private readonly reactView: React.FC<any>;
     private readonly bootstrap5: boolean; //TODO: will be removed once we migrate all react views to bs5 (I assume one left)
 
@@ -26,19 +25,22 @@ abstract class reactViewModelBase extends viewModelBase {
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
 
-        this.reactOptions = this.createReactOptions(this.reactView, {
+        const reactDirtyFlag = getDirtyFlagForReact(this.dirtyFlag);
+        const reactProps = {
             ...args,
             db: this.activeDatabase()
-        });
+        }
+
+        this.reactOptions = this.createReactOptions(this.reactView, reactProps, reactDirtyFlag);
     }
 
-    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps) {
+    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps, dirtyFlag?: KoToReactDirtyFlag) {
         return ko.pureComputed(() => ({
             component,
-            props
+            props,
+            dirtyFlag
         }));
     }
 }
-
 
 export = reactViewModelBase;
