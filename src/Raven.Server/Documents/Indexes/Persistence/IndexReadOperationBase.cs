@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             {
                 _memoryInfo = new MemoryInfo
                 {
-                    AllocatedBefore = GC.GetAllocatedBytesForCurrentThread(),
+                    AllocatedManagedBefore = GC.GetAllocatedBytesForCurrentThread(),
+                    AllocatedUnmanagedBefore = NativeMemory.ThreadAllocations.Value.TotalAllocated,
                     ManagedThreadId = NativeMemory.CurrentThreadStats.ManagedThreadId,
                     Query = query.Metadata.Query
                 };
@@ -63,10 +64,17 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
             if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
-                var diff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedBefore;
-                if (diff > 0)
+                var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
+                var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
+
+                if (mangedDiff > 0 || unmanagedDiff > 0)
                 {
-                    _logger.Info($"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, allocated: {new Size(diff, SizeUnit.Bytes)}");
+                    var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
+                              $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
+                              $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
+                              $"managed thread id: {_memoryInfo.ManagedThreadId}";
+
+                    _logger.Info(msg);
                 }
             }
         }
@@ -80,7 +88,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         private class MemoryInfo
         {
-            public long AllocatedBefore { get; init; }
+            public long AllocatedManagedBefore { get; init; }
+            public long AllocatedUnmanagedBefore { get; init; }
             public int ManagedThreadId { get; init; }
             public Queries.AST.Query Query { get; init; }
         }
