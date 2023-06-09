@@ -1,11 +1,12 @@
 ﻿import React, { useCallback, useState } from "react";
-import { Button, Spinner } from "reactstrap";
+import { Button } from "reactstrap";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
 import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
 import { Icon } from "components/common/Icon";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface ReorderNodesControlsProps {
     sortableMode: boolean;
@@ -35,10 +36,9 @@ export function ReorderNodesControls(props: ReorderNodesControlsProps) {
         </Button>
     ) : (
         <>
-            <Button color="success" onClick={onSaveClicked} disabled={saving}>
-                {saving ? <Spinner size="sm" /> : <Icon icon="save" />}
-                <span>Save reorder</span>
-            </Button>
+            <ButtonWithSpinner color="success" onClick={onSaveClicked} isSpinning={saving} icon="save">
+                Save reorder
+            </ButtonWithSpinner>
             <Button onClick={cancelReorder}>
                 <Icon icon="cancel" />
                 <span>Cancel</span>
