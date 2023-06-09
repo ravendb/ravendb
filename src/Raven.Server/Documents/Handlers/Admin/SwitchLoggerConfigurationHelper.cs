@@ -45,4 +45,23 @@ internal static class SwitchLoggerConfigurationHelper
 
         yield return path.Substring(start, path.Length - start);
     }
+    
+    public static void GetConfigurationFromRoot(SwitchLogger root, Dictionary<string, LogMode> configuration)
+    {
+        if (root.IsModeOverrode)
+            configuration.Add(root.Name, root.GetLogMode());
+        GetConfiguration(root, configuration);
+    }
+
+    private static void GetConfiguration(SwitchLogger parent, Dictionary<string, LogMode> configuration)
+    {
+        foreach (var (_, child) in parent.Loggers)
+        {
+            var childMode = child.GetLogMode();
+            if(child.IsModeOverrode && childMode != parent.GetLogMode())
+                configuration.Add($"{child.Source}.{child.Name}", childMode);
+
+            GetConfiguration(child, configuration);
+        }
+    }
 }

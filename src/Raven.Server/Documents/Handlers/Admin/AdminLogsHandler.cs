@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced.Extensions;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
@@ -278,18 +279,25 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
-
-        [RavenAction("/admin/loggers/reset/all", "GET", AuthorizationStatus.Operator)]
-        public Task ResetAllLoggers()
+        
+        [RavenAction("/admin/loggers/configuration", "GET", AuthorizationStatus.Operator)]
+        public async Task GetLoggingTogglingConfiguration()
         {
             using (AcquireLocksAndGetLoggers(out var generic, out var server))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                generic.ResetRecursively();
-                server.ResetRecursively();
-                return Task.CompletedTask;
+                await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
+
+                var configuration = new Dictionary<string, LogMode>();
+                SwitchLoggerConfigurationHelper.GetConfigurationFromRoot(generic, configuration);
+                SwitchLoggerConfigurationHelper.GetConfigurationFromRoot(server, configuration);
+
+                var djv = new DynamicJsonValue {[nameof(SwitchLoggerConfiguration.Loggers)] = configuration.ToJson()};
+                var json = context.ReadObject(djv, "loggers/configuration");
+                writer.WriteObject(json);
             }
         }
-
+        
         [RavenAction("/admin/loggers", "POST", AuthorizationStatus.Operator)]
         public async Task SetLoggerMode()
         {
@@ -302,6 +310,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(json);
                 using (AcquireLocksAndGetLoggers(out var generic, out var server))
                 {
+                    generic.ResetRecursively();
+                    server.ResetRecursively();
+                    
                     foreach (var (path, mode) in configuration.Loggers)
                     {
                         var first = SwitchLoggerConfigurationHelper.IterateSwitches(path).FirstOrDefault();

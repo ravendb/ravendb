@@ -56,14 +56,23 @@ namespace SlowTests.SparrowTests
             {
                 Loggers = new Dictionary<string, LogMode>
                 {
-                    {"Server", LogMode.Information}
+                    {"Server", LogMode.Information},
+                    {"Server.Databases", LogMode.None}
                 }
             };
             var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = configuration}, new StringEnumConverter()), Encoding.UTF8, "application/json");
             var setResponse = await client.PostAsync(store.Urls.First() + "/admin/loggers", data);
-
             Assert.Equal(HttpStatusCode.OK, setResponse.StatusCode);
             Assert.Equal(LogMode.Information, server.Logger.GetLogMode());
+            Assert.Equal(LogMode.None, server.DatabasesLogger.GetLogMode());
+            
+            var getResponse = await client.GetAsync(store.Urls.First() + "/admin/loggers/configuration");
+            Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+            var result = await getResponse.Content.ReadAsStringAsync();
+            configuration = JsonConvert.DeserializeObject<AdminLogsHandler.SwitchLoggerConfiguration>(result);
+
+            Assert.Contains(new KeyValuePair<string, LogMode>("Server", LogMode.Information), configuration.Loggers);
+            Assert.Contains(new KeyValuePair<string, LogMode>("Server.Databases", LogMode.None), configuration.Loggers);
         }
 
         [Fact]
