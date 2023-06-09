@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import viewModelBase from "viewmodels/viewModelBase";
-import { getDirtyFlagForReact } from "common/reactViewModelUtils";
+import { getReactDirtyFlag } from "common/reactViewModelUtils";
 
 abstract class reactViewModelBase extends viewModelBase {
 
@@ -25,7 +25,7 @@ abstract class reactViewModelBase extends viewModelBase {
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
 
-        const reactDirtyFlag = getDirtyFlagForReact(this.dirtyFlag);
+        const reactDirtyFlag = getReactDirtyFlag(this.dirtyFlag);
         const reactProps = {
             ...args,
             db: this.activeDatabase()
@@ -34,7 +34,7 @@ abstract class reactViewModelBase extends viewModelBase {
         this.reactOptions = this.createReactOptions(this.reactView, reactProps, reactDirtyFlag);
     }
 
-    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps, dirtyFlag?: KoToReactDirtyFlag) {
+    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps, dirtyFlag?: ReactDirtyFlag) {
         return ko.pureComputed(() => ({
             component,
             props,

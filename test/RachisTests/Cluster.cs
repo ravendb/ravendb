@@ -53,7 +53,6 @@ namespace RachisTests
                 };
 
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
-                WaitForUserToContinueTheTest(store);
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));

@@ -1,7 +1,6 @@
-export function getDirtyFlagForReact(dirtyFlag: () => DirtyFlag): KoToReactDirtyFlag {
+export function getReactDirtyFlag(dirtyFlag: () => DirtyFlag): ReactDirtyFlag {
     return {
-        koIsDirty: dirtyFlag().isDirty,
-        koSetIsDirty: (value: boolean) => value
+        setIsDirty: (value: boolean) => value
             ? dirtyFlag().forceDirty()
             : dirtyFlag().reset(),
     };
