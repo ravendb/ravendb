@@ -1034,7 +1034,7 @@ namespace Voron
                         {
                             case RootObjectType.FixedSizeTree:
                             case RootObjectType.VariableSizeTree:
-                            case RootObjectType.CompactTree:
+                            case RootObjectType.Lookup:
                                 countOfTrees++;
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
@@ -1157,9 +1157,10 @@ namespace Voron
                                 var set = tx.OpenPostingList(currentKey);
                                 detailedReportInput.PostingLists.Add(set);
                                 break;
-                            case RootObjectType.CompactTree:
-                                var ct = tx.CompactTreeFor(currentKey);
-                                detailedReportInput.CompactTrees.Add(ct);
+                            case RootObjectType.Lookup:
+                                throw new NotImplementedException();
+                                // var ct = tx.CompactTreeFor(currentKey);
+                                // detailedReportInput.CompactTrees.Add(ct);
                                 break;
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;

@@ -126,11 +126,12 @@ namespace Voron.Debugging
                             RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
                             switch (rootObjectType)
                             {
-                                case RootObjectType.CompactTree:
-                                    var compactTree = tree.CompactTreeFor(it.CurrentKey);
-                                    var nestedReport= GetReport(compactTree, input.IncludeDetails);
-                                    nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
-                                    trees.Add(nestedReport);
+                                case RootObjectType.Lookup:
+                                    throw new NotImplementedException();
+                                    // var compactTree = tree.LookupFor<>(it.CurrentKey);
+                                    // var nestedReport= GetReport(compactTree, input.IncludeDetails);
+                                    // nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                    // trees.Add(nestedReport);
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
                                     continue; // already accounted for
