@@ -59,7 +59,8 @@ namespace Sparrow.LowMemory
                 {
                     var now = DateTime.UtcNow;
                     
-                    if (isLowMemory && _logger.IsOperationsEnabled && now - _lastLoggedLowMemory > _logLowMemoryInterval)
+                    if (((isLowMemory && _logger.IsOperationsEnabled) || _logger.IsInfoEnabled)
+                        && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
