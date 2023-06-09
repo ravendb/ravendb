@@ -1211,7 +1211,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public Dictionary<(DateTime, bool), BackupHistoryEntry> GetBackupHistoryFromEndpoint(TransactionOperationContext context, DocumentStore store, string databaseName)
+        public Dictionary<(DateTime CreatedAt, bool IsFull, string TaskName), BackupHistoryEntry> GetBackupHistoryFromEndpoint(TransactionOperationContext context, DocumentStore store, string databaseName)
         {
             var client = store.GetRequestExecutor().HttpClient;
             var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/databases/{databaseName}/backup-history"));
@@ -1223,9 +1223,9 @@ namespace Tests.Infrastructure
             return GetBackupHistory(array);
         }
 
-        public Dictionary<(DateTime, bool), BackupHistoryEntry> GetBackupHistoryFromClusterStorage(TransactionOperationContext context, RavenServer server, string databaseName)
+        public Dictionary<(DateTime, bool, string), BackupHistoryEntry> GetBackupHistoryFromClusterStorage(TransactionOperationContext context, RavenServer server, string databaseName)
         {
-            Dictionary<(DateTime, bool), BackupHistoryEntry> dict = new();
+            Dictionary<(DateTime, bool, string), BackupHistoryEntry> dict = new();
             var prefix = BackupHistoryEntry.GenerateItemPrefix(databaseName);
             var itemsFromCluster = server.ServerStore.Cluster
                 .ItemsStartingWith(context, prefix, 0, long.MaxValue);
@@ -1234,49 +1234,53 @@ namespace Tests.Infrastructure
             {
                 historyItem.Value.TryGet(nameof(BackupHistory), out BlittableJsonReaderArray entriesFromCluster);
                     
-                foreach (var entry in GetBackupHistory(entriesFromCluster))
+                foreach (var entry in GetBackupHistory(entriesFromCluster, assertId: false))
                     dict.Add(entry.Key, entry.Value);
             }
             return dict;
         }
 
-        public Dictionary<(DateTime, bool), BackupHistoryEntry> GetBackupHistoryFromTemporaryStorage(Dictionary<string, BlittableJsonReaderObject> entriesFromTemporaryStorage)
+        public Dictionary<(DateTime, bool, string), BackupHistoryEntry> GetBackupHistoryFromTemporaryStorage(Dictionary<string, BlittableJsonReaderObject> entriesFromTemporaryStorage)
         {
-            Dictionary<(DateTime, bool), BackupHistoryEntry> dict = new();
+            Dictionary<(DateTime, bool, string), BackupHistoryEntry> dict = new();
             foreach (var entry in entriesFromTemporaryStorage.Values)
             {
                 entry.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime entryCreatedAt);
                 entry.TryGet(nameof(BackupHistoryEntry.IsFull), out bool entryIsFull);
+                entry.TryGet(nameof(BackupHistoryWriter.TaskNamePropertyName), out string entryTaskName);
 
-                dict.Add((entryCreatedAt, entryIsFull), JsonDeserializationClient.BackupHistoryEntry(entry));
+                dict.Add((entryCreatedAt, entryIsFull, entryTaskName), JsonDeserializationClient.BackupHistoryEntry(entry));
             }
             return dict;
         }
 
-        private Dictionary<(DateTime, bool), BackupHistoryEntry> GetBackupHistory(IEnumerable<object> blittableJsonReaderArray)
+        private Dictionary<(DateTime, bool, string), BackupHistoryEntry> GetBackupHistory(IEnumerable<object> blittableJsonReaderArray, bool assertId = true)
         {
-            Dictionary<(DateTime, bool), BackupHistoryEntry> dict = new();
+            Dictionary<(DateTime, bool, string), BackupHistoryEntry> dict = new();
 
             foreach (BlittableJsonReaderObject historyEntry in blittableJsonReaderArray)
             {
                 historyEntry.TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup);
                 fullBackup.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime fullBackupCreatedAt);
-                fullBackup.TryGet(BackupHistoryEntry.IdPropertyName, out string fullBackupId);
+                fullBackup.TryGet(BackupHistoryWriter.IdPropertyName, out string fullBackupId);
+                fullBackup.TryGet(BackupHistoryWriter.TaskNamePropertyName, out string fullBackupTaskName);
 
-
-                Assert.True(dict.TryAdd((fullBackupCreatedAt, true), JsonDeserializationClient.BackupHistoryEntry(fullBackup)),
+                Assert.True(dict.TryAdd((fullBackupCreatedAt, true, fullBackupTaskName), JsonDeserializationClient.BackupHistoryEntry(fullBackup)),
                     $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={fullBackupCreatedAt} already exists in Dictionary");
-                Assert.Equal(fullBackupId, fullBackupCreatedAt.Ticks.ToString());
+                if (assertId)
+                    Assert.Equal(fullBackupId, fullBackupCreatedAt.Ticks.ToString());
 
                 historyEntry.TryGet(nameof(BackupHistory.IncrementalBackups), out BlittableJsonReaderArray increments);
                 foreach (BlittableJsonReaderObject increment in increments)
                 {
                     increment.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime incrementCreatedAt);
-                    increment.TryGet(BackupHistoryEntry.IdPropertyName, out string incrementId);
+                    increment.TryGet(BackupHistoryWriter.IdPropertyName, out string incrementId);
+                    increment.TryGet(BackupHistoryWriter.TaskNamePropertyName, out string incrementTaskName);
 
-                    Assert.True(dict.TryAdd((incrementCreatedAt, false), JsonDeserializationClient.BackupHistoryEntry(increment)),
+                    Assert.True(dict.TryAdd((incrementCreatedAt, false, incrementTaskName), JsonDeserializationClient.BackupHistoryEntry(increment)),
                         $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={incrementCreatedAt} already exists in Dictionary");
-                    Assert.Equal(incrementId, incrementCreatedAt.Ticks.ToString());
+                    if (assertId)
+                        Assert.Equal(incrementId, incrementCreatedAt.Ticks.ToString());
                 }
             }
 

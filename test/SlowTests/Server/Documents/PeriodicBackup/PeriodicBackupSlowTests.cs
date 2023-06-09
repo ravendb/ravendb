@@ -3561,6 +3561,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task BackupHistory_AssertEndpointsResponses()
         {
             const int clusterSize = 3;
+            const string taskName = "RavenDB-19358 Backup history assert endpoints responses";
+
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
 
@@ -3586,7 +3588,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: "RavenDB-19358");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: taskName);
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var taskId = result.TaskId;
 
@@ -3602,51 +3604,66 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (configurationStorageContext.OpenReadTransaction())
                 {
                     var fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
-                    var detailsFromStorageDictionary = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
+                    var detailsFromStorageDictionary =
+                        documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
 
                     Assert.Equal(2, fromResponseDictionary.Count);
                     Assert.Equal(2, detailsFromStorageDictionary.Count);
 
                     for (int i = 0; i < 2; i++)
-                        AssertBackup(fromResponseDictionary.Values.ToList()[i], backupStatusesList[i], serverStoreContext);
-                }
-
-                void AssertBackup(BackupHistoryEntry entryFromResponse, PeriodicBackupStatus status, JsonOperationContext context)
-                {
-                    var expectedCreatedAt = entryFromResponse.IsFull ? status.LastFullBackup.Value : status.LastIncrementalBackup.Value;
-
-                    Assert.Equal(status.BackupType, entryFromResponse.BackupType);
-                    Assert.Equal(expectedCreatedAt, entryFromResponse.CreatedAt);
-                    Assert.Equal(databaseName, entryFromResponse.DatabaseName);
-                    Assert.Equal(status.DurationInMs, entryFromResponse.DurationInMs);
-                    Assert.Equal(status.Error?.Exception, entryFromResponse.Error);
-                    Assert.Equal(status.IsFull, entryFromResponse.IsFull);
-                    Assert.Equal(status.NodeTag, entryFromResponse.NodeTag);
-                    Assert.Equal(status.LastFullBackup, entryFromResponse.LastFullBackup);
-                    Assert.Equal(status.TaskId, entryFromResponse.TaskId);
-
-                    var details = GetDetailsFromEndpoint(context, entryFromResponse);
-
-                    details.TryGet(nameof(BackupResult.Documents), out BlittableJsonReaderObject documents);
-                    documents.TryGet(nameof(BackupResult.Documents.Processed), out bool docsProcessed);
-                    documents.TryGet(nameof(BackupResult.Documents.ReadCount), out long docsReadCount);
-
-                    details.TryGet(nameof(BackupResult.LocalBackup), out BlittableJsonReaderObject localBackup);
-                    localBackup.TryGet(nameof(BackupResult.LocalBackup.BackupDirectory), out string backupDirectory);
-                    var expectedBackupDirectory =
-                        $"{entryFromResponse.CreatedAt.ToLocalTime().ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}.ravendb-{entryFromResponse.DatabaseName}-{entryFromResponse.NodeTag}-{entryFromResponse.BackupType.ToString().ToLower()}";
-
-                    if (entryFromResponse.IsFull)
                     {
-                        Assert.True(docsProcessed);
-                        Assert.Equal(1, docsReadCount);
-                        Assert.Equal(expectedBackupDirectory, backupDirectory);
-                    }
-                    else
-                    {
-                        Assert.True(docsProcessed);
-                        Assert.Equal(0, docsReadCount);
-                        Assert.Null(backupDirectory);
+                        var entryFromResponse = fromResponseDictionary.Values.ToArray()[i];
+                        var status = backupStatusesList[i];
+                        Assert.NotNull(status);
+
+                        DateTime expectedCreatedAt;
+                        if (entryFromResponse.IsFull)
+                        {
+                            Assert.True(status.LastFullBackup.HasValue);
+                            expectedCreatedAt = status.LastFullBackup.Value;
+                        }
+                        else
+                        {
+                            Assert.True(status.LastIncrementalBackup.HasValue);
+                            expectedCreatedAt = status.LastIncrementalBackup.Value;
+                        }
+
+                        Assert.Equal(status.BackupType, entryFromResponse.BackupType);
+                        Assert.Equal(expectedCreatedAt, entryFromResponse.CreatedAt);
+                        Assert.Equal(databaseName, entryFromResponse.DatabaseName);
+                        Assert.Equal(status.DurationInMs, entryFromResponse.DurationInMs);
+                        Assert.Equal(status.Error?.Exception, entryFromResponse.Error);
+                        Assert.Equal(status.IsFull, entryFromResponse.IsFull);
+                        Assert.Equal(status.NodeTag, entryFromResponse.NodeTag);
+                        Assert.Equal(status.LastFullBackup, entryFromResponse.LastFullBackup);
+                        Assert.Equal(status.TaskId, entryFromResponse.TaskId);
+
+                        var details = GetDetailsFromEndpoint(serverStoreContext, entryFromResponse);
+
+                        details.TryGet(nameof(BackupResult.Documents), out BlittableJsonReaderObject documents);
+                        documents.TryGet(nameof(BackupResult.Documents.Processed), out bool docsProcessed);
+                        documents.TryGet(nameof(BackupResult.Documents.ReadCount), out long docsReadCount);
+
+                        details.TryGet(nameof(BackupResult.LocalBackup), out BlittableJsonReaderObject localBackup);
+                        localBackup.TryGet(nameof(BackupResult.LocalBackup.BackupDirectory), out string backupDirectory);
+                        var expectedBackupDirectory =
+                            $"{entryFromResponse.CreatedAt.ToLocalTime().ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}.ravendb-{entryFromResponse.DatabaseName}-{entryFromResponse.NodeTag}-{entryFromResponse.BackupType.ToString().ToLower()}";
+
+                        if (entryFromResponse.IsFull)
+                        {
+                            Assert.True(docsProcessed);
+                            Assert.Equal(1, docsReadCount);
+                            Assert.Equal(expectedBackupDirectory, backupDirectory);
+                        }
+                        else
+                        {
+                            Assert.True(docsProcessed);
+                            Assert.Equal(0, docsReadCount);
+                            Assert.Null(backupDirectory);
+                        }
+
+                        var taskNameFromResponse = fromResponseDictionary.Keys.ToArray()[i].TaskName;
+                        Assert.Equal(taskName, taskNameFromResponse);
                     }
                 }
 
@@ -3670,6 +3687,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task BackupHistory_ShouldStoreFaultedBackups()
         {
             const int clusterSize = 3;
+            const string taskName = "RavenDB-19358 Backup History should store faulted backups";
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
             var expectedError = new Exception(nameof(DocumentDatabase.PeriodicBackupRunner._forTestingPurposes.SimulateFailedBackup)).ToString();
@@ -3696,7 +3714,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: "RavenDB-19358");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: taskName);
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var taskId = result.TaskId;
                 documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
@@ -3706,7 +3724,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
                 using (serverStoreContext.OpenReadTransaction())
                 {
-                    Dictionary<(DateTime, bool IsFull), BackupHistoryEntry> fromResponseDictionary = default;
+                    Dictionary<(DateTime, bool IsFull, string TaskName), BackupHistoryEntry> fromResponseDictionary = default;
                     WaitForValue(() =>
                     {
                         fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
@@ -3718,6 +3736,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     
                     Assert.Equal(BackupType.Backup, entryPeriodical.Value.BackupType);
                     Assert.True(entryPeriodical.Key.IsFull);
+                    Assert.Equal(entryPeriodical.Key.TaskName, taskName);
                     Assert.True(entryPeriodical.Value.Error.Contains(expectedError));
 
                     using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
@@ -3735,6 +3754,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             const int historySizeLimit = 1;
             const int clusterSize = 3;
+            const string taskName = "RavenDB-19358 Backup History should take into account limit configuration should delete oldest entries first";
+
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
 
@@ -3763,15 +3784,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: "RavenDB-19358");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: taskName);
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var taskId = result.TaskId;
 
-                (DateTime, bool IsFull) entryKeyToRemove = default;
+                (DateTime, bool IsFull, string TaskName) entryKeyToRemove = default;
                 var detailsKeysToRemove = new List<string>();
                 for (int i = 1; i <= historySizeLimit + 1; i++)
                 {
-                    int actualFullBackupsCount;
                     var backupPlan = new[] { true, false };
                     var countFullBackups = backupPlan.Count(isFull => isFull);
                     var expectedFullBackupCount = countFullBackups <= historySizeLimit ? countFullBackups : historySizeLimit;
@@ -3783,7 +3803,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
                     using (configurationStorageContext.OpenReadTransaction())
                     {
-                        Dictionary<(DateTime, bool IsFull), BackupHistoryEntry> fromResponseDictionary = default;
+                        int actualFullBackupsCount;
+                        Dictionary<(DateTime, bool IsFull, string TaskName), BackupHistoryEntry> fromResponseDictionary = default;
                         Dictionary<string, BlittableJsonReaderObject> detailsFromStorageDictionary = default;
                         switch (i)
                         {
@@ -4020,8 +4041,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 store.Initialize();
                 var documentDatabase = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
 
-                Dictionary<(DateTime, bool), BackupHistoryEntry> fromResponseDictionary = default;
-                Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromClusterDictionary = default;
+                Dictionary<(DateTime, bool, string TaskName), BackupHistoryEntry> fromResponseDictionary = default;
+                Dictionary<(DateTime, bool, string TaskName), BackupHistoryEntry> entriesFromClusterDictionary = default;
 
                 using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
                 using (serverStoreContext.OpenReadTransaction())
@@ -4037,12 +4058,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var index = (int)Math.Ceiling((double)(i + 1) / backupPlan.Length) - 1;
                     var expectedNodeTag = expectedNodeTagOrder[index];
-
                     var responseNodeTag = fromResponseDictionary.Values.ToList()[i].NodeTag;
                     var storageNodeTag = entriesFromClusterDictionary.Values.ToList()[i].NodeTag;
 
                     Assert.Equal(expectedNodeTag, responseNodeTag);
                     Assert.Equal(expectedNodeTag, storageNodeTag);
+
+                    var expectedTaskName = $"{backupName}-{expectedNodeTag}";
+                    var responseTaskName = fromResponseDictionary.Keys.ToList()[i].TaskName;
+                    var storageTaskName = entriesFromClusterDictionary.Keys.ToList()[i].TaskName;
+
+                    Assert.Equal(expectedTaskName, responseTaskName);
+                    Assert.Equal(expectedTaskName, storageTaskName);
                 }
 
                 using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
@@ -4147,9 +4174,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 void CollectAndAssertBackupHistoryData(int expectedCountOfEntriesInClusterStorage, int expectedCountOfEntriesInTemporaryStorage)
                 {
-                    Dictionary<(DateTime, bool), BackupHistoryEntry> fromResponseDictionary;
-                    Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromClusterDictionary;
-                    Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromTemporaryDictionary;
+                    Dictionary<(DateTime, bool IsFull, string), BackupHistoryEntry> fromResponseDictionary;
+                    Dictionary<(DateTime, bool, string), BackupHistoryEntry> entriesFromClusterDictionary;
+                    Dictionary<(DateTime, bool, string), BackupHistoryEntry> entriesFromTemporaryDictionary;
 
                     using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
                     using (serverStoreContext.OpenReadTransaction())
@@ -4167,7 +4194,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(expectedCountOfEntriesInClusterStorage + expectedCountOfEntriesInTemporaryStorage, actualDetailsCount);
                     }
 
-                    var fromStoragesDictionary = new Dictionary<(DateTime, bool), BackupHistoryEntry>();
+                    var fromStoragesDictionary = new Dictionary<(DateTime, bool, string), BackupHistoryEntry>();
                     foreach (var entry in entriesFromClusterDictionary)
                         fromStoragesDictionary.Add(entry.Key, entry.Value);
                     foreach (var entry in entriesFromTemporaryDictionary)
@@ -4184,7 +4211,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var entryFromStorage = fromStoragesDictionary.Values.ToList()[i];
                         var entryFromResponse = fromResponseDictionary.Values.ToList()[i];
-                        var writtenAsFullBackup = fromResponseDictionary.Keys.ToList()[i].Item2;
+                        var writtenAsFullBackup = fromResponseDictionary.Keys.ToList()[i].IsFull;
                         var expectedIsFull = generalBackupPlan[i];
 
                         Assert.Equal(entryFromStorage, entryFromResponse);
