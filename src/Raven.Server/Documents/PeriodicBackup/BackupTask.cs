@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -270,7 +269,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // save the backup status
                         // create a local copy of ref `runningBackupStatus` so that it can be used in the anonymous method.
                         var status = runningBackupStatus;
-                        BackupUtils.SaveBackupStatus(status, _database.Name, _database.ServerStore, _logger, _backupResult, _onProgress, TaskCancelToken);
+                        BackupUtils.SaveBackupStatus(status, _database, _logger, _backupResult, _onProgress, TaskCancelToken);
                     }
                 }
             }

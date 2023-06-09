@@ -498,7 +498,7 @@ namespace Raven.Server.Web.System
                                     {
                                         var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
                                         var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
-                                        BackupUtils.SaveBackupStatus(runningBackupStatus, Database.Name, Database.ServerStore, Logger, backupResult, operationCancelToken: cancelToken);
+                                        BackupUtils.SaveBackupStatus(runningBackupStatus, Database, Logger, backupResult, operationCancelToken: cancelToken);
                                         tcs.SetResult(backupResult);
                                     }
                                 }

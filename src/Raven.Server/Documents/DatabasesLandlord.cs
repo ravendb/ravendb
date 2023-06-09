@@ -27,6 +27,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Util.Settings;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
@@ -1102,7 +1103,7 @@ namespace Raven.Server.Documents
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
                             PeriodicBackupStatus backupStatus;
-
+                            
                             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             using (context.OpenReadTransaction())
                                 backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, nextIdleDatabaseActivity.TaskId);
@@ -1113,8 +1114,9 @@ namespace Raven.Server.Documents
 
                             var backupResult = new BackupResult();
                             backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-
-                            BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                            
+                            var database = TryGetOrCreateResourceStore(databaseName).Result;
+                            BackupUtils.SaveBackupStatus(backupStatus, database, _logger, backupResult);
 
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {

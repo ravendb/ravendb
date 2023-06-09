@@ -21,6 +21,8 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using static Raven.Server.Documents.TransactionCommands.JsonPatchCommand;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Utils;
 
@@ -428,18 +430,23 @@ internal static class BackupUtils
         return new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, nextBackup.DateTime, parameters.Configuration.TaskId, parameters.LastEtag);
     }
 
-    public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
+    public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger,
         BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
     {
+        var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
+        {
+            PeriodicBackupStatus = status,
+            BackupHistoryEntries = documentDatabase.ConfigurationStorage.BackupHistoryStorage.RetractTemporaryStoredBackupHistoryEntries(),
+            MaxNumberOfFullBackupsInBackupHistory = documentDatabase.ServerStore.Configuration.Backup.MaxNumberOfFullBackupsInBackupHistory
+        };
+
         try
         {
-            var command = new UpdatePeriodicBackupStatusCommand(databaseName, RaftIdGenerator.NewId()) { PeriodicBackupStatus = status };
-
             AsyncHelpers.RunSync(async () =>
             {
                 var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                     {
-                        var result = await serverStore.SendToLeaderAsync(command);
+                        var result = await documentDatabase.ServerStore.SendToLeaderAsync(command);
                         return result.Index;
                     },
                     infoMessage: "Saving the backup status in the cluster",
@@ -448,7 +455,7 @@ internal static class BackupUtils
 
                 await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                     {
-                        await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                        await documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
                         return default;
                     },
                     infoMessage: "Verifying that the backup status was successfully saved in the cluster",
@@ -467,6 +474,11 @@ internal static class BackupUtils
                 logger.Operations(message, e);
 
             backupResult?.AddError($"{message}{Environment.NewLine}{e}");
+            documentDatabase.ConfigurationStorage.BackupHistoryStorage.StoreBackupHistoryEntries(command.CurrentAndTemporarySavedEntries);
+        }
+        finally
+        {
+            documentDatabase.ConfigurationStorage.BackupHistoryStorage.StoreBackupDetails(backupResult, status);
         }
     }
 

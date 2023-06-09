@@ -3597,7 +3597,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await Backup.RunBackupAndReturnStatusAsync(leaderServer, taskId, store, isFullBackup: true),
                     await Backup.RunBackupAndReturnStatusAsync(leaderServer, taskId, store, isFullBackup: false)
                 };
-
+                
                 using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
                 using (serverStoreContext.OpenReadTransaction())
                 using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
