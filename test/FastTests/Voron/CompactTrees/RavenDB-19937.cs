@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FastTests.Voron;
-using SharpCompress.Compressors;
-using SharpCompress.Compressors.Deflate;
-using Tests.Infrastructure;
+﻿using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,7 +46,6 @@ public class RavenDB_19937 : CompactTreeReplayTest
                         break;
                 }
 
-                tree.Verify();
                 tree.VerifyOrderOfElements();
             }
             wtx.Commit();
@@ -65,11 +56,10 @@ public class RavenDB_19937 : CompactTreeReplayTest
 
             CompactTree tree = rtx.CompactTreeFor($"{filename}");
 
-            tree.Verify();
             tree.VerifyOrderOfElements();
             foreach (long page in tree.AllPages())
             {
-                var state = new CompactTree.CursorState { Page = rtx.LowLevelTransaction.GetPage(page), };
+                var state = new Lookup<CompactTree.CompactKeyLookup>.CursorState() { Page = rtx.LowLevelTransaction.GetPage(page), };
                 Assert.Equal(state.ComputeFreeSpace(), state.Header->FreeSpace);
             }
         }

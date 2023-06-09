@@ -67,7 +67,6 @@ public unsafe class CompactKey : IDisposable
     }
 
     public bool IsValid => Dictionary > 0;
-    public long ContainerId;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ReadOnlySpan<byte> EncodedWithCurrent(out int lengthInBits)

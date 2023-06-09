@@ -1,342 +1,100 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Data.Lookups;
-using Voron.Global;
 
 namespace Voron.Data.CompactTrees
 {
     partial class CompactTree
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ForwardIterator Iterate()
+        public Iterator<Lookup<CompactKeyLookup>.ForwardIterator> Iterate()
         {
-            return Iterate<ForwardIterator>();
+            return Iterate<Lookup<CompactKeyLookup>.ForwardIterator>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public TDirection Iterate<TDirection>() where TDirection : struct, ITreeIterator
+        public Iterator<TDirection> Iterate<TDirection>() where TDirection : struct, ILookupIterator
         {
-            var it = new TDirection();
-            it.Init(this);
-            return it;
+            TDirection direction = _inner.Iterate<TDirection>();
+            return new Iterator<TDirection>(this, direction);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TDirection IterateValues<TDirection>() where TDirection : struct,  ILookupIterator
+        {
+            return _inner.Iterate<TDirection>();
         }
 
-        public unsafe struct ForwardIterator : ITreeIterator
+        public struct Iterator<TDirection> where TDirection : struct, ILookupIterator
         {
-            private CompactTree _tree;
-            private IteratorCursorState _cursor;
+            private readonly CompactTree _tree;
+            private TDirection _it;
 
-            public void Init<T>(T tree)
+            public Iterator(CompactTree tree,TDirection it)
             {
-                _tree = (CompactTree)(object)tree;
-                _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
-            }
-
-            public void Seek(string key)
-            {
-                using var _ = Slice.From(_tree._llt.Allocator, key, out var slice);
-                Seek(slice);
-            }
-
-            public void Seek(ReadOnlySpan<byte> key)
-            {
-                _tree.FindPageFor(key, ref _cursor);
-
-                ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
-            }
-
-            public void Seek(CompactKey key)
-            {
-                key.ChangeDictionary(_tree.State.TreeDictionaryId);
-                _tree.FindPageFor(key, ref _cursor);
-
-                ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
-            }
-
-            public void Reset()
-            {
-                _tree.PushPage(_tree._state.RootPage, ref _cursor);
-
-                ref var cState = ref _cursor;
-                ref var state = ref cState._stk[cState._pos];
-
-                while (state.Header->IsBranch)
-                {
-                    var next = GetValue(ref state, 0);
-                    _tree.PushPage(next, ref cState);
-
-                    state = ref cState._stk[cState._pos];
-                }
-            }
-
-            public int Fill(Span<long> results)
-            {
-                if (_cursor._pos < 0)
-                    return 0;
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition < state.Header->NumberOfEntries)
-                    {
-                        var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
-                        for (int i = 0; i < read; i++)
-                        {
-                            int curPos = state.LastSearchPosition++;
-                            results[i] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[curPos]);
-                        }
-
-                        return read;
-                    }
-                    if (_tree.GoToNextPage(ref _cursor) == false)
-                    {
-                        return 0;
-                    }
-                }
-            }
-
-            public bool MoveNext(out long value)
-            {
-                if (_cursor._pos < 0)
-                {
-                    value = default;
-                    return false;
-                }
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
-                    {
-                        value = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition]);
-                        state.LastSearchPosition++;
-                        return true;
-                    }
-                    if (_tree.GoToNextPage(ref _cursor) == false)
-                    {
-                        value = default;
-                        return false;
-                    }
-                }
-            }
-
-            public bool MoveNext(out CompactKeyCacheScope scope, out long value)
-            {
-                if (_cursor._pos < 0)
-                {
-                    value = default;
-                    scope = default;
-                    return false;
-                }
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
-                    {
-                        if (GetEntry(_tree, ref state, state.LastSearchPosition, out scope, out value) == false)
-                        {
-                            scope.Dispose();
-                            return false;
-                        }
-
-                        state.LastSearchPosition++;
-                        return true;
-                    }
-                    if (_tree.GoToNextPage(ref _cursor) == false)
-                    {
-                        scope = default;
-                        value = default;
-                        return false;
-                    }
-                }
-            }
-
-            public bool Skip(long count)
-            {
-                ref var state = ref _cursor._stk[_cursor._pos];
-                int i = 0;
-                while (i < count)
-                {
-                    // TODO: When this works, just jump over the NumberOfEntries.
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
-                    {
-                        i++;
-                        state.LastSearchPosition++;
-                    }
-                    else if (_tree.GoToNextPage(ref _cursor) == false)
-                    {
-                        i++;
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        public unsafe struct BackwardIterator : ITreeIterator
-        {
-            private CompactTree _tree;
-            private IteratorCursorState _cursor;
-
-            public void Init<T>(T tree)
-            {
-                _tree = (CompactTree)(object)tree;
-                _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
-            }
-
-            public void Seek(string key)
-            {
-                using var _ = Slice.From(_tree._llt.Allocator, key, out var slice);
-                Seek(slice);
-            }
-
-            public void Seek(ReadOnlySpan<byte> key)
-            {
-                _tree.FindPageFor(key, ref _cursor);
-
-                ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
-            }
-
-            public void Seek(CompactKey key)
-            {
-                key.ChangeDictionary(_tree.State.TreeDictionaryId);
-                _tree.FindPageFor(key, ref _cursor);
-
-                ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
-            }
-
-            public void Reset()
-            {
-                _tree.PushPage(_tree._state.RootPage, ref _cursor);
-
-                ref var cState = ref _cursor;
-                ref var state = ref cState._stk[cState._pos];
-
-                while (state.Header->IsBranch)
-                {
-                    var lastItem = state.Header->NumberOfEntries - 1;
-                    state.LastSearchPosition = lastItem;
-
-                    var next = GetValue(ref state, lastItem);
-                    _tree.PushPage(next, ref cState);
-
-                    state = ref cState._stk[cState._pos];
-                }
-
-                state.LastSearchPosition = state.Header->NumberOfEntries - 1;
-            }
-
-            public int Fill(Span<long> results)
-            {
-                if (_cursor._pos < 0)
-                    return 0;
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition >= 0)
-                    {
-                        int read = 0;
-                        while(read < results.Length && state.LastSearchPosition >= 0)
-                        {
-                            int curPos = state.LastSearchPosition--;
-                            results[read++] = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[curPos]);
-                        }
-                        return read;
-                    }
-                    if (_tree.GoToPreviousPage(ref _cursor) == false)
-                    {
-                        return 0;
-                    }
-                }
+                _tree = tree;
+                _it = it;
             }
             
-            public bool MoveNext(out long value)
+            public void Seek(string key)
             {
-                if (_cursor._pos < 0)
-                {
-                    value = default;
-                   return false;
-                }
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition >= 0) // same page
-                    {
-                        value = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition]);
-
-                        state.LastSearchPosition--;
-                        return true;
-                    }
-
-                    if (_tree.GoToPreviousPage(ref _cursor) == false)
-                    {
-                        value = default;
-                        return false;
-                    }
-                }
+                using var _ = Slice.From(_tree._inner.Llt.Allocator, key, out var slice);
+                Seek(slice);
             }
 
-            public bool MoveNext(out CompactKeyCacheScope scope, out long value)
+            public void Seek(ReadOnlySpan<byte> key)
             {
-                if (_cursor._pos < 0)
+                using var scope = new CompactKeyCacheScope(_tree._inner.Llt);
+                var encodedKey = scope.Key;
+                encodedKey.Set(key);
+                encodedKey.ChangeDictionary(_tree._inner.State.DictionaryId);
+
+                Seek(encodedKey);
+            }
+
+            public void Seek(CompactKey key)
+            {
+                key.ChangeDictionary(_tree._inner.State.DictionaryId);
+                _it.Seek(new CompactKeyLookup(key));
+            }
+
+            public void Reset()
+            {
+                _it.Reset();
+            }
+
+            public bool Skip(long count) => _it.Skip(count);
+            public int Fill(Span<long> matches) => _it.Fill(matches);
+
+            public bool MoveNext(out long v) => _it.MoveNext(out v);
+            
+            public bool MoveNext(out CompactKey key,out long v)
+            {
+                if (_it.MoveNext(out CompactKeyLookup keyData, out v) == false)
                 {
-                    value = default;
-                    scope = default;
+                    key = default;
                     return false;
                 }
-                ref var state = ref _cursor._stk[_cursor._pos];
-                while (true)
-                {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition >= 0) // same page
-                    {
-                        GetEntry(_tree, ref state, state.LastSearchPosition, out scope, out value);
+                key = keyData.Key;
+                return true;
+            }
+        }
 
-                        state.LastSearchPosition--;
-                        return true;
-                    }
-                    if (_tree.GoToPreviousPage(ref _cursor) == false)
-                    {
-                        scope = default;
-                        value = default;
-                        return false;
-                    }
-                }
+        public FuzzIterator FuzzyIterate(Slice term, float providerDistance)
+        {
+            throw new NotImplementedException();
+        }
+
+        public class FuzzIterator
+        {
+            public void Seek(Slice currentTermSlice)
+            {
+                throw new NotImplementedException();
             }
 
-            public bool Skip(long count)
+            public bool MoveNext(out CompactKey o, out long o1, out float f)
             {
-                ref var state = ref _cursor._stk[_cursor._pos];
-                int i = 0;
-                while (i < count)
-                {
-                    // TODO: When this works, just jump over the NumberOfEntries.
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition > 0) // same page
-                    {
-                        i++;
-                        state.LastSearchPosition--;
-                    }
-                    else if (_tree.GoToPreviousPage(ref _cursor) == false)
-                    {
-                        i++;
-                    }
-                }
-
-                return true;
+                throw new NotImplementedException();
             }
         }
     }

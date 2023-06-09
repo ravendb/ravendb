@@ -549,7 +549,7 @@ namespace Voron.Impl
 
         public CompactTree CompactTreeFor(Slice treeName)
         {
-            return CompactTree.Create(_lowLevelTransaction, treeName);
+            return _lowLevelTransaction.RootObjects.CompactTreeFor(treeName);
         }
 
         public FixedSizeTree FixedTreeFor(string treeName)

@@ -191,9 +191,9 @@ namespace Corax.Queries
 
                     byte lastByte = ngram[^1];
 
-                    while (iter.MoveNext(out var gramKeyScope, out var _))
+                    while (iter.MoveNext(out var gramCompactKey, out var _))
                     {
-                        var gramKey = gramKeyScope.Key.Decoded();
+                        var gramKey = gramCompactKey.Decoded();
                         if (gramKey[ngram.Length - 1] > lastByte)
                             break;
 
@@ -211,8 +211,6 @@ namespace Corax.Queries
 
                         ref var item = ref values.GetAsRef(location);
                         item.Popularity++;
-
-                        gramKeyScope.Dispose();
                     }
                 }
 
@@ -305,9 +303,9 @@ namespace Corax.Queries
 
                 var allocator = provider._searcher.Allocator;
                 TDistanceProvider distance = provider._distanceProvider;
-                while (iter.MoveNext(out var keyScope, out var _, out float score))
+                while (iter.MoveNext(out var compactKey, out var _, out float score))
                 {
-                    var key = keyScope.Key.Decoded();
+                    var key = compactKey.Decoded();
 
                     // The original distance is Levenshtein, therefore we dont need to recompute it. 
                     if (typeof(TDistanceProvider) != typeof(LevenshteinDistance))
@@ -319,7 +317,6 @@ namespace Corax.Queries
 
                     Slice.From(allocator, key, out var keySlice);
                     values.Add((keySlice, score));
-                    keyScope.Dispose();
                 }
 
                 if (values.Count == 0)

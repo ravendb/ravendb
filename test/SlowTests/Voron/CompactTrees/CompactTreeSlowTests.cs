@@ -22,7 +22,7 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 tree.Add("hi" + i, i);
@@ -31,7 +31,7 @@ public class CompactTreeSlowTests : StorageTest
         }
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+            var tree = rtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 Assert.True(tree.TryGetValue("hi" + i, out var r));
@@ -48,7 +48,7 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 tree.Add("hi" + i, i);
@@ -58,7 +58,7 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 Assert.True(tree.TryRemove("hi" + i, out var v));
@@ -68,10 +68,10 @@ public class CompactTreeSlowTests : StorageTest
         }
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
-            Assert.Equal(0, tree.State.NumberOfEntries);
-            Assert.Equal(0, tree.State.BranchPages);
-            Assert.Equal(1, tree.State.LeafPages);
+            var tree = rtx.CompactTreeFor( "test");
+            Assert.Equal(0, tree.NumberOfEntries);
+            Assert.Equal(0, tree.BranchPages);
+            Assert.Equal(1, tree.LeafPages);
         }
     }
 
@@ -84,7 +84,7 @@ public class CompactTreeSlowTests : StorageTest
         Random rnd = new Random(random);
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < size; i++)
             {
                 int k = rnd.Next();
@@ -101,7 +101,7 @@ public class CompactTreeSlowTests : StorageTest
         rnd = new Random(random);
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < size; i++)
             {
                 int k = rnd.Next();
@@ -118,10 +118,10 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
-            Assert.Equal(0, tree.State.NumberOfEntries);
-            Assert.Equal(0, tree.State.BranchPages);
-            Assert.Equal(1, tree.State.LeafPages);
+            var tree = rtx.CompactTreeFor( "test");
+            Assert.Equal(0, tree.NumberOfEntries);
+            Assert.Equal(0, tree.BranchPages);
+            Assert.Equal(1, tree.LeafPages);
         }
     }
 
@@ -132,7 +132,7 @@ public class CompactTreeSlowTests : StorageTest
         const int Size = 400000;
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 tree.Add($"hi{i:00000000}", i);
@@ -142,7 +142,7 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 Assert.True(tree.TryRemove($"hi{i:00000000}", out var v));
@@ -152,10 +152,10 @@ public class CompactTreeSlowTests : StorageTest
         }
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
-            Assert.Equal(0, tree.State.NumberOfEntries);
-            Assert.Equal(0, tree.State.BranchPages);
-            Assert.Equal(1, tree.State.LeafPages);
+            var tree = rtx.CompactTreeFor( "test");
+            Assert.Equal(0, tree.NumberOfEntries);
+            Assert.Equal(0, tree.BranchPages);
+            Assert.Equal(1, tree.LeafPages);
         }
     }
 
@@ -166,7 +166,7 @@ public class CompactTreeSlowTests : StorageTest
         const int Size = 400000;
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 tree.Add($"hi{i:00000000}", i);
@@ -176,7 +176,7 @@ public class CompactTreeSlowTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = Size - 1; i >= 0; i--)
             {
                 Assert.True(tree.TryRemove($"hi{i:00000000}", out var v));
@@ -186,10 +186,10 @@ public class CompactTreeSlowTests : StorageTest
         }
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
-            Assert.Equal(0, tree.State.NumberOfEntries);
-            Assert.Equal(0, tree.State.BranchPages);
-            Assert.Equal(1, tree.State.LeafPages);
+            var tree = rtx.CompactTreeFor( "test");
+            Assert.Equal(0, tree.NumberOfEntries);
+            Assert.Equal(0, tree.BranchPages);
+            Assert.Equal(1, tree.LeafPages);
         }
     }
 
@@ -200,7 +200,7 @@ public class CompactTreeSlowTests : StorageTest
         const int Size = 400000;
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            var tree = wtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 tree.Add($"hi{i:00000000}", i);
@@ -209,7 +209,7 @@ public class CompactTreeSlowTests : StorageTest
         }
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+            var tree = rtx.CompactTreeFor( "test");
             for (int i = 0; i < Size; i++)
             {
                 var result = tree.TryGetValue($"hi{i:00000000}", out var r);

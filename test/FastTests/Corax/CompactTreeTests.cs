@@ -51,7 +51,7 @@ public class CompactTreeTests : StorageTest
                 expected.Add((i.ToString(), i));
             }
             
-            var entries = tree.AllEntriesIn(tree.State.RootPage);
+            var entries = tree.AllEntriesIn(tree.RootPage);
             // we remove the entry that is the left most in the root entry
             Assert.True(tree.TryRemove(entries[^1].Item1, out _));
             expected.RemoveAll(x => x.Item1 == entries[^1].Item1);
@@ -66,9 +66,9 @@ public class CompactTreeTests : StorageTest
             var it = tree.Iterate();
             it.Reset();
             var items = new List<(string, long)>();
-            while (it.MoveNext(out var scope, out var v))
+            while (it.MoveNext(out var key, out var v))
             {
-                items.Add((scope.Key.ToString(), v));
+                items.Add((key.ToString(), v));
             }
             Assert.Equal(expected, items);
         }
@@ -160,9 +160,9 @@ public class CompactTreeTests : StorageTest
             it.Reset();
             var expected = new List<(string, long)> { ("one", 10), ("three", 3), ("two", 2), };
             var items = new List<(string, long)>();
-            while (it.MoveNext(out var scope, out var v))
+            while (it.MoveNext(out var key, out var v))
             {
-                items.Add((scope.Key.ToString(), v));
+                items.Add((key.ToString(), v));
             }
             Assert.Equal(expected, items);
         }
@@ -174,31 +174,6 @@ public class CompactTreeTests : StorageTest
             tree.TryRemove("two", out var old);
             Assert.Equal(2, old);
             wtx.Commit();
-        }
-    }
-
-    [Theory]
-    [InlineDataWithRandomSeed]
-    public unsafe void CanEncodeAndDecode(int seed)
-    {
-        var r = new Random(seed);
-        
-        var buffer = stackalloc byte[CompactTree.EncodingBufferSize];
-
-        long key = 0;
-        long val = 0;
-        for (int i = 0; i < 8; i++)
-        {
-            key = (key << 8) + r.Next(0, 128);
-            val = (val << 8) + r.Next(0, 128);
-        
-            var len = CompactTree.EncodeEntry(key, val, buffer);
-            Assert.True(len <= CompactTree.EncodingBufferSize);
-            var lenDecoded = CompactTree.DecodeEntry(buffer, out var k, out var v);
-        
-            Assert.Equal(len, lenDecoded);
-            Assert.Equal(key, k);
-            Assert.Equal(val, v);
         }
     }
 }

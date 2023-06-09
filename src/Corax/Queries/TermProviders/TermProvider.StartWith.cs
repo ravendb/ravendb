@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
+using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
@@ -19,7 +20,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private CompactTree.ForwardIterator _iterator;
+        private  CompactTreeForwardIterator _iterator;
 
         public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
@@ -40,24 +41,24 @@ namespace Corax.Queries
             var result = Next(out term, out var scope);
             scope.Dispose();
             return result;
-        } 
+        }
 
-        public bool Next(out TermMatch term, out CompactKeyCacheScope termScope)
+        public bool Next(out TermMatch term, out CompactKey compactKey)
         {
-            if (_iterator.MoveNext(out termScope, out var _) == false)
+            if (_iterator.MoveNext(out compactKey, out var _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            var key = termScope.Key.Decoded();
+            var key = compactKey.Decoded();
             if (key.StartsWith(_startWith.Decoded()) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            term = _searcher.TermQuery(_field, termScope.Key, _tree);
+            term = _searcher.TermQuery(_field, compactKey, _tree);
             return true;
         }
 

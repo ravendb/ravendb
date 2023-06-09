@@ -45,7 +45,7 @@ namespace SlowTests.Voron.CompactTrees
                 int itemsToInsert = (i < transactions) ? transactionSize : treeSize % transactionSize;
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    var tree = wtx.CompactTreeFor( "test");
                     for (int j = 0; j < itemsToInsert; j++)
                     {
                         long item = Math.Abs((long)rnd.Next() + rnd.Next());
@@ -65,7 +65,7 @@ namespace SlowTests.Voron.CompactTrees
             {
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    var tree = wtx.CompactTreeFor( "test");
                     for (int j = 0; j < treeSize; j++)
                     {
                         long key = keys[rnd.Next(keys.Count)];
@@ -79,7 +79,7 @@ namespace SlowTests.Voron.CompactTrees
 
                 using (var rtx = Env.ReadTransaction())
                 {
-                    var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                    var tree = rtx.CompactTreeFor( "test");
 
                     foreach (var key in keys)
                     {
@@ -110,7 +110,7 @@ namespace SlowTests.Voron.CompactTrees
                 int itemsToInsert = (i < transactions) ? transactionSize : treeSize % transactionSize;
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    var tree = wtx.CompactTreeFor( "test");
                     for (int j = 0; j < itemsToInsert; j++)
                     {
                         long item = Math.Abs((long)rnd.Next() + rnd.Next());
@@ -132,7 +132,7 @@ namespace SlowTests.Voron.CompactTrees
             {
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    var tree = wtx.CompactTreeFor( "test");
                     for (int j = 0; j < treeSize; j++)
                     {
                         long key = currentKeys[rnd.Next(currentKeys.Count)];
@@ -160,7 +160,7 @@ namespace SlowTests.Voron.CompactTrees
 
                 using (var rtx = Env.ReadTransaction())
                 {
-                    var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                    var tree = rtx.CompactTreeFor( "test");
 
                     foreach (var key in currentKeys)
                     {

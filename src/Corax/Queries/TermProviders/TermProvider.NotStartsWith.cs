@@ -5,6 +5,7 @@ using Corax.Mappings;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
+using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
@@ -16,7 +17,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private CompactTree.ForwardIterator _iterator;
+        private CompactTreeForwardIterator _iterator;
 
         public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
@@ -36,16 +37,15 @@ namespace Corax.Queries
         public bool Next(out TermMatch term)
         {
             var startWith = _startWith.Decoded();
-            while (_iterator.MoveNext(out var termScope, out var _))
+            while (_iterator.MoveNext(out var key, out var _))
             {
-                var termSlice = termScope.Key.Decoded();
+                var termSlice = key.Decoded();
                 if (termSlice.StartsWith(startWith))
                 {
-                    termScope.Dispose();
                     continue;
                 }
 
-                term = _searcher.TermQuery(_field, termScope.Key, _tree);
+                term = _searcher.TermQuery(_field, key, _tree);
                 return true;
             }
             
