@@ -51,10 +51,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var query = testIndexParameters.Query;
                 var queryParameters = testIndexParameters.QueryParameters;
                 int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
-                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeoutInSeconds ?? 15;
+                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeoutInSec ?? 15;
 
                 const int documentsPerIndexUpperLimit = 10_000;
                 const int documentsPerIndexLowerLimit = 1;
+
+                const string testIndexName = "<TestIndexName>";
                 
                 if (testIndexParameters.IndexDefinition is null)
                     throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
@@ -69,24 +71,30 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new UnauthorizedAccessException($"Testing C# indexes requires admin privileges.");
                 }
 
-                testIndexDefinition.Name ??= Guid.NewGuid().ToString("N");
+                var temporaryIndexName = Guid.NewGuid().ToString("N");
 
-                query ??= $"from index '{testIndexDefinition.Name}'";
-
+                query ??= $"from index '{testIndexName}'";
+                
+                query = query.Replace(testIndexName, temporaryIndexName);
+                
                 var djv = new DynamicJsonValue() { [nameof(IndexQueryServerSide.Query)] = query, [nameof(IndexQueryServerSide.QueryParameters)] = queryParameters };
 
                 var queryAsBlittable = context.ReadObject(djv, "test-index-query");
+
+                using var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query");
+                
+                var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
+
+                if (indexQueryServerSide.Metadata.IndexName != temporaryIndexName)
+                    throw new BadRequestException($"Expected {testIndexName} as index name in query, but could not find it.");
                 
                 using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
                 {
                     index.Start();
 
-                    using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query"))
                     using (var token = CreateTimeLimitedQueryToken())
                     using (var queryContext = QueryOperationContext.Allocate(Database))
                     {
-                        var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
-
                         indexQueryServerSide.WaitForNonStaleResults = true;
                         indexQueryServerSide.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(waitForNonStaleResultsTimeout);
 
