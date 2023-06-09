@@ -5,6 +5,7 @@ using Corax.Mappings;
 using Sparrow;
 using Voron;
 using Voron.Data.CompactTrees;
+using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
@@ -14,7 +15,7 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
 
-        private CompactTree.ForwardIterator _iterator;
+        private CompactTreeForwardIterator _iterator;
 
         public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
         {
@@ -33,10 +34,9 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
-            while (_iterator.MoveNext(out var keyScope, out var _))
+            while (_iterator.MoveNext(out var key, out var _))
             {
-                term = _searcher.TermQuery(_field, keyScope.Key, _tree);
-                keyScope.Dispose();
+                term = _searcher.TermQuery(_field, key, _tree);
                 return true;
             }
 
@@ -46,10 +46,9 @@ namespace Corax.Queries
 
         public bool GetNextTerm(out ReadOnlySpan<byte> term)
         {
-            while (_iterator.MoveNext(out var keyScope, out var _))
+            while (_iterator.MoveNext(out var compactKey, out var _))
             {
-                var key = keyScope.Key.Decoded();
-                keyScope.Dispose();
+                var key = compactKey.Decoded();
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {

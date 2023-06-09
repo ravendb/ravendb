@@ -39,7 +39,6 @@ public class CompactTreeOptimizedLookup : StorageTest
                 }
             }
 
-            dates.Verify();
             dates.VerifyOrderOfElements();
         }
     }

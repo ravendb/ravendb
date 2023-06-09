@@ -15,7 +15,6 @@ using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 
 namespace Corax.Queries.SortingMatches;
 
@@ -49,63 +48,80 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         if (_orderMetadata.HasBoost)
         {
-            _fillFunc = SortBy<EntryComparerByScore, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
+            _fillFunc = SortBy<EntryComparerByScore, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
         }
         else
         {
             _fillFunc = _orderMetadata.FieldType switch
             {
-                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
-                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
+                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.CompactKeyLookup,  Lookup<CompactTree.CompactKeyLookup>.ForwardIterator,  Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
+                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Int64LookupKey, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  DoubleLookupKey,Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
         }
     }
     
-    private struct NoIterationOptimization : ITreeIterator
+    private struct NoIterationOptimization : ILookupIterator
     {
         public void Init<T>(T parent)
         {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
         }
 
         public void Reset()
         {
-            throw new NotSupportedException();
-        }
-
-        public bool MoveNext(out long value)
-        {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
         }
 
         public int Fill(Span<long> results)
         {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
+        }
+
+        public bool Skip(long count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool MoveNext(out long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool MoveNext<TLookupKey>(out TLookupKey key, out long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Seek<TLookupKey>(TLookupKey key)
+        {
+            throw new NotImplementedException();
         }
     }
         
     private static delegate*<ref SortingMatch<TInner>, Span<long>, int> 
-        SortBy<TEntryComparer, TFwdIt,TBackIt>(OrderMetadata metadata)
+        SortBy<TEntryComparer, TLookupKey, TFwdIt,TBackIt>(OrderMetadata metadata)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
-        where TFwdIt : struct, ITreeIterator
-        where TBackIt : struct, ITreeIterator
+        where TLookupKey : struct, ILookupKey
+        where TFwdIt : struct,  ILookupIterator
+        where TBackIt : struct, ILookupIterator
     {
         if (metadata.Ascending)
         {
-            return &Fill<TEntryComparer, TFwdIt>;
+            return &Fill<TEntryComparer, TLookupKey, TFwdIt>;
         }
 
-        return &Fill<Descending<TEntryComparer>, TBackIt>;
+        return &Fill<Descending<TEntryComparer>,  TLookupKey, TBackIt>;
     }
 
 
-    private static int Fill<TEntryComparer, TDirection>(ref SortingMatch<TInner> match, Span<long> matches)
-        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan> 
-        where TDirection : struct, ITreeIterator
+    private static int Fill<TEntryComparer, TLookupKey, TDirection>(ref SortingMatch<TInner> match, Span<long> matches)
+        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
+        where TLookupKey : struct, ILookupKey
+        where TDirection : struct, ILookupIterator
     {
         // This method should also be re-entrant for the case where we have already pre-sorted everything and 
         // we will just need to acquire via pages the totality of the results. 
@@ -145,12 +161,12 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         return 0;
     }
 
-    private ref struct SortedIndexReader<TIterator>
-        where TIterator : struct, ITreeIterator
+    private ref struct SortedIndexReader<TDirection>
+        where TDirection : struct, ILookupIterator
     {
         private PostingList.Iterator _postListIt;
         private FastPForBufferedReader _smallListReader;
-        private TIterator _termsIt;
+        private TDirection _termsIt;
         private readonly long _min;
         private readonly long _max;
         private readonly IndexSearcher _searcher;
@@ -166,7 +182,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
         private readonly PageLocator _pageLocator;
 
-        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TIterator it, long min, long max)
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TDirection it, long min, long max)
         {
             _termsIt = it;
             _min = min;
@@ -302,8 +318,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         }
     }
 
-    private static void SortUsingIndex<TEntryComparer,TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches) 
-        where TDirection : struct, ITreeIterator
+    private static void SortUsingIndex<TEntryComparer, TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches)
+        where TDirection : struct, ILookupIterator
         where TEntryComparer : struct, IEntryComparer
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
@@ -359,11 +375,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         
         SortedIndexReader<TDirection> GetReader(ref SortingMatch<TInner> match, long min, long max)
         {
-            if (typeof(TDirection) == typeof(CompactTree.ForwardIterator) ||
-                typeof(TDirection) == typeof(CompactTree.BackwardIterator))
+            if (typeof(TDirection) == typeof(Lookup<CompactTree.CompactKeyLookup>.ForwardIterator) ||
+                typeof(TDirection) == typeof(Lookup<CompactTree.CompactKeyLookup>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.IterateValues<TDirection>(), min, max);
             }
 
             if (typeof(TDirection) == typeof(Lookup<Int64LookupKey>.ForwardIterator) ||

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
@@ -12,150 +13,6 @@ using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.Lookups;
-
-public interface ILookupKey
-{
-    long ToLong();
-
-    static abstract T FromLong<T>(long l);
-
-    static abstract long MinValue { get; }
-
-    int CompareTo(long l);
-    int CompareTo<T>(T l) where T : ILookupKey;
-
-    bool IsEqual<T>(T k) where T : ILookupKey;
-}
-
-public struct Int64LookupKey : ILookupKey
-{
-    public long Value;
-    
-    public long ToLong()
-    {
-        return Value;
-    }
-
-    public static implicit operator Int64LookupKey(long v)
-    {
-        return new Int64LookupKey(v);
-    }
-    
-    public static T FromLong<T>(long l)
-    {
-        if (typeof(T) != typeof(Int64LookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        return (T)(object)new Int64LookupKey(l);
-    }
-
-    public static long MinValue => long.MinValue;
-
-    public int CompareTo(long l)
-    {
-        return Value.CompareTo(l);
-    }
-
-    public int CompareTo<T>(T l) where T : ILookupKey
-    {
-        if (typeof(T) != typeof(Int64LookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        var o = (Int64LookupKey)(object)l;
-        return Value.CompareTo(o.Value);
-    }
-
-    public bool IsEqual<T>(T k) where T : ILookupKey
-    {
-        if (typeof(T) != typeof(Int64LookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        var o = (Int64LookupKey)(object)k;
-        return Value == o.Value;
-    }
-
-    public Int64LookupKey(long value)
-    {
-        Value = value;
-    }
-
-    public override string ToString()
-    {
-        return Value.ToString();
-    }
-}
-
-public struct DoubleLookupKey : ILookupKey
-{
-    public double Value;
-    
-    public long ToLong()
-    {
-        return BitConverter.DoubleToInt64Bits(Value);
-    }
-    
-    public static implicit operator DoubleLookupKey(double d)
-    {
-        return new DoubleLookupKey(d);
-    }
-
-    public DoubleLookupKey(double value)
-    {
-        Value = value;
-    }
-
-    public override string ToString()
-    {
-        return Value.ToString();
-    }
-
-    public static T FromLong<T>(long l)
-    {
-        if (typeof(T) != typeof(DoubleLookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        return (T)(object)new DoubleLookupKey(BitConverter.Int64BitsToDouble(l));
-    }
-
-    
-    public static long MinValue => BitConverter.DoubleToInt64Bits(double.MinValue);
-
-    public int CompareTo(long l)
-    {
-        var d = BitConverter.Int64BitsToDouble(l);
-        return Value.CompareTo(d);
-    }
-
-    public bool IsEqual<T>(T k) where T : ILookupKey
-    {
-        if (typeof(T) != typeof(DoubleLookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        var o = (DoubleLookupKey)(object)k;
-        return Math.Abs(Value - o.Value) < double.Epsilon;
-    }
-    
-    public int CompareTo<T>(T l) where T : ILookupKey
-    {
-        if (typeof(T) != typeof(DoubleLookupKey))
-        {
-            throw new NotSupportedException(typeof(T).FullName);
-        }
-
-        var o = (DoubleLookupKey)(object)l;
-        return Value.CompareTo(o.Value);
-    }
-}
 
 public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     where TLookupKey : struct,  ILookupKey
@@ -347,10 +204,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     private readonly Tree _parent;
 
     public long NumberOfEntries => _state.NumberOfEntries;
-    public LookupState State => _state;
+    public ref LookupState State => ref _state;
     public LowLevelTransaction Llt => _llt;
 
-    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name)
+    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId = -1, long termsContainerId = -1)
     {
         var llt = parent.Llt;
 
@@ -381,6 +238,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 LeafPages = 1,
                 RootPage = newPage.PageNumber,
                 NumberOfEntries = 0,
+                DictionaryId = dictionaryId,
+                TermsContainerId = termsContainerId
             };
         }
         else
@@ -423,7 +282,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public bool TryRemove(TLookupKey key)
     {
         FindPageFor(key, ref _internalCursor);
-        return RemoveFromPage(allowRecurse: true);
+        return RemoveFromPage(key, allowRecurse: true);
     }
 
     public bool TryRemove(TLookupKey key, out long value)
@@ -436,7 +295,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return false;
         }
         value = GetValue(ref state, state.LastSearchPosition);
-        return RemoveFromPage(allowRecurse: true);
+        return RemoveFromPage(key, allowRecurse: true);
     }
 
     private void RemoveFromPage(bool allowRecurse, int pos)
@@ -444,10 +303,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         state.LastSearchPosition = pos;
         state.LastMatch = 0;
-        RemoveFromPage(allowRecurse);
+        long keyData = GetKeyData(ref state, pos);
+        var key = TLookupKey.FromLong<TLookupKey>(keyData);
+        RemoveFromPage(key, allowRecurse);
     }
 
-    private bool RemoveFromPage(bool allowRecurse)
+    private bool RemoveFromPage(TLookupKey key, bool allowRecurse)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.LastMatch != 0)
@@ -465,6 +326,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
         Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
+        key.OnKeyRemoval(this);
+        
         entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
 
         if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
@@ -482,14 +345,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace - Constants.Storage.PageSize / 8)
                 DefragPage(_llt, ref state);
 
-            MaybeMergeEntries(ref state);
+            if (MaybeMergeEntries(ref state))
+                InitializeStateForTryGetNextValue(); // we change the structure of the tree, so we can't reuse 
         }
 
         VerifySizeOf(ref state);
         return true;
     }
 
-    private void MaybeMergeEntries(ref CursorState destinationState)
+    private bool MaybeMergeEntries(ref CursorState destinationState)
     {
         CursorState sourceState;
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
@@ -509,7 +373,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 };
                 FreePageFor(ref sourceState, ref destinationState);
             }
-            return;
+            return true;
         }
 
         var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -519,7 +383,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         };
 
         if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
-            return; // cannot merge leaf & branch pages
+            return false; // cannot merge leaf & branch pages
 
         var destinationPage = destinationState.Page;
         var destinationHeader = destinationState.Header;
@@ -547,7 +411,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
 
         if (sourceKeysCopied == 0)
-            return;
+            return false;
 
         Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
                     sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
@@ -560,7 +424,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             parent.LastSearchPosition++;
             FreePageFor(ref destinationState, ref sourceState);
-            return;
+            return true;
         }
 
         sourceHeader->FreeSpace += (ushort)(sourceMovedLength + (sourceKeysCopied * sizeof(ushort)));
@@ -579,8 +443,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
         AddToPage(newKey, siblingPage);
-        return;
-
+        return true;
+        
         [SkipLocalsInit]
         bool MoveEntryWithReEncoding(ref CursorState destinationState, Span<ushort> entries)
         {
@@ -723,6 +587,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         else
         {
             state.LastSearchPosition = ~state.LastSearchPosition;
+            key.OnNewKeyAddition(this);
         }
 
         Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
@@ -816,6 +681,14 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         SearchInCurrentPage(splitKey, ref _internalCursor._stk[_internalCursor._pos]);
 
         AddToPage(splitKey, page.PageNumber);
+        
+        if (_internalCursor._stk[_internalCursor._pos].Header->PageFlags == LookupPageFlags.Leaf)
+        {
+            // we change the structure of the tree, so we can't reuse the state
+            // but we can only do that as the _last_ part of the operation, otherwise
+            // recursive split page will give bad results
+            InitializeStateForTryGetNextValue(); 
+        }
 
         VerifySizeOf(ref state);
     }
@@ -869,7 +742,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref CursorState updatedPageState = ref newPageState; // start with the new page
         int position = state.Header->NumberOfEntries - 1;
         var curKey = GetKeyData(ref state, position);
-        if (causeForSplit.CompareTo(curKey) < 0)
+        if (causeForSplit.CompareTo(this, curKey) < 0)
         {
             // the new entry belong on the *old* page
             updatedPageState = ref state;
@@ -1004,8 +877,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Unsafe.InitBlock(tmpPtr, 0, Constants.Storage.PageSize);
 
             // We copy just the header and start working from there.
-            var tmpHeader = (CompactPageHeader*)tmpPtr;
-            *tmpHeader = *(CompactPageHeader*)state.Page.Pointer;
+            var tmpHeader = (LookupPageHeader*)tmpPtr;
+            *tmpHeader = *(LookupPageHeader*)state.Page.Pointer;
 
             Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
             Debug.Assert(tmpHeader->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
@@ -1154,7 +1027,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
             curKey = GetKeyData(header, pagePtr + @base[bot + mid]);
 
-            match = key.CompareTo(curKey);
+            match = key.CompareTo(this, curKey);
 
             if (match >= 0)
                 bot += mid;
@@ -1164,7 +1037,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         curKey = GetKeyData(header, pagePtr + @base[bot]);
 
-        match = key.CompareTo(curKey);
+        match = key.CompareTo(this, curKey);
 
         if (match == 0)
         {
@@ -1259,5 +1132,112 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             // got all the way to the top? Just search normally
             return TryGetValue(key, out var v) ? v : missingValue;
         }
+    }
+
+    public void InitializeStateForTryGetNextValue()
+    {
+        _internalCursor._pos = -1;
+        _internalCursor._len = 0;
+        PushPage(_state.RootPage, ref _internalCursor);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        state.LastSearchPosition = 0;
+    }
+
+    public bool TryGetNextValue(TLookupKey key, out long value)
+    {
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        if (state.Header->PageFlags == LookupPageFlags.Branch)
+        {
+            FindPageFor(ref _internalCursor, ref state, key);
+            state = ref _internalCursor._stk[_internalCursor._pos];
+
+            if (state.LastMatch == 0) // found it
+            {
+                value = GetValue(ref state, state.LastSearchPosition);
+                return true;
+            }
+            // did *not* find it, but we are somewhere on the tree that is ensured
+            // to be at the key location *or before it*, so we can now start scanning *up*
+        }
+
+        Debug.Assert(state.Header->PageFlags == LookupPageFlags.Leaf, $"Got {state.Header->PageFlags} flag instead of {nameof(LookupPageFlags.Leaf)}");
+
+        SearchInCurrentPage(key, ref state);
+        if (state.LastSearchPosition >= 0) // found it, yeah!
+        {
+            value = GetValue(ref state, state.LastSearchPosition);
+            return true;
+        }
+
+        var pos = ~state.LastSearchPosition;
+        var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
+        if (shouldBeInCurrentPage)
+        {
+            var curKey = GetKeyData(ref state, pos);
+            var match = key.CompareTo(this, curKey);
+
+            shouldBeInCurrentPage = match < 0;
+        }
+
+        if (shouldBeInCurrentPage == false)
+        {
+            // if this isn't in this page, it may be in the _next_ one, but we 
+            // now need to check the parent page to see that
+            shouldBeInCurrentPage = true;
+
+            for (int i = _internalCursor._pos - 1; i >= 0; i--)
+            {
+                ref var cur = ref _internalCursor._stk[i];
+                if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
+                    continue;
+
+                var curKey = GetKeyData(ref cur, cur.LastSearchPosition+1 );
+                var match = key.CompareTo(this, curKey);
+                if (match < 0)
+                    continue;
+
+                shouldBeInCurrentPage = false;
+                break;
+            }
+        }
+
+        if (shouldBeInCurrentPage)
+        {
+            // we didn't find the key, but we found a _greater_ key in the page
+            // therefore, we don't have it (we know the previous key was in this page
+            // so if there is a greater key in this page, we didn't find it
+            value = default;
+            return false;
+        }
+
+        while (_internalCursor._pos > 0)
+        {
+            PopPage(ref _internalCursor);
+            state = ref _internalCursor._stk[_internalCursor._pos];
+            var previousSearchPosition = state.LastSearchPosition;
+
+            SearchInCurrentPage(key, ref state);
+
+            if (state.LastSearchPosition < 0)
+                state.LastSearchPosition = ~state.LastSearchPosition;
+
+            // is this points to a different page, just search there normally
+            if (state.LastSearchPosition > previousSearchPosition && state.LastSearchPosition < state.Header->NumberOfEntries)
+            {
+                FindPageFor(ref _internalCursor, ref state, key);
+                state = ref _internalCursor._stk[_internalCursor._pos];
+                if (state.LastMatch != 0)
+                {
+                    value = default;
+                    return false;
+                }
+
+                value = GetValue(ref state, state.LastSearchPosition);
+                return true;
+            }
+        }
+
+        // if we go to here, we are at the root, so operate normally
+        return TryGetValue(key, out value);
     }
 }

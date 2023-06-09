@@ -19,6 +19,12 @@ namespace Voron.Data.Lookups
         [FieldOffset(32)]
         public long LeafPages;
 
+        // used for compact trees only
+        [FieldOffset(40)]
+        public long DictionaryId;
+        [FieldOffset(48)]
+        public long TermsContainerId;
+        
 
         public override string ToString()
         {
@@ -32,6 +38,8 @@ namespace Voron.Data.Lookups
             header->NumberOfEntries = NumberOfEntries;
             header->BranchPages = BranchPages;
             header->LeafPages = LeafPages;
+            header->DictionaryId = DictionaryId;
+            header->TermsContainerId = TermsContainerId;
         }
     }
 }

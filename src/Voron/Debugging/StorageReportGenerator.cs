@@ -425,32 +425,33 @@ namespace Voron.Debugging
         
         public TreeReport GetReport(CompactTree ct, bool includeDetails)
         {
-            List<double> pageDensities = null;
-            if (includeDetails)
-            {
-                pageDensities = GetPageDensities(ct);
-            }
-            var container = new Container(ct.Llt.GetPage(ct.State.TermsContainerId));
-            
-            long pageCount = ct.State.BranchPages + ct.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
-
-            double density = pageDensities?.Average() ?? -1;
-            
-            var treeReport = new TreeReport
-            {
-                Type = RootObjectType.Set,
-                Name = ct.Name.ToString(),
-                BranchPages = ct.State.BranchPages,
-                NumberOfEntries = ct.State.NumberOfEntries,
-                LeafPages = ct.State.LeafPages + container.Header.NumberOfPages,
-                PageCount = pageCount,
-                OverflowPages = container.Header.NumberOfOverflowPages,
-                Density = density,
-                AllocatedSpaceInBytes = PagesToBytes(pageCount),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
-            };
-
-            return treeReport;
+            throw new NotImplementedException();
+            // List<double> pageDensities = null;
+            // if (includeDetails)
+            // {
+            //     pageDensities = GetPageDensities(ct);
+            // }
+            // var container = new Container(ct.Llt.GetPage(ct.State.TermsContainerId));
+            //
+            // long pageCount = ct.State.BranchPages + ct.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
+            //
+            // double density = pageDensities?.Average() ?? -1;
+            //
+            // var treeReport = new TreeReport
+            // {
+            //     Type = RootObjectType.Set,
+            //     Name = ct.Name.ToString(),
+            //     BranchPages = ct.State.BranchPages,
+            //     NumberOfEntries = ct.State.NumberOfEntries,
+            //     LeafPages = ct.State.LeafPages + container.Header.NumberOfPages,
+            //     PageCount = pageCount,
+            //     OverflowPages = container.Header.NumberOfOverflowPages,
+            //     Density = density,
+            //     AllocatedSpaceInBytes = PagesToBytes(pageCount),
+            //     UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+            // };
+            //
+            // return treeReport;
         }
         
         public TreeReport GetContainerReport(Slice name, long page, bool includeDetails)
@@ -784,18 +785,19 @@ namespace Voron.Debugging
         
         public static List<double> GetPageDensities(CompactTree ct)
         {
-            var allPages = ct.AllPages();
-            if (allPages.Count == 0)
-                return null;
-
-            var densities = new List<double>();
-            foreach (var p in allPages)
-            {
-                var page = ct.Llt.GetPage(p);
-                var state = new CompactTree.CursorState { Page = page };
-                densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
-            }
-            return densities;
+            throw new NotImplementedException();
+            // var allPages = ct.AllPages();
+            // if (allPages.Count == 0)
+            //     return null;
+            //
+            // var densities = new List<double>();
+            // foreach (var p in allPages)
+            // {
+            //     var page = ct.Llt.GetPage(p);
+            //     var state = new CompactTree.CursorState { Page = page };
+            //     densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
+            // }
+            // return densities;
         }
 
         private static List<double> GetPageDensities(FixedSizeTree tree)

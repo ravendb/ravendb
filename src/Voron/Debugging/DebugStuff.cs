@@ -293,74 +293,6 @@ namespace Voron.Debugging
             await sw.WriteLineAsync("</ul></li></ul>");
         }
         
-            
-        [Conditional("DEBUG")]
-        public static void RenderAndShow(CompactTree tree, string message = null)
-        {
-            var headerData = $"{tree.State}";
-            var it = Container.GetAllPagesSet(tree.Llt, tree.State.TermsContainerId);
-            long numOfCounterPages = 0, containerSpace = 0, freeSpace =0, entries = 0;
-            while (it.TryMoveNext(out var p))
-            {
-                Container container = new Container(tree.Llt.GetPage(p));
-                containerSpace += container.SpaceUsed();
-                entries += container.Header.NumberOfOffsets;
-                freeSpace += container.Header.FloorOfData - container.Header.CeilingOfOffsets;
-                numOfCounterPages++;
-            }
-
-            headerData += $" Terms container pages: {numOfCounterPages:#,#}, Used: {containerSpace:#,#}, Free: {freeSpace:#,#}, Entries: {entries:#,#}";
-            if (!string.IsNullOrWhiteSpace(message))
-                headerData = $"{message}-{headerData}";
-
-            RenderAndShowTCompactTree(tree, tree.State.RootPage, $"<p>{headerData}</p>");
-        }
-        
-        [Conditional("DEBUG")]
-        public static void RenderAndShowTCompactTree(CompactTree tree, long startPageNumber, string headerData = null)
-        {
-            RenderHtmlTreeView(writer =>
-            {
-                if (headerData != null)
-                    writer.WriteLine(headerData);
-                writer.WriteLine("<div class='css-treeview'><ul>");
-                               RenderPageInternal(tree, tree.Llt.GetPage(startPageNumber), writer, "Root", true);
-
-                writer.WriteLine("</ul></div>");
-            });
-        }
-        
-        private static unsafe void RenderPageInternal(CompactTree tree, Page page, TextWriter sw, string text, bool open)
-        {
-            var header = (CompactPageHeader*)page.Pointer;
-            sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
-
-            var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
-            for (int i = 0; i < header->NumberOfEntries; i++)
-            {
-                var state = new CompactTree.CursorState { Page = page };
-                string keyText = "[smallest]";
-                if (CompactTree.GetEntry(tree, ref state, i, out var keyScope, out var val))
-                {
-                    var key = keyScope.Key.Decoded();
-                    keyText =  Encoding.UTF8.GetString(key) ;
-                }
-                
-
-                if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
-                {
-                    sw.Write($"<li>{keyText} {val}</li>");
-                }
-                else
-                {
-                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, keyText, false);
-                }
-            }
-
-            sw.WriteLine("</ul></li></ul>");
-        }
-        
-        
         [Conditional("DEBUG")]
         public static void RenderAndShow<TKey>(Lookup<TKey> tree, string message = null)
             where TKey : struct, ILookupKey
@@ -390,7 +322,7 @@ namespace Voron.Debugging
         private static unsafe void RenderPageInternal<TKey>(Lookup<TKey>  tree, Page page, TextWriter sw, string text, bool open)
             where TKey : struct, ILookupKey
         {
-            var header = (CompactPageHeader*)page.Pointer;
+            var header = (LookupPageHeader*)page.Pointer;
             sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
 
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
@@ -398,10 +330,11 @@ namespace Voron.Debugging
             {
                 var state = new Lookup<TKey>.CursorState { Page = page };
                 Lookup<TKey>.GetKeyAndValue(ref state, i, out var key, out var val);
+                TKey lookupKey = TKey.FromLong<TKey>(key);
 
-                if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
                 {
-                    sw.Write($"<li>{key} {val}</li>");
+                    sw.Write($"<li>{key} {lookupKey}</li>");
                 }
                 else
                 {

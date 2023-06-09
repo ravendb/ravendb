@@ -5,6 +5,7 @@ using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
@@ -52,11 +53,10 @@ public class CompactTreeAddAndRemove : StorageTest
                 }
             }
 
-            dates.Verify();
             dates.VerifyOrderOfElements();
             foreach (long page in dates.AllPages())
             {
-                var state = new CompactTree.CursorState { Page = wtx.LowLevelTransaction.GetPage(page), };
+                var state = new Lookup<CompactTree.CompactKeyLookup>.CursorState() { Page = wtx.LowLevelTransaction.GetPage(page), };
                 Assert.Equal(state.ComputeFreeSpace(), state.Header->FreeSpace);
             }
         }

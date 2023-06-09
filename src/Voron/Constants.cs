@@ -64,14 +64,7 @@ namespace Voron.Global
 
         public static class CompactTree
         {
-            public const int PageHeaderSize = CompactPageHeader.SizeOf;
-
             public const int MaximumKeySize = 1024;
-            
-            static CompactTree()
-            {
-                Constants.Assert(() => PageHeaderSize == sizeof(CompactPageHeader), () => $"{nameof(CompactPageHeader)} size has changed and not updated at Voron.Global.Constants.");
-            }
         }
 
         public static class Tree

@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Buffers;
-using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Corax.Mappings;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Data.Fixed;
 using Voron.Data.Lookups;
+using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
+
 
 namespace Corax.Queries
 {
@@ -34,7 +28,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
 
-        private CompactTree.ForwardIterator _iterator;
+        private CompactTreeForwardIterator _iterator;
 
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;
@@ -68,15 +62,15 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term) => Next(out term, out _);
 
-        public bool Next(out TermMatch term, out CompactKeyCacheScope termScope)
+        public bool Next(out TermMatch term, out CompactKey key)
         {
-            if (_iterator.MoveNext(out termScope, out var _) == false)
+            if (_iterator.MoveNext(out key, out var _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            var termSlice = termScope.Key.Decoded();
+            var termSlice = key.Decoded();
 
             if (typeof(TLow) == typeof(Range.Exclusive))
             {
@@ -85,7 +79,7 @@ namespace Corax.Queries
                     _skipLowCheck = false;
                     if (_low.AsSpan().SequenceEqual(termSlice))
                     {
-                        return Next(out term, out termScope);
+                        return Next(out term, out key);
                     }
                 }
             }
@@ -102,7 +96,7 @@ namespace Corax.Queries
 
             }
             
-            term = _searcher.TermQuery(_field, termScope.Key, _tree);
+            term = _searcher.TermQuery(_field, key, _tree);
             return true;
         }
 
@@ -159,7 +153,7 @@ namespace Corax.Queries
                 wasFirst = true;
             }
 
-            hasNext = _iterator.MoveNext(out var key, out var termId);
+            hasNext = _iterator.MoveNext(out TVal key, out var termId);
 
             if (hasNext == false)
                 goto Empty;
