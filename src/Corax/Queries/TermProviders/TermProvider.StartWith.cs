@@ -38,14 +38,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term)
         {
-            var result = Next(out term, out var scope);
-            scope.Dispose();
-            return result;
-        }
-
-        public bool Next(out TermMatch term, out CompactKey compactKey)
-        {
-            if (_iterator.MoveNext(out compactKey, out var _) == false)
+            if (_iterator.MoveNext(out var compactKey, out var _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;

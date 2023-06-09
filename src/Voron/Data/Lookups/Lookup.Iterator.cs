@@ -42,12 +42,13 @@ namespace Voron.Data.Lookups
             
             public void Seek<T>(T key)
             {  
-                if (typeof(T) != typeof(Lookup<TLookupKey>))
+                if (typeof(T) != typeof(TLookupKey))
                 {
                     throw new NotSupportedException(typeof(T).FullName);
                 }
-                
-                _tree.FindPageFor((TLookupKey)(object)key, ref _cursor);
+
+                var lookupKey = (TLookupKey)(object)key;
+                _tree.FindPageFor(ref lookupKey, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition < 0)
@@ -168,7 +169,7 @@ namespace Voron.Data.Lookups
 
             public bool MoveNext<T>(out T key, out long value)
             {
-                if (typeof(T) != typeof(Lookup<TLookupKey>))
+                if (typeof(T) != typeof(TLookupKey))
                 {
                     throw new NotSupportedException(typeof(T).FullName);
                 }
@@ -218,11 +219,13 @@ namespace Voron.Data.Lookups
 
             public void Seek<T>(T key)
             {
-                if (typeof(T) != typeof(Lookup<TLookupKey>))
+                if (typeof(T) != typeof(TLookupKey))
                 {
                     throw new NotSupportedException(typeof(T).FullName);
                 }
-                _tree.FindPageFor((TLookupKey)(object)key, ref _cursor);
+
+                var lookupKey = (TLookupKey)(object)key;
+                _tree.FindPageFor(ref lookupKey, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition < 0)

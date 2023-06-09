@@ -334,11 +334,11 @@ namespace Voron.Debugging
 
                 if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
                 {
-                    sw.Write($"<li>{key} {lookupKey}</li>");
+                    sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
                 }
                 else
                 {
-                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, key.ToString(), false);
+                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, lookupKey.ToString(tree), false);
                 }
             }
 
