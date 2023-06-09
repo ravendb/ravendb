@@ -22,8 +22,8 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
         <Button
             className={classNames("d-flex", "align-items-center", className)}
             size={size}
-            disabled={isSpinning || disabled}
             {...rest}
+            disabled={disabled || isSpinning}
         >
             {isSpinning ? <Spinner size="sm" className="me-1" /> : IconElement}
             {children}
