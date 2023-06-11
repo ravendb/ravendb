@@ -1800,7 +1800,7 @@ namespace Raven.Server.Documents
                     var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
 
-                    if (shouldVersion)
+                    if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
                     {
                         var oldFlags = flags;
                         flags |= DocumentFlags.HasRevisions;
