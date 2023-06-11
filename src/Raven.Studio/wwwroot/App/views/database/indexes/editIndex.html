@@ -505,6 +505,22 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div>
+                                <div class="toggle">
+                                    <input id="toggleEncryption" type="checkbox" data-bind="checked: specifyQuery">
+                                    <label for="toggleEncryption">Override Default Query (<code>from index &quot;&lt;TestedIndexName&gt;&quot;</code>)</label>
+                                </div>
+                                <div data-bind="collapse: specifyQuery" class="margin-left"> 
+                                    <pre class="form-control margin-top query-source" placeholder="Enter transform script"
+                                         data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
+                                    </pre>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
+                                        <div class="help-block" data-bind="validationMessage: query"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="flex-grow scroll" style="height: 50vh" data-bind="visible: currentTab">
                                 <div class="objects-list-container">
                                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-index-results-template'"></virtual-grid>
