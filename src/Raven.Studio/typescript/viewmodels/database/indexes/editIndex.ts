@@ -48,6 +48,7 @@ import viewModelBase from "viewmodels/viewModelBase";
 import configurationConstants from "configuration";
 import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
+import testIndex = require("models/database/index/testIndex");
 
 class editIndex extends shardViewModelBase {
     
@@ -60,6 +61,8 @@ class editIndex extends shardViewModelBase {
     indexesToDeleteAfterMerge = ko.observableArray<string>([]); // represents index merge mode
     editedIndex = ko.observable<indexDefinition>();
     isAutoIndex = ko.observable<boolean>(false);
+    
+    testIndex = new testIndex(() => this.db, () => this.editedIndex());
 
     originalIndexName: string;
     isSaveEnabled: KnockoutComputed<boolean>;

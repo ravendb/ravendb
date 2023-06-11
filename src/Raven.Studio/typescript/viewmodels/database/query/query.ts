@@ -623,6 +623,9 @@ class query extends shardViewModelBase {
         const documentsProvider = new documentBasedColumnsProvider(this.db, grid, {
             enableInlinePreview: true,
             detectTimeSeries: true,
+            customInlinePreview: doc => {
+                documentBasedColumnsProvider.showPreview(doc, this.criteria().indexEntries() ? "Index Entry Preview" : null);
+            },
             timeSeriesActionHandler: (type, documentId, name, value) => {
                 if (type === "plot") {
                     const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);

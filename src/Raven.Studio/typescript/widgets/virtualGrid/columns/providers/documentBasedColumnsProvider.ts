@@ -109,7 +109,7 @@ class documentBasedColumnsProvider {
 
         if (this.enableInlinePreview) {
             const previewColumn = new actionColumn<document>(this.gridController,
-                    doc => this.customInlinePreview(doc, doc.getId() ? null : "Index Entry Preview"), "Preview", `<i class="icon-preview"></i>`, "75px",
+                    doc => this.customInlinePreview(doc), "Preview", `<i class="icon-preview"></i>`, "75px",
             {
                 title: () => 'Show item preview'
             });
@@ -194,7 +194,7 @@ class documentBasedColumnsProvider {
         
         const text = JSON.stringify(docDto, null, 4);
         const shardPart = doc.__metadata?.shardNumber != null ? " (shard #" + doc.__metadata.shardNumber + ")" : "";
-        const titleToUse = title ?? doc.getId() ? "Document: " + doc.getId() + shardPart : "Document Preview";
+        const titleToUse = title ?? (doc.getId() ? "Document: " + doc.getId() + shardPart : "Document Preview");
         app.showBootstrapDialog(new showDataDialog(titleToUse, text, "javascript"));
     }
 

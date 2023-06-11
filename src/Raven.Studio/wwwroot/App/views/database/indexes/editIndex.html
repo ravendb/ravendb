@@ -249,6 +249,12 @@
                                   data-bind="text: editedIndex().additionalSources().length || undefined"></span>
                         </a>
                     </li>
+                    <li role="presentation" id="testIndexTab">
+                        <a href="#testIndex" aria-controls="testIndex" role="tab" data-toggle="tab">
+                            <i class="icon-test-index"></i>
+                            <span>Test Index</span>
+                        </a>
+                    </li>
                 </ul>
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade in active" id="fields">
@@ -455,6 +461,68 @@
                                 </li>
                             </ul>
                             <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
+                            </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane fade" id="testIndex">
+                        <div class="panel padding flex-vertical flex-grow" data-bind="with: testIndex">
+                            <div class="flex-header">
+                                <div class="flex-horizontal margin-bottom margin-bottom-sm">
+                                    <div class="flex-grow flex-vertical">
+                                        <div class="input-group">
+                                            <div class="input-group-addon">Scan limit</div>
+                                            <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.testing }, disable: spinners.testing" title="Run test with current settings">
+                                            <i class="icon-rocket"></i><span>Run Test</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-horizontal">
+                                    <div class="flex-grow flex-vertical">
+                                        <div class="input-group">
+                                            <div class="input-group-addon">Time limit</div>
+                                            <div class="input-group flex-grow">
+                                                <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
+                                                <div class="input-group-addon">
+                                                    seconds
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="btn-group dropdown-right open" data-bind="style: { visibility: currentTab() ? 'visible' : 'hidden' }">
+                                            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                                <i class="icon-table"></i><span>Display</span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                                <div data-bind="compose: { model: columnsSelector }"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-grow scroll" style="height: 50vh" data-bind="visible: currentTab">
+                                <div class="objects-list-container">
+                                    <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-index-results-template'"></virtual-grid>
+                                </div>
+                            </div>
+                            <div class="flex-window-head" data-bind="visible: currentTab">
+                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'queryResults' }, click: _.partial(goToTab, 'queryResults')">
+                                    Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().queryResults.toLocaleString(), visible: resultsCount().queryResults"></span>
+                                </button>
+                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'indexEntries' }, click: _.partial(goToTab, 'indexEntries')">
+                                    Index Entries &nbsp; <span class="label label-primary" data-bind="text: resultsCount().indexEntries.toLocaleString(), visible: resultsCount().indexEntries"></span>
+                                </button>
+                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'mapResults' }, click: _.partial(goToTab, 'mapResults')">
+                                    Map Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().mapResults.toLocaleString(), visible: resultsCount().mapResults"></span>
+                                </button>
+                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'reduceResults' }, click: _.partial(goToTab, 'reduceResults')">
+                                    Reduce Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().reduceResults.toLocaleString(), visible: resultsCount().reduceResults"></span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -935,3 +1003,10 @@
         </div>
     </div>
 </script>
+
+<script type="text/html" id="empty-test-index-results-template">
+    No test results.
+</script>
+
+<div class="tooltip json-preview lg js-index-test-tooltip" style="opacity: 0">
+</div>
