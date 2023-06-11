@@ -121,10 +121,6 @@ class backupHistory extends viewModelBase {
     }
     
     private getLinkForTaskView(item: BackupHistoryItem) {
-        if (item.NodeTag !== clusterTopologyManager.default.localNodeTag()) {
-            return null;
-        }
-
         if (!item.TaskId) {
             // manual backup
             return null;
