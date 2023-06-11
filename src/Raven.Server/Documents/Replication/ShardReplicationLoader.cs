@@ -9,6 +9,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -39,6 +40,15 @@ public class ShardReplicationLoader : ReplicationLoader
         PullReplicationParams incomingPullParams,
         ReplicationLatestEtagRequest getLatestEtagMessage)
     {
+        if (getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Sharded)
+        {
+            return new IncomingExternalReplicationHandlerForShard(tcpConnectionOptions,
+                getLatestEtagMessage,
+                this,
+                buffer,
+                getLatestEtagMessage.ReplicationsType);
+        }
+
         if (getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Migration)
         {
             return new IncomingMigrationReplicationHandler(

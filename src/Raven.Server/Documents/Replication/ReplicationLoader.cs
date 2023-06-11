@@ -618,16 +618,6 @@ namespace Raven.Server.Documents.Replication
         {
             if (incomingPullParams == null)
             {
-                if (ShardHelper.IsShardName(Database.Name) && 
-                    getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Sharded)
-                {
-                    return new IncomingExternalReplicationHandlerForShard(tcpConnectionOptions,
-                        getLatestEtagMessage,
-                        this,
-                        buffer,
-                        getLatestEtagMessage.ReplicationsType);
-                }
-
                 return new IncomingReplicationHandler(
                     tcpConnectionOptions,
                     getLatestEtagMessage,
