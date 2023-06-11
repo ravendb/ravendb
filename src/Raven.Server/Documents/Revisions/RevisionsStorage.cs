@@ -850,7 +850,7 @@ namespace Raven.Server.Documents.Revisions
                         break;
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr);
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
 
                     if (minimumTimeToKeep.HasValue && _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
                     {
@@ -879,6 +879,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var writeTables = new Dictionary<string, Table>();
             long maxEtagDeleted = 0;
+            string defaultExMessageSuffix = $"from table '{table.Name}'";
 
             foreach (var revision in revisionsToRemove)
             {
@@ -893,12 +894,31 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     Table writeTable = null;
-                    var collection = CollectionName.GetCollectionName(revision.Data);
-                    if (writeTables.TryGetValue(collection, out writeTable) == false)
+                    string exMsgSuffix;
+                    if (table.ReadByKey(keySlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
                     {
-                        writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(collection));
-                        writeTables[collection] = writeTable;
+                        writeTable = table;
+                        exMsgSuffix = defaultExMessageSuffix;
                     }
+                    else
+                    {
+                        // We request to delete revision with the wrong collection
+                        var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
+
+                        var collection = _documentsStorage.ExtractCollectionName(context, revisionData.Data);
+                        if (writeTables.TryGetValue(collection.Name, out writeTable) == false)
+                        {
+                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collection);
+                            writeTables[collection.Name] = writeTable;
+                        }
+
+                        exMsgSuffix = $"of collection '{collection.Name}' {defaultExMessageSuffix}, in order to replace with the collection '{collection.Name}'";
+                    }
+
+                    if (writeTable.IsOwned(tvr.Id) == false) // this shouldn't happened
+                        throw new VoronErrorException(
+                            $"Failed to remove revision {keySlice} (id:{revision.Id}) {exMsgSuffix}");
+
                     writeTable.DeleteByKey(keySlice);
                 }
             }
@@ -1105,7 +1125,7 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
                 {
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr);
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
 
                     if (revision.Flags.Contain(DocumentFlags.ForceCreated) == false)
                     {
