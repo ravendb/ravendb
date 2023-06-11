@@ -651,6 +651,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var document = documentType.Document;
                     var id = document.Id;
+                    var documentChangeVector = context.GetChangeVector(document.ChangeVector);
 
                     if (IsRevision)
                     {
@@ -674,15 +675,15 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             _missingDocumentsForRevisions?.TryRemove(id, out _);
                             _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
-                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                                document.NonPersistentFlags, documentChangeVector, document.LastModified.Ticks);
                         }
                         else
                         {
                             _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
-                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                                document.NonPersistentFlags, documentChangeVector, document.LastModified.Ticks);
                         }
 
-                        databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(document.ChangeVector), context);
+                        databaseChangeVector = ChangeVector.Merge(databaseChangeVector, documentChangeVector, context);
 
                         continue;
                     }
@@ -713,12 +714,12 @@ namespace Raven.Server.Smuggler.Documents
 
                         document.Flags |= DocumentFlags.HasRevisions;
                         _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
-                            document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            document.NonPersistentFlags, documentChangeVector, document.LastModified.Ticks);
 
                         if (parentDocument != null)
                         {
                             // the change vector of the document must be identical to the one of the last revision
-                            databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(document.ChangeVector), context);
+                            databaseChangeVector = ChangeVector.Merge(databaseChangeVector, documentChangeVector, context);
 
                             using (parentDocument.Data)
                                 parentDocument.Data = parentDocument.Data.Clone(context);

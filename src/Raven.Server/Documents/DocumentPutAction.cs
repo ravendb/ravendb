@@ -145,7 +145,7 @@ namespace Raven.Server.Documents
                 }
 
                 BlittableJsonReaderObject oldDoc = null;
-                string oldChangeVector = "";
+                ChangeVector oldChangeVector = null;
                 if (oldValue.Pointer == null)
                 {
                     // expectedChangeVector being null means we don't care, 
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents
                         }
 
                         flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector.AsString(), modifiedTicks, configuration, collectionName);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
 

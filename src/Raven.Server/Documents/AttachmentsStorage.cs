@@ -13,6 +13,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -214,14 +215,14 @@ namespace Raven.Server.Documents
 
                                 var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
                                 var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
-
+                                var docChangeVector = context.GetChangeVector(doc.ChangeVector);
                                 var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
                                 if (configuration != null)
                                 {
-                                    var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, doc.Data, doc.ChangeVector, collection);
+                                    var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, doc.Data, docChangeVector, collection);
                                     if (shouldVersionOldDoc)
                                     {
-                                        _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, doc.ChangeVector, doc.LastModified.Ticks, configuration, collection);
+                                        _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, docChangeVector, doc.LastModified.Ticks, configuration, collection);
                                     }
                                 }
 
@@ -1298,12 +1299,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
             using (GetAttachmentPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags);
             }
         }
 

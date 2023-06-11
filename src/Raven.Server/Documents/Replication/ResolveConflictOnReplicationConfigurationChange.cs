@@ -350,18 +350,19 @@ namespace Raven.Server.Documents.Replication
             if (incoming == null)
                 return;
 
+            var incomingChangeVector = context.GetChangeVector(incoming.ChangeVector);
             // we resolved the conflict on the fly, so we save the remote document as revisions
             if (incoming.Doc != null)
             {
                 _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc,
                     incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                    NonPersistentDocumentFlags.FromResolver, incoming.ChangeVector, incoming.LastModified.Ticks);
+                    NonPersistentDocumentFlags.FromResolver, incomingChangeVector, incoming.LastModified.Ticks);
             }
             else
             {
                 using (Slice.External(context.Allocator, incoming.LowerId, out var lowerId))
                 {
-                    _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, lowerId, new CollectionName(incoming.Collection), incoming.ChangeVector,
+                    _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, lowerId, new CollectionName(incoming.Collection), incomingChangeVector,
                         incoming.LastModified.Ticks, NonPersistentDocumentFlags.FromResolver, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                 }
             }
@@ -379,14 +380,14 @@ namespace Raven.Server.Documents.Replication
             {
                 _database.DocumentsStorage.RevisionsStorage.Put(context, existing.Document.Id, existing.Document.Data,
                     existing.Document.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                    NonPersistentDocumentFlags.FromResolver, existing.Document.ChangeVector, existing.Document.LastModified.Ticks);
+                    NonPersistentDocumentFlags.FromResolver, context.GetChangeVector(existing.Document.ChangeVector), existing.Document.LastModified.Ticks);
             }
             else if (existing.Tombstone != null)
             {
                 using (Slice.External(context.Allocator, existing.Tombstone.LowerId, out var key))
                 {
                     _database.DocumentsStorage.RevisionsStorage.Delete(context, existing.Tombstone.LowerId, key, new CollectionName(existing.Tombstone.Collection),
-                        existing.Tombstone.ChangeVector,
+                        context.GetChangeVector(existing.Tombstone.ChangeVector),
                         existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.FromResolver,
                         existing.Tombstone.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                 }
