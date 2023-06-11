@@ -536,13 +536,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
-                        // we let pass all the conflicted revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
-                        if (doc.Flags.Contain(DocumentFlags.Conflicted) ||
-                            doc.Flags.Contain(DocumentFlags.FromClusterTransaction) ||
-                            doc.Flags.Contain(DocumentFlags.FromOldDocumentRevision))
-                        {
-                            return false;
-                        }
+                        return false;
                     }
 
                     break;
