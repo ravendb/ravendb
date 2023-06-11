@@ -36,7 +36,7 @@ namespace SlowTests.Client.Attachments
         public AttachmentsReplication(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
@@ -97,7 +97,7 @@ namespace SlowTests.Client.Attachments
                     await SetupAttachmentReplicationAsync(store1, store2, false);
                 }
                 Assert.True(WaitForDocument(store2, "marker$users/1"));
-                
+
                 using (var session = store2.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
@@ -226,7 +226,7 @@ namespace SlowTests.Client.Attachments
                 }
             }
         }
-        
+
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DeleteAttachments(Options options)
@@ -335,7 +335,7 @@ namespace SlowTests.Client.Attachments
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
 
                 await SetupAttachmentReplicationAsync(store1, store2);
-                
+
                 await AssertAttachmentCount(store2, 2, 4);
 
                 using (var session = store2.OpenSession())
@@ -501,7 +501,7 @@ namespace SlowTests.Client.Attachments
                     configuration.Collections["Users"].PurgeOnDelete = false;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
                 });
-                
+
                 await SetupAttachmentReplicationAsync(store1, store2);
                 await SetupAttachmentReplicationAsync(store2, store1);
 
@@ -550,7 +550,7 @@ namespace SlowTests.Client.Attachments
                     u.Age = 50;
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store1.OpenSession())
                 {
                     var u = session.Load<User>("users/1");
@@ -632,7 +632,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Age == 30, 15_000));
-                
+
                 await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
@@ -811,7 +811,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Fitzchak 3"));
-              
+
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 WaitForMarker(store1, store2);
 
@@ -1141,7 +1141,7 @@ namespace SlowTests.Client.Attachments
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
                 }
-                
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" }, "users/2$users/1");
@@ -1390,14 +1390,14 @@ namespace SlowTests.Client.Attachments
             var co = new ServerCreationOptions
             {
                 RunInMemory = false,
-                CustomSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString()},
+                CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString() },
                 RegisterForDisposal = false
             };
 
             using (var server = GetNewServer(co))
-            using (var store1 = GetDocumentStore(new Options(options) {Server = server, RunInMemory = false}))
-            using (var store2 = GetDocumentStore(new Options(options) {Server = server, RunInMemory = false}))
-            using (var store3 = GetDocumentStore(new Options(options) {Server = server, RunInMemory = false}))
+            using (var store1 = GetDocumentStore(new Options(options) { Server = server, RunInMemory = false }))
+            using (var store2 = GetDocumentStore(new Options(options) { Server = server, RunInMemory = false }))
+            using (var store3 = GetDocumentStore(new Options(options) { Server = server, RunInMemory = false }))
             {
                 using (var session = store1.OpenAsyncSession())
                 using (var a1 = new MemoryStream(new byte[2 * 1024 * 1024]))
@@ -1415,8 +1415,8 @@ namespace SlowTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, breakReplication: true, new List<RavenServer>() {server});
-                
+                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, breakReplication: true, new List<RavenServer>() { server });
+
                 await SetupReplicationAsync(store1, store2);
                 replication.ReplicateOnce("foo");
 
@@ -1468,7 +1468,7 @@ namespace SlowTests.Client.Attachments
             {
                 string docId1 = "users/1", docId2 = "users/2$users/1";
                 var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, breakReplication: true);
-                
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, docId1);
@@ -1478,7 +1478,7 @@ namespace SlowTests.Client.Attachments
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, docId2);
@@ -1491,7 +1491,7 @@ namespace SlowTests.Client.Attachments
 
                 await SetupReplicationAsync(store1, store2);
                 replication.ReplicateOnce(docId1);
-                 
+
                 Assert.True(WaitForDocument(store2, docId1));
 
                 using (var session = store2.OpenAsyncSession())
@@ -1506,7 +1506,7 @@ namespace SlowTests.Client.Attachments
 
                     Assert.Null(await session.LoadAsync<User>(docId2));
                 }
-                
+
                 replication.ReplicateOnce(docId1);
                 Assert.True(WaitForDocument(store2, docId2));
 
@@ -1533,7 +1533,7 @@ namespace SlowTests.Client.Attachments
 
             var mainServer = cluster.Nodes[0];
             var toRemove = mainServer.ServerStore.NodeTag;
-            
+
             using (var store = GetDocumentStore(new Options(options)
             {
                 Server = mainServer,
@@ -1579,9 +1579,9 @@ namespace SlowTests.Client.Attachments
                 }
 
                 var replication = await GetReplicationManagerAsync(store, databaseName, options.DatabaseMode, servers: cluster.Nodes);
-                
+
                 await replication.EnsureNoReplicationLoopAsync();
-                
+
                 if (options.DatabaseMode == RavenDatabaseMode.Single)
                 {
                     var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: toRemove,
@@ -1606,7 +1606,7 @@ namespace SlowTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                if(options.DatabaseMode == RavenDatabaseMode.Single)
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
                     await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, toRemove));
                 else
                 {
@@ -2578,7 +2578,7 @@ namespace SlowTests.Client.Attachments
             using (var store2 = GetDocumentStore(options))
             using (var store3 = GetDocumentStore(options))
             {
-                var user = new User {Name = "Karmel", Id = "users/1"};
+                var user = new User { Name = "Karmel", Id = "users/1" };
                 using (var session = store1.OpenSession())
                 {
                     session.Store(user, user.Id);
@@ -2620,7 +2620,6 @@ namespace SlowTests.Client.Attachments
                 var stores = new DocumentStore[] { store1, store2, store3 };
                 await WriteStatus(stores, "Stage 1");
 
-
                 using (var session = store1.OpenAsyncSession())
                 {
                     var u = await session.LoadAsync<User>("users/1");
@@ -2645,71 +2644,77 @@ namespace SlowTests.Client.Attachments
 
                 await WriteStatus(stores, "Stage 4");
 
-                var res2 = await WaitForChangeVectorInReplicationAsync(stores);
-                Assert.True(res2);
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
 
-                var res = await WaitForValueAsync(async () =>
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    var res = await WaitForValueAsync(async () =>
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        using (var session2 = store2.OpenAsyncSession())
+                        using (var session3 = store3.OpenAsyncSession())
+                        {
+                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                            if (attachment != null && attachment2 != null && attachment3 != null &&
+                                attachment.Details.Name == "foo/bar" &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context) &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context))
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }
+                    }, true, 30_000, interval: 333);
+
+                    await WriteStatus(stores, "Stage 5");
+
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     using (var session3 = store3.OpenAsyncSession())
                     {
+                        var u1 = await session.LoadAsync<User>("users/1");
+                        var u2 = await session2.LoadAsync<User>("users/1");
+                        var u3 = await session3.LoadAsync<User>("users/1");
+
+                        var cv1 = context.GetChangeVector(session.Advanced.GetChangeVectorFor(u1)).Version.AsString();
+                        var cv2 = context.GetChangeVector(session2.Advanced.GetChangeVectorFor(u2)).Version.AsString();
+                        var cv3 = context.GetChangeVector(session3.Advanced.GetChangeVectorFor(u3)).Version.AsString();
+
+                        Console.WriteLine($"\ncv1: {cv1}");
+                        Console.WriteLine($"cv2: {cv2}");
+                        Console.WriteLine($"cv3: {cv3}\n");
+
+                        Assert.True(cv1.Equals(cv2));
+                        Assert.True(cv1.Equals(cv3));
+
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        if (attachment != null && attachment2 != null && attachment3 != null &&
-                            attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details) &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details))
-                        {
-                            return true;
-                        }
+                        Assert.NotNull(attachment);
+                        Assert.NotNull(attachment2);
+                        Assert.NotNull(attachment3);
 
-                        return false;
+                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector3 = context.GetChangeVector(attachment3.Details.ChangeVector).Version.AsString();
+
+                        user = await session.LoadAsync<User>("users/1");
+                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
+                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
+                        Assert.Equal("foo/bar", attachment.Details.Name);
+                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+                        Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector3, attachmentChangeVector2);
+                        Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                     }
-                }, true, 30_000, interval: 333);
-
-
-                await WriteStatus(stores, "Stage 5");
-
-                using (var session = store1.OpenAsyncSession())
-                using (var session2 = store2.OpenAsyncSession())
-                using (var session3 = store3.OpenAsyncSession())
-                {
-                    var u1 = await session.LoadAsync<User>("users/1");
-                    var u2 = await session2.LoadAsync<User>("users/1");
-                    var u3 = await session3.LoadAsync<User>("users/1");
-
-                    var cv1 = session.Advanced.GetChangeVectorFor(u1);
-                    var cv2 = session2.Advanced.GetChangeVectorFor(u2);
-                    var cv3 = session3.Advanced.GetChangeVectorFor(u3);
-
-                    Console.WriteLine($"\ncv1: {cv1}");
-                    Console.WriteLine($"cv2: {cv2}");
-                    Console.WriteLine($"cv3: {cv3}\n");
-
-                    Assert.True(cv1.Equals(cv2));
-                    Assert.True(cv1.Equals(cv3));
-
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment2);
-                    Assert.NotNull(attachment3);
-
-                    user = await session.LoadAsync<User>("users/1");
-                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
-                    Assert.Equal("foo/bar", attachment.Details.Name);
-                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-                    Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                 }
             }
         }
@@ -2788,46 +2793,52 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var res2 = await WaitForChangeVectorInReplicationAsync(stores);
-                Assert.True(res2);
-
                 await WriteStatus(stores, "Stage 3");
 
-                var res = await WaitForValueAsync(async () =>
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    var res = await WaitForValueAsync(async () =>
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        using (var session2 = store2.OpenAsyncSession())
+                        {
+                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                            if (attachment != null && attachment2 != null &&
+                                attachment.Details.Hash == "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=" &&
+                                attachment.Details.Name == "foo/bar" &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context))
+                            {
+                                return true;
+                            }
+                            return false;
+                        }
+                    }, true, 15_000, 500);
+
+                    Assert.True(res);
+
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     {
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        if (attachment != null && attachment2 != null &&
-                            attachment.Details.Hash == "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=" &&
-                            attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details))
-                        {
-                            return true;
-                        }
-                        return false;
+                        Assert.NotNull(attachment);
+                        Assert.NotNull(attachment2);
+
+                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
+
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Details.Hash);
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment2.Details.Hash);
+                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
                     }
-                }, true, 15_000, 500);
-
-                Assert.True(res);
-
-                using (var session = store1.OpenAsyncSession())
-                using (var session2 = store2.OpenAsyncSession())
-                {
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment2);
-
-                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Details.Hash);
-                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
                 }
             }
         }
@@ -2841,11 +2852,11 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "users/1");
+                    session.Store(new User { Name = "Karmel" }, "users/1");
                     session.SaveChanges();
                 }
 
-                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
                     Assert.Equal("foo/bar", result.Name);
@@ -2860,12 +2871,12 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store2, store1);
                 await EnsureReplicatingAsync(store1, store2);
 
-                var stores = new DocumentStore[] {store1, store2};
+                var stores = new DocumentStore[] { store1, store2 };
                 await WriteStatus(stores, "Stage 1");
 
                 var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode);
                 var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode);
-                
+
                 replication1.Break();
                 replication2.Break();
 
@@ -2890,57 +2901,62 @@ namespace SlowTests.Client.Attachments
                 replication1.Mend();
 
                 replication2.Mend();
-                
+
                 await EnsureReplicatingAsync(store2, store1);
                 await EnsureReplicatingAsync(store1, store2);
 
-
-                var res2 = await WaitForChangeVectorInReplicationAsync(stores);
-                Assert.True(res2);
-
                 await WriteStatus(stores, "Stage 3");
 
-                await WaitForValueAsync(async () =>
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    await WaitForValueAsync(async () =>
+                    {
+                        using var session1 = store1.OpenAsyncSession();
+                        using var session2 = store2.OpenAsyncSession();
+                        var attachment = await session1.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                        var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                        if (attachment != null && attachment2 != null &&
+                            attachment.Details.Hash == "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" &&
+                            attachment.Details.Name == "foo/bar" &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context))
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    }, true, 10000, 500);
+
+
                     using var session1 = store1.OpenAsyncSession();
                     using var session2 = store2.OpenAsyncSession();
+
+                    var user = await session1.LoadAsync<User>("users/1");
+                    Assert.Equal(30, user.Age);
+                    var user2 = await session2.LoadAsync<User>("users/1");
+                    Assert.Equal(30, user2.Age);
+
+                    await WriteAttachmentDetails(stores);
+
                     var attachment = await session1.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                     var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                    if (attachment != null && attachment2 != null &&
-                        attachment.Details.Hash == "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" &&
-                        attachment.Details.Name == "foo/bar" &&
-                        AreAttachmentDetailsEqual(attachment.Details, attachment2.Details))
-                    {
-                        return true;
-                    }
+                    Assert.NotNull(attachment);
+                    Assert.NotNull(attachment2);
 
-                    return false;
-                }, true, 10000, 500);
+                    var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                    var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
 
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
+                    Assert.Equal("foo/bar", attachment.Details.Name);
 
-                using var session1 = store1.OpenAsyncSession();
-                using var session2 = store2.OpenAsyncSession();
-
-                var user = await session1.LoadAsync<User>("users/1");
-                Assert.Equal(30, user.Age);
-                var user2 = await session2.LoadAsync<User>("users/1");
-                Assert.Equal(30, user2.Age);
-
-                await WriteAttachmentDetails(stores);
-
-                var attachment = await session1.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-          
-                Assert.NotNull(attachment);
-                Assert.NotNull(attachment2);
-
-                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
-                Assert.Equal("foo/bar", attachment.Details.Name);
-
-                Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                    Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+                }
             }
         }
 
@@ -3038,60 +3054,67 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store3, store1);
                 await EnsureReplicatingAsync(store3, store2);
 
-                var res2 = await WaitForChangeVectorInReplicationAsync(stores);
-                Assert.True(res2);
-
                 await WriteStatus(stores, "Stage 3");
 
-                await WaitForValueAsync(async () =>
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    await WaitForValueAsync(async () =>
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        using (var session2 = store2.OpenAsyncSession())
+                        using (var session3 = store3.OpenAsyncSession())
+                        {
+                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                            if (attachment != null && attachment2 != null && attachment3 != null &&
+                                attachment.Details.Name == "foo/bar" &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context) &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context))
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }
+                    }, true, 30_000, 500);
+
+                    await WriteAttachmentDetails(stores);
+
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     using (var session3 = store3.OpenAsyncSession())
                     {
+                        var user = await session.LoadAsync<User>("users/1");
+
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        if (attachment != null && attachment2 != null && attachment3 != null &&
-                            attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details) &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details))
-                        {
-                            return true;
-                        }
+                        Assert.NotNull(attachment);
+                        Assert.NotNull(attachment2);
+                        Assert.NotNull(attachment3);
 
-                        return false;
+                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector3 = context.GetChangeVector(attachment3.Details.ChangeVector).Version.AsString();
+
+                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
+                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
+                        Assert.Equal("foo/bar", attachment.Details.Name);
+
+                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+
+                        Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector3, attachmentChangeVector2);
+                        Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                     }
-                }, true, 10000, 500);
-
-                await WriteAttachmentDetails(stores);
-
-                using (var session = store1.OpenAsyncSession())
-                using (var session2 = store2.OpenAsyncSession())
-                using (var session3 = store3.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/1");
-
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment2);
-                    Assert.NotNull(attachment3);
-
-                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
-                    Assert.Equal("foo/bar", attachment.Details.Name);
-
-                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-
-                    Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                 }
             }
         }
@@ -3231,7 +3254,7 @@ namespace SlowTests.Client.Attachments
                 var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode);
                 var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode);
                 var replication3 = await GetReplicationManagerAsync(store3, store3.Database, options.DatabaseMode);
-                
+
                 replication1.Break();
                 replication2.Break();
                 replication3.Break();
@@ -3271,11 +3294,13 @@ namespace SlowTests.Client.Attachments
 
                 await EnsureReplicatingAsync(store2, store1);
                 await EnsureReplicatingAsync(store2, store3);
-                
+
                 replication3.Mend();
 
                 await EnsureReplicatingAsync(store3, store2);
                 await EnsureReplicatingAsync(store3, store1);
+
+                await Task.Delay(3000); // wait for the replication ping-pong to settle down
 
                 replication1.Mend();
 
@@ -3283,39 +3308,47 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store1, store3);
 
                 var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
-                var dbName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "users/1");
-                var dbName3 = options.DatabaseMode == RavenDatabaseMode.Single ? store3.Database : await Sharding.GetShardDatabaseNameForDocAsync(store3, "users/1");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
 
-                var res2 = await WaitForValueAsync(async () =>
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    var cvs = new List<string>();
-
-                    var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
-                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    var res = await WaitForValueAsync(async () =>
                     {
-                        cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
-                    }
-                    var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2);
-                    using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
-                    }
-                    var storage3 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName3);
-                    using (storage3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
-                    }
+                        using (var session = store1.OpenAsyncSession())
+                        using (var session2 = store2.OpenAsyncSession())
+                        using (var session3 = store3.OpenAsyncSession())
+                        {
+                            var user = await session.LoadAsync<User>("users/1");
+                            var user2 = await session2.LoadAsync<User>("users/1");
+                            var user3 = await session3.LoadAsync<User>("users/1");
 
-                    return cvs.Any(x => x != cvs.FirstOrDefault()) == false;
-                }, true, timeout: 30_000, interval: 333);
-                
-                Assert.True(res2);
+                            return user.Age == user2.Age && user.Age == user3.Age;
+                        }
+                    }, true, 30_000, 500);
+                    Assert.True(res);
 
-                var res = await WaitForValueAsync(async () =>
-                {
+                    res = await WaitForValueAsync(async () =>
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        using (var session2 = store2.OpenAsyncSession())
+                        using (var session3 = store3.OpenAsyncSession())
+                        {
+                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                            var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                            if (attachment != null && attachment2 != null && attachment3 != null &&
+                                attachment.Details.Name == "foo/bar" &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context) &&
+                                AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context))
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }
+                    }, true, 30_000, 500);
+
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     using (var session3 = store3.OpenAsyncSession())
@@ -3324,42 +3357,27 @@ namespace SlowTests.Client.Attachments
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        if (attachment != null && attachment2 != null && attachment3 != null &&
-                            attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details) &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details))
-                        {
-                            return true;
-                        }
+                        Assert.NotNull(attachment);
+                        Assert.NotNull(attachment2);
+                        Assert.NotNull(attachment3);
 
-                        return false;
+                        var user = await session.LoadAsync<User>("users/1");
+                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
+                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0), $"age: {user.Age}, hash: {attachment.Details.Hash}");
+                        Assert.Equal("foo/bar", attachment.Details.Name);
+
+                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
+                        var attachmentChangeVector3 = context.GetChangeVector(attachment3.Details.ChangeVector).Version.AsString();
+
+                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+
+                        Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
+                        Assert.Equal(attachmentChangeVector3, attachmentChangeVector2);
+                        Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                     }
-                }, true, 10_000, 500);
-
-                using (var session = store1.OpenAsyncSession())
-                using (var session2 = store2.OpenAsyncSession())
-                using (var session3 = store3.OpenAsyncSession())
-                {
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                    var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment2);
-                    Assert.NotNull(attachment3);
-
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0), $"age: {user.Age}, hash: {attachment.Details.Hash}");
-                    Assert.Equal("foo/bar", attachment.Details.Name);
-
-                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-
-                    Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
                 }
             }
         }
@@ -3396,26 +3414,10 @@ namespace SlowTests.Client.Attachments
             Console.WriteLine("-----");
         }
 
-        private async Task<bool> WaitForChangeVectorInReplicationAsync(DocumentStore[] stores)
-        {
-            var val = await WaitForValueAsync(async () =>
-            {
-                var cvs = new List<string>();
-                foreach (var store in stores)
-                {
-                    var stats = await GetDatabaseStatisticsAsync(store);
-                    cvs.Add(stats.DatabaseChangeVector);
-                }
-                
-                return cvs.Any(x => x != cvs.FirstOrDefault()) == false;
-            }, true, timeout: 30_000, interval: 333);
-            return val;
-        }
-
-        private bool AreAttachmentDetailsEqual(AttachmentDetails attachment1, AttachmentDetails attachment2)
+        private bool AreAttachmentDetailsEqual(AttachmentDetails attachment1, AttachmentDetails attachment2, DocumentsOperationContext context)
         {
             if (attachment1.DocumentId == attachment2.DocumentId &&
-                attachment1.ChangeVector == attachment2.ChangeVector &&
+                context.GetChangeVector(attachment1.ChangeVector).Version.AsString() == context.GetChangeVector(attachment2.ChangeVector).Version.AsString() &&
                 attachment1.Hash == attachment2.Hash &&
                 attachment1.Name == attachment2.Name &&
                 attachment1.ContentType == attachment2.ContentType)
