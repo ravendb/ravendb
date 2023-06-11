@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
@@ -272,23 +273,29 @@ public class ChangeVector
         return newChangeVector.SerializeVector();
     }
 
-    public static List<string> ExtractDbIdsFromChangeVector(ChangeVector changeVector)
+    private static IEnumerable<string> ExtractDbIdsFromChangeVector(ChangeVector changeVector)
     {
         return ExtractDbIdsFromChangeVector(changeVector.Order.AsString());
     }
 
-    public static List<string> ExtractDbIdsFromChangeVector(string changeVector)
+    private static IEnumerable<string> ExtractDbIdsFromChangeVector(string changeVector)
     {
         if (string.IsNullOrEmpty(changeVector))
-            return null;
+            yield break;
 
-        var dbIds = new List<string>();
         var cvs = changeVector.ToChangeVectorList();
-
         foreach (var entry in cvs)
-            dbIds.Add(entry.DbId);
+            yield return entry.DbId;
+    }
 
-        return dbIds;
+    public bool CheckIfDbIdExists(ChangeVector changeVector)
+    {
+        var dbIdsFromRemote = ExtractDbIdsFromChangeVector(changeVector.Order);
+
+        if (dbIdsFromRemote.Any(x => Order.Contains(x)))
+            return true;
+
+        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

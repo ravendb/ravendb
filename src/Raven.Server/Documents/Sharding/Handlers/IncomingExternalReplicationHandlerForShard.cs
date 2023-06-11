@@ -50,16 +50,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var shouldUpdateDatabaseCv = true;
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
-                if (current.IsNullOrEmpty == false)
+                if (current.IsNullOrEmpty == false && current.CheckIfDbIdExists(changeVector.Order))
                 {
-                    var dbIdsFromDestCv = ChangeVector.ExtractDbIdsFromChangeVector(changeVector.Order);
-                    if (dbIdsFromDestCv != null &&
-                        dbIdsFromDestCv.Any(x => current.Order.Contains(x)))
-                    {
-                        // the destination dbId already exists in the database change vector
-                        // so we can avoid generating a new database change vector
-                        shouldUpdateDatabaseCv = false;
-                    }
+                    // the destination dbId already exists in the database change vector
+                    // so we can avoid generating a new database change vector
+                    shouldUpdateDatabaseCv = false;
                 }
 
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
