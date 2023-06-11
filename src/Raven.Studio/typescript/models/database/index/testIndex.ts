@@ -72,7 +72,7 @@ class testIndex {
     toDto(): Raven.Server.Documents.Indexes.Test.TestIndexParameters {
         return {
             IndexDefinition: this.indexDefinitionProvider().toDto(),
-            WaitForNonStaleResultsTimeoutInSeconds: this.testTimeLimit() ?? 15,
+            WaitForNonStaleResultsTimeoutInSec: this.testTimeLimit() ?? 15,
             Query: this.specifyQuery() ? this.query() : null,
             QueryParameters: null,
             MaxDocumentsToProcess: this.testScanLimit()
