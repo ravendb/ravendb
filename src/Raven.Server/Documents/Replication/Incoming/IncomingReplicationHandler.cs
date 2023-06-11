@@ -374,10 +374,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment?.ChangeVector) switch
+                                var localAttachmentChangeVector = context.GetChangeVector(localAttachment?.ChangeVector);
+                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, localAttachmentChangeVector) switch
                                 {
                                     // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
-                                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localAttachment.ChangeVector),
+                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, localAttachmentChangeVector, context),
                                     ConflictStatus.Update => attachment.ChangeVector,
                                     ConflictStatus.AlreadyMerged => null, // nothing to do
                                     _ => throw new ArgumentOutOfRangeException()
@@ -394,15 +395,15 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
 
                                 var tombstone = database.DocumentsStorage.AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
-                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(incomingChangeVector, context.GetChangeVector(tombstone.ChangeVector)) == ConflictStatus.AlreadyMerged)
                                     continue;
 
                                 string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
                                 pendingAttachmentsTombstoneUpdates ??= new();
-                                pendingAttachmentsTombstoneUpdates.Add((documentId, attachmentTombstone.ChangeVector, attachmentTombstone.LastModifiedTicks));
+                                pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
 
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    changeVectorVersion,
+                                    incomingChangeVector,
                                     attachmentTombstone.LastModifiedTicks);
                                 break;
 
@@ -648,7 +649,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
                             // the related document update, so we need to simulate that locally
                             if (doc != null &&
-                                ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged) 
+                                ChangeVectorUtils.GetConflictStatus(context.GetChangeVector(cv), context.GetChangeVector(doc.ChangeVector)) != ConflictStatus.AlreadyMerged) 
                             {
                                 // have to load the full document
                                 doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, fields: DocumentFields.All, throwOnConflict: false);

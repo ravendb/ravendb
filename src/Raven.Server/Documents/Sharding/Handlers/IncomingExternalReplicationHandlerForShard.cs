@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -42,19 +43,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector);
-                var dbId = _database.DbBase64Id;
 
-                if ((changeVector.IsSingle && changeVector.Contains(dbId)) ||
-                    changeVector.Order.Contains(dbId) ||
-                    changeVector.Version.Contains(dbId))
-                {
-                    // this item already exists in storage
-                    // was sent directly back from replication (in case of bidirectional replication) or changed in the destination
-                    // either way, since the dbId exists in the item's change vector we can safely return without updating
-                    return changeVector.Order;
-                }
-
-                if (HasConflicts(context, item, changeVector))
+                if (ShouldSkip(item) || HasConflicts(context, item))
                     return changeVector.Order;
 
                 var shouldUpdateDatabaseCv = true;
@@ -77,6 +67,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (shouldUpdateDatabaseCv)
                     context.LastDatabaseChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, etag);
 
+                var dbId = _database.DbBase64Id;
                 if (changeVector.IsSingle)
                 {
                     var version = changeVector.Version;
@@ -91,25 +82,27 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 return changeVector.Order;
             }
 
-            private static bool HasConflicts(DocumentsOperationContext context, ReplicationBatchItem item, ChangeVector changeVector)
+            private bool ShouldSkip(ReplicationBatchItem item)
+            {
+                if (item is AttachmentReplicationItem attachment &&
+                    AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision)
+                    return true;
+
+                if (item is DocumentReplicationItem doc &&
+                    (doc.Flags.Contain(DocumentFlags.Revision) ||
+                    doc.Flags.Contain(DocumentFlags.DeleteRevision)))
+                    return true;
+
+                return false;
+            }
+
+            private static bool HasConflicts(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 // we only care about documents 
-                if (item is DocumentReplicationItem doc == false ||
-                    doc.Flags.Contain(DocumentFlags.Revision) ||
-                    doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                if (item is DocumentReplicationItem doc == false)
                     return false;
 
-                var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, doc.Id);
-
-                // document or tombstone doesn't exist - no conflict 
-                if (result.Missing)
-                    return false;
-
-                var existingChangeVector = result.Document != null ?
-                    context.GetChangeVector(result.Document.ChangeVector) :
-                    context.GetChangeVector(result.Tombstone.ChangeVector);
-
-                return ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.Conflict;
+                return ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out _) == ConflictStatus.Conflict;
             }
         }
     }

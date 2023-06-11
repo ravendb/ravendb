@@ -754,7 +754,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    status = ChangeVectorUtils.GetConflictStatus(changeVector, existingConflict.ChangeVector);
+                    status = ChangeVectorUtils.GetConflictStatus(context.GetChangeVector(changeVector), context.GetChangeVector(existingConflict.ChangeVector));
                     if (status == ConflictStatus.Conflict)
                     {
                         ConflictManager.AssertChangeVectorNotNull(existingConflict.ChangeVector);
