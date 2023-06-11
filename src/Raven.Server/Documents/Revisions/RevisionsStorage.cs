@@ -724,7 +724,6 @@ namespace Raven.Server.Documents.Revisions
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                context.LastDatabaseChangeVector = changeVector;
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var deletedRevisionsCount = 0L;
@@ -752,7 +751,6 @@ namespace Raven.Server.Documents.Revisions
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                context.LastDatabaseChangeVector = changeVector;
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var prevRevisionsCount = GetRevisionsCount(context, id);
@@ -1684,7 +1682,6 @@ namespace Raven.Server.Documents.Revisions
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                context.LastDatabaseChangeVector = changeVector;
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
                 var prevRevisionsCount = GetRevisionsCount(context, id);
