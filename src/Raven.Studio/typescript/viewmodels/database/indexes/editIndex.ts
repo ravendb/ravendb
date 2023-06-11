@@ -144,6 +144,12 @@ class editIndex extends shardViewModelBase {
         this.initializeObservables();
     }
     
+    detached() {
+        super.detached();
+        
+        this.testIndex.dispose();
+    }
+
     formatDeploymentMode(mode: Raven.Client.Documents.Indexes.IndexDeploymentMode) {
         switch (mode) {
             case "Rolling":
@@ -379,6 +385,8 @@ class editIndex extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.initFieldTooltips();
+        
+        this.testIndex.compositionComplete();
     }
     
     private initValidation() {

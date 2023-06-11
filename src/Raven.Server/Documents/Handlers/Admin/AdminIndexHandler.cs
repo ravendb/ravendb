@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 const int documentsPerIndexUpperLimit = 10_000;
                 const int documentsPerIndexLowerLimit = 1;
 
-                const string testIndexName = "<TestIndexName>";
+                const string testIndexName = "<TestedIndexName>";
                 
                 if (testIndexParameters.IndexDefinition is null)
                     throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");

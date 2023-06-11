@@ -12,6 +12,8 @@ import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 import TestIndexResult = Raven.Server.Documents.Indexes.Test.TestIndexResult;
 import assertUnreachable from "components/utils/assertUnreachable";
 import { highlight, languages } from "prismjs";
+import rqlLanguageService from "common/rqlLanguageService";
+import aceEditorBindingHandler from "common/bindingHelpers/aceEditorBindingHandler";
 
 type testTabName = "queryResults" | "indexEntries" | "mapResults" | "reduceResults";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -26,6 +28,9 @@ class testIndex {
 
     testTimeLimit = ko.observable<number>();
     testScanLimit = ko.observable<number>(10_000);
+
+    specifyQuery = ko.observable<boolean>(false);
+    query = ko.observable<string>(`from index "<TestedIndexName>"`);
 
     gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
@@ -45,17 +50,31 @@ class testIndex {
 
     currentTab = ko.observable<testTabName>(null);
 
+    languageService: rqlLanguageService;
+
     constructor(dbProvider: () => database, indexDefinitionProvider: () => indexDefinition) {
         this.dbProvider = dbProvider;
         this.indexDefinitionProvider = indexDefinitionProvider;
+
+        aceEditorBindingHandler.install();
+
+        this.languageService = new rqlLanguageService(dbProvider(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
+    }
+
+    compositionComplete() {
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+
+        this.query.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
     }
 
     toDto(): Raven.Server.Documents.Indexes.Test.TestIndexParameters {
         return {
             IndexDefinition: this.indexDefinitionProvider().toDto(),
             WaitForNonStaleResultsTimeoutInSeconds: this.testTimeLimit() ?? 15,
-            Query: null, //TODO:
-            QueryParameters: null, //TODO:
+            Query: this.specifyQuery() ? this.query() : null,
+            QueryParameters: null,
             MaxDocumentsToProcess: this.testScanLimit()
         }
     }
@@ -152,6 +171,10 @@ class testIndex {
         }
 
         this.isFirstRun = false;
+    }
+
+    dispose() {
+        this.languageService.dispose();
     }
 
     private fetchTestDocuments(db: database): JQueryPromise<TestIndexResult> {
