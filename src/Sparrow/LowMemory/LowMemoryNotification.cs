@@ -50,7 +50,7 @@ namespace Sparrow.LowMemory
         private readonly TimeSpan _lohCompactionInterval = TimeSpan.FromMinutes(15);
         private DateTime _lastLohCompactionRequest = DateTime.MinValue;
 
-        private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity = LowMemorySeverity.ExtremelyLow)
+        private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity)
         {
 
             try
@@ -400,7 +400,7 @@ namespace Sparrow.LowMemory
                         memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
                 }
                 LowMemoryState = false;
-                RunLowMemoryHandlers(false, memoryInfo);
+                RunLowMemoryHandlers(false, memoryInfo, isLowMemory);
                 timeout = memoryInfo.AvailableMemory < LowMemoryThreshold * 2 ? 1000 : 5000;
             }
 
