@@ -844,8 +844,12 @@ return oldestDoc;"
         }
 
 
-        [Fact]
-        public async Task Delete_Only_ForceCreated_Revisions()
+        [Theory]
+        [InlineData(false,false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task DeleteAllRevisions_IncludeForceCreatedRevisions(bool includeForceCreated, bool checkUponUpdate)
         {
             using var store = GetDocumentStore();
 
@@ -916,17 +920,30 @@ return oldestDoc;"
                 Assert.Equal(5, doc2RevCount);
             }
 
-            WaitForUserToContinueTheTest(store);
+            if (checkUponUpdate)
+            {
+                var maxUponUpdateConfig = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        MinimumRevisionsToKeep = 0,
+                        MaximumRevisionsToDeleteUponDocumentUpdate = 1
+                    }
+                };
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: maxUponUpdateConfig);
+            }
 
-            await store.Maintenance.SendAsync(new DeleteForceCreatedRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { "Docs/2", "Docs/1" } }));
+            // WaitForUserToContinueTheTest(store);
+
+            await store.Maintenance.SendAsync(new DeleteForceCreatedRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { "Docs/2", "Docs/1" } }, includeForceCreated));
 
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount);
+                Assert.Equal(includeForceCreated ? 0 : 2, doc1RevCount);
 
                 var doc2RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/2");
-                Assert.Equal(5, doc2RevCount);
+                Assert.Equal(0, doc2RevCount);
             }
 
         }
@@ -934,22 +951,25 @@ return oldestDoc;"
         public class DeleteForceCreatedRevisionsOperation : IMaintenanceOperation
         {
             private readonly AdminRevisionsHandler.Parameters _parameters;
+            private readonly bool _includeForceCreated;
 
-            public DeleteForceCreatedRevisionsOperation(AdminRevisionsHandler.Parameters parameters)
+            public DeleteForceCreatedRevisionsOperation(AdminRevisionsHandler.Parameters parameters, bool includeForceCreated)
             {
                 _parameters = parameters;
+                _includeForceCreated = includeForceCreated;
             }
 
             public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new DeleteRevisionsCommand(conventions, context, _parameters);
+                return new DeleteRevisionsCommand(conventions, context, _parameters, _includeForceCreated);
             }
 
             private class DeleteRevisionsCommand : RavenCommand
             {
                 private readonly BlittableJsonReaderObject _parameters;
+                private readonly bool _includeForceCreated;
 
-                public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters)
+                public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters, bool includeForceCreated)
                 {
                     if (conventions == null)
                         throw new ArgumentNullException(nameof(conventions));
@@ -959,11 +979,12 @@ return oldestDoc;"
                         throw new ArgumentNullException(nameof(parameters));
 
                     _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
+                    _includeForceCreated = includeForceCreated;
                 }
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    url = $"{node.Url}/databases/{node.Database}/admin/revisions?onlyForceCreated=true";
+                    url = $"{node.Url}/databases/{node.Database}/admin/revisions?includeForceCreated={_includeForceCreated}";
 
                     return new HttpRequestMessage
                     {
