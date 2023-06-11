@@ -853,7 +853,7 @@ namespace Raven.Server.Documents.Revisions
                         break;
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (minimumTimeToKeep.HasValue && _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
                     {
@@ -906,7 +906,7 @@ namespace Raven.Server.Documents.Revisions
                     else
                     {
                         // We request to delete revision with the wrong collection
-                        var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
+                        var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data);
 
                         var collection = _documentsStorage.ExtractCollectionName(context, revisionData.Data);
                         if (writeTables.TryGetValue(collection.Name, out writeTable) == false)
@@ -1065,7 +1065,7 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr);
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
                     {
@@ -1134,7 +1134,7 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector);
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (skipForceCreated && revision.Flags.Contain(DocumentFlags.ForceCreated))
                     {
