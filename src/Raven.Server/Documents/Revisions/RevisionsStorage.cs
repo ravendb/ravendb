@@ -1274,14 +1274,14 @@ namespace Raven.Server.Documents.Revisions
                 return;
 
             Debug.Assert(changeVector != null, "Change vector must be set");
-
+            var hadRevisions = flags.Contain(DocumentFlags.HasRevisions);
             flags = flags.Strip(DocumentFlags.HasAttachments);
             flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
 
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
-            if (configuration.Disabled && fromReplication == false)
+            if (configuration.Disabled && hadRevisions==false && fromReplication == false)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);

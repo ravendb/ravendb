@@ -13,10 +13,12 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -726,7 +728,12 @@ return oldestDoc;"
                 session.Delete("Docs/1");
                 await session.SaveChangesAsync();
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(13, doc1RevCount); // When you have no config, the db doesnt create a "Deleted Revision" in doc delete.
+                Assert.Equal(14, doc1RevCount);
+
+                // check if delete revision has been created (even if you have no config - you have revisions so you need to create "delete revision" in delete).
+                var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+                Assert.Equal(14, revisionsMetadata.Count);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
             }
 
             var dstConfig = new RevisionsCollectionConfiguration
@@ -994,5 +1001,117 @@ return oldestDoc;"
                 }
             }
         }
+
+
+        //-----------------------------------------------------------------------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DocWithRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete(bool disableConfiguration)
+        {
+            using var store = GetDocumentStore();
+
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+
+            // Create a doc with 2 revisions
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            RevisionsConfiguration configuration1;
+            if (disableConfiguration)
+            {
+                // Disable default configuration
+                configuration1 = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = true,
+                        MinimumRevisionsToKeep = 100
+                    }
+                };
+            }
+            else
+            {
+                // Remove all configurations except the Conflicts Config
+                configuration1 = new RevisionsConfiguration
+                {
+                    Default = null
+                };
+            }
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete("Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); // UpdateDocument: 2 (user should use "enforce config" for delete the redundent revisions)
+
+                var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+                Assert.Equal(3, revisionsMetadata.Count);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+            }
+        }
+
+        [Fact]
+        public async Task DocWithForceCreatedRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete()
+        {
+            using var store = GetDocumentStore();
+
+            // Create a doc with 2 revisions
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+                session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+                session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete("Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); // UpdateDocument: 2 (user should use "enforce config" for delete the redundent revisions)
+
+                var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+                Assert.Equal(3, revisionsMetadata.Count);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+            }
+        }
+
+
     }
 }
