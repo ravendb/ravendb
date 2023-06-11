@@ -295,6 +295,7 @@ namespace Raven.Server.Documents.Revisions
                 if (configuration.MinimumRevisionsToKeep == 0)
                     return false;
 
+                changeVector = context.GetChangeVector(changeVector).Version;
                 using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                 {
                     var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -315,6 +316,7 @@ namespace Raven.Server.Documents.Revisions
             Debug.Assert(changeVector != null, "Change vector must be set");
             Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
 
+            changeVector = context.GetChangeVector(changeVector).Version;
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
             if (collectionName == null)
@@ -677,6 +679,7 @@ namespace Raven.Server.Documents.Revisions
             Table writeTable = null;
             string currentCollection = null;
             var deletedRevisionsCount = 0;
+            changeVector = context.GetChangeVector(changeVector).Version;
 
             while (true)
             {
@@ -884,6 +887,8 @@ namespace Raven.Server.Documents.Revisions
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
             if (configuration.Disabled && fromReplication == false)
                 return;
+
+            changeVector = context.GetChangeVector(changeVector).Version;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
