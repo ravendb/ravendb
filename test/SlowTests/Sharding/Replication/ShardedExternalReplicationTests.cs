@@ -1654,11 +1654,11 @@ namespace SlowTests.Sharding.Replication
                     s1.SaveChanges();
                 }
 
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
-
+                await Sharding.Replication.EnsureReplicatingAsyncForShardedDestination(store1, store2);
+              
                 await CheckData(store2, location);
+
+                await Task.Delay(3000);
 
                 await EnsureNoReplicationLoop(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);

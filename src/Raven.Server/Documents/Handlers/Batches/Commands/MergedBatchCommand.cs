@@ -94,7 +94,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                                                                            existingDocument.Data.Clone(context),
                                                                            existingDocument.Flags |= DocumentFlags.HasRevisions,
                                                                            nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
-                                                                           existingDocument.ChangeVector,
+                                                                           context.GetChangeVector(existingDocument.ChangeVector),
                                                                            existingDocument.LastModified.Ticks);
                             flags |= DocumentFlags.HasRevisions;
                         }
@@ -398,7 +398,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                                                                                  clonedDocData,
                                                                                  existingDoc.Flags,
                                                                                  nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
-                                                                                 existingDoc.ChangeVector,
+                                                                                 context.GetChangeVector(existingDoc.ChangeVector),
                                                                                  existingDoc.LastModified.Ticks);
                     if (revisionCreated)
                     {

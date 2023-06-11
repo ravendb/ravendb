@@ -284,7 +284,7 @@ namespace Raven.Server.Documents
                             nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
 
                         _documentsStorage.RevisionsStorage.Put(
-                            context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions, nonPersistentFlags, conflicted.ChangeVector,
+                            context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions, nonPersistentFlags, context.GetChangeVector(conflicted.ChangeVector),
                             conflicted.LastModified.Ticks,
                             collectionName: collection,
                             configuration: _documentsStorage.RevisionsStorage.ConflictConfiguration.Default);
