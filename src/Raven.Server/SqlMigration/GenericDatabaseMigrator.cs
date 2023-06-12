@@ -198,15 +198,27 @@ namespace Raven.Server.SqlMigration
             }
         }
 
-        private static DynamicJsonValue BuildEmbeddedSqlKeysDictionary(ReferenceInformation refInfo, List<DynamicJsonValue> specialColumnsValues, DynamicJsonValue specialColumns)
+        private static (DynamicJsonArray Keys, DynamicJsonValue EmbeddedItemsSpecialColumnValues) BuildEmbeddedSqlKeysDictionary(ReferenceInformation refInfo, List<DynamicJsonValue> specialColumnsValues, DynamicJsonValue specialColumns)
         {
-            var embeddedArrayWithLinks = (DynamicJsonArray)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
+            var keys = (DynamicJsonArray)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
             var embeddedItemsSpecialColumnValues = new DynamicJsonValue();
             var i = 0;
-            foreach (var item in embeddedArrayWithLinks)
+            foreach (var item in keys)
                 embeddedItemsSpecialColumnValues[item.ToString()] = specialColumnsValues[i++];
 
-            return embeddedItemsSpecialColumnValues;
+            return (keys, embeddedItemsSpecialColumnValues);
+        }
+
+        private static string ConvertColumnNameToPascalCase(string columnName)
+        {
+            string[] parts = columnName.Split('_');
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = parts[i].First().ToString().ToUpper() + parts[i].Substring(1);
+            }
+
+            return string.Concat(parts);
         }
         
         private void FillDocumentFields(DynamicJsonValue value, DynamicJsonValue specialColumns, List<ReferenceInformation> references,
@@ -218,26 +230,32 @@ namespace Raven.Server.SqlMigration
                 {
                     case ReferenceType.ArrayEmbed:
                         var arrayWithEmbeddedObjects = (EmbeddedArrayValue)refInfo.DataProvider.Provide(specialColumns);
-                        value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
-                        
-
-                        if (embeddedReferencesSqlKeysConfiguration != EmbeddedDocumentSqlKeysStorage.None)
+                        if (embeddedReferencesSqlKeysConfiguration != EmbeddedDocumentSqlKeysStorage.OnDocument)
                         {
-                            var embeddedItemsSpecialColumnValues = BuildEmbeddedSqlKeysDictionary(refInfo, arrayWithEmbeddedObjects.SpecialColumnsValues, specialColumns);
-                            
-                            switch (embeddedReferencesSqlKeysConfiguration)
-                            {
-                                case EmbeddedDocumentSqlKeysStorage.OnMetadata:
-                                    specialColumns[refInfo.PropertyName] = embeddedItemsSpecialColumnValues;
-                                    break;
-                                case EmbeddedDocumentSqlKeysStorage.OnDocument:
-                                    value[refInfo.PropertyName + "Ids"] = embeddedItemsSpecialColumnValues;
-                                    break;
-                                default:
-                                    throw new ArgumentOutOfRangeException(nameof(embeddedReferencesSqlKeysConfiguration), embeddedReferencesSqlKeysConfiguration, null);
-                            }
+                            value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
                         }
-                        
+                        else
+                        {
+                            // inject specialColumnsValues to nestedObjects
+                            List<object> nestedObjects = arrayWithEmbeddedObjects.ArrayOfNestedObjects.ToList();
+                            List<DynamicJsonValue> nestedObjectsSpecialFields = arrayWithEmbeddedObjects.SpecialColumnsValues.ToList();
+                            for (int i = 0; i < nestedObjects.Count; i++)
+                            {
+                                var nestedObject = (DynamicJsonValue)nestedObjects[i];
+                                foreach (var property in nestedObjectsSpecialFields[i].Properties)
+                                {
+                                    nestedObject[ConvertColumnNameToPascalCase(property.Name)] = property.Value;
+                                }
+                            }
+                            value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
+                        }
+
+                        if (embeddedReferencesSqlKeysConfiguration == EmbeddedDocumentSqlKeysStorage.OnMetadata)
+                        {
+                            // add @sql-keys content in the metadata
+                            var specialColumnsKeysValues = BuildEmbeddedSqlKeysDictionary(refInfo, arrayWithEmbeddedObjects.SpecialColumnsValues, specialColumns);
+                            specialColumns[refInfo.PropertyName] = specialColumnsKeysValues.EmbeddedItemsSpecialColumnValues;
+                        }
                         
                         if (refInfo.ChildReferences != null)
                         {
@@ -262,17 +280,16 @@ namespace Raven.Server.SqlMigration
                         var embeddedObjectValue = (EmbeddedObjectValue)refInfo.DataProvider.Provide(specialColumns);
                         value[refInfo.PropertyName] = embeddedObjectValue?.Object; // fill in value or null
 
-                        var embeddedObjectLinkValue = (string)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
-                        
                         if (value[refInfo.PropertyName] != null && value[refInfo.PropertyName] is DynamicJsonValue)
                         {
                             switch (embeddedReferencesSqlKeysConfiguration)
                             {
                                 case EmbeddedDocumentSqlKeysStorage.OnMetadata:
-                                    value[Constants.Documents.Metadata.Key] = new DynamicJsonValue{["@sql-keys"] = embeddedObjectLinkValue};
+                                    value[Constants.Documents.Metadata.Key] = new DynamicJsonValue{["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues};
                                     break;
                                 case EmbeddedDocumentSqlKeysStorage.OnDocument:
-                                    ((DynamicJsonValue)value[refInfo.PropertyName])["@sql-keys"] = embeddedObjectLinkValue;
+                                    foreach (var specialField in embeddedObjectValue.SpecialColumnsValues.Properties)
+                                        ((DynamicJsonValue)value[refInfo.PropertyName])[ConvertColumnNameToPascalCase(specialField.Name)] = specialField.Value;
                                     break;
                                 case EmbeddedDocumentSqlKeysStorage.None:
                                     break;
