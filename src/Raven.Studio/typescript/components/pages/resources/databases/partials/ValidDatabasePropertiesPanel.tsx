@@ -81,6 +81,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const localPerformanceHintsCount =
         nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.performanceHints ?? 0;
 
+    const hasRemoteAlerts = alertsCount > localAlertsCount;
+    const hasRemotePerformanceHints = performanceHintsCount > localPerformanceHintsCount;
+
     const remoteTopLevelStates = nonEmptyTopLevelState.filter((x) => x.nodeTag !== localNodeTag);
 
     const maxSizes = genUtils.maxByShard(
@@ -251,7 +254,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                     ref={setAlertsPopoverElement}
                                 >
                                     {alertSection}
-                                    {alertsCount !== localAlertsCount && (
+                                    {hasRemoteAlerts && (
                                         <>
                                             <div className="vr bg-warning"></div>
                                             <Icon icon="global" />
@@ -261,16 +264,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 </a>
                             </Badge>
                         </RichPanelDetailItem>
-                        <PopoverWithHover target={alertsPopoverElement}>
-                            <AlertsPopover
-                                isCurrentNodeRelevant={isCurrentNodeRelevant}
-                                localNodeTag={localNodeTag}
-                                localTotal={localAlertsCount}
-                                getServerNodeUrl={getServerNodeUrl}
-                                openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
-                                remoteTopLevelStates={remoteTopLevelStates}
-                            />
-                        </PopoverWithHover>
+                        {hasRemoteAlerts && (
+                            <PopoverWithHover target={alertsPopoverElement}>
+                                <AlertsPopover
+                                    isCurrentNodeRelevant={isCurrentNodeRelevant}
+                                    localNodeTag={localNodeTag}
+                                    localTotal={localAlertsCount}
+                                    getServerNodeUrl={getServerNodeUrl}
+                                    openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
+                                    remoteTopLevelStates={remoteTopLevelStates}
+                                />
+                            </PopoverWithHover>
+                        )}
                     </>
                 )}
                 {performanceHintsCount > 0 && (
@@ -289,7 +294,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                     ref={setPerfHintsPopoverElement}
                                 >
                                     {performanceHintsSection}
-                                    {performanceHintsCount !== localPerformanceHintsCount && (
+                                    {hasRemotePerformanceHints && (
                                         <>
                                             <div className="vr bg-info"></div>
                                             <Icon icon="global" />
@@ -299,16 +304,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 </a>
                             </Badge>
                         </RichPanelDetailItem>
-                        <PopoverWithHover target={perfHintsPopoverElement}>
-                            <PerfHintsPopover
-                                isCurrentNodeRelevant={isCurrentNodeRelevant}
-                                localNodeTag={localNodeTag}
-                                localTotal={localPerformanceHintsCount}
-                                getServerNodeUrl={getServerNodeUrl}
-                                openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
-                                remoteTopLevelStates={remoteTopLevelStates}
-                            />
-                        </PopoverWithHover>
+                        {hasRemotePerformanceHints && (
+                            <PopoverWithHover target={perfHintsPopoverElement}>
+                                <PerfHintsPopover
+                                    isCurrentNodeRelevant={isCurrentNodeRelevant}
+                                    localNodeTag={localNodeTag}
+                                    localTotal={localPerformanceHintsCount}
+                                    getServerNodeUrl={getServerNodeUrl}
+                                    openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
+                                    remoteTopLevelStates={remoteTopLevelStates}
+                                />
+                            </PopoverWithHover>
+                        )}
                     </>
                 )}
                 {hasAnyLoadError && (
