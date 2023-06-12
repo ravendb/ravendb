@@ -38,6 +38,10 @@ export const toggleIndexing =
 export const openNotificationCenterForDatabase =
     (db: DatabaseSharedInfo): AppThunk =>
     (dispatch, getState) => {
+        if (!db.currentNode.relevant) {
+            return;
+        }
+
         const activeDatabase = databaseSelectors.activeDatabase(getState());
         if (activeDatabase !== db.name) {
             const dbRaw = databasesManager.default.getDatabaseByName(db.name);

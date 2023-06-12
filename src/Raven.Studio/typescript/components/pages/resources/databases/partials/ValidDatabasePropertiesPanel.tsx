@@ -239,7 +239,10 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 )}
                 {alertsCount > 0 && (
                     <>
-                        <RichPanelDetailItem key="alerts" title="Click to view alerts in Notification Center">
+                        <RichPanelDetailItem
+                            key="alerts"
+                            title={db.currentNode.relevant ? "Click to view alerts in Notification Center" : ""}
+                        >
                             <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                                 <a
                                     href="#"
@@ -274,7 +277,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <>
                         <RichPanelDetailItem
                             key="performance-hints"
-                            title="Click to view performance hints in Notification Center"
+                            title={
+                                db.currentNode.relevant ? "Click to view performance hints in Notification Center" : ""
+                            }
                         >
                             <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">
                                 <a
