@@ -16,7 +16,7 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                    <div class="columns-list-container" data-bind="with: editedConfiguration">
+                    <div class="dropdown-extended" data-bind="with: editedConfiguration">
                         <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="margin-bottom">
                             <label class="control-label pull-left no-margin">
                                 <h4>Max Log Entries</h4>
@@ -81,7 +81,8 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                    <div class="columns-list-container" data-bind="with: onDiskConfiguration" id="settingsContainer">
+                    <div class="dropdown-extended" data-bind="with: onDiskConfiguration" id="settingsContainer">
+                        <div class="bg-warning padding padding-xs text-center"><i class="icon-warning"></i> <span>Logs settings will reset to default values after a server restart</span></div>
                         <form class="form-horizontal" role="form">
                             <div class="row">
                                 <label class="col-md-3 control-label">Logs Path:</label>
