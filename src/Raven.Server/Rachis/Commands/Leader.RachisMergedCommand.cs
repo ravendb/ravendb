@@ -115,7 +115,14 @@ namespace Raven.Server.Rachis
 
             private void AfterCommit(LowLevelTransaction tx)
             {
-                _leader._newEntry.Set();
+                try
+                {
+                    _leader._newEntry.Set();
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    // _newEntry is disposed because _leader is already disposed
+                }
             }
 
             public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
