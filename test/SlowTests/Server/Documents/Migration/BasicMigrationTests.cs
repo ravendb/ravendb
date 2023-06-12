@@ -803,5 +803,70 @@ namespace SlowTests.Server.Documents.Migration
                 }
             }
         }
+        
+        [Theory]
+        [RequiresMsSqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
+        [RequiresMySqlInlineData]
+        public async Task NestedEmbeddingWithNoSqlKeys(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                using (var store = GetDocumentStore())
+                {
+                    var collection = new RootCollection(schemaName, "order", "Orders")
+                    {
+                        NestedCollections = new List<EmbeddedCollection>
+                        {
+                            new EmbeddedCollection(schemaName, "order_item", RelationType.OneToMany, new List<string> { "order_id" }, "Items")
+                            {
+                                NestedCollections = new List<EmbeddedCollection>
+                                {
+                                    new EmbeddedCollection(schemaName, "product", RelationType.ManyToOne, new List<string> { "product_id" }, "Product")
+                                }
+                            }
+                        }
+                    };
+
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            collection
+                        },
+                        CollectionsEmbeddedReferencesSqlKeysConfigurations =
+                            new Dictionary<string, EmbeddedDocumentSqlKeysStorage> {{"Orders", EmbeddedDocumentSqlKeysStorage.None}}
+                    };
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var order = session.Load<JObject>("Orders/1");
+
+                        Assert.NotNull(order);
+                        Assert.NotNull(order["Items"]);
+
+                        var item = order["Items"][0];
+                        Assert.NotNull(item);
+                        Assert.Null(item["OrderId"]);
+
+                        var itemProduct = item["Product"];
+                        Assert.NotNull(itemProduct);
+                        Assert.Null(itemProduct["PId"]);
+                    }
+                }
+            }
+        }
     }
 }
