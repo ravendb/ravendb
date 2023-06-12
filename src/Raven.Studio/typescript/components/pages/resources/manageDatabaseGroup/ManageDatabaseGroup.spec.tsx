@@ -3,6 +3,7 @@ import React from "react";
 import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./ManageDatabaseGroupPage.stories";
+import { mockHooks } from "test/mocks/hooks/MockHooks";
 
 const {
     Cluster,
@@ -91,5 +92,20 @@ describe("ManageDatabaseGroup", function () {
 
         await fireClick(await screen.findByText(selectors.reorderNodes));
         await fireClick(await screen.findByText(selectors.saveReorder));
+    });
+
+    it("can set dirty flag", async () => {
+        const { screen, fireClick } = rtlRender(<Cluster />);
+        const { useDirtyFlag } = mockHooks;
+
+        expect(useDirtyFlag.isDirty).toBeFalse();
+
+        await screen.findByText(selectors.pageReady);
+
+        await fireClick(await screen.findByText(selectors.reorderNodes));
+        expect(useDirtyFlag.isDirty).toBeTrue();
+
+        await fireClick(await screen.findByText(selectors.saveReorder));
+        expect(useDirtyFlag.isDirty).toBeFalse();
     });
 });

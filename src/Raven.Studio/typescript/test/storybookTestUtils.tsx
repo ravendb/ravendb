@@ -3,6 +3,7 @@ import React from "react";
 import { configureMockServices, ServiceProvider } from "components/hooks/useServices";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
+import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 
 export function storybookContainerPublicContainer(storyFn: any) {
     return (
@@ -27,9 +28,11 @@ export function forceStoryRerender() {
 
 export function withStorybookContexts(storyFn: any) {
     return (
-        <ServiceProvider services={mockServices.context}>
-            <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
-        </ServiceProvider>
+        <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
+            <ServiceProvider services={mockServices.context}>
+                <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
+            </ServiceProvider>
+        </DirtyFlagProvider>
     );
 }
 

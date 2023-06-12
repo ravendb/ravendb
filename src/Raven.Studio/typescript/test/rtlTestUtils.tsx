@@ -17,8 +17,9 @@ import * as byClassNameQueries from "./byClassNameQueries";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { createStoreConfiguration } from "components/store";
-import { Provider } from "react-redux";
+import { Provider as ReduxProvider } from "react-redux";
 import { setEffectiveTestStore } from "components/storeCompat";
+import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 
 let needsTestMock = true;
 
@@ -76,11 +77,13 @@ function AllProvidersInner({ children }: any) {
     setEffectiveTestStore(store);
 
     return (
-        <Provider store={store}>
-            <ServiceProvider services={mockServices.context}>
-                <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
-            </ServiceProvider>
-        </Provider>
+        <ReduxProvider store={store}>
+            <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
+                <ServiceProvider services={mockServices.context}>
+                    <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
+                </ServiceProvider>
+            </DirtyFlagProvider>
+        </ReduxProvider>
     );
 }
 
