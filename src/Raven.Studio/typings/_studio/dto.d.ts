@@ -786,6 +786,23 @@ interface clusterWideStackTraceResponseItem {
     Error: string;
 }
 
+interface adminLogsLoggersConfigurationResponse {
+    Loggers: dictionary<string, string>;
+}
+
+interface adminLogsLoggerDto {
+    Name: string;
+    Source: string;
+    IsModeOverrode: boolean;
+    LogMode: Sparrow.Logging.LogMode;
+    Loggers: dictionary<adminLogsLoggerDto>;
+}
+
+interface adminLogsLoggersResponse {
+    LogMode: Sparrow.Logging.LogMode;
+    Loggers: dictionary<adminLogsLoggerDto>;
+}
+
 interface stackTracesResponseDto {
     Results: Array<rawStackTraceResponseItem>;
     Threads: Array<Raven.Server.Dashboard.ThreadInfo>;

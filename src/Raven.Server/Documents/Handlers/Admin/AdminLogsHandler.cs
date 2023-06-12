@@ -336,6 +336,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                 }
             }
+            
+            NoContentStatus();
         }
 
         internal class SwitchLoggerConfiguration

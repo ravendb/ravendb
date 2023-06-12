@@ -21,11 +21,15 @@ import getTrafficWatchConfigurationCommand = require("commands/maintenance/getTr
 import trafficWatchConfiguration = require("models/resources/trafficWatchConfiguration");
 import saveTrafficWatchConfigurationCommand = require("commands/maintenance/saveTrafficWatchConfigurationCommand");
 import getAdminLogsMicrosoftStateCommand = require("commands/maintenance/getAdminLogsMicrosoftStateCommand");
+import getAdminLogsLoggersCommand = require("commands/maintenance/getAdminLogsLoggersCommand");
+import getAdminLogsLoggersConfigurationCommand = require("commands/maintenance/getAdminLogsLoggersConfigurationCommand");
 import getAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/getAdminLogsMicrosoftConfigurationCommand");
 import enableAdminLogsMicrosoftCommand = require("commands/maintenance/enableAdminLogsMicrosoftCommand");
 import disableAdminLogsMicrosoftCommand = require("commands/maintenance/disableAdminLogsMicrosoftCommand");
 import saveAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
 import configureMicrosoftLogsDialog = require("./configureMicrosoftLogsDialog");
+import configureLoggersDialog from "viewmodels/manage/configureLoggersDialog";
+import saveAdminLogsLoggersConfigurationCommand from "commands/maintenance/saveAdminLogsLoggersConfigurationCommand";
 
 class heightCalculator {
     
@@ -141,6 +145,10 @@ class adminLogs extends viewModelBase {
 
     // show user location of traffic watch in logs configuration button
     highlightTrafficWatch: boolean;
+    
+    spinners = {
+        loggersLoading: ko.observable<boolean>(false)
+    }
 
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
@@ -149,7 +157,7 @@ class adminLogs extends viewModelBase {
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "loadLogsConfig",
             "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode", 
-            "configureTrafficWatch", "configureMicrosoftLogs");
+            "configureTrafficWatch", "configureMicrosoftLogs", "configureLoggers");
         
         this.initObservables();
         this.initValidation();
@@ -650,6 +658,30 @@ class adminLogs extends viewModelBase {
     updateMouseStatus(pressed: boolean) {
         this.mouseDown(pressed);
         return true;  // we want bubble and execute default action (selection)
+    }
+    
+    configureLoggers() {
+        this.spinners.loggersLoading(true);
+        
+        new getAdminLogsLoggersCommand()
+            .execute()
+            .fail(() => {
+                this.spinners.loggersLoading(false);
+            })
+            .done(loggers => {
+                new getAdminLogsLoggersConfigurationCommand()
+                    .execute()
+                    .always(() => this.spinners.loggersLoading(false))
+                    .done(loggersConfiguration => {
+                        app.showBootstrapDialog(new configureLoggersDialog(loggers, loggersConfiguration))
+                            .done((result: dictionary<Sparrow.Logging.LogMode>) => {
+                                if (result) {
+                                    new saveAdminLogsLoggersConfigurationCommand(result)
+                                        .execute();
+                                }
+                            });
+                    });
+            });
     }
     
     configureTrafficWatch() {

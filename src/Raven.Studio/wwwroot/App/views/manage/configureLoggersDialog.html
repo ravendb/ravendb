@@ -1,0 +1,79 @@
+<div class="modal-dialog modal-lg prevent-close" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Configure Loggers</h4>
+
+        </div>
+        <div class="modal-body">
+            <div class="flex-horizontal margin-bottom margin-bottom-sm">
+                <div class="flex-grow"
+                     data-bind="validationOptions: { insertMessages: false }, validationElement: newSourceName">
+                    <div class="dropdown btn-block">
+                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                               id="loggerSourceInput" autocomplete="off"
+                               data-bind="textInput: newSourceName"
+                               placeholder="Select (or enter) a logger source">
+                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                        <ul class="dropdown-menu"
+                            data-bind="foreach: $root.createLogSourceAutoCompleter(), autoComplete: '#loggerSourceInput'">
+                            <li data-bind="click: _.partial($root.addLogSourceFromDropdown, $data)">
+                                <a href="#" data-bind="text: $data"></a>
+                            </li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: newSourceName"></span>
+                </div>
+                <div>
+                    <button data-bind="click: $root.addLogSource, enable: $root.newSourceName"
+                            class="btn btn-default">
+                        <i class="icon-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <ul class="well collection-list"
+                data-bind="visible: configuration().length, foreach: configuration">
+                <li>
+                    <div class="name force-text-wrap" data-bind="text: source">
+                    </div>
+                    <div data-bind="validationOptions: { insertMessages: false }">
+                        <div class="radio radio-default radio-inline">
+                            <input type="radio" value="Operations"
+                                   data-bind="checked: logLevel, attr: { id: 'logLevel_op_' + $index() }"/>
+                            <label data-bind="attr: { for: 'logLevel_op_' + $index() }">Operations</label>
+                        </div>
+                        <div class="radio radio-default radio-inline">
+                            <input type="radio" value="Information"
+                                   data-bind="checked: logLevel, attr: { id: 'logLevel_info_' + $index() }"/>
+                            <label data-bind="attr: { for: 'logLevel_info_' + $index() }">
+                                Information 
+                            </label>
+                        </div>
+                        <div class="radio radio-default radio-inline">
+                            <input type="radio" value="None"
+                                   data-bind="checked: logLevel, attr: { id: 'logLevel_none_' + $index() }"/>
+                            <label data-bind="attr: { for: 'logLevel_none_' + $index() }">
+                                None
+                            </label>
+                        </div>
+                    </div>
+                    <a href="#" data-bind="click: _.partial($root.deleteItem, $data)"
+                       title="Delete this logger configuration">
+                        <i class="icon-trash"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">
+                Cancel
+            </button>
+            <button type="button" class="btn btn-primary" data-bind="click: save">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+        </div>
+    </div>
+</div>

@@ -111,6 +111,19 @@
                                 </div>
                             </div>
                             <div class="row">
+                                <label class="col-md-3 control-label">Loggers:</label>
+                                <div class="col-md-9">
+                                    <div class="form-control-static">
+                                        <button type="button" class="btn btn-default btn-sm close-panel margin-right"
+                                                id="js-loggers-config" 
+                                                data-bind="click: $root.configureLoggers, css: { 'btn-spinner': $root.spinners.loggersLoading }, disable: $root.spinners.loggersLoading">
+                                            <i class="icon-settings"></i>
+                                            <span>Configure</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <label class="col-md-3 control-label">Retention Time:</label>
                                 <div class="col-md-9">
                                     <p class="form-control-static" data-bind="text: retentionTimeText"></p>
