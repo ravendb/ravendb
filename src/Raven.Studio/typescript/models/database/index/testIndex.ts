@@ -30,7 +30,7 @@ class testIndex {
     testScanLimit = ko.observable<number>(10_000);
 
     specifyQuery = ko.observable<boolean>(false);
-    query = ko.observable<string>(`from index "<TestedIndexName>"`);
+    query = ko.observable<string>(`from index "<TestIndexName>"`);
 
     gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
