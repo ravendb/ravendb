@@ -1281,6 +1281,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
 
         // if we go to here, we are at the root, so operate normally
-        return TryGetValue(key, out value);
+        return TryGetValue(ref key, out value);
     }
 }
