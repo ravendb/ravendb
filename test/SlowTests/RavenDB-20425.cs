@@ -1066,7 +1066,7 @@ return oldestDoc;"
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); // UpdateDocument: 2 (user should use "enforce config" for delete the redundent revisions)
+                Assert.Equal(3, doc1RevCount); 
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
@@ -1104,7 +1104,7 @@ return oldestDoc;"
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); // UpdateDocument: 2 (user should use "enforce config" for delete the redundent revisions)
+                Assert.Equal(3, doc1RevCount); 
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
@@ -1112,6 +1112,81 @@ return oldestDoc;"
             }
         }
 
+        //-----------------------------------------------------------------------------------------------------------------------------------------
+
+        [Fact]
+        public async Task RevivedDocumentShouldHaveTheRevisionsOfTheDeletedDoc()
+        {
+            using var store = GetDocumentStore();
+
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old1" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old2" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            // Remove all configurations except the Conflicts Config
+            var emptyConfig = new RevisionsConfiguration
+            {
+                Default = null
+            };
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: emptyConfig);
+
+            // Delete doc
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete("Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            // Assert doc has 'Delete Revision' although it has been deleted after we deleted the configuration
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); 
+
+                var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+                Assert.Equal(3, revisionsMetadata.Count);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+            }
+
+            // Create the doc again and assert that it has 'HasRevisions' flag and the old doc revisions
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(doc);
+                Assert.Contains(DocumentFlags.HasRevisions.ToString(),metadata.GetString(Constants.Documents.Metadata.Flags));
+
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount);
+
+                var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+                Assert.Equal(3, revisionsMetadata.Count);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+
+            }
+        }
 
     }
 }
