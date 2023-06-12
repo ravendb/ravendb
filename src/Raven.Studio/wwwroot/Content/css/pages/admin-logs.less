@@ -61,8 +61,19 @@
         }
     }
 
+    .dropdown-extended {
+        width: 600px;
+        padding: @gutter-sm;
+    }
+
     .full-width {
         width: 100%;
+    }
+
+    .bootstrap-datetimepicker-widget {
+        &::before, &::after {
+            display: none;
+        }
     }
 
     #adminLogsPath {
