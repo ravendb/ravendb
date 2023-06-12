@@ -35,7 +35,7 @@ namespace SlowTests.SparrowTests
             server.Logger.SetLoggerMode(LogMode.Information);
             using var store = new DocumentStore {Urls = new[] {server.WebUrl}, Database = "Random"}.Initialize();
             var client = store.GetRequestExecutor().HttpClient;
-            var response = await client.GetAsync(store.Urls.First() + "/admin/loggers");
+            var response = await client.GetAsync(store.Urls.First() + "/admin/logging-toggling/loggers");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var result = await response.Content.ReadAsStringAsync();
@@ -61,12 +61,12 @@ namespace SlowTests.SparrowTests
                 }
             };
             var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = configuration}, new StringEnumConverter()), Encoding.UTF8, "application/json");
-            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/loggers", data);
-            Assert.Equal(HttpStatusCode.OK, setResponse.StatusCode);
+            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/logging-toggling/configuration", data);
+            Assert.Equal(HttpStatusCode.NoContent, setResponse.StatusCode);
             Assert.Equal(LogMode.Information, server.Logger.GetLogMode());
             Assert.Equal(LogMode.None, server.DatabasesLogger.GetLogMode());
             
-            var getResponse = await client.GetAsync(store.Urls.First() + "/admin/loggers/configuration");
+            var getResponse = await client.GetAsync(store.Urls.First() + "/admin/logging-toggling/configuration");
             Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
             var result = await getResponse.Content.ReadAsStringAsync();
             configuration = JsonConvert.DeserializeObject<AdminLogsHandler.SwitchLoggerConfiguration>(result);
@@ -154,7 +154,49 @@ namespace SlowTests.SparrowTests
                 Assert.True(bLogger.IsModeOverrode);
                 Assert.True(bLogger.IsInfoEnabled);
                 Assert.True(cLogger.IsModeOverrode);
-                Assert.True(cLogger.IsOperationsEnabled || cLogger.IsInfoEnabled);
+                Assert.True(cLogger.IsOperationsEnabled && cLogger.IsInfoEnabled);
+            }
+            finally
+            {
+                loggingSource.EndLogging();
+            }
+        }
+
+        [Fact]
+        public void LoggerToggling_WhenSetLoggerWithDotInTheName_ShouldSet()
+        {
+            var name = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+
+            var loggingSource = new LoggingSource(
+                LogMode.None,
+                path,
+                "LoggingSource" + name,
+                TimeSpan.MaxValue,
+                long.MaxValue,
+                false);
+
+            try
+            {
+                var aLogger = new SwitchLogger(loggingSource, "A");
+                var bLogger = aLogger.GetSubSwitchLogger("B");
+                var cLogger = bLogger.GetSubSwitchLogger("C.C1");
+
+                var configuration = new AdminLogsHandler.SwitchLoggerConfiguration
+                {
+                    Loggers = new Dictionary<string, LogMode>
+                    {
+                        {@"A.B.C\.C1", LogMode.Information}
+                    }
+                };
+
+                var (configurationPath, mode) = configuration.Loggers.First();
+                SwitchLoggerConfigurationHelper.ApplyConfiguration(aLogger, SwitchLoggerConfigurationHelper.IterateSwitches(configurationPath).Skip(1), mode);
+
+                Assert.True(cLogger.IsModeOverrode);
+                Assert.True(cLogger.IsOperationsEnabled && cLogger.IsInfoEnabled);
             }
             finally
             {

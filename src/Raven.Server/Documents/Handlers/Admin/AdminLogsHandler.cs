@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             });
         }
 
-        [RavenAction("/admin/loggers", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logging-toggling/loggers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllLoggers()
         {
             using (AcquireLocksAndGetLoggers(out var generic, out var server))
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
         
-        [RavenAction("/admin/loggers/configuration", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logging-toggling/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetLoggingTogglingConfiguration()
         {
             using (AcquireLocksAndGetLoggers(out var generic, out var server))
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
         
-        [RavenAction("/admin/loggers", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logging-toggling/configuration", "POST", AuthorizationStatus.Operator)]
         public async Task SetLoggerMode()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))

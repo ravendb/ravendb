@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Sparrow.Logging;
 
@@ -31,19 +32,35 @@ internal static class SwitchLoggerConfigurationHelper
         var end = 0;
         while (end < path.Length)
         {
-            end = path.IndexOf('.', start);
+            end = path.IndexOf('.', end);
             if (end < 0)
+            {
+                end = path.Length;
                 break;
+            }
 
-            if (end != 0 && path[end - 1] == '\\')
+            if (end - start == 0)
+                throw new InvalidOperationException($"Double dot is not meaningful. pos {start} configuration path {path}");
+            
+            if (path[end - 1] == '\\')
+            {
+                end++;
                 continue;
+            }
 
-            string iterateSwitches = path.Substring(start, end - start);
-            yield return iterateSwitches;
-            start = end + 1;
+            yield return GetSwitch();
+            start = end += 1;
         }
 
-        yield return path.Substring(start, path.Length - start);
+        yield return GetSwitch();
+
+        string GetSwitch()
+        {
+            string iterateSwitches = path.Substring(start, end - start);
+            if (iterateSwitches.Contains('\\'))
+                iterateSwitches = iterateSwitches.Replace("\\", "");
+            return iterateSwitches;
+        }
     }
     
     public static void GetConfigurationFromRoot(SwitchLogger root, Dictionary<string, LogMode> configuration)
