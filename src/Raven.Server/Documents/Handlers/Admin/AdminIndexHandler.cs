@@ -72,6 +72,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 var temporaryIndexName = Guid.NewGuid().ToString("N");
+                
+                testIndexDefinition.Name = temporaryIndexName;
 
                 query ??= $"from index '{testIndexName}'";
                 
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
 
                 if (indexQueryServerSide.Metadata.IndexName != temporaryIndexName)
-                    throw new BadRequestException($"Expected {testIndexName} as index name in query, but could not find it.");
+                    throw new BadRequestException($"Expected '{testIndexName}' as index name in query, but could not find it.");
                 
                 using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
                 {
