@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     generic.ResetRecursively();
                     server.ResetRecursively();
                     
-                    foreach (var (path, mode) in configuration.Loggers)
+                    foreach (var (path, mode) in configuration.Loggers.OrderBy(x => x.Key))
                     {
                         var first = SwitchLoggerConfigurationHelper.IterateSwitches(path).FirstOrDefault();
                         if(first.IsNullOrWhiteSpace())
