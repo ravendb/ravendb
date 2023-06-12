@@ -173,3 +173,32 @@ $directions: ("top", "right", "bottom", "left");
 .flex-justify-end {
     justify-content: flex-end;
 }
+
+@keyframes bg-pulse {
+    from {
+        background-color: rgba(var(--pulse-bg), 0.1);
+    }
+
+    to {
+        background-color: rgba(var(--pulse-bg), 0.4);
+    }
+}
+
+.bg-pulse {
+    animation: bg-pulse 1s cubic-bezier(0.5, 0, 1, 0.5) alternate infinite;
+    &.bg-primary {
+        --pulse-bg: var(--bs-primary-rgb);
+    }
+    &.bg-success {
+        --pulse-bg: var(--bs-success-rgb);
+    }
+    &.bg-info {
+        --pulse-bg: var(--bs-info-rgb);
+    }
+    &.bg-warning {
+        --pulse-bg: var(--bs-warning-rgb);
+    }
+    &.bg-danger {
+        --pulse-bg: var(--bs-danger-rgb);
+    }
+}
