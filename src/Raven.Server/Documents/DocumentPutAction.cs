@@ -234,10 +234,7 @@ namespace Raven.Server.Documents
 
                     if (shouldVersion)
                     {
-                        var flagsBeforeVersion = flags;
-                        flags |= DocumentFlags.HasRevisions;
-
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flagsBeforeVersion, oldDoc, oldChangeVector,
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector,
                                 collectionName))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
@@ -248,6 +245,7 @@ namespace Raven.Server.Documents
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
 
+                        flags |= DocumentFlags.HasRevisions;
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
                             configuration, collectionName);
 

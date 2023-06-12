@@ -1802,10 +1802,8 @@ namespace Raven.Server.Documents
 
                     if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
                     {
-                        var oldFlags = flags;
-                        flags |= DocumentFlags.HasRevisions;
 
-                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, oldFlags, local.Document.Data,
+                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data,
                                 local.Document.ChangeVector, collectionName))
                         {
                             DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
@@ -1815,10 +1813,6 @@ namespace Raven.Server.Documents
 
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
                             modifiedTicks, nonPersistentFlags, documentFlags == DocumentFlags.Reverted ? documentFlags : flags);
-
-                        var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
-                        if (revisionsCountAfterDelete == 0)
-                            flags = flags.Strip(DocumentFlags.HasRevisions);
                     }
                 }
 
