@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes.Test;
@@ -66,13 +67,12 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapIndex", 
                 Maps = new HashSet<string>
                 {
                     "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }"
                 }
             },
-            Query = "from index 'CoolLinqMapIndex' select Age"
+            Query = "from index '<TestIndexName>' select Age"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -82,13 +82,13 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "map('Dtos', (dto) => { return { Name: dto.Name, Age: dto.Age }; })"
                 }
             },
-            Query = "from index 'CoolJsMapIndex' select Age"
+            Query = "from index \"<TestIndexName>\" select Age"
         });
     
     private void TestMapIndexOnDocuments(Options options, TestIndexParameters payload)
@@ -216,14 +216,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "map('Dtos', (dto) => { return { Name: dto.Name, Age: dto.Age, Count: 1 }; })"
                 },
                 Reduce = "groupBy(x => ({ Name: x.Name })).aggregate(g => { return { Name: g.key.Name, Count: g.values.reduce((count, val) => val.Count + count, 0), Age: g.values.reduce((age, val) => val.Age + age, 0) }; })"
             },
-            Query = "from index 'CoolJsMapReduceIndex' select Count"
+            Query = "from index '<TestIndexName>' select Count"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -233,14 +233,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age, Count = 1 }"
                 },
                 Reduce = "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }"
             },
-            Query = "from index 'CoolLinqMapReduceIndex' select Count"
+            Query = "from index '<TestIndexName>' select Count"
         });
     
     private void TestMapReduceIndexOnDocuments(Options options, TestIndexParameters payload)
@@ -336,7 +336,7 @@ public class RavenDB_11097 : RavenTestBase
                 {
                     IndexDefinition = new IndexDefinition()
                     {
-                        Name = "CoolLinqMapReduceIndex",
+                        Name = "<TestIndexName>",
                         Maps = new HashSet<string>
                         {
                             "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age, Count = 1 }",
@@ -345,7 +345,7 @@ public class RavenDB_11097 : RavenTestBase
                         Reduce =
                             "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }"
                     },
-                    Query = "from index 'CoolLinqMapReduceIndex' select Count"
+                    Query = "from index '<TestIndexName>' select Count"
                 };
                 
                 var cmd = new PutTestIndexCommand(payload);
@@ -409,13 +409,13 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "from ts in timeSeries.Dtos.HeartRates from entry in ts.Entries select new { Tag = entry.Tag, FirstValue = entry.Values[0] }"
                 }
             },
-            Query = "from index 'CoolLinqMapIndex' select Tag"
+            Query = "from index '<TestIndexName>' select Tag"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -425,13 +425,13 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "timeSeries.map('Dtos', function (ts) { return ts.Entries.map(entry => ({ Tag: entry.Tag, FirstValue: entry.Values[0] })); })"
                 }
             },
-            Query = "from index 'CoolJsMapIndex' select Tag"
+            Query = "from index '<TestIndexName>' select Tag"
         });
     
     private void TestMapIndexOnTimeSeries(Options options, TestIndexParameters payload)
@@ -510,14 +510,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "from ts in timeSeries.Dtos.HeartRates from entry in ts.Entries select new { Tag = entry.Tag, FirstValue = entry.Values[0] }"
                 },
                 Reduce = "from result in results group result by new { result.Tag } into g select new { Tag = g.Key.Tag, FirstValue = g.Sum(x => x.FirstValue) }"
             },
-            Query = "from index 'CoolLinqMapReduceIndex'"
+            Query = "from index '<TestIndexName>'"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -527,14 +527,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "timeSeries.map('Dtos', function (ts) { return ts.Entries.map(entry => ({ Tag: entry.Tag, FirstValue: entry.Values[0] })); })"
                 },
                 Reduce = "groupBy(x => ({ Tag: x.Tag })).aggregate(g => { return { Tag: g.key.Tag, FirstValue: g.values.reduce((count, val) => val.FirstValue + count, 0) } })"
             },
-            Query = "from index 'CoolJsMapReduceIndex'"
+            Query = "from index '<TestIndexName>'"
         });
     
     private void TestMapReduceIndexOnTimeSeries(Options options, TestIndexParameters payload)
@@ -615,13 +615,12 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapIndex",
                 Maps = new HashSet<string>
                 {
                     "from counter in counters.Dtos.Likes select new { Value = counter.Value }"
                 }
             },
-            Query = "from index 'CoolLinqMapIndex'"
+            Query = "from index '<TestIndexName>'"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -631,13 +630,12 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapIndex",
                 Maps = new HashSet<string>
                 {
                     "counters.map('Dtos', 'Likes', function (counter) { return { Value: counter.Value } })"
                 }
             },
-            Query = "from index 'CoolJsMapIndex'"
+            Query = "from index '<TestIndexName>'"
         });
     
     private void TestMapIndexOnCounters(Options options, TestIndexParameters payload)
@@ -717,14 +715,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolLinqMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "from counter in counters.Dtos.Likes select new { Name = counter.Name, Value = counter.Value }"
                 },
                 Reduce = "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Value = g.Sum(x => x.Value) }"
             },
-            Query = "from index 'CoolLinqMapReduceIndex' select Value"
+            Query = "from index '<TestIndexName>' select Value"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -734,14 +732,14 @@ public class RavenDB_11097 : RavenTestBase
         {
             IndexDefinition = new IndexDefinition()
             {
-                Name = "CoolJsMapReduceIndex",
+                Name = "<TestIndexName>",
                 Maps = new HashSet<string>
                 {
                     "counters.map('Dtos', 'Likes', function (counter) { return { Name: counter.Name, Value: counter.Value } })"
                 },
                 Reduce = "groupBy(x => ({ Name: x.Name })).aggregate(g => { return { Name: g.key.Name, Value: g.values.reduce((count, val) => val.Value + count, 0) } })"
             },
-            Query = "from index 'CoolJsMapReduceIndex' select Value"
+            Query = "from index '<TestIndexName>' select Value"
         });
     
     private void TestMapReduceIndexOnCounters(Options options, TestIndexParameters payload)
@@ -831,7 +829,7 @@ public class RavenDB_11097 : RavenTestBase
                 {
                     IndexDefinition = new IndexDefinition()
                     {
-                        Name = "LinqMapReduceIndexWithOutputToCollection",
+                        Name = "<TestIndexName>",
                         Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age, Count = 1 }" },
                         Reduce =
                             "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }",
@@ -885,7 +883,7 @@ public class RavenDB_11097 : RavenTestBase
                     {
                         IndexDefinition = new IndexDefinition()
                         {
-                            Name = "Temp2137",
+                            Name = "<TestIndexName>",
                             Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }", "from cat in docs.Cats select new { Name = cat.Name, Age = cat.Age }", "from dto in docs.Dtos select new { Name = dto.Name, Age = 2137 }" }
                         },
                         MaxDocumentsToProcess = 4
@@ -940,10 +938,10 @@ public class RavenDB_11097 : RavenTestBase
                     {
                         IndexDefinition = new IndexDefinition()
                         {
-                            Name = "Temp2137",
+                            Name = "<TestIndexName>",
                             Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }" }
                         },
-                        Query = "from Dtos where Age = $p0",
+                        Query = "from index '<TestIndexName>' where Age = $p0",
                         QueryParameters = new { p0 = 37 }
                     };
 
@@ -994,7 +992,7 @@ public class RavenDB_11097 : RavenTestBase
                     {
                         IndexDefinition = new IndexDefinition()
                         {
-                            Name = "Temp2137",
+                            Name = "<TestIndexName>",
                             Maps = new HashSet<string> { "from nestedDto in docs.NestedDtos select new { UpperName = nestedDto.Name, LowerName = nestedDto.NestedObject.Name }" }
                         }
                     };
@@ -1012,6 +1010,39 @@ public class RavenDB_11097 : RavenTestBase
 
                     Assert.Equal("UpperName1", mapResultsObjectList[0].UpperName);
                     Assert.Equal("Name1", mapResultsObjectList[0].LowerName);
+                }
+            }
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void InvalidIndexNameInQueryShouldThrow()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+
+                session.Store(dto1);
+
+                session.SaveChanges();
+                
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "<TestIndexName>",
+                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { CoolName = dto.Name }" }
+                        },
+                        Query = "from index 'InvalidIndexName'"
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload);
+                    var ex = Assert.Throws<BadRequestException>(() => commands.Execute(cmd));
+                    Assert.Contains("Expected '<TestIndexName>' as index name in query, but could not find it.", ex.Message);
                 }
             }
         }
