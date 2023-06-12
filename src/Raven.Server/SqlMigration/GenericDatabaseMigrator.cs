@@ -102,10 +102,24 @@ namespace Raven.Server.SqlMigration
             if (onProgress == null)
                 onProgress = progress => { };
 
-            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection) => isEmbeddedCollection 
-                ? settings.Collections.SelectMany(x => x.NestedCollections).Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name 
-                : settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
-
+            
+            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection)
+            {
+                string GetCollectionNameRecursivelyFromNestedCollections(CollectionWithReferences embeddedCollection)
+                {
+                    return embeddedCollection.SourceTableSchema == tableSchema && embeddedCollection.SourceTableName == tableName
+                        ? embeddedCollection.Name
+                        : embeddedCollection.NestedCollections.Select(GetCollectionNameRecursivelyFromNestedCollections)
+                            .FirstOrDefault(collectionNameResult => collectionNameResult != null);
+                }
+                
+                return isEmbeddedCollection
+                    ? settings.Collections.Select(GetCollectionNameRecursivelyFromNestedCollections)
+                        .FirstOrDefault(collectionName => collectionName != null)
+                    : settings.Collections.Where(collection => collection.SourceTableSchema == tableSchema && collection.SourceTableName == tableName)
+                        .Select(collection => collection.Name).FirstOrDefault();
+            }
+            
             await using (var enumerationConnection = OpenConnection())
             await using (var referencesConnection = OpenConnection())
             using (var writer = new SqlMigrationWriter(context, settings.BatchSize))
