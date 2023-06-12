@@ -400,10 +400,10 @@ namespace Corax
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
-        private readonly Dictionary<long, long> _deletedEntries = new();
+        private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
-        private Lookup<Int64LookupKey> _entryIdToOffset;
+        private readonly Lookup<Int64LookupKey> _entryIdToOffset;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
 
@@ -1387,8 +1387,11 @@ namespace Corax
         {
             var llt = Transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
-            foreach ((long entryToDelete, long entryContainerId) in _deletedEntries)
+            foreach (long entryToDelete in _deletedEntries)
             {
+                if (_entryIdToOffset.TryRemove(entryToDelete, out var entryContainerId) == false)
+                    throw new InvalidOperationException("Unable to find entry id: " + entryToDelete);
+
                 RemoveDocumentBoost(entryToDelete);
                 RecordTermsToDeleteFrom(entryToDelete, entryContainerId, llt, ref lastVisitedPage);
             }
@@ -1428,10 +1431,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = buffer[i];
-                        if (_entryIdToOffset.TryRemove(entryId, out var internalId) == false)
-                            throw new InvalidOperationException("Unable to find entry id: " + entryId);
-
-                        _deletedEntries.Add(entryId, internalId);
+                        _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
                 }
@@ -1453,10 +1453,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = output[i];
-                        if (_entryIdToOffset.TryRemove(entryId, out var internalId) == false)
-                            throw new InvalidOperationException("Unable to find entry id: " + entryId);
-
-                        _deletedEntries.Add(entryId, internalId);
+                        _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
                 }
@@ -1464,10 +1461,7 @@ namespace Corax
             }
             else
             {
-                if (_entryIdToOffset.TryRemove(containerId, out var internalId) == false)
-                    throw new InvalidOperationException("Unable to find entry id: " + containerId);
-
-                _deletedEntries.Add(containerId, internalId);
+                _deletedEntries.Add(containerId);
                 _numberOfModifications--;
             }
         }
@@ -1628,6 +1622,7 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
+
                 bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
