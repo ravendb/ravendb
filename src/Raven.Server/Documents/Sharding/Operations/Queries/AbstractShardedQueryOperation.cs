@@ -67,7 +67,9 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     protected static void CombineSingleShardResultProperties(QueryResult<List<TResult>, List<TIncludes>> combinedResult, QueryResult singleShardResult)
     {
-        combinedResult.TotalResults += singleShardResult.TotalResults;
+        // unbounded collection query compatibility to non-sharded (single shard total results is -1 in such case, we set it as -1 only once)
+        if (combinedResult.TotalResults != -1 || singleShardResult.TotalResults != -1)
+            combinedResult.TotalResults += singleShardResult.TotalResults;
         combinedResult.IsStale |= singleShardResult.IsStale;
 
         combinedResult.SkippedResults = 0; // sharded queries start from 0 on all shards and we apply paging on the orchestrator side
