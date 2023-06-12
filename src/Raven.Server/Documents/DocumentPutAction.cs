@@ -218,6 +218,12 @@ namespace Raven.Server.Documents
                     flags |= DocumentFlags.Resolved;
                 }
 
+                var revisionsCount = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                if (revisionsCount > 0)
+                {
+                    flags |= DocumentFlags.HasRevisions;
+                }
+
                 if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
 
@@ -230,7 +236,6 @@ namespace Raven.Server.Documents
                     {
                         var flagsBeforeVersion = flags;
                         flags |= DocumentFlags.HasRevisions;
-
 
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flagsBeforeVersion, oldDoc, oldChangeVector,
                                 collectionName))
