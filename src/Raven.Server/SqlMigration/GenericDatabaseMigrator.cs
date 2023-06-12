@@ -20,16 +20,10 @@ using DbProviderFactories = Raven.Server.Documents.ETL.Providers.SQL.RelationalW
 
 namespace Raven.Server.SqlMigration
 {
-    public enum EmbeddedDocumentSqlKeysStorage
-    {
-        None,
-        OnMetadata,
-        OnDocument,
-    }
+    
     public abstract class GenericDatabaseMigrator : IDatabaseDriver
     {
         protected readonly string ConnectionString;
-        protected readonly Dictionary<string, EmbeddedDocumentSqlKeysStorage> CollectionsEmbeddedReferencesSqlKeysConfigurations = new();
 
         public abstract DatabaseSchema FindSchema();
 
@@ -128,7 +122,7 @@ namespace Raven.Server.SqlMigration
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
                         var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
-                        CollectionsEmbeddedReferencesSqlKeysConfigurations.TryGetValue(collectionToImport.Name, out var collectionEmbeddedReferencesSqlKeysConfiguration);
+                        settings.CollectionsEmbeddedReferencesSqlKeysConfigurations.TryGetValue(collectionToImport.Name, out var collectionEmbeddedReferencesSqlKeysConfiguration);
                         InitializeDataProviders(references, referencesConnection);
 
                         try
@@ -661,7 +655,6 @@ namespace Raven.Server.SqlMigration
                 {
                     objectProperties.Add(ExtractFromReader(reader, refInfo.TargetDocumentColumns));
                     attachments.Add(ExtractAttachments(reader, refInfo.TargetAttachmentColumns));
-                    CollectionsEmbeddedReferencesSqlKeysConfigurations.TryGetValue(refInfo.SourceTableName, out var embeddedDocumentSqlKeysStorage);
                     
                     specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));    
                 }
