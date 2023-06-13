@@ -1323,6 +1323,8 @@ namespace SlowTests.Cluster
                 Task t1, t2;
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
+                    await Task.Delay(3000); // wait for the replication ping-pong to settle down
+
                     t1 = ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                     t2 = ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
                 }
