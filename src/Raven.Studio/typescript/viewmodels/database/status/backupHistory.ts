@@ -79,7 +79,7 @@ class backupHistory extends viewModelBase {
                         sortable: "string"
                     }),
                 new hyperlinkColumn<BackupHistoryItem>(grid,
-                    x => x.TaskName,
+                    x => x.TaskName ?? "-",
                     x => this.getLinkForTaskView(x),
                     "Task Name", "18%", {
                         sortable: "string"

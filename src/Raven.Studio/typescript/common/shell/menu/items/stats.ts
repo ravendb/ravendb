@@ -28,7 +28,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             title: 'Backup History',
             tooltip: "Backup History",
             nav: true,
-            css: 'icon-storage', //tODO: backup history
+            css: 'icon-backup-history',
             dynamicHash: appUrls.statusBackupHistory
         }),
         new leafMenuItem({
