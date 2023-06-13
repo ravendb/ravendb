@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Sparrow.Extensions;
 using Sparrow.Logging;
 using static Sparrow.Server.Platform.Posix.Syscall;
 
@@ -18,6 +17,8 @@ public abstract class CGroup
     public const string PROC_SELF_CGROUP_FILENAME = "/proc/self/cgroup";
     public const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";
     public const string PROC_CGROUPS_FILENAME = "/proc/cgroups";
+    
+    public const string MEMORY_CONTROLLER_NAME = "memory";
 
     protected abstract string MemoryLimitFileName { get; } 
     protected abstract string MemoryUsageFileName { get; } 
@@ -25,7 +26,7 @@ public abstract class CGroup
 
     private Lazy<CachedPath> _groupPathForMemory;
 
-    private bool _memoryDisabled;
+    private readonly Dictionary<string, bool> _missingControllerGroups = new Dictionary<string, bool>();
 
     private class CachedPath
     {
@@ -57,7 +58,7 @@ public abstract class CGroup
         }
         catch (Exception e)
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
             return null;
         }
@@ -70,7 +71,7 @@ public abstract class CGroup
         }
         catch (Exception e)
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Failed to get CGroup current memory usage from {MemoryUsageFileName} - {GetType().Name}", e);
             return null;
         }
@@ -83,7 +84,7 @@ public abstract class CGroup
         }
         catch (Exception e)
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Failed to get CGroup memory limit from {MemoryLimitFileName} - {GetType().Name}", e);
             return null;
         }
@@ -157,13 +158,9 @@ public abstract class CGroup
 
     private string FindCGroupPathForMemory()
     {
-        if (_memoryDisabled)
-            return null;
-        
-        if(IsControllerGroupsAvailable("memory"))
+        if (IsControllerGroupsAvailable(MEMORY_CONTROLLER_NAME))
             return FindCGroupPathForMemoryInternal();
 
-        _memoryDisabled = true;
         return null;
     }
     protected abstract string FindCGroupPathForMemoryInternal();
@@ -175,10 +172,10 @@ public abstract class CGroup
         foreach (var line in File.ReadLines(PROC_MOUNTINFO_FILENAME))
         {
             var match = FindHierarchyMountReg.Match(line);
-            if(match.Success == false)
+            if (match.Success == false)
                 continue;
 
-            if(match.Groups["filesystemType"].Value.StartsWith("cgroup") == false)
+            if (match.Groups["filesystemType"].Value.StartsWith("cgroup") == false)
                 continue;
 
             yield return match;
@@ -194,23 +191,29 @@ public abstract class CGroup
         return mountPath + toAppend;
     }
 
-    //memory	0	205	1
-    //cpu 2       232     1
+    //memory 0	205	1
+    //cpu    2  232 1
     private static readonly Regex FindControllerGroupsAvailability = new Regex(@"^(?<subsys_name>[\w|_]+)\s+(?<hierarchy>\d+)\s+(?<num_cgroups>\d+)\s+(?<enabled>[1|0])$", RegexOptions.Compiled);
     private bool IsControllerGroupsAvailable(string subsysName)
     {
+        if (_missingControllerGroups.TryGetValue(subsysName, out var enabled))
+            return enabled;
+        
         var result = false;
         foreach (string line in File.ReadLines(PROC_CGROUPS_FILENAME))
         {
             var match = FindControllerGroupsAvailability.Match(line);
-            if(match.Success == false)
+            if (match.Success == false)
                 continue;
 
-            if(match.Groups["subsys_name"].Value.Equals(subsysName) == false)
+            if (match.Groups["subsys_name"].Value.Equals(subsysName) == false)
                 continue;
 
             result = match.Groups["enabled"].Value == "1";
+            break;
         }
+
+        _missingControllerGroups[subsysName] = result;
         return result;
     }
     
@@ -228,7 +231,7 @@ public abstract class CGroup
     }
 
     #region for_test
-    public bool ForTestIsControllerMemoryGroupsAvailable() => IsControllerGroupsAvailable("memory");
+    public bool ForTestIsControllerMemoryGroupsAvailable() => IsControllerGroupsAvailable(MEMORY_CONTROLLER_NAME);
     public string ForTestFindCGroupPathForMemory() => FindCGroupPathForMemoryInternal();
     #endregion
 }
@@ -254,7 +257,7 @@ public class CGroupV1 : CGroup
     {
         foreach (var match in FindHierarchyMount())
         {
-            if(isSubSystem(match.Groups["options"].Captures.Select(x => x.Value)) == false)
+            if (isSubSystem(match.Groups["options"].Captures.Select(x => x.Value)) == false)
                 continue;
 
             mountRoot = match.Groups["mountroot"].Value;
@@ -273,10 +276,10 @@ public class CGroupV1 : CGroup
         foreach (var line in File.ReadLines(PROC_SELF_CGROUP_FILENAME))
         {
             var match = FindCGroupPathForSubsystemReg.Match(line);
-            if(match.Success == false)
+            if (match.Success == false)
                 throw new CGroupException($"Failed to parse cgroup info file contents - {line}.");
                 
-            if(isSubSystem(match.Groups["subsystem_list"].Captures.Select(x => x.Value)) == false)
+            if (isSubSystem(match.Groups["subsystem_list"].Captures.Select(x => x.Value)) == false)
                 continue;
 
             return match.Groups["path"].Value;
@@ -322,7 +325,7 @@ public class CGroupV2 : CGroup
         foreach (var line in File.ReadLines(PROC_SELF_CGROUP_FILENAME))
         {
             var match = FindCGroupPathForSubsystemReg.Match(line);
-            if(match.Success == false)
+            if (match.Success == false)
                 continue;
                 
             return match.Groups["path"].Value;
@@ -342,7 +345,7 @@ public class CGroupV2 : CGroup
             if (e is FileNotFoundException)
                 _hasMemoryPeakFile = false;
             
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
             return null;
         }
@@ -367,7 +370,7 @@ public class UnidentifiedCGroup : CGroup
         if (_lastLog + TimeSpan.FromMinutes(10) < DateTime.UtcNow)
         {
             _lastLog = DateTime.UtcNow;
-            if(Logger.IsOperationsEnabled)
+            if (Logger.IsOperationsEnabled)
                 Logger.Operations(_errorMessage);
         }
 
