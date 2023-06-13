@@ -470,7 +470,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool OrderByTicksAutomaticallyWhenDatesAreInvolved { get; set; }
 
-        [Description("EXPERT: Controls how many terms we'll keep in the cache for each term. Higher values reduce memory usage at the expense of increased term data access time.")]
+        [Description("EXPERT: Controls how many terms we'll keep in the cache for each field. Higher values reduce the memory usage at the expense of increased search time for each term.")]
         [DefaultValue(1)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Lucene.ReaderTermsIndexDivisor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
