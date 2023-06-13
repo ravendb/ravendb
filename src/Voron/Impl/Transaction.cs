@@ -718,5 +718,10 @@ namespace Voron.Impl
             if (_cachedDecompressedBuffersByStorageId.Remove(storageId, out var t))
                 Allocator.Release(ref t);
         }
+
+        public void Forget(Slice name)
+        {
+            LowLevelTransaction.RootObjects.Forget(name);
+        }
     }
 }

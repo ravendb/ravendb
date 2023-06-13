@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Sparrow;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl.Scratch;
@@ -42,6 +43,11 @@ namespace Voron.Debugging
 
     public class DataFileReport
     {
+        public override string ToString()
+        {
+            return $"{nameof(AllocatedSpaceInBytes)}: {new Size(AllocatedSpaceInBytes,SizeUnit.Bytes)}, {nameof(UsedSpaceInBytes)}: {new Size(UsedSpaceInBytes,SizeUnit.Bytes)}, {nameof(FreeSpaceInBytes)}: {new Size(FreeSpaceInBytes, SizeUnit.Bytes)}";
+        }
+
         public long AllocatedSpaceInBytes { get; set; }
         public long UsedSpaceInBytes { get; set; }
         public long FreeSpaceInBytes { get; set; }

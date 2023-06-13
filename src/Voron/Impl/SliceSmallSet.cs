@@ -327,5 +327,23 @@ namespace Voron.Impl
             ArrayPool<Slice>.Shared.Return(_keys);
             ArrayPool<TValue>.Shared.Return(_values);
         }
+
+        public void Remove(Slice name)
+        {
+            int idx = FindKey(name);
+            if (idx == Invalid)
+            {
+                if (_overflowStorage == null)
+                    return;
+
+                _overflowStorage.Remove(name);
+            }
+            
+            
+            _keys[idx] = default;
+            _keySizes[idx] = default;
+            _keyHashes[idx] = default;
+            _values[idx] = default;
+        }
     }
 }

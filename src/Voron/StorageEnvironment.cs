@@ -36,6 +36,7 @@ using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 using Sparrow.Server.Collections;
+using Voron.Data.Lookups;
 
 namespace Voron
 {
@@ -1109,7 +1110,8 @@ namespace Voron
                 Containers = new(),
                 PostingLists = new(),
                 PersistentDictionaries = new(),
-                CompactTrees = new(),
+                NumericLookups = new(),
+                TextualLookups = new(),
                 IncludeDetails = includeDetails,
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
@@ -1158,10 +1160,20 @@ namespace Voron
                                 detailedReportInput.PostingLists.Add(set);
                                 break;
                             case RootObjectType.Lookup:
-                                throw new NotImplementedException();
-                                // var ct = tx.CompactTreeFor(currentKey);
-                                // detailedReportInput.CompactTrees.Add(ct);
-                                break;
+                                 // Here is may be int64, double or compact key, we aren't sure
+                                 var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
+                                 if (numeric.State.DictionaryId == -1)
+                                 {
+                                     // we don't care if it is double or long, same size for the report
+                                     detailedReportInput.NumericLookups.Add(numeric);
+                                 }
+                                 else
+                                 {
+                                     tx.Forget(currentKey);
+                                     var txt = tx.LookupFor<CompactTree.CompactKeyLookup>(currentKey);
+                                     detailedReportInput.TextualLookups.Add(txt);
+                                 }
+                                 break;
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
                                 detailedReportInput.PersistentDictionaries.Add(header);
