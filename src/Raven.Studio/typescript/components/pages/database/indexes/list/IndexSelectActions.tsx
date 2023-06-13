@@ -12,9 +12,10 @@ import {
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
+import genUtils = require("common/generalUtils");
 
 interface IndexSelectActionProps {
-    indexesCount: number;
+    indexNames: string[];
     selectedIndexes: string[];
     deleteSelectedIndexes: () => Promise<void>;
     startSelectedIndexes: () => Promise<void>;
@@ -26,7 +27,7 @@ interface IndexSelectActionProps {
 
 export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
-        indexesCount,
+        indexNames,
         selectedIndexes,
         deleteSelectedIndexes,
         startSelectedIndexes,
@@ -39,12 +40,14 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     const [globalLockChanges] = useState(false);
     // TODO: IDK I just wanted it to compile
 
+    const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
+
     return (
         <div className="position-relative">
             <Checkbox
                 toggleSelection={toggleSelectAll}
-                selected={selectedIndexes.length > 0}
-                indeterminate={selectedIndexes.length > 0 && selectedIndexes.length < indexesCount}
+                selected={selectionState === "AllSelected"}
+                indeterminate={selectionState === "SomeSelected"}
                 title="Select all or none"
                 color="primary"
                 size="lg"

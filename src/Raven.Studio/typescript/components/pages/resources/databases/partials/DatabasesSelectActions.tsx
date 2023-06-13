@@ -23,8 +23,7 @@ import {
     toggleDatabases,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
-
-type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
+import genUtils = require("common/generalUtils");
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -49,7 +48,7 @@ export function DatabasesSelectActions({
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
 
-    const selectionState = getSelectionState(
+    const selectionState = genUtils.getSelectionState(
         databaseNames,
         selectedDatabases.map((x) => x.name)
     );
@@ -210,21 +209,4 @@ export function DatabasesSelectActions({
             </SelectionActions>
         </div>
     );
-}
-
-function getSelectionState(filteredNames: string[], selectedNames: string[]): SelectionState {
-    const selectedFromFilteredCount = selectedNames.reduce((count, selectedName) => {
-        if (filteredNames.includes(selectedName)) {
-            return count + 1;
-        }
-        return count;
-    }, 0);
-
-    if (selectedFromFilteredCount === 0) {
-        return "Empty";
-    }
-    if (selectedFromFilteredCount === filteredNames.length) {
-        return "AllSelected";
-    }
-    return "SomeSelected";
 }

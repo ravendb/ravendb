@@ -17,11 +17,9 @@ export interface IndexSharedInfo {
     type: Raven.Client.Documents.Indexes.IndexType;
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
     searchEngine: SearchEngineType;
-
     reduceOutputCollectionName: string;
     patternForReferencesToReduceOutputCollection: string;
     collectionNameForReferenceDocuments: string;
-
     nodesInfo: IndexNodeInfo[];
 }
 
@@ -59,7 +57,7 @@ export interface IndexNodeInfoDetails {
 
 export interface IndexFilterCriteria {
     searchText: string;
-    status: IndexStatus[];
+    statuses: IndexStatus[];
     showOnlyIndexesWithIndexingErrors: boolean;
     autoRefresh: boolean; //TODO:
 }
