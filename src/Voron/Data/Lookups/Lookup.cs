@@ -284,7 +284,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public bool TryRemove(ref TLookupKey key)
     {
         FindPageFor(ref key, ref _internalCursor);
-        return RemoveFromPage(key, allowRecurse: true);
+        return RemoveFromPage(ref key, allowRecurse: true);
     }
 
     public bool TryRemove(TLookupKey key, out long value) => TryRemove(ref key, out value);
@@ -299,7 +299,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return false;
         }
         value = GetValue(ref state, state.LastSearchPosition);
-        return RemoveFromPage(key, allowRecurse: true);
+        return RemoveFromPage(ref key, allowRecurse: true);
     }
 
     private void RemoveFromPage(bool allowRecurse, int pos)
@@ -309,10 +309,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         state.LastMatch = 0;
         long keyData = GetKeyData(ref state, pos);
         var key = TLookupKey.FromLong<TLookupKey>(keyData);
-        RemoveFromPage(key, allowRecurse);
+        RemoveFromPage(ref key, allowRecurse);
     }
 
-    private bool RemoveFromPage(TLookupKey key, bool allowRecurse)
+    private bool RemoveFromPage(ref TLookupKey key, bool allowRecurse)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.LastMatch != 0)
