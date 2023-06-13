@@ -3,6 +3,6 @@
 public enum EmbeddedDocumentSqlKeysStorage
 {
     None,
-    OnDocument,
-    OnMetadata
+    AsNestedDocumentProperty,
+    OnDocumentMetadata,
 }

@@ -136,7 +136,6 @@ namespace Raven.Server.SqlMigration
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
                         var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
-                        settings.CollectionsEmbeddedReferencesSqlKeysConfigurations.TryGetValue(collectionToImport.Name, out var collectionEmbeddedReferencesSqlKeysConfiguration);
                         InitializeDataProviders(references, referencesConnection);
 
                         try
@@ -161,7 +160,7 @@ namespace Raven.Server.SqlMigration
 
                                     doc.SetCollectionAndId(collectionToImport.Name, id);
 
-                                    FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments, collectionEmbeddedReferencesSqlKeysConfiguration);
+                                    FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
 
                                     var docBlittable = patcher.Patch(doc.ToBlittable(context));
 
@@ -222,7 +221,7 @@ namespace Raven.Server.SqlMigration
         }
         
         private void FillDocumentFields(DynamicJsonValue value, DynamicJsonValue specialColumns, List<ReferenceInformation> references,
-            string attachmentNamePrefix, Dictionary<string, byte[]> attachments, EmbeddedDocumentSqlKeysStorage embeddedReferencesSqlKeysConfiguration = EmbeddedDocumentSqlKeysStorage.None)
+            string attachmentNamePrefix, Dictionary<string, byte[]> attachments)
         {
             foreach (var refInfo in references)
             {
@@ -230,7 +229,7 @@ namespace Raven.Server.SqlMigration
                 {
                     case ReferenceType.ArrayEmbed:
                         var arrayWithEmbeddedObjects = (EmbeddedArrayValue)refInfo.DataProvider.Provide(specialColumns);
-                        if (embeddedReferencesSqlKeysConfiguration != EmbeddedDocumentSqlKeysStorage.OnDocument)
+                        if (refInfo.EmbeddedDocumentsSqlKeysStorage != EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty)
                         {
                             value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
                         }
@@ -250,7 +249,7 @@ namespace Raven.Server.SqlMigration
                             value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
                         }
 
-                        if (embeddedReferencesSqlKeysConfiguration == EmbeddedDocumentSqlKeysStorage.OnMetadata)
+                        if (refInfo.EmbeddedDocumentsSqlKeysStorage == EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata)
                         {
                             // add @sql-keys content in the metadata
                             var specialColumnsKeysValues = BuildEmbeddedSqlKeysDictionary(refInfo, arrayWithEmbeddedObjects.SpecialColumnsValues, specialColumns);
@@ -264,7 +263,7 @@ namespace Raven.Server.SqlMigration
                             {
                                 string innerAttachmentPrefix = GenerateAttachmentKey(attachmentNamePrefix, refInfo.PropertyName, idx.ToString());
                                 FillDocumentFields(arrayItem, arrayWithEmbeddedObjects.SpecialColumnsValues[idx], refInfo.ChildReferences, innerAttachmentPrefix,
-                                    attachments, embeddedReferencesSqlKeysConfiguration);
+                                    attachments);
                                 
                                 foreach (var kvp in arrayWithEmbeddedObjects.Attachments[idx])
                                 {
@@ -282,19 +281,17 @@ namespace Raven.Server.SqlMigration
 
                         if (value[refInfo.PropertyName] != null && value[refInfo.PropertyName] is DynamicJsonValue)
                         {
-                            switch (embeddedReferencesSqlKeysConfiguration)
+                            switch (refInfo.EmbeddedDocumentsSqlKeysStorage)
                             {
-                                case EmbeddedDocumentSqlKeysStorage.OnMetadata:
+                                case EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata:
                                     value[Constants.Documents.Metadata.Key] = new DynamicJsonValue{["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues};
                                     break;
-                                case EmbeddedDocumentSqlKeysStorage.OnDocument:
+                                case EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty:
                                     foreach (var specialField in embeddedObjectValue.SpecialColumnsValues.Properties)
                                         ((DynamicJsonValue)value[refInfo.PropertyName])[ConvertColumnNameToPascalCase(specialField.Name)] = specialField.Value;
                                     break;
                                 case EmbeddedDocumentSqlKeysStorage.None:
                                     break;
-                                default:
-                                    throw new ArgumentOutOfRangeException(nameof(embeddedReferencesSqlKeysConfiguration), embeddedReferencesSqlKeysConfiguration, null);
                             }
                             
                         }
@@ -310,7 +307,7 @@ namespace Raven.Server.SqlMigration
                             if (refInfo.ChildReferences != null)
                             {
                                 FillDocumentFields(embeddedObjectValue.Object, embeddedObjectValue.SpecialColumnsValues, refInfo.ChildReferences, innerAttachmentPrefix,
-                                        attachments, embeddedReferencesSqlKeysConfiguration);
+                                        attachments);
                             }
                         }
 
@@ -384,6 +381,7 @@ namespace Raven.Server.SqlMigration
                 foreach (var embeddedCollection in sourceCollection.NestedCollections)
                 {
                     var reference = CreateReference(dbSchema, collectionNameProvider, sourceCollection, embeddedCollection);
+                    reference.EmbeddedDocumentsSqlKeysStorage = embeddedCollection.SqlKeysStorage;
                     var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, collectionNameProvider);
                     reference.ChildReferences = resolvedReferences.Count > 0 ? resolvedReferences : null;
                     result.Add(reference);

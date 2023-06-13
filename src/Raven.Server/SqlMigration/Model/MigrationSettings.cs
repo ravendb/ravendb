@@ -8,6 +8,5 @@ namespace Raven.Server.SqlMigration.Model
         public List<RootCollection> Collections { get; set; }
         public int BatchSize { get; set; } = 1000;
         public int? MaxRowsPerTable { get; set; }
-        public Dictionary<string, EmbeddedDocumentSqlKeysStorage> CollectionsEmbeddedReferencesSqlKeysConfigurations = new();
     }
 }
