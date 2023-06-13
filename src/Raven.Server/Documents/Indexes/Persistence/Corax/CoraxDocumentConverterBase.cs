@@ -70,6 +70,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
         out ByteString output, out float? documentBoost, out bool shouldSkip)
     {
+        using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
         var scope = SetDocumentFields(key, sourceDocumentId, doc, indexContext, currentIndexingScope?.Source, out id, out output, out documentBoost, out var fields);
         if (_fields.Count > 0)
