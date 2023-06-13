@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 class getAdminLogsLoggersConfigurationCommand extends commandBase {
     
     execute(): JQueryPromise<adminLogsLoggersConfigurationResponse> {
-        const url = endpoints.global.adminLogs.adminLoggersConfiguration;
+        const url = endpoints.global.adminLogs.adminLoggingTogglingConfiguration;
         
         return this.query<adminLogsLoggersConfigurationResponse>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get loggers configuration", response.responseText, response.statusText)) 
