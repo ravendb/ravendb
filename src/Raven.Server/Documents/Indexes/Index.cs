@@ -4969,7 +4969,8 @@ namespace Raven.Server.Documents.Indexes
 
                 generator.HandlePostingListDetails += (postingList, report) =>
                 {
-                    if (!Corax.Constants.IndexWriter.LargePostingListsSetSlice.Equals(postingList.Name))
+                    bool isLargePostingList = Corax.Constants.IndexWriter.LargePostingListsSetSlice.AsReadOnlySpan().SequenceEqual(postingList.Name.AsReadOnlySpan());
+                    if (isLargePostingList == false)
                         return;
 
                     Span<long> buffer = stackalloc long[1024];

@@ -15,6 +15,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -60,7 +61,8 @@ namespace Voron.Debugging
         public Dictionary<Slice, long> Containers;
         public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
-        public List<CompactTree> CompactTrees;
+        public List<Lookup<Int64LookupKey>> NumericLookups;
+        public List<Lookup<CompactTree.CompactKeyLookup>> TextualLookups;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
@@ -127,11 +129,22 @@ namespace Voron.Debugging
                             switch (rootObjectType)
                             {
                                 case RootObjectType.Lookup:
-                                    throw new NotImplementedException();
-                                    // var compactTree = tree.LookupFor<>(it.CurrentKey);
-                                    // var nestedReport= GetReport(compactTree, input.IncludeDetails);
-                                    // nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
-                                    // trees.Add(nestedReport);
+                                    var lookup = tree.LookupFor<Int64LookupKey>(it.CurrentKey);
+
+                                    if (lookup.State.DictionaryId < 0)
+                                    {
+                                        var nestedReport= GetReport(lookup, input.IncludeDetails);
+                                        nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                        trees.Add(nestedReport);
+                                    }
+                                    else
+                                    {
+                                        tree.Forget(it.CurrentKey);
+                                        var textLookup = tree.LookupFor<CompactTree.CompactKeyLookup>(it.CurrentKey);
+                                        var nestedReport= GetReport(textLookup, input.IncludeDetails);
+                                        nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                        trees.Add(nestedReport);
+                                    }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
                                     continue; // already accounted for
@@ -189,9 +202,14 @@ namespace Voron.Debugging
                 });
             }
 
-            foreach (CompactTree compactTree in input.CompactTrees)
+            foreach (var nl in input.NumericLookups)
             {
-                trees.Add(GetReport(compactTree, input.IncludeDetails));
+                trees.Add(GetReport(nl, input.IncludeDetails));
+            }
+            
+            foreach (var tl in input.TextualLookups)
+            {
+                trees.Add(GetReport(tl, input.IncludeDetails));
             }
 
             foreach (var fst in input.FixedSizeTrees)
@@ -424,35 +442,63 @@ namespace Voron.Debugging
             return treeReport;
         }
         
-        public TreeReport GetReport(CompactTree ct, bool includeDetails)
+        public TreeReport GetReport(Lookup<Int64LookupKey> lookup, bool includeDetails)
         {
-            throw new NotImplementedException();
-            // List<double> pageDensities = null;
-            // if (includeDetails)
-            // {
-            //     pageDensities = GetPageDensities(ct);
-            // }
-            // var container = new Container(ct.Llt.GetPage(ct.State.TermsContainerId));
-            //
-            // long pageCount = ct.State.BranchPages + ct.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
-            //
-            // double density = pageDensities?.Average() ?? -1;
-            //
-            // var treeReport = new TreeReport
-            // {
-            //     Type = RootObjectType.Set,
-            //     Name = ct.Name.ToString(),
-            //     BranchPages = ct.State.BranchPages,
-            //     NumberOfEntries = ct.State.NumberOfEntries,
-            //     LeafPages = ct.State.LeafPages + container.Header.NumberOfPages,
-            //     PageCount = pageCount,
-            //     OverflowPages = container.Header.NumberOfOverflowPages,
-            //     Density = density,
-            //     AllocatedSpaceInBytes = PagesToBytes(pageCount),
-            //     UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
-            // };
-            //
-            // return treeReport;
+            List<double> pageDensities = null;
+            if (includeDetails)
+            {
+                pageDensities = GetLookupPageDensities(lookup.Llt,lookup.AllPages());
+            }
+            
+            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages;
+            
+            double density = pageDensities?.Average() ?? -1;
+            
+            var treeReport = new TreeReport
+            {
+                Type = RootObjectType.Lookup,
+                Name = lookup.Name.ToString(),
+                BranchPages = lookup.State.BranchPages,
+                NumberOfEntries = lookup.State.NumberOfEntries,
+                LeafPages = lookup.State.LeafPages,
+                PageCount = pageCount,
+                OverflowPages = 0,
+                Density = density,
+                AllocatedSpaceInBytes = PagesToBytes(pageCount),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+            };
+            
+            return treeReport;
+        }
+        
+        public TreeReport GetReport(Lookup<CompactTree.CompactKeyLookup> lookup, bool includeDetails)
+        {
+            List<double> pageDensities = null;
+            if (includeDetails)
+            {
+                pageDensities = GetLookupPageDensities(lookup.Llt,lookup.AllPages());
+            }
+            var container = new Container(lookup.Llt.GetPage(lookup.State.TermsContainerId));
+            
+            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
+            
+            double density = pageDensities?.Average() ?? -1;
+            
+            var treeReport = new TreeReport
+            {
+                Type = RootObjectType.Set,
+                Name = lookup.Name.ToString(),
+                BranchPages = lookup.State.BranchPages,
+                NumberOfEntries = lookup.State.NumberOfEntries,
+                LeafPages = lookup.State.LeafPages + container.Header.NumberOfPages,
+                PageCount = pageCount,
+                OverflowPages = container.Header.NumberOfOverflowPages,
+                Density = density,
+                AllocatedSpaceInBytes = PagesToBytes(pageCount),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+            };
+            
+            return treeReport;
         }
         
         public TreeReport GetContainerReport(Slice name, long page, bool includeDetails)
@@ -784,21 +830,19 @@ namespace Voron.Debugging
             return densities;
         }
         
-        public static List<double> GetPageDensities(CompactTree ct)
+        public static List<double> GetLookupPageDensities(LowLevelTransaction llt,List<long> allPages)
         {
-            throw new NotImplementedException();
-            // var allPages = ct.AllPages();
-            // if (allPages.Count == 0)
-            //     return null;
-            //
-            // var densities = new List<double>();
-            // foreach (var p in allPages)
-            // {
-            //     var page = ct.Llt.GetPage(p);
-            //     var state = new CompactTree.CursorState { Page = page };
-            //     densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
-            // }
-            // return densities;
+            if (allPages.Count == 0)
+                return null;
+            
+            var densities = new List<double>();
+            foreach (var p in allPages)
+            {
+                var page = llt.GetPage(p);
+                var state = new Lookup<Int64LookupKey>.CursorState { Page = page };
+                densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
+            }
+            return densities;
         }
 
         private static List<double> GetPageDensities(FixedSizeTree tree)

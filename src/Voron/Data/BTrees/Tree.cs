@@ -1634,5 +1634,12 @@ namespace Voron.Data.BTrees
                 }
             }
         }
+
+        public void Forget(Slice name)
+        {
+            if (_prepareLocator == null)
+                return;
+            _prepareLocator.Remove(name);
+        }
     }
 }
