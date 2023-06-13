@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session.Tokens
         private SuggestToken(string fieldName, string alias, string termParameterName, string optionsParameterName)
         {
             FieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
-            _alias = alias.Contains(" ") ? $"\"{alias}\"" : alias;
+            _alias = alias?.Contains(" ") == true ? $"\"{alias}\"" : alias;
             _termParameterName = termParameterName ?? throw new ArgumentNullException(nameof(termParameterName));
             _optionsParameterName = optionsParameterName;
         }
