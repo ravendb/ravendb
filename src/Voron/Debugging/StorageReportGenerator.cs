@@ -117,7 +117,8 @@ namespace Voron.Debugging
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
-                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees))
+                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees) ||
+                    tree.State.Flags.HasFlag(TreeFlags.Lookups))
                 {
                     using var it = tree.Iterate(false);
                     if (it.Seek(Slices.BeforeAllKeys))
