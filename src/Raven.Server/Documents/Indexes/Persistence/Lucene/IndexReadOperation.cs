@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly MemoryInfo _memoryInfo;
 
         private readonly IState _state;
+        private readonly IDisposable _readLock;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
@@ -87,6 +88,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+            _readLock = _luceneCleaner.EnterRunningQueryReadLock();
 
             if (_logger.IsInfoEnabled && query != null)
             {
@@ -863,9 +865,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
-            _analyzer?.Dispose();
-            _releaseSearcher?.Dispose();
-            _releaseReadTransaction?.Dispose();
+            using (_readLock)
+            {
+                _analyzer?.Dispose();
+                _releaseSearcher?.Dispose();
+                _releaseReadTransaction?.Dispose();
+            }
 
             if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
