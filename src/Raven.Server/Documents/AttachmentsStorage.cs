@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -428,11 +427,11 @@ namespace Raven.Server.Documents
 
         public void RevisionAttachments(DocumentsOperationContext context, BlittableJsonReaderObject document, Slice lowerId, Slice changeVector)
         {
-            var currentAttachments = GetAttachmentsFromDocumentMetadata(document)
-                .Select(attachment => JsonDeserializationClient.AttachmentName(attachment));
+            var currentAttachments = GetAttachmentsFromDocumentMetadata(document);
 
-            foreach (var attachment in currentAttachments)
+            foreach (var bjro in currentAttachments)
             {
+                var attachment = JsonDeserializationClient.AttachmentName(bjro);
                 PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
             }
         }
