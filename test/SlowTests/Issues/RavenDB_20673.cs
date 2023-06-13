@@ -21,9 +21,9 @@ namespace SlowTests.Issues
         {
             using (var s = store.OpenSession())
             {
-                s.Store(new User {Name = "dan"});
-                s.Store(new User {Name = "daniel"});
-                s.Store(new User {Name = "danielle"});
+                s.Store(new User { Name = "dan" });
+                s.Store(new User { Name = "daniel" });
+                s.Store(new User { Name = "danielle" });
                 s.SaveChanges();
             }
         }

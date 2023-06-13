@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -13,14 +14,14 @@ namespace Raven.Client.Documents.Session.Tokens
         private SuggestToken(string fieldName, string alias, string termParameterName, string optionsParameterName)
         {
             FieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
-            _alias = alias?.Contains(" ") == true ? $"\"{alias}\"" : alias;
+            _alias = alias;
             _termParameterName = termParameterName ?? throw new ArgumentNullException(nameof(termParameterName));
             _optionsParameterName = optionsParameterName;
         }
 
         public static SuggestToken Create(string fieldName, string alias, string termParameterName, string optionsParameterName)
         {
-            return new SuggestToken(fieldName, alias, termParameterName, optionsParameterName);
+            return new SuggestToken(fieldName, QueryFieldUtil.EscapeIfNecessary(alias), termParameterName, optionsParameterName);
         }
 
         public override void WriteTo(StringBuilder writer)
