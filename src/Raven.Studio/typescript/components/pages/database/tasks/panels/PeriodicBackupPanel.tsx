@@ -31,6 +31,7 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import { Badge, Collapse } from "reactstrap";
 import { Icon } from "components/common/Icon";
+import useBoolean from "components/hooks/useBoolean";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
@@ -64,6 +65,8 @@ function findBackupNowBlockReason(data: OngoingTaskPeriodicBackupInfo, runningOn
 
 function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db, forceReload } = props;
+
+    const { value: isCurrentNodeResponsible, setValue: setIsCurrentNodeResponsible } = useBoolean(false);
 
     const backupDestinationsHumanized = data.shared.backupDestinations.length
         ? data.shared.backupDestinations.join(", ")
@@ -121,11 +124,12 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
         return genUtils.formatTimeSpan(retentionPolicyPeriod, true);
     }, [data.shared]);
 
-    const backupNowVisible = !data.shared.serverWide || canEdit;
     const backupNowBlockReason = findBackupNowBlockReason(data, runningOnAnotherNode);
 
     const backupNowInProgress = !!onGoingBackup;
     const neverBackedUp = !data.shared.lastFullBackup;
+    const backupNowVisible =
+        (!data.shared.serverWide || canEdit) && !(backupNowInProgress && !isCurrentNodeResponsible);
 
     const onBackupNow = () => {
         if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
@@ -147,10 +151,12 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
                     (backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
                         forceReload();
 
-                        if (
-                            backupNowResult &&
-                            clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode
-                        ) {
+                        const isCurrentNodeResponsibleResult =
+                            clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode;
+
+                        setIsCurrentNodeResponsible(isCurrentNodeResponsibleResult);
+
+                        if (backupNowResult && isCurrentNodeResponsibleResult) {
                             // running on this node
                             const operationId = backupNowResult.OperationId;
                             notificationCenter.instance.openDetailsForOperationById(db, operationId);
