@@ -991,6 +991,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 AssertValues(storeA);
                 AssertValues(storeB);
 
+                await Task.Delay(3000); // wait for the replication ping-pong to settle down
+
                 await replicationA.EnsureNoReplicationLoopAsync();
                 await replicationB.EnsureNoReplicationLoopAsync();
                 
