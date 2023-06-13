@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector);
 
-                if (ShouldSkip(item) || HasConflicts(context, item))
+                if (IsRevisionType(item) || HasConflicts(context, item))
                     return changeVector.Order;
 
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 return changeVector.Order;
             }
 
-            private bool ShouldSkip(ReplicationBatchItem item)
+            private bool IsRevisionType(ReplicationBatchItem item)
             {
                 if (item is AttachmentReplicationItem attachment &&
                     AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision)
