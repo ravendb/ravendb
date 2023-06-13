@@ -536,6 +536,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
+                        // RavenDB-20487: we let all revision documents to pass to the other side
                         return false;
                     }
 
