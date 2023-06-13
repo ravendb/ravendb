@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Raven.Client.Documents.Attachments;
+﻿using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -47,19 +46,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (ShouldSkip(item) || HasConflicts(context, item))
                     return changeVector.Order;
 
-                var shouldUpdateDatabaseCv = true;
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-
-                if (current.IsNullOrEmpty == false && current.CheckIfDbIdExists(changeVector.Order))
-                {
-                    // the destination dbId already exists in the database change vector
-                    // so we can avoid generating a new database change vector
-                    shouldUpdateDatabaseCv = false;
-                }
-
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
 
-                if (shouldUpdateDatabaseCv)
+                if (current.IsNullOrEmpty)
                     context.LastDatabaseChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, etag);
 
                 var dbId = _database.DbBase64Id;
