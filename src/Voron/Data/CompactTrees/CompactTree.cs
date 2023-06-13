@@ -139,6 +139,8 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
+            if (ContainerId == 0)
+                return; // the empty key is not stored and cannot be referenced
             DecrementTermReferenceCount(parent.Llt, ContainerId, ref parent.State);
         }
 
