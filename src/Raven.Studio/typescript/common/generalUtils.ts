@@ -4,6 +4,8 @@ import moment = require("moment");
 import d3 = require("d3");
 import { SyntheticEvent } from "react";
 
+type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
+
 class genUtils {
     
     static integerMaxValue = 2147483647;
@@ -739,6 +741,23 @@ class genUtils {
         });
         
         return Array.from(result.values());
+    }
+
+    static getSelectionState(filteredNames: string[], selectedNames: string[]): SelectionState {
+        const selectedFromFilteredCount = selectedNames.reduce((count, selectedName) => {
+            if (filteredNames.includes(selectedName)) {
+                return count + 1;
+            }
+            return count;
+        }, 0);
+    
+        if (selectedFromFilteredCount === 0) {
+            return "Empty";
+        }
+        if (selectedFromFilteredCount === filteredNames.length) {
+            return "AllSelected";
+        }
+        return "SomeSelected";
     }
 } 
 

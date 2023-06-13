@@ -1,63 +1,21 @@
-﻿import React, { ChangeEvent, useCallback, useState } from "react";
-import classNames from "classnames";
+﻿import React from "react";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "components/models/indexes";
-import { Button, DropdownItem, Input, InputGroup } from "reactstrap";
-import useBoolean from "hooks/useBoolean";
-import { DropdownPanel } from "components/common/DropdownPanel";
-import { Switch } from "components/common/Checkbox";
+import { IndexStatus, IndexFilterCriteria } from "components/models/indexes";
+import { Button, Input } from "reactstrap";
 import produce from "immer";
 import { Icon } from "components/common/Icon";
-
-interface IndexFilterStatusItemProps {
-    label: string;
-    color?: string;
-    toggleClass?: string;
-    toggleStatus: () => void;
-    checked: boolean;
-    children?: any;
-}
-
-function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
-    return (
-        <React.Fragment>
-            <div className="dropdown-item-text">
-                <Switch
-                    color={props.color}
-                    className={props.toggleClass}
-                    selected={props.checked}
-                    toggleSelection={props.toggleStatus}
-                    reverse
-                >
-                    {props.label}
-                </Switch>
-                {props.children}
-            </div>
-        </React.Fragment>
-    );
-}
-
-interface IndexFilterProps {
-    filter: IndexFilterCriteria;
-    setFilter: React.Dispatch<React.SetStateAction<IndexFilterCriteria>>;
-}
-
-function hasAnyStateFilter(filter: IndexFilterCriteria) {
-    const autoRefresh = filter.autoRefresh;
-    const filterCount = filter.status;
-    const withIndexingErrorsOnly = filter.showOnlyIndexesWithIndexingErrors;
-
-    return !autoRefresh || filterCount.length !== 7 || withIndexingErrorsOnly;
-}
+import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
+import { InputItem } from "components/models/common";
 
 interface IndexFilterDescriptionProps {
     filter: IndexFilterCriteria;
     setFilter: (x: IndexFilterCriteria) => void;
-    indexes: IndexSharedInfo[];
+    filterByStatusOptions: InputItem<IndexStatus>[];
+    indexesCount: number;
 }
 
 export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
-    const { filter, setFilter } = props;
+    const { filter, setFilter, filterByStatusOptions, indexesCount } = props;
 
     //TODO: const indexesCount = indexes.length;
 
@@ -93,14 +51,14 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
     });
     */
 
-    if (!filter.status.length) {
-        return (
-            <div className="on-base-background mt-2">
-                All <strong>Index Status</strong> options are unchecked. Please select options under{" "}
-                <strong>&apos;Index Status&apos;</strong> to view indexes list.
-            </div>
-        );
-    }
+    // if (!filter.statuses.length) {
+    //     return (
+    //         <div className="on-base-background mt-2">
+    //             All <strong>Index Status</strong> options are unchecked. Please select options under{" "}
+    //             <strong>&apos;Index Status&apos;</strong> to view indexes list.
+    //         </div>
+    //     );
+    // }
 
     /* TODO
     const indexingErrorsOnlyPart = filter.showOnlyIndexesWithIndexingErrors ? (
@@ -117,6 +75,14 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         setFilter(
             produce(filter, (draft) => {
                 draft.searchText = searchText;
+            })
+        );
+    };
+
+    const onSearchStatusesChange = (statuses: IndexStatus[]) => {
+        setFilter(
+            produce(filter, (draft) => {
+                draft.statuses = statuses;
             })
         );
     };
@@ -145,15 +111,15 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
                 </div>
             </div>
             <div>
-                {/* TODO: add selectedItems and setSelectedItems */}
-                {/* <MultiCheckboxToggle
-                    inputItems={indexesStatesList}
+                <MultiCheckboxToggle
+                    inputItems={filterByStatusOptions}
                     label="Filter by state"
-                    selectedItems={[]}
-                    setSelectedItems={() => {
-                        // TODO: add logic
-                    }}
-                /> */}
+                    selectedItems={filter.statuses}
+                    setSelectedItems={onSearchStatusesChange}
+                    selectAll
+                    selectAllLabel="All"
+                    selectAllCount={indexesCount}
+                />
             </div>
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
             {/* TODO: add auto refresh (is it needed) */}
@@ -171,150 +137,182 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const indexesStatesList = [
-    { value: "all", label: "All", count: 8 },
-    { value: "normal", label: "Normal" },
-    { value: "error", label: "Error/Faulty" },
-    { value: "stale", label: "Stale" },
-    { value: "rollingdeployment", label: "Rolling deployment" },
-    { value: "paused", label: "Paused" },
-    { value: "disabled", label: "Disabled" },
-    { value: "idle", label: "Idle" },
-];
+//////// ---------------------------
+//////// ---------------------------
+//////// ---------------------------
+// interface IndexFilterStatusItemProps {
+//     label: string;
+//     color?: string;
+//     toggleClass?: string;
+//     toggleStatus: () => void;
+//     checked: boolean;
+//     children?: any;
+// }
 
-// TODO: remove this component after the MultiToggle in IndexFilterDescription is properly connected
-export default function IndexFilter(props: IndexFilterProps) {
-    const { filter, setFilter } = props;
+// function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
+//     return (
+//         <React.Fragment>
+//             <div className="dropdown-item-text">
+//                 <Switch
+//                     color={props.color}
+//                     className={props.toggleClass}
+//                     selected={props.checked}
+//                     toggleSelection={props.toggleStatus}
+//                     reverse
+//                 >
+//                     {props.label}
+//                 </Switch>
+//                 {props.children}
+//             </div>
+//         </React.Fragment>
+//     );
+// }
 
-    const toggleStatus = useCallback(
-        (status: IndexStatus) => {
-            console.log("status toggled " + status);
-            setFilter((f) => ({
-                ...f,
-                status: filter.status.includes(status)
-                    ? filter.status.filter((x) => x !== status)
-                    : filter.status.concat(status),
-            }));
-        },
-        [filter, setFilter]
-    );
+// interface IndexFilterProps {
+//     filter: IndexFilterCriteria;
+//     setFilter: React.Dispatch<React.SetStateAction<IndexFilterCriteria>>;
+// }
 
-    const onSearchTextChange = (e: ChangeEvent<HTMLInputElement>) => {
-        props.setFilter((f) => ({
-            ...f,
-            searchText: e.target.value,
-        }));
-    };
+// function hasAnyStateFilter(filter: IndexFilterCriteria) {
+//     const autoRefresh = filter.autoRefresh;
+//     const filterCount = filter.statuses;
+//     const withIndexingErrorsOnly = filter.showOnlyIndexesWithIndexingErrors;
 
-    const toggleIndexesWithErrors = () => {
-        props.setFilter((f) => ({
-            ...f,
-            showOnlyIndexesWithIndexingErrors: !f.showOnlyIndexesWithIndexingErrors,
-        }));
-    };
+//     return !autoRefresh || filterCount.length !== 7 || withIndexingErrorsOnly;
+// }
 
-    const toggleAutoRefresh = () => {
-        props.setFilter((f) => ({
-            ...f,
-            autoRefresh: !f.autoRefresh,
-        }));
-    };
+// // TODO: remove this component after the MultiToggle in IndexFilterDescription is properly connected
+// export default function IndexFilter(props: IndexFilterProps) {
+//     const { filter, setFilter } = props;
 
-    const [filterReferenceElement, setFilterReferenceElement] = useState(null);
-    const { value: filterDropdownVisible, toggle: toggleFilterDropdown } = useBoolean(false);
+//     const toggleStatus = useCallback(
+//         (status: IndexStatus) => {
+//             console.log("status toggled " + status);
+//             setFilter((f) => ({
+//                 ...f,
+//                 statuses: filter.statuses.includes(status)
+//                     ? filter.statuses.filter((x) => x !== status)
+//                     : filter.statuses.concat(status),
+//             }));
+//         },
+//         [filter, setFilter]
+//     );
 
-    return (
-        <InputGroup data-label="Filter" className="d-none">
-            {/*TODO: Remove this component after the MultiToggle is properly connected */}
-            <Input
-                type="text"
-                accessKey="/"
-                placeholder="Index Name"
-                title="Filter indexes"
-                value={filter.searchText}
-                onChange={onSearchTextChange}
-            />
-            <Button
-                innerRef={setFilterReferenceElement}
-                onClick={toggleFilterDropdown}
-                color={hasAnyStateFilter(filter) ? "light" : "secondary"}
-                title="Set the indexing state for the selected indexes"
-                className={classNames("dropdown-toggle")}
-            >
-                <span>Index Status</span>
-            </Button>
-            <DropdownPanel
-                visible={filterDropdownVisible}
-                toggle={toggleFilterDropdown}
-                buttonRef={filterReferenceElement}
-            >
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("Normal")}
-                    checked={filter.status.includes("Normal")}
-                    label="Normal"
-                    color="success"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("ErrorOrFaulty")}
-                    checked={filter.status.includes("ErrorOrFaulty")}
-                    label="Error / Faulty"
-                    color="danger"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("Stale")}
-                    checked={filter.status.includes("Stale")}
-                    label="Stale"
-                    color="warning"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("RollingDeployment")}
-                    checked={filter.status.includes("RollingDeployment")}
-                    label="Rolling deployment"
-                    color="warning"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("Paused")}
-                    checked={filter.status.includes("Paused")}
-                    label="Paused"
-                    color="warning"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("Disabled")}
-                    checked={filter.status.includes("Disabled")}
-                    label="Disabled"
-                    color="warning"
-                />
-                <IndexFilterStatusItem
-                    toggleStatus={() => toggleStatus("Idle")}
-                    checked={filter.status.includes("Idle")}
-                    label="Idle"
-                    color="warning"
-                />
-                <DropdownItem divider />
-                <div className="bg-faded-warning">
-                    <IndexFilterStatusItem
-                        toggleStatus={toggleIndexesWithErrors}
-                        checked={filter.showOnlyIndexesWithIndexingErrors}
-                        label="With indexing errors only"
-                        color="warning"
-                    />
-                </div>
-                <div className="bg-faded-info">
-                    <IndexFilterStatusItem
-                        toggleStatus={toggleAutoRefresh}
-                        checked={filter.autoRefresh}
-                        label="Auto refresh"
-                        color="warning"
-                    >
-                        <div className="fs-5">
-                            Automatically refreshes the list of indexes.
-                            <br />
-                            Might result in list flickering.
-                        </div>
-                    </IndexFilterStatusItem>
-                </div>
-            </DropdownPanel>
-        </InputGroup>
-    );
-}
+//     const onSearchTextChange = (e: ChangeEvent<HTMLInputElement>) => {
+//         props.setFilter((f) => ({
+//             ...f,
+//             searchText: e.target.value,
+//         }));
+//     };
+
+//     const toggleIndexesWithErrors = () => {
+//         props.setFilter((f) => ({
+//             ...f,
+//             showOnlyIndexesWithIndexingErrors: !f.showOnlyIndexesWithIndexingErrors,
+//         }));
+//     };
+
+//     const toggleAutoRefresh = () => {
+//         props.setFilter((f) => ({
+//             ...f,
+//             autoRefresh: !f.autoRefresh,
+//         }));
+//     };
+
+//     const [filterReferenceElement, setFilterReferenceElement] = useState(null);
+//     const { value: filterDropdownVisible, toggle: toggleFilterDropdown } = useBoolean(false);
+
+//     return (
+//         <InputGroup data-label="Filter" className="d-none">
+//             {/*TODO: Remove this component after the MultiToggle is properly connected */}
+//             <Input
+//                 type="text"
+//                 accessKey="/"
+//                 placeholder="Index Name"
+//                 title="Filter indexes"
+//                 value={filter.searchText}
+//                 onChange={onSearchTextChange}
+//             />
+//             <Button
+//                 innerRef={setFilterReferenceElement}
+//                 onClick={toggleFilterDropdown}
+//                 color={hasAnyStateFilter(filter) ? "light" : "secondary"}
+//                 title="Set the indexing state for the selected indexes"
+//                 className={classNames("dropdown-toggle")}
+//             >
+//                 <span>Index Status</span>
+//             </Button>
+//             <DropdownPanel
+//                 visible={filterDropdownVisible}
+//                 toggle={toggleFilterDropdown}
+//                 buttonRef={filterReferenceElement}
+//             >
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("Normal")}
+//                     checked={filter.statuses.includes("Normal")}
+//                     label="Normal"
+//                     color="success"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("ErrorOrFaulty")}
+//                     checked={filter.statuses.includes("ErrorOrFaulty")}
+//                     label="Error / Faulty"
+//                     color="danger"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("Stale")}
+//                     checked={filter.statuses.includes("Stale")}
+//                     label="Stale"
+//                     color="warning"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("RollingDeployment")}
+//                     checked={filter.statuses.includes("RollingDeployment")}
+//                     label="Rolling deployment"
+//                     color="warning"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("Paused")}
+//                     checked={filter.statuses.includes("Paused")}
+//                     label="Paused"
+//                     color="warning"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("Disabled")}
+//                     checked={filter.statuses.includes("Disabled")}
+//                     label="Disabled"
+//                     color="warning"
+//                 />
+//                 <IndexFilterStatusItem
+//                     toggleStatus={() => toggleStatus("Idle")}
+//                     checked={filter.statuses.includes("Idle")}
+//                     label="Idle"
+//                     color="warning"
+//                 />
+//                 <DropdownItem divider />
+//                 <div className="bg-faded-warning">
+//                     <IndexFilterStatusItem
+//                         toggleStatus={toggleIndexesWithErrors}
+//                         checked={filter.showOnlyIndexesWithIndexingErrors}
+//                         label="With indexing errors only"
+//                         color="warning"
+//                     />
+//                 </div>
+//                 <div className="bg-faded-info">
+//                     <IndexFilterStatusItem
+//                         toggleStatus={toggleAutoRefresh}
+//                         checked={filter.autoRefresh}
+//                         label="Auto refresh"
+//                         color="warning"
+//                     >
+//                         <div className="fs-5">
+//                             Automatically refreshes the list of indexes.
+//                             <br />
+//                             Might result in list flickering.
+//                         </div>
+//                     </IndexFilterStatusItem>
+//                 </div>
+//             </DropdownPanel>
+//         </InputGroup>
+//     );
+// }

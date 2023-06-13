@@ -89,7 +89,6 @@ type IndexesStatsReducerAction =
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
     locations: databaseLocationSpecifier[];
-
     resetInProgress: string[];
 }
 

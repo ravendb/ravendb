@@ -79,7 +79,9 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                                 <Icon icon="clear" className="label-clear" margin="m-0" />
                             </div>
 
-                            {selectAllCount && <span className="multi-toggle-item-count ms-1">{selectAllCount}</span>}
+                            {selectAllCount != null && (
+                                <span className="multi-toggle-item-count ms-1">{selectAllCount}</span>
+                            )}
                         </Button>
                         <div className="vr" />
                     </>

@@ -6,7 +6,6 @@ import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-
 import "./IndexesPage.scss";
 import { Button, Card, Col, Row, Spinner } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
@@ -44,13 +43,14 @@ export function IndexesPage(props: IndexesPageProps) {
         toggleSelectAll,
         filter,
         setFilter,
+        filterByStatusOptions,
         groups,
         replacements,
         swapNowProgress,
         highlightCallback,
         confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
-        indexesCount,
+        allIndexesCount,
         setIndexPriority,
         startIndexes,
         disableIndexes,
@@ -73,6 +73,8 @@ export function IndexesPage(props: IndexesPageProps) {
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
     const disableSelectedIndexes = () => disableIndexes(getSelectedIndexes());
     const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
+
+    const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
 
     if (loading) {
         return <LoadingView />;
@@ -97,7 +99,8 @@ export function IndexesPage(props: IndexesPageProps) {
                             <IndexFilterDescription
                                 filter={filter}
                                 setFilter={(x) => setFilter(x)}
-                                indexes={getAllIndexes(groups, replacements)}
+                                filterByStatusOptions={filterByStatusOptions}
+                                indexesCount={allIndexesCount}
                             />
                         </Col>
 
@@ -105,7 +108,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     </Row>
                     {canReadWriteDatabase(database) && (
                         <IndexSelectActions
-                            indexesCount={indexesCount}
+                            indexNames={indexNames}
                             selectedIndexes={selectedIndexes}
                             deleteSelectedIndexes={deleteSelectedIndexes}
                             startSelectedIndexes={startSelectedIndexes}

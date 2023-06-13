@@ -31,6 +31,7 @@ import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
 import IndexChange = Raven.Client.Documents.Changes.IndexChange;
+import { InputItem } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 
@@ -59,7 +60,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         if (stale) {
             return {
                 ...defaultFilterCriteria,
-                status: ["Stale"],
+                statuses: ["Stale"],
             };
         } else {
             return defaultFilterCriteria;
@@ -198,6 +199,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     }, []);
 
+    // TODO @klaczur - filter by state
     const getSelectedIndexes = useCallback(
         (): IndexSharedInfo[] => stats.indexes.filter((x) => selectedIndexes.includes(x.name)),
         [selectedIndexes, stats]
@@ -531,7 +533,45 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     };
 
-    const indexesCount = getAllIndexes(groups, replacements).length;
+    const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
+        let normal = 0,
+            errorOrFaulty = 0,
+            stale = 0,
+            paused = 0,
+            disabled = 0,
+            idle = 0;
+
+        for (const index of stats.indexes) {
+            if (anyMatch(index, (x) => IndexUtils.isNormalState(x, globalIndexingStatus))) {
+                normal++;
+            }
+            if (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.hasAnyFaultyNode(index)) {
+                errorOrFaulty++;
+            }
+            if (anyMatch(index, (x) => x.stale)) {
+                stale++;
+            }
+            if (anyMatch(index, (x) => IndexUtils.isPausedState(x, globalIndexingStatus))) {
+                paused++;
+            }
+            if (anyMatch(index, (x) => IndexUtils.isDisabledState(x, globalIndexingStatus))) {
+                disabled++;
+            }
+            if (anyMatch(index, (x) => IndexUtils.isIdleState(x, globalIndexingStatus))) {
+                idle++;
+            }
+            // TODO: add "RollingDeployment"
+        }
+
+        return [
+            { value: "Normal", label: "Normal", count: normal },
+            { value: "ErrorOrFaulty", label: "Error Or Faulty", count: errorOrFaulty },
+            { value: "Stale", label: "Stale", count: stale },
+            { value: "Paused", label: "Paused", count: paused },
+            { value: "Disabled", label: "Disabled", count: disabled },
+            { value: "Idle", label: "Idle", count: idle },
+        ];
+    }, [stats.indexes]);
 
     return {
         loading,
@@ -544,13 +584,14 @@ export function useIndexesPage(database: database, stale: boolean) {
         toggleSelectAll,
         filter,
         setFilter,
+        filterByStatusOptions,
         groups,
         replacements,
         swapNowProgress,
         highlightCallback,
         confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
-        indexesCount,
+        allIndexesCount: stats.indexes.length,
         setIndexPriority,
         getSelectedIndexes,
         startIndexes,
@@ -567,7 +608,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 }
 
 export const defaultFilterCriteria: IndexFilterCriteria = {
-    status: ["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle", "RollingDeployment"],
+    statuses: [],
     autoRefresh: true,
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",
@@ -633,21 +674,21 @@ function groupAndFilterIndexStats(
     };
 }
 
+const anyMatch = (index: IndexSharedInfo, predicate: (index: IndexNodeInfoDetails) => boolean) =>
+    index.nodesInfo.some((x) => x.status === "success" && predicate(x.details));
+
 function matchesAnyIndexStatus(
     index: IndexSharedInfo,
     status: IndexStatus[],
     globalIndexingStatus: IndexRunningStatus
 ): boolean {
     if (status.length === 0) {
-        return false;
+        return true;
     }
 
     /* TODO
         || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
      */
-
-    const anyMatch = (index: IndexSharedInfo, predicate: (index: IndexNodeInfoDetails) => boolean) =>
-        index.nodesInfo.some((x) => x.status === "success" && predicate(x.details));
 
     return (
         (status.includes("Normal") && anyMatch(index, (x) => IndexUtils.isNormalState(x, globalIndexingStatus))) ||
@@ -666,7 +707,7 @@ function indexMatchesFilter(
     globalIndexingStatus: IndexRunningStatus
 ): boolean {
     const nameMatch = !filter.searchText || index.name.toLowerCase().includes(filter.searchText.toLowerCase());
-    const statusMatch = matchesAnyIndexStatus(index, filter.status, globalIndexingStatus);
+    const statusMatch = matchesAnyIndexStatus(index, filter.statuses, globalIndexingStatus);
     const indexingErrorsMatch =
         !filter.showOnlyIndexesWithIndexingErrors ||
         (filter.showOnlyIndexesWithIndexingErrors && index.nodesInfo.some((x) => x.details?.errorCount > 0));
