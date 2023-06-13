@@ -618,16 +618,6 @@ namespace Corax
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
 
-            // can't fit in old size, have to update the location
-            int reqSize = idLen + id.Size + data.Length;
-            if (rawSize < reqSize)
-            {
-                // remove the existing entry
-                Container.Delete(Transaction.LowLevelTransaction, _entriesContainerId, entryContainerId);
-                // allocate enough space for the new size 
-                entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, reqSize, out _);
-                _entryIdToOffset.Add(entryId, entryContainerId);
-            }
             var context = Transaction.Allocator;
 
             // we can fit it in the old space, let's, great!
@@ -645,7 +635,20 @@ namespace Corax
             // In conclusion, implementing this as "RemoveOldDynamicFields" and "IndexDynamicFields" methods would be a sufficient solution for now.
             RemoveOldDynamicFields();
             IndexDynamicFields(data);
-            
+
+            oldEntryReader = default; // this is here to ensure that no one is going to try to *use* the old reader after we modify it
+
+            // can't fit in old size, have to update the location
+            int reqSize = idLen + id.Size + data.Length;
+            if (rawSize < reqSize)
+            {
+                // remove the existing entry
+                Container.Delete(Transaction.LowLevelTransaction, _entriesContainerId, entryContainerId);
+                // allocate enough space for the new size 
+                entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, reqSize, out _);
+                _entryIdToOffset.Add(entryId, entryContainerId);
+            }
+
             // now we can update the actual details here...
             var space = Container.GetMutable(Transaction.LowLevelTransaction, entryContainerId);
             buf.Slice(0, idLen).CopyTo(space);
