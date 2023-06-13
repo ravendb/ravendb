@@ -1399,7 +1399,7 @@ namespace Voron.Data.BTrees
 
                 var keyClone = key.Clone(_llt.Allocator);
                 _prepareLocator.Add(keyClone, compactTree);
-                return compactTree;
+                prep = compactTree;
             }
 
             State.Flags |= TreeFlags.CompactTrees;
@@ -1429,7 +1429,7 @@ namespace Voron.Data.BTrees
 
                 var keyClone = key.Clone(_llt.Allocator);
                 _prepareLocator.Add(keyClone, lookup);
-                return lookup;
+                prep = lookup;
             }
 
             State.Flags |= TreeFlags.Lookups;
