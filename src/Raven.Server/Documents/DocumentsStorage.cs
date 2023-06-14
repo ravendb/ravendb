@@ -956,7 +956,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<long> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -981,7 +981,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, Reference<long> totalCount)
         {
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
@@ -993,7 +993,7 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<long> totalCount)
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
             foreach (var doc in GetDocuments(context, ids, start, int.MaxValue, totalCount))
