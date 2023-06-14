@@ -48,6 +48,13 @@ export function DatabasesPage(props: DatabasesPageProps) {
         states: [],
     });
 
+    const [showFilterOptions, setShowFilterOptions] = useState(false);
+    const [showToggleButton, setShowToggleButton] = useState(false);
+
+    const toggleFilterOptions = () => {
+        setShowFilterOptions(!showFilterOptions);
+    };
+
     const { isOperatorOrAbove } = useAccessManager();
     const canCreateNewDatabase = isOperatorOrAbove();
 
@@ -69,6 +76,22 @@ export function DatabasesPage(props: DatabasesPageProps) {
             setSelectedDatabaseNames((s) => s.concat(dbName));
         }
     };
+
+    useEffect(() => {
+        const handleResize = () => {
+            const screenWidth = window.innerWidth;
+            setShowFilterOptions(screenWidth >= 1400);
+            setShowToggleButton(screenWidth < 1400);
+        };
+
+        handleResize();
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
 
     useEffect(() => {
         if (props.compact) {
@@ -111,7 +134,17 @@ export function DatabasesPage(props: DatabasesPageProps) {
                             </DropdownMenu>
                         </UncontrolledDropdown>
                     )}
-                    <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                    {showToggleButton && (
+                        <Button color="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
+                            <Icon icon="filter" />
+                            {showFilterOptions ? "Hide Filtering Options" : "Show Filtering Options"}
+                        </Button>
+                    )}
+                    <div className="d-flex flex-grow flex-wrap gap-3">
+                        {showFilterOptions && (
+                            <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                        )}
+                    </div>
                 </div>
 
                 <DatabasesSelectActions
