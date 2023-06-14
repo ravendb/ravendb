@@ -1,6 +1,5 @@
 import React from "react";
 import AceEditor from "react-ace";
-
 import {
     Card,
     Alert,
@@ -14,7 +13,6 @@ import {
     Col,
     Button,
 } from "reactstrap";
-
 import { Icon } from "components/common/Icon";
 import AboutView from "components/common/AboutView";
 import "./AdminJsConsole.scss";
@@ -68,9 +66,9 @@ export default function AdminJSConsole() {
                             <Icon icon="warning" /> WARNING
                         </div>
                         <div>
-                            Do not use the console unless you are sure about what you're doing. Running a script in the
-                            Admin Console could cause your server to crash, cause loss of data, or other irreversible
-                            harm.
+                            Do not use the console unless you are sure about what you&apos;re doing. Running a script in
+                            the Admin Console could cause your server to crash, cause loss of data, or other
+                            irreversible harm.
                         </div>
                     </Alert>
 
