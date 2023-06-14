@@ -7,9 +7,9 @@ import IndexUtils from "components/utils/IndexUtils";
 class remoteMetadataProvider implements queryCompleterProviders {
     
     private readonly db: database;
-    private readonly indexes: KnockoutObservable<string[]>;
+    private readonly indexes: KnockoutObservable<string[]> | string[];
     
-    constructor(database: database, indexes: KnockoutObservable<string[]>) {
+    constructor(database: database, indexes: KnockoutObservable<string[]> | string[]) {
         this.db = database;
         this.indexes = indexes;
     }
@@ -49,7 +49,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
     }
 
     indexNames(callback: (indexNames: string[]) => void): void {
-        callback(this.indexes());
+        callback(ko.isObservable(this.indexes) ? this.indexes() : this.indexes);
     }
 }
 

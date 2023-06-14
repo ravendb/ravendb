@@ -1,5 +1,4 @@
-import React from "react";
-import AceEditor from "react-ace";
+import React, { useMemo } from "react";
 import {
     Card,
     Alert,
@@ -16,8 +15,23 @@ import {
 import { Icon } from "components/common/Icon";
 import AboutView from "components/common/AboutView";
 import "./AdminJsConsole.scss";
+import database from "models/resources/database";
+import rqlLanguageService from "common/rqlLanguageService";
+import AceEditor from "components/common/AceEditor";
 
-export default function AdminJSConsole() {
+interface AdminJSConsoleProps {
+    db: database;
+}
+
+export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
+    // TODO: remove after testing
+    const languageService1 = new rqlLanguageService(db, ["from-react", "from-react2"], "Select");
+    const languageService2 = new rqlLanguageService(
+        db,
+        ko.observableArray(["from-knockout", "from-knockout-2"]),
+        "Select"
+    );
+
     return (
         <div className="content-margin">
             <Row>
@@ -105,30 +119,7 @@ export default function AdminJSConsole() {
                                 <div>
                                     <h3>Script</h3>
                                 </div>
-                                <div>
-                                    {" "}
-                                    <AceEditor
-                                        mode="java"
-                                        theme="github"
-                                        onChange={null}
-                                        name="UNIQUE_ID_OF_DIV"
-                                        editorProps={{ $blockScrolling: true }}
-                                        value={null}
-                                        fontSize={14}
-                                        showPrintMargin={true}
-                                        showGutter={true}
-                                        highlightActiveLine={true}
-                                        setOptions={{
-                                            enableBasicAutocompletion: true,
-                                            enableLiveAutocompletion: true,
-                                            enableSnippets: true,
-                                            showLineNumbers: true,
-                                            tabSize: 2,
-                                        }}
-                                        width="100%"
-                                        height="300px"
-                                    />
-                                </div>
+                                <AceEditor rqlLanguageService={languageService1} />
                                 <div className="run-script-button">
                                     <Button color="primary" size="lg" className="px-4 py-2">
                                         <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
@@ -140,29 +131,7 @@ export default function AdminJSConsole() {
                                 <div>
                                     <h3>Script result</h3>
                                 </div>
-                                <div>
-                                    <AceEditor
-                                        mode="java"
-                                        theme="github"
-                                        onChange={null}
-                                        name="UNIQUE_ID_OF_DIV"
-                                        editorProps={{ $blockScrolling: true }}
-                                        value={null}
-                                        fontSize={14}
-                                        showPrintMargin={true}
-                                        showGutter={true}
-                                        highlightActiveLine={true}
-                                        setOptions={{
-                                            enableBasicAutocompletion: true,
-                                            enableLiveAutocompletion: true,
-                                            enableSnippets: true,
-                                            showLineNumbers: true,
-                                            tabSize: 2,
-                                        }}
-                                        width="100%"
-                                        height="400px"
-                                    />
-                                </div>
+                                <AceEditor rqlLanguageService={languageService2} />
                             </div>
                         </CardBody>
                     </Card>

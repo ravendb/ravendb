@@ -3,6 +3,7 @@ import { bridgeToReact } from "common/reactUtils";
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import AdminJsConsole from "components/pages/resources/manageServer/adminJsConsole/AdminJsConsole";
 import ClientGlobalConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration";
 
 export = getManageServerMenuItem;
@@ -54,7 +55,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
-            moduleId: require("viewmodels/manage/adminJsConsole"),
+            moduleId: bridgeToReact(AdminJsConsole, "nonShardedView"),
             title: "Admin JS Console",
             nav: true,
             css: 'icon-administrator-js-console',
