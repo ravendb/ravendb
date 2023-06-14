@@ -47,6 +47,7 @@ export function DatabasesSelectActions({
 
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
+    const selectedDatabaseNames = selectedDatabases.map((x) => x.name);
 
     const selectionState = genUtils.getSelectionState(
         databaseNames,
@@ -54,14 +55,12 @@ export function DatabasesSelectActions({
     );
 
     const toggleSelectAll = useCallback(() => {
-        const selectedCount = selectedDatabases.length;
-
-        if (selectedCount > 0) {
-            setSelectedDatabaseNames([]);
+        if (selectionState === "Empty") {
+            setSelectedDatabaseNames([...selectedDatabaseNames, ...databaseNames]);
         } else {
-            setSelectedDatabaseNames(databaseNames);
+            setSelectedDatabaseNames(selectedDatabaseNames.filter((x) => !databaseNames.includes(x)));
         }
-    }, [selectedDatabases.length, setSelectedDatabaseNames, databaseNames]);
+    }, [databaseNames, selectedDatabaseNames, selectionState, setSelectedDatabaseNames]);
 
     if (!isOperatorOrAbove()) {
         // no access
