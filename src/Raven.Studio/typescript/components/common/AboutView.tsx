@@ -4,6 +4,7 @@ import { Icon } from "./Icon";
 import { Button, PopoverBody, UncontrolledPopover } from "reactstrap";
 import classNames from "classnames";
 import useId from "components/hooks/useId";
+
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
     className?: string;
@@ -11,6 +12,7 @@ interface AboutViewProps {
 
 const AboutView = (props: AboutViewProps) => {
     const { children, className } = props;
+
     const popoverId = useId("aboutView");
 
     return (
