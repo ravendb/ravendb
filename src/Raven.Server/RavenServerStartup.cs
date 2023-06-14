@@ -30,6 +30,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -368,9 +369,8 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is LowMemoryException ||
+            if (exception.IsOutOfMemory() ||
                 exception is HighDirtyMemoryException ||
-                exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException ||
                 exception is VoronErrorException ||
                 exception is QuotaException ||
