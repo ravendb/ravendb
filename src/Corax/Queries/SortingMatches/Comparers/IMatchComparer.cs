@@ -7,7 +7,7 @@ using Spatial4n.Shapes;
 
 namespace Corax.Queries.SortingMatches.Comparers
 {
-    public enum MatchCompareFieldType
+    public enum MatchCompareFieldType : ushort
     {
         Sequence,
         Integer,
