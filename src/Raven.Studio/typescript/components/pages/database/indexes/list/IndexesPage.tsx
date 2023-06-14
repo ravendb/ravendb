@@ -1,7 +1,7 @@
 ﻿import React from "react";
 import database from "models/resources/database";
 import { IndexPanel } from "./IndexPanel";
-import { IndexFilterDescription } from "./IndexFilter";
+import IndexFilter from "./IndexFilter";
 import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
@@ -96,7 +96,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </Button>
                         </Col>
                         <Col>
-                            <IndexFilterDescription
+                            <IndexFilter
                                 filter={filter}
                                 setFilter={(x) => setFilter(x)}
                                 filterByStatusOptions={filterByStatusOptions}

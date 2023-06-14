@@ -8,14 +8,14 @@ import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import { InputItem } from "components/models/common";
 import { Switch } from "components/common/Checkbox";
 
-interface IndexFilterDescriptionProps {
+interface IndexFilterProps {
     filter: IndexFilterCriteria;
     setFilter: (x: IndexFilterCriteria) => void;
     filterByStatusOptions: InputItem<IndexStatus>[];
     indexesCount: number;
 }
 
-export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
+export default function IndexFilter(props: IndexFilterProps) {
     const { filter, setFilter, filterByStatusOptions, indexesCount } = props;
 
     shardingTodo();
