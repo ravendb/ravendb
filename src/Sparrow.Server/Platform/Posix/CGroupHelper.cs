@@ -17,8 +17,8 @@ public abstract class CGroup
     public const string PROC_SELF_CGROUP_FILENAME = "/proc/self/cgroup";
     public const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";
     public const string PROC_CGROUPS_FILENAME = "/proc/cgroups";
-    
-    public const string MEMORY_CONTROLLER_NAME = "memory";
+
+    private const string MEMORY_CONTROLLER_NAME = "memory";
 
     protected abstract string MemoryLimitFileName { get; } 
     protected abstract string MemoryUsageFileName { get; } 
@@ -26,22 +26,20 @@ public abstract class CGroup
 
     private Lazy<CachedPath> _groupPathForMemory;
 
-    private readonly Dictionary<string, bool> _missingControllerGroups = new Dictionary<string, bool>();
-
     private class CachedPath
     {
-        public DateTime Time { get; private set; }
+        public DateTime ExpiryTime { get; private set; }
         public string Path { get;}
 
-        public CachedPath(string path, DateTime time)
+        public CachedPath(string path, DateTime expiryTime)
         {
             Path = path;
-            Time = time;
+            ExpiryTime = expiryTime;
         }
 
         public void Deprecate()
         {
-            Time = DateTime.MinValue;
+            ExpiryTime = DateTime.MinValue;
         }
     }
 
@@ -93,7 +91,7 @@ public abstract class CGroup
     private Lazy<CachedPath> GetGroupPathForMemory()
     {
         var groupPathForMemory = _groupPathForMemory;
-        if (DateTime.UtcNow - groupPathForMemory.Value.Time > TimeSpan.FromMinutes(1))
+        if (DateTime.UtcNow > groupPathForMemory.Value.ExpiryTime)
         {
             var newVal = CreateNewLazyCachedPath();
             Interlocked.CompareExchange(ref _groupPathForMemory, newVal, groupPathForMemory);
@@ -109,6 +107,8 @@ public abstract class CGroup
             string path = null;
             try
             {
+                if (IsControllerGroupsAvailable(MEMORY_CONTROLLER_NAME) == false)
+                    return new CachedPath(null, DateTime.MaxValue);
                 path = FindCGroupPathForMemory();
             }
             catch (Exception e)
@@ -117,7 +117,7 @@ public abstract class CGroup
                     Logger.Operations("Failed to get CGroup path for memory", e);
             }
 
-            return new CachedPath(path, DateTime.UtcNow);
+            return new CachedPath(path, DateTime.UtcNow + TimeSpan.FromMinutes(1));
         });
     }
     
@@ -158,10 +158,7 @@ public abstract class CGroup
 
     private string FindCGroupPathForMemory()
     {
-        if (IsControllerGroupsAvailable(MEMORY_CONTROLLER_NAME))
-            return FindCGroupPathForMemoryInternal();
-
-        return null;
+        return FindCGroupPathForMemoryInternal();
     }
     protected abstract string FindCGroupPathForMemoryInternal();
     
@@ -196,10 +193,6 @@ public abstract class CGroup
     private static readonly Regex FindControllerGroupsAvailability = new Regex(@"^(?<subsys_name>[\w|_]+)\s+(?<hierarchy>\d+)\s+(?<num_cgroups>\d+)\s+(?<enabled>[1|0])$", RegexOptions.Compiled);
     private bool IsControllerGroupsAvailable(string subsysName)
     {
-        if (_missingControllerGroups.TryGetValue(subsysName, out var enabled))
-            return enabled;
-        
-        var result = false;
         foreach (string line in File.ReadLines(PROC_CGROUPS_FILENAME))
         {
             var match = FindControllerGroupsAvailability.Match(line);
@@ -209,12 +202,10 @@ public abstract class CGroup
             if (match.Groups["subsys_name"].Value.Equals(subsysName) == false)
                 continue;
 
-            result = match.Groups["enabled"].Value == "1";
-            break;
+            return match.Groups["enabled"].Value == "1";
         }
 
-        _missingControllerGroups[subsysName] = result;
-        return result;
+        return false;
     }
     
     protected delegate bool CheckSpecialValues(string textValue, out long? value);
