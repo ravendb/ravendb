@@ -927,10 +927,10 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 AssertValues(storeA);
                 AssertValues(storeB);
