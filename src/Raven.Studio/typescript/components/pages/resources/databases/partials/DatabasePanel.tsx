@@ -312,7 +312,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         <Icon
                                             icon="database"
                                             addon={db.currentNode.relevant ? "home" : null}
-                                            margin="m-0"
+                                            margin="me-2"
                                         />
                                         {db.name}
                                     </span>
