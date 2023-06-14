@@ -116,7 +116,7 @@ namespace SlowTests.Client.TimeSeries
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 var ts = storeB.Operations
                     .Send(new GetTimeSeriesOperation("users/1", "Heartrate"));
