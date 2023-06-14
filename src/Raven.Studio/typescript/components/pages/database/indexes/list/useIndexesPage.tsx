@@ -81,14 +81,8 @@ export function useIndexesPage(database: database, stale: boolean) {
         const collections = collectionsTracker.default.collections();
         const groupedIndexes = groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
 
-        const allVisibleIndexes = getAllIndexes(groupedIndexes.groups, groupedIndexes.replacements);
-        const newSelection = selectedIndexes.filter((x) => allVisibleIndexes.some((idx) => idx.name === x));
-        if (newSelection.length !== selectedIndexes.length) {
-            setSelectedIndexes(newSelection);
-        }
-
         return groupedIndexes;
-    }, [stats, filter, selectedIndexes]);
+    }, [filter, stats.indexes]);
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         try {
@@ -199,7 +193,6 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     }, []);
 
-    // TODO @klaczur - filter by state
     const getSelectedIndexes = useCallback(
         (): IndexSharedInfo[] => stats.indexes.filter((x) => selectedIndexes.includes(x.name)),
         [selectedIndexes, stats]
@@ -519,17 +512,14 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const toggleSelectAll = () => {
         eventsCollector.reportEvent("indexes", "toggle-select-all");
-        const selectedIndexesCount = selectedIndexes.length;
 
-        if (selectedIndexesCount > 0) {
-            setSelectedIndexes([]);
+        const allVisibleIndexes = getAllIndexes(groups, replacements).map((x) => x.name);
+        const selectionState = genUtils.getSelectionState(allVisibleIndexes, selectedIndexes);
+
+        if (selectionState === "Empty") {
+            setSelectedIndexes((prevState) => [...prevState, ...allVisibleIndexes]);
         } else {
-            const toSelect: string[] = [];
-            groups.forEach((group) => {
-                toSelect.push(...group.indexes.map((x) => x.name));
-            });
-            toSelect.push(...replacements.map((x) => x.name));
-            setSelectedIndexes(toSelect);
+            setSelectedIndexes((prevState) => prevState.filter((x) => !allVisibleIndexes.includes(x)));
         }
     };
 
@@ -616,8 +606,17 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
 
 export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
     const allIndexes: IndexSharedInfo[] = [];
-    groups.forEach((group) => allIndexes.push(...group.indexes));
-    allIndexes.push(...replacements);
+
+    for (const index of groups.map((x) => x.indexes).flat()) {
+        allIndexes.push(index);
+
+        const replacement = replacements.find((x) => x.name === IndexUtils.SideBySideIndexPrefix + index.name);
+
+        if (replacement) {
+            allIndexes.push(replacement);
+        }
+    }
+
     return allIndexes;
 }
 
