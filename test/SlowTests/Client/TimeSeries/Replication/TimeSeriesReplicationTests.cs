@@ -1172,7 +1172,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
