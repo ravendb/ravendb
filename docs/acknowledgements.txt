@@ -9,7 +9,7 @@ RavenDB is making use of the following OSS projects:
 * libsodium (https://libsodium.org) under the ISC license (https://github.com/jedisct1/libsodium/blob/master/LICENSE)
 * Lucene.NET (https://github.com/apache/lucenenet) under the Apache 2.0 license (https://github.com/apache/lucenenet/blob/master/LICENSE.txt)
 * Newtonsoft.Json (https://github.com/JamesNK/Newtonsoft.Json/) under the MIT license (https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md)
-* NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apatch 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
+* NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apache 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
 * Npgsql (http://www.npgsql.org/) under the PostgreSQL License, a liberal OSI-approved open source license (https://raw.githubusercontent.com/npgsql/npgsql/master/LICENSE.txt)
 * Portable.BouncyCastle (https://github.com/onovotny/bc-csharp) under the license based on the MIT X Consortium license (https://raw.githubusercontent.com/onovotny/bc-csharp/netstandard/License.html)
 * Oocx.ACME (https://github.com/oocx/acme.net) under the MIT license (https://github.com/oocx/acme.net/blob/master/LICENSE)
