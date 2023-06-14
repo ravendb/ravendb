@@ -1,13 +1,15 @@
 ﻿import React, { ReactNode } from "react";
+import classNames from "classnames";
 
 import "./StickyHeader.scss";
 
 interface StickyHeaderProps {
     children: ReactNode | ReactNode[];
+    className?: string;
 }
 
 export function StickyHeader(props: StickyHeaderProps) {
-    const { children } = props;
+    const { children, className } = props;
 
-    return <div className="sticky-header">{children}</div>;
+    return <div className={classNames("sticky-header", className)}>{children}</div>;
 }
