@@ -37,7 +37,7 @@ namespace Voron.Data
 
             _index = 0;
             _llt = llt;
-            _encrypted = _llt.Environment.Options.Encryption.IsEnabled;
+            _encrypted = _llt.Environment.Options.Encryption.IsEnabled && _llt.Transaction.IsWriteTransaction == false;
             _lastPage = default(Page);
             _position = 0;
 
