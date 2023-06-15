@@ -122,14 +122,14 @@ namespace Raven.Server.Documents.Indexes
 
         private int UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            bool mustDelete;
-            using (_stats.BloomStats.Start())
+            if (indexItem.SkipLuceneDelete == false)
             {
-                mustDelete = _filters.Add(indexItem.LowerId) == false;
+                using (_stats.BloomStats.Start())
+                {
+                    if (_filters.Add(indexItem.LowerId) == false)
+                        writer.Value.Delete(indexItem.LowerId, stats);
+                }
             }
-
-            if (indexItem.SkipLuceneDelete == false && mustDelete)
-                writer.Value.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
@@ -137,6 +137,14 @@ namespace Raven.Server.Documents.Indexes
                 writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
 
                 numberOfOutputs++;
+            }
+
+            if (indexItem.SkipLuceneDelete && numberOfOutputs > 0)
+            {
+                // we skip deleting from lucene for the initial indexing run
+                // but we must update the bloom filters if we actually indexed that document
+                using (_stats.BloomStats.Start())
+                    _filters.Add(indexItem.LowerId);
             }
 
             return numberOfOutputs;
