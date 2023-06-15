@@ -1075,6 +1075,20 @@ namespace Raven.Server.Documents.Subscriptions
                     // ignored
                 }
 
+                try
+                {
+                    if (SubscriptionConnectionTask is { IsCompleted: false })
+                    {
+                        // precaution - it's supposed this task will fail here since we disposed all resources used by connection
+                        // but we should wait for it before we release _copiedBuffer
+                        SubscriptionConnectionTask.Wait();
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+                
                 RecentSubscriptionStatuses?.Clear();
             }
 
