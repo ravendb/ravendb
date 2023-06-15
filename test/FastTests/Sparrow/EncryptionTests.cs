@@ -232,7 +232,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Encryption | RavenTestCategory.Voron, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void RavenDB_159751()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))

@@ -1229,7 +1229,7 @@ namespace Raven.Server.Documents
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
-                
+
                 yield return tombstoneItem;
             }
         }
@@ -1259,8 +1259,8 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+            if (collection == Schemas.Attachments.AttachmentsTombstones ||
+                collection == Schemas.Revisions.RevisionsTombstones)
             {
                 tableName = collection;
             }
@@ -1759,7 +1759,7 @@ namespace Raven.Server.Documents
                 if (flags.Contain(DocumentFlags.HasCounters))
                     CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
-                if (flags.Contain(DocumentFlags.HasTimeSeries)) 
+                if (flags.Contain(DocumentFlags.HasTimeSeries))
                     TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName, flags);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange

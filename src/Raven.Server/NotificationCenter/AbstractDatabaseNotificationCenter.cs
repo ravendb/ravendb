@@ -11,6 +11,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public readonly string Database;
 
     public readonly Paging Paging;
+    public readonly TombstoneNotifications TombstoneNotifications;
     public readonly Indexing Indexing;
     public readonly RequestLatency RequestLatency;
     public readonly EtlNotifications EtlNotifications;
@@ -26,6 +27,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     {
         Database = database;
         Paging = new Paging(this);
+        TombstoneNotifications = new TombstoneNotifications(this);
         Indexing = new Indexing(this);
         RequestLatency = new RequestLatency(this);
         EtlNotifications = new EtlNotifications(this);

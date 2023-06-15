@@ -38,11 +38,11 @@ namespace Voron.Debugging
         public long NextPageNumber { get; set; }
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
-        
+
         public int CountOfSets { get; set; }
-        
+
         public int CountOfContainers { get; set; }
-        
+
         public int CountOfPersistentDictionaries { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
@@ -105,7 +105,7 @@ namespace Voron.Debugging
         }
 
         public event Action<PostingList, TreeReport> HandlePostingListDetails;
-        
+
         public unsafe DetailedStorageReport Generate(DetailedReportInput input)
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
@@ -134,7 +134,7 @@ namespace Voron.Debugging
 
                                     if (lookup.State.DictionaryId < 0)
                                     {
-                                        var nestedReport= GetReport(lookup, input.IncludeDetails);
+                                        var nestedReport = GetReport(lookup, input.IncludeDetails);
                                         nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
                                         trees.Add(nestedReport);
                                     }
@@ -142,7 +142,7 @@ namespace Voron.Debugging
                                     {
                                         tree.Forget(it.CurrentKey);
                                         var textLookup = tree.LookupFor<CompactTree.CompactKeyLookup>(it.CurrentKey);
-                                        var nestedReport= GetReport(textLookup, input.IncludeDetails);
+                                        var nestedReport = GetReport(textLookup, input.IncludeDetails);
                                         nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
                                         trees.Add(nestedReport);
                                     }
@@ -155,17 +155,17 @@ namespace Voron.Debugging
                                     var nesteSetReport = GetReport(set, input.IncludeDetails);
                                     nesteSetReport.Name = treeReport.Name + "/" + nesteSetReport.Name;
                                     trees.Add(nesteSetReport);
-                                    break; 
+                                    break;
                                 default:
                                     throw new ArgumentOutOfRangeException(rootObjectType.ToString());
 
                             }
-                            
+
                         } while (it.MoveNext());
                     }
                 }
 
-                if(input.IncludeDetails)
+                if (input.IncludeDetails)
                     continue;
 
                 if (treeReport.Streams == null)
@@ -208,7 +208,7 @@ namespace Voron.Debugging
             {
                 trees.Add(GetReport(nl, input.IncludeDetails));
             }
-            
+
             foreach (var tl in input.TextualLookups)
             {
                 trees.Add(GetReport(tl, input.IncludeDetails));
@@ -219,7 +219,7 @@ namespace Voron.Debugging
                 var treeReport = GetReport(fst, input.IncludeDetails);
                 trees.Add(treeReport);
 
-                _treesAllocatedSpaceInBytes  += treeReport.AllocatedSpaceInBytes;
+                _treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
             }
 
             long _tablesAllocatedSpaceInBytes = 0;
@@ -229,7 +229,7 @@ namespace Voron.Debugging
                 var tableReport = table.GetReport(input.IncludeDetails, this);
                 tables.Add(tableReport);
 
-                _tablesAllocatedSpaceInBytes  += tableReport.AllocatedSpaceInBytes;
+                _tablesAllocatedSpaceInBytes += tableReport.AllocatedSpaceInBytes;
             }
 
             var journals = new JournalsReport
@@ -250,7 +250,7 @@ namespace Voron.Debugging
                 // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
 
                 var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - _treesAllocatedSpaceInBytes;
-               
+
                 foreach (var tree in trees)
                 {
                     if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
@@ -443,19 +443,19 @@ namespace Voron.Debugging
 
             return treeReport;
         }
-        
+
         public TreeReport GetReport(Lookup<Int64LookupKey> lookup, bool includeDetails)
         {
             List<double> pageDensities = null;
             if (includeDetails)
             {
-                pageDensities = GetLookupPageDensities(lookup.Llt,lookup.AllPages());
+                pageDensities = GetLookupPageDensities(lookup.Llt, lookup.AllPages());
             }
-            
+
             long pageCount = lookup.State.BranchPages + lookup.State.LeafPages;
-            
+
             double density = pageDensities?.Average() ?? -1;
-            
+
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Lookup,
@@ -469,23 +469,23 @@ namespace Voron.Debugging
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
             };
-            
+
             return treeReport;
         }
-        
+
         public TreeReport GetReport(Lookup<CompactTree.CompactKeyLookup> lookup, bool includeDetails)
         {
             List<double> pageDensities = null;
             if (includeDetails)
             {
-                pageDensities = GetLookupPageDensities(lookup.Llt,lookup.AllPages());
+                pageDensities = GetLookupPageDensities(lookup.Llt, lookup.AllPages());
             }
             var container = new Container(lookup.Llt.GetPage(lookup.State.TermsContainerId));
-            
-            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
-            
+
+            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages + container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
+
             double density = pageDensities?.Average() ?? -1;
-            
+
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
@@ -499,10 +499,10 @@ namespace Voron.Debugging
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
             };
-            
+
             return treeReport;
         }
-        
+
         public TreeReport GetContainerReport(Slice name, long page, bool includeDetails)
         {
             List<double> pageDensities = null;
@@ -511,7 +511,7 @@ namespace Voron.Debugging
             {
                 pageDensities = new();
                 var it = Container.GetAllPagesSet(_tx, page);
-                while(it.TryMoveNext(out var pageNum))
+                while (it.TryMoveNext(out var pageNum))
                 {
                     // cannot use GetPageHeaderForDebug since we are reading not just from the header
                     Page cur = _tx.GetPage(pageNum);
@@ -527,7 +527,7 @@ namespace Voron.Debugging
                     }
                 }
             }
-            
+
             // cannot use GetPageHeaderForDebug since we are reading not just from the header
             var root = new Container(_tx.GetPage(page));
             double density = pageDensities?.Average() ?? -1;
@@ -542,12 +542,12 @@ namespace Voron.Debugging
                 PageCount = totalPages,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(totalPages),
-                UsedSpaceInBytes = includeDetails ?(long)(PagesToBytes(totalPages) * density): -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(totalPages) * density) : -1,
             };
 
             return treeReport;
         }
-        
+
         public TreeReport GetReport(Tree tree, bool includeDetails)
         {
             List<double> pageDensities = null;
@@ -812,7 +812,7 @@ namespace Voron.Debugging
 
             return densities;
         }
-        
+
         public static List<double> GetPageDensities(PostingList postingList)
         {
             var allPages = postingList.AllPages();
@@ -838,17 +838,18 @@ namespace Voron.Debugging
 
             return densities;
         }
-        
-        public static List<double> GetLookupPageDensities(LowLevelTransaction llt,List<long> allPages)
+
+        public static List<double> GetLookupPageDensities(LowLevelTransaction llt, List<long> allPages)
         {
             if (allPages.Count == 0)
                 return null;
-            
+
             var densities = new List<double>();
             foreach (var p in allPages)
             {
-                var compactPageHeader = ct.Llt.GetPageHeaderForDebug<CompactPageHeader>(p);
-                densities.Add((double)compactPageHeader.FreeSpace / Constants.Storage.PageSize);
+                var page = llt.GetPage(p);
+                var state = new Lookup<Int64LookupKey>.CursorState { Page = page };
+                densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
             }
             return densities;
         }

@@ -1,27 +1,16 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Context;
 using User = SlowTests.Core.Utils.Entities.User;
-using Raven.Server.Documents;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
