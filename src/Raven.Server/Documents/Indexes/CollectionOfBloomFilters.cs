@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Indexes
         public bool Consumed;
         private static readonly long _consumed = -1L;
 
+        public long CurrentFilterCount => _currentFilter.Count;
+
         private CollectionOfBloomFilters(Mode mode, long version, Tree tree, TransactionOperationContext context)
         {
             _mode = mode;
