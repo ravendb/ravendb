@@ -3,8 +3,9 @@
 import database = require("models/resources/database");
 import remoteMetadataProvider = require("./autoComplete/remoteMetadataProvider");
 import cachedMetadataProvider = require("./autoComplete/cachedMetadataProvider");
+import { LanguageService } from "components/models/aceEditor";
 
-class rqlLanguageService {
+class rqlLanguageService implements LanguageService {
     
     private nextMessageId = 1;
     private worker: Worker;
