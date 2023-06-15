@@ -1053,16 +1053,8 @@ internal static class CoraxQueryBuilder
         int sortIndex = 0;
         var sortArray = new OrderMetadata[8];
 
-        for (int orderFieldId = 0; orderFieldId < 8; orderFieldId++)
+        foreach (var field in orderByFields)
         {
-            if (orderFieldId >= orderByFields.Length)
-            {
-                sortArray[orderFieldId] = new OrderMetadata(false, MatchCompareFieldType.Null);
-                continue;
-            }
-            
-            
-            OrderByField field = orderByFields[orderFieldId];
             if (field.OrderingType == OrderByFieldType.Random)
             {
                 var seed = field.Arguments.Length > 0 ? 
@@ -1157,7 +1149,7 @@ internal static class CoraxQueryBuilder
             sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence);
         }
 
-        return sortIndex == 1 ? sortArray[0..sortIndex] : sortArray;
+        return sortArray[0..sortIndex];
     }
 
     private static IQueryMatch OrderBy(Parameters builderParameters, IQueryMatch match, in OrderMetadata[] orderMetadata)
@@ -1167,12 +1159,10 @@ internal static class CoraxQueryBuilder
         var take = builderParameters.Take;
         switch (orderMetadata.Length)
         {
-            //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
             case 0:
                 return match;
             case 1:
                 return indexSearcher.OrderBy(match, orderMetadata[0], take);
-            
             default:
                 return indexSearcher.OrderByMulti(match, orderMetadata, take);
         }
