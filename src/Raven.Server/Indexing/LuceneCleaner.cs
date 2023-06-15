@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Lucene.Net.Search;
+using Nito.AsyncEx;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Logging;
@@ -12,7 +13,7 @@ namespace Raven.Server.Indexing;
 
 public class LuceneCleaner : ILowMemoryHandler
 {
-    private readonly ReaderWriterLockSlim _runningQueryLock = new();
+    private readonly AsyncReaderWriterLock _runningQueryLock = new();
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LuceneCleaner>("Memory");
 
     public LuceneCleaner()
@@ -22,10 +23,22 @@ public class LuceneCleaner : ILowMemoryHandler
 
     public void LowMemory(LowMemorySeverity lowMemorySeverity)
     {
-        if (_runningQueryLock.TryEnterWriteLock(10) == false)
-            return;
+        IDisposable writeLock;
 
-        IDisposable toDispose;
+        using (var cts = new CancellationTokenSource())
+        {
+            cts.CancelAfter(10);
+            try
+            {
+                writeLock = _runningQueryLock.WriterLock(cts.Token);
+            }
+            catch
+            {
+                return;
+            }
+        }
+
+        IDisposable cacheToDispose;
         long unmanagedUsedBeforeInBytes = NativeMemory.TotalAllocatedMemoryByLucene;
 
         try
@@ -34,16 +47,16 @@ public class LuceneCleaner : ILowMemoryHandler
             // When the GC will run, the finalizer of the Segments will be executed and release the unmanaged memory.
             // HOWEVER, this will happen when the managed memory is high enough to trigger a GC cycle.
             // Which is too late since we are already in a low memory state
-            toDispose = FieldCache_Fields.DEFAULT.PurgeAllCaches();
+            cacheToDispose = FieldCache_Fields.DEFAULT.PurgeAllCaches();
         }
         finally
         {
-            _runningQueryLock.ExitWriteLock();
+            writeLock.Dispose();
         }
 
         Stopwatch sp = Logger.IsInfoEnabled ? Stopwatch.StartNew() : null;
 
-        toDispose.Dispose();
+        cacheToDispose.Dispose();
 
         if (sp != null && sp.ElapsedMilliseconds > 100)
         {
@@ -58,8 +71,6 @@ public class LuceneCleaner : ILowMemoryHandler
 
     public IDisposable EnterRunningQueryReadLock()
     {
-        _runningQueryLock.EnterReadLock();
-
-        return new DisposableAction(() => _runningQueryLock.ExitReadLock());
+        return _runningQueryLock.ReaderLock();
     }
 }
