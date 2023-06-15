@@ -25,7 +25,7 @@ public static class MemoryUtils
 
             try
             {
-                var sorted = new SortedDictionary<long, string>(InvertedComparerInstance);
+                var sorted = new SortedDictionary<long, (string ThreadName, int ManagedThreadId)>(InvertedComparerInstance);
 
                 long totalAllocatedForUnknownThreads = 0;
                 var unknownThreadsCount = 0;
@@ -38,10 +38,10 @@ public static class MemoryUtils
                         continue;
                     }
 
-                    sorted[stats.TotalAllocated] = stats.Name;
+                    sorted[stats.TotalAllocated] = (stats.Name, stats.ManagedThreadId);
                 }
 
-                sorted[totalAllocatedForUnknownThreads] = null;
+                sorted[totalAllocatedForUnknownThreads] = (null, 0);
 
                 var count = 0;
                 var first = true;
@@ -63,9 +63,23 @@ public static class MemoryUtils
                         sb.Append(", ");
                     }
 
-                    TryAppend(() => sb.Append("name: ").Append(keyValue.Value).Append(", allocations: ").Append(new Size(keyValue.Key, SizeUnit.Bytes)));
-                    if (keyValue.Value == null)
+                    sb.Append("[#");
+                    sb.Append(count);
+                    sb.Append("] ");
+
+                    TryAppend(() => sb.Append("name: ")
+                        .Append(keyValue.Value.ThreadName).Append(", allocations: ")
+                        .Append(new Size(keyValue.Key, SizeUnit.Bytes)));
+
+                    if (keyValue.Value.ManagedThreadId != 0)
+                    {
+                        TryAppend(() => sb.Append(", managed thread id: ").Append(keyValue.Value.ManagedThreadId));
+                    }
+
+                    if (keyValue.Value.ThreadName == null)
+                    {
                         TryAppend(() => sb.Append(" (threads count: ").Append(unknownThreadsCount).Append(")"));
+                    }
                 }
             }
             catch

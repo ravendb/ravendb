@@ -589,6 +589,19 @@ namespace Voron.Impl
             if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
                 return result;
 
+            var p = GetPageInternal(pageNumber);
+
+            _pageLocator.SetReadable(p.PageNumber, p);
+
+            return p;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page GetPageWithoutCache(long pageNumber)
+        {
+            if (_disposed != TxState.None)
+                ThrowObjectDisposed();
+
             return GetPageInternal(pageNumber);
         }
 
@@ -640,8 +653,71 @@ namespace Voron.Impl
 
             TrackReadOnlyPage(p);
 
-            _pageLocator.SetReadable(p.PageNumber, p);
             return p;
+        }
+
+        public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
+        {
+            if (_disposed != TxState.None)
+                ThrowObjectDisposed();
+
+            if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page page))
+                return *(T*)page.Pointer;
+
+            T result;
+            PageFromScratchBuffer value;
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
+            {
+                Debug.Assert(value != null);
+                PagerState state = null;
+                if (_scratchPagerStates != null)
+                {
+                    var lastUsed = _lastScratchFileUsed;
+                    if (lastUsed.FileNumber == value.ScratchFileNumber)
+                    {
+                        state = lastUsed.State;
+                    }
+                    else
+                    {
+                        state = _scratchPagerStates[value.ScratchFileNumber];
+                        _lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
+                    }
+                }
+
+                result = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+            }
+            else
+            {
+                var pageFromJournal = _journal.ReadPageHeaderForDebug<T>(this, pageNumber, _scratchPagerStates);
+                if (pageFromJournal != null)
+                {
+                    result = pageFromJournal.Value;
+                }
+                else
+                {
+                    result = DataPager.AcquirePagePointerHeaderForDebug<T>(this, pageNumber);
+                }
+            }
+
+            return result;
+        }
+
+        public void TryReleasePage(long pageNumber)
+        {
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out _))
+            {
+                // we don't release pages from the scratch buffers
+                return;
+            }
+
+            var pageFromJournalExists = _journal.PageExists(this, pageNumber);
+            if (pageFromJournalExists)
+            {
+                // we don't release pages from the scratch buffers that we found through the journals
+                return;
+            }
+
+            DataPager.TryReleasePage(this, pageNumber);
         }
 
         private void ThrowObjectDisposed()

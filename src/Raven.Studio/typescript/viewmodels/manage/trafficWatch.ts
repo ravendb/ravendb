@@ -18,8 +18,35 @@ import TrafficWatchHttpChange = Raven.Client.Documents.Changes.TrafficWatchHttpC
 import trafficWatchQueriesDialog from "viewmodels/manage/trafficWatchQueriesDialog";
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
+import queryTimingsDialog from "viewmodels/manage/queryTimingsDialog";
 
-type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes;
+type trafficChangeType =
+    Raven.Client.Documents.Changes.TrafficWatchChangeType
+    | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes;
+
+
+class showTimingsFeature implements columnPreviewFeature {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => Raven.Client.Documents.Changes.TrafficWatchHttpChange, containerSelector: string) {
+        $tooltip.on("click", ".show-timings", () => {
+            const item = elementProvider();
+            
+            app.showBootstrapDialog(new queryTimingsDialog(item.QueryTimings, item.CustomInfo));
+        });
+    }
+    
+    syntax(column: virtualColumn, escapedValue: any, element: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
+        console.log(column, escapedValue, element);
+        if (column.header !== "Duration" || escapedValue === generalUtils.escapeHtml("N/A")) {
+            return "";
+        }
+
+        if (!trafficWatch.isHttpItem(element) || !element.QueryTimings) {
+            return "";
+        }
+
+        return `<button class="btn btn-default btn-sm show-timings"><i class="icon-stats"></i><span>Show timings</span></button>`;
+    }
+}
 
 class runQueryFeature implements columnPreviewFeature {
 
@@ -318,7 +345,7 @@ class trafficWatch extends viewModelBase {
         return false;
     }
     
-    private static isHttpItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is Raven.Client.Documents.Changes.TrafficWatchHttpChange {
+    static isHttpItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is Raven.Client.Documents.Changes.TrafficWatchHttpChange {
         return item.TrafficWatchType === "Http";
     }
 
@@ -473,6 +500,15 @@ class trafficWatch extends viewModelBase {
             return "";
         };
         
+        const durationProvider = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
+            if (trafficWatch.isHttpItem(item)) { 
+                const timingsPart = item.QueryTimings ? `<span class="icon-stats text-info margin-right margin-right-xs"></span>` : ""; 
+                return item.ElapsedMilliseconds.toLocaleString() + " " + timingsPart;
+            } else {
+                return "N/A";
+            }
+        }
+        
         const grid = this.gridController();
         grid.headerVisible(true);
         grid.init(() => this.fetchTraffic(), () =>
@@ -520,7 +556,9 @@ class trafficWatch extends viewModelBase {
                     x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "N/A",
                     "Duration", "6%", {
                         extraClass: rowHighlightRules,
-                        sortable: "number"
+                        sortable: "number", 
+                        transformValue: (v, item) => durationProvider(item),
+                        useRawValue: () => true
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
@@ -550,11 +588,14 @@ class trafficWatch extends viewModelBase {
         );
 
         const runQuery = new runQueryFeature();
+        const showTimings = new showTimingsFeature();
         
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
              e: JQueryEventObject, onValue: (value: any, valueToCopy?: string, wrapValue?: boolean) => void) => {
-                if (column.header === "Details") {
+                if (column.header === "Duration") {
+                    onValue(trafficWatch.isHttpItem(item) ? item.ElapsedMilliseconds.toLocaleString() + " ms" : "n/a");
+                } else if (column.header === "Details") {
                     onValue(trafficWatch.formatDetails(item));
                 } else if (column.header === "Timestamp") {
                     onValue(moment.utc(item.TimeStamp), item.TimeStamp);
@@ -564,7 +605,7 @@ class trafficWatch extends viewModelBase {
                     onValue(this.formatSource(item, true), this.formatSource(item, false), false);
                 }
             }, {
-                additionalFeatures: [runQuery]
+                additionalFeatures: [runQuery, showTimings]
             });
 
         $(".traffic-watch .viewport").on("scroll", () => {

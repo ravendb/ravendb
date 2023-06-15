@@ -1059,6 +1059,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                 .ToList();
         }
 
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var periodicBackup in PeriodicBackups)
+            {
+                if (periodicBackup.Configuration.Disabled)
+                    dict[periodicBackup.Configuration.Name] = tombstoneCollections;
+            }
+
+            return dict;
+        }
+
         public void HandleDatabaseValueChanged(string type, object changeState)
         {
             if (type != nameof(DelayBackupCommand))
