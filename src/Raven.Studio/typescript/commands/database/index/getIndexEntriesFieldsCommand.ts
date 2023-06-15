@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class getIndexEntriesFieldsCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private location: databaseLocationSpecifier, private reportFailure: boolean = true) {
+    private readonly indexName: string;
+    private readonly db: database;
+    private readonly location: databaseLocationSpecifier;
+    private readonly reportFailure: boolean;
+
+    constructor(indexName: string, db: database, location: databaseLocationSpecifier, reportFailure = true) {
         super();
+        this.indexName = indexName;
+        this.db = db;
+        this.location = location;
+        this.reportFailure = reportFailure;
     }
 
     execute(): JQueryPromise<getIndexEntriesFieldsCommandResult> {

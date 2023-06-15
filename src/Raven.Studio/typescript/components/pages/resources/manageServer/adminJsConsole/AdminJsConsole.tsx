@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState } from "react";
 import {
     Card,
     Alert,
@@ -16,7 +16,6 @@ import { Icon } from "components/common/Icon";
 import AboutView from "components/common/AboutView";
 import "./AdminJsConsole.scss";
 import database from "models/resources/database";
-import rqlLanguageService from "common/rqlLanguageService";
 import AceEditor from "components/common/AceEditor";
 
 interface AdminJSConsoleProps {
@@ -25,12 +24,8 @@ interface AdminJSConsoleProps {
 
 export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
     // TODO: remove after testing
-    const languageService1 = new rqlLanguageService(db, ["from-react", "from-react2"], "Select");
-    const languageService2 = new rqlLanguageService(
-        db,
-        ko.observableArray(["from-knockout", "from-knockout-2"]),
-        "Select"
-    );
+
+    const [script, setScript] = useState("");
 
     return (
         <div className="content-margin">
@@ -119,7 +114,9 @@ export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
                                 <div>
                                     <h3>Script</h3>
                                 </div>
-                                <AceEditor rqlLanguageService={languageService1} />
+
+                                <AceEditor mode="javascript" onChange={setScript} />
+
                                 <div className="run-script-button">
                                     <Button color="primary" size="lg" className="px-4 py-2">
                                         <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
@@ -131,7 +128,8 @@ export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
                                 <div>
                                     <h3>Script result</h3>
                                 </div>
-                                <AceEditor rqlLanguageService={languageService2} />
+
+                                <AceEditor mode="javascript" readOnly />
                             </div>
                         </CardBody>
                     </Card>
