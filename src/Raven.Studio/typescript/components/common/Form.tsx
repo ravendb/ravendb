@@ -5,6 +5,8 @@ import { Control, ControllerProps, FieldPath, FieldValues, useController } from 
 import { Input, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
+import AceEditor, { AceEditorProps } from "./AceEditor";
+import Select, { SelectProps } from "./Select";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -39,26 +41,6 @@ export function FormInput<
     return <FormInputGeneral {...props} />;
 }
 
-export function FormSelect<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(
-    props: FormElementProps<TFieldValues, TName> &
-        Omit<InputProps, "type"> & { options: valueAndLabelItem<TFieldValues[TName], string>[] }
-) {
-    const { options, ...rest } = props;
-
-    return (
-        <FormInputGeneral type="select" {...rest}>
-            {options.map((x) => (
-                <option key={x.value} value={x.value}>
-                    {x.label}
-                </option>
-            ))}
-        </FormInputGeneral>
-    );
-}
-
 export function FormCheckbox<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
     props: FormToggleProps<TFieldValues, TName>
 ) {
@@ -75,6 +57,31 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     props: FormToggleProps<TFieldValues, TName>
 ) {
     return <FormCheckbox type="radio" {...props} />;
+}
+
+export function FormSelect<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(props: FormElementProps<TFieldValues, TName> & Omit<SelectProps<TFieldValues[TName]>, "setSelectedValue">) {
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div>
+            <Select setSelectedValue={onChange} selectedValue={value} {...rest} />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -106,6 +113,26 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
             {invalid && <div className="text-danger small">{error.message}</div>}
         </div>
     );
+}
+
+export function FormAceEditor<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(props: FormElementProps<TFieldValues, TName> & AceEditorProps) {
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return <AceEditor onChange={onChange} value={value} validationErrorMessage={error?.message} {...rest} />;
 }
 
 function FormInputGeneral<

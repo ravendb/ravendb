@@ -8,6 +8,8 @@ const selectActiveDatabase = (store: RootState) => store.databases.activeDatabas
 const { databasesSelectors } = databasesSliceInternal;
 
 const selectAllDatabases = (store: RootState) => databasesSelectors.selectAll(store.databases.databases);
+const selectAllDatabaseNames = (store: RootState) =>
+    databasesSelectors.selectIds(store.databases.databases) as string[];
 
 const selectAllDatabasesCount = (store: RootState) => databasesSelectors.selectTotal(store.databases.databases);
 
@@ -31,6 +33,7 @@ function selectDatabaseByName(name: string) {
 export const databaseSelectors = {
     activeDatabase: selectActiveDatabase,
     allDatabases: selectAllDatabases,
+    allDatabaseNames: selectAllDatabaseNames,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,
 };

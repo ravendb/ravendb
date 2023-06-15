@@ -4,6 +4,7 @@ import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.Cli
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import saveClientConfigurationCommand = require("commands/resources/saveClientConfigurationCommand");
 import database = require("models/resources/database");
+import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -20,5 +21,9 @@ export default class ManageServerService {
 
     async saveClientConfiguration(dto: ClientConfiguration, db: database): Promise<void> {
         return new saveClientConfigurationCommand(dto, db).execute();
+    }
+
+    async runAdminJsScript(script: string, targetDatabaseName?: string): Promise<{ Result: string }> {
+        return new adminJsScriptCommand(script, targetDatabaseName).execute();
     }
 }

@@ -4,6 +4,7 @@ import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 import LoadBalanceBehavior = Raven.Client.Http.LoadBalanceBehavior;
 import assertUnreachable from "components/utils/assertUnreachable";
 import { exhaustiveStringTuple } from "components/utils/common";
+import { SelectOption } from "../Select";
 
 export default class ClientConfigurationUtils {
     static allReadBalanceBehaviors = exhaustiveStringTuple<ReadBalanceBehavior>()("None", "RoundRobin", "FastestNode");
@@ -21,7 +22,7 @@ export default class ClientConfigurationUtils {
         }
     }
 
-    static getReadBalanceBehaviorOptions(): valueAndLabelItem<ReadBalanceBehavior, string>[] {
+    static getReadBalanceBehaviorOptions(): SelectOption<ReadBalanceBehavior>[] {
         return ClientConfigurationUtils.allReadBalanceBehaviors.map((value) => ({
             value,
             label: ClientConfigurationUtils.formatReadBalanceBehavior(value),
@@ -41,7 +42,7 @@ export default class ClientConfigurationUtils {
         }
     }
 
-    static getLoadBalanceBehaviorOptions(): valueAndLabelItem<LoadBalanceBehavior, string>[] {
+    static getLoadBalanceBehaviorOptions(): SelectOption<LoadBalanceBehavior>[] {
         return ClientConfigurationUtils.allLoadBalanceBehaviors.map((value) => ({
             value,
             label: ClientConfigurationUtils.formatLoadBalanceBehavior(value),
