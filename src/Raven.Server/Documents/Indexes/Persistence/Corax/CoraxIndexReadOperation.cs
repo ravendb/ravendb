@@ -665,14 +665,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 QueryPool.Return(ids);
 
-                if (queryMatch is not SortingMatch sm)
+                if (queryMatch is not SortingMatch && queryMatch is not NewMultiSortingMatch)
                     break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
 
+                var sortingMatchTotalResults = 0L;
+                if (queryMatch is SortingMatch) 
+                    sortingMatchTotalResults = ((SortingMatch)queryMatch).TotalResults;
+                else 
+                    sortingMatchTotalResults = ((NewMultiSortingMatch)queryMatch).TotalResults;
+
                 if (docsToLoad == 0 ||
-                    sm.TotalResults == totalResults.Value ||
+                    sortingMatchTotalResults == totalResults.Value ||
                     scannedDocuments.Value >= query.FilterLimit)
                 {
-                    totalResults.Value = (int)Math.Min(sm.TotalResults, int.MaxValue);
+                    totalResults.Value = (int)Math.Min(sortingMatchTotalResults, int.MaxValue);
                     runQuery = false;
                 }
                 else

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
@@ -456,8 +455,6 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
             throw new NotSupportedException(typeof(TDirection).FullName);
         }
-        
-
     }
 
     private static void InitializeIndexesTopHalf(Span<long> span)
