@@ -4182,6 +4182,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
+                dict[Name] = Collections;
+
+            return dict;
+        }
+
         internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);

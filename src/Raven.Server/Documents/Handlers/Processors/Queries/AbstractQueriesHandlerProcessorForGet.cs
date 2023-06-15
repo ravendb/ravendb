@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries;
@@ -187,6 +188,8 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                                 $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs,
                                 totalDocumentsSizeInBytes);
                         }
+
+                        AddQueryTimingsToTrafficWatch(indexQuery);
                     }
                 }
             }
@@ -303,5 +306,13 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
             RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"FacetedQuery ({result.IndexName})", $"{query.Metadata.QueryText}\n{query.QueryParameters}", numberOfResults, query.PageSize, result.DurationInMs, -1);
+
+        AddQueryTimingsToTrafficWatch(query);
+    }
+
+    private void AddQueryTimingsToTrafficWatch(IndexQueryServerSide indexQuery)
+    {
+        if (TrafficWatchManager.HasRegisteredClients && indexQuery.Timings != null)
+            HttpContext.Items[nameof(QueryTimings)] = indexQuery.Timings.ToTimings();
     }
 }

@@ -109,7 +109,7 @@ class textColumn<T extends object> implements virtualColumn {
 
         if (this.opts.transformValue) {
             return {
-                rawText: this.opts.transformValue(cellValue),
+                rawText: this.opts.transformValue(cellValue, item),
                 typeCssClass: "token string"
             };
         }

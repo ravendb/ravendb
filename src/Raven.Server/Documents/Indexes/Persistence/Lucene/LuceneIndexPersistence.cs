@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
                     }
 
-                    reader ??= _lastReader = IndexReader.Open(_directory, readOnly: true, state);
+                    reader ??= _lastReader = IndexReader.Open(_directory, deletionPolicy: null, readOnly: true, termInfosIndexDivisor: _index.Configuration.ReaderTermsIndexDivisor, state);
 
                     reader.IncRef();
 

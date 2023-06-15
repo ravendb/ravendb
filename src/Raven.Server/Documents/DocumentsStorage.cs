@@ -1229,7 +1229,7 @@ namespace Raven.Server.Documents
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
-                
+
                 yield return tombstoneItem;
             }
         }
@@ -1253,6 +1253,31 @@ namespace Raven.Server.Documents
 
                 yield return TableValueToTombstone(context, ref result.Reader);
             }
+        }
+
+        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        {
+            string tableName;
+
+            if (collection == Schemas.Attachments.AttachmentsTombstones ||
+                collection == Schemas.Revisions.RevisionsTombstones)
+            {
+                tableName = collection;
+            }
+            else
+            {
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    return 0;
+
+                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+            }
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
+            if (table == null)
+                return 0;
+
+            return table.NumberOfEntries;
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(
@@ -1734,7 +1759,7 @@ namespace Raven.Server.Documents
                 if (flags.Contain(DocumentFlags.HasCounters))
                     CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
-                if (flags.Contain(DocumentFlags.HasTimeSeries)) 
+                if (flags.Contain(DocumentFlags.HasTimeSeries))
                     TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName, flags);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange

@@ -302,6 +302,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T ReadPageHeaderForDebug<T>(LowLevelTransaction tx, long p, PagerState pagerState = null) where T : unmanaged
+        {
+            return _scratchPager.AcquirePagePointerHeaderForDebug<T>(tx, p, pagerState);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, long p)
         {
             return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);

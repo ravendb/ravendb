@@ -89,18 +89,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     }
                 }
             }
-
-            if (dataForReplicationCommand.ReplicatedAttachmentStreams != null)
-            {
-                foreach (var kvp in dataForReplicationCommand.ReplicatedAttachmentStreams)
-                {
-                    if (expectedAttachmentStreams == null || expectedAttachmentStreams.Contains(kvp.Key))
-                    {
-                        throw new InvalidOperationException("Attempted to attachment with hash: " + kvp.Key +
-                                                            ", but without a matching attachment key.");
-                    }
-                }
-            }
         }
 
         protected override void DisposeInternal()

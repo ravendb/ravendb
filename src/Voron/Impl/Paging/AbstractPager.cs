@@ -10,7 +10,6 @@ using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -351,6 +350,12 @@ namespace Voron.Impl.Paging
         public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
             return AcquirePagePointerInternal(tx, pageNumber, pagerState);
+        }
+
+        public virtual T AcquirePagePointerHeaderForDebug<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null) where T : unmanaged
+        {
+            var pointer = AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            return *(T*)pointer;
         }
 
         public virtual void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long valuePositionInScratchBuffer, long actualNumberOfAllocatedScratchPages)
@@ -756,6 +761,10 @@ namespace Voron.Impl.Paging
         public virtual byte* AcquireRawPagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return AcquirePagePointer(tx, pageNumber, pagerState);
+        }
+
+        public virtual void TryReleasePage(IPagerLevelTransactionState tx, long page)
+        {
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)

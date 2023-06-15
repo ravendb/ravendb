@@ -16,15 +16,13 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                    <div class="columns-list-container" data-bind="with: editedConfiguration">
-                        <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="margin-bottom">
-                            <label class="control-label pull-left no-margin">
-                                <h4>Max Log Entries</h4>
-                            </label>
+                    <div class="dropdown-extended" data-bind="with: editedConfiguration">
+                            <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="flex-vertical">
+                                <label class="small-label">Max Log Entries</label>
                             <input class="form-control input-sm full-width" type="number" min="0" data-bind="numericInput: maxEntries" />
                             <span class="help-block" data-bind="validationMessage: maxEntries"></span>
                         </div>
-                        <h4>Log filters</h4>
+                            <label class="small-label margin-top-sm">Log filters</label>
                         <div class="flex-horizontal margin-bottom margin-bottom-sm">
                             <div class="dropdown">
                                 <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
@@ -81,17 +79,15 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                    <div class="columns-list-container" data-bind="with: onDiskConfiguration" id="settingsContainer">
-                        <form class="form-horizontal" role="form">
-                            <div class="row">
-                                <label class="col-md-3 control-label">Logs Path:</label>
-                                <div class="col-md-9">
-                                    <p class="form-control-static" id="adminLogsPath" data-bind="text: fullPath"></p>
+                        <div class="dropdown-extended padding" data-bind="with: onDiskConfiguration" id="settingsContainer">
+                            <div class="bg-warning padding padding-xs margin-bottom text-center"><i class="icon-warning"></i> <span>Logs settings will reset to default values after a server restart</span></div>
+                            <form class="d-flex gap-3 flex-vertical" role="form">
+                                <div class="flex-vertical">
+                                    <label class="small-label margin-bottom-xxs">Logs Path</label>
+                                    <p class="word-break m-0" id="adminLogsPath" data-bind="text: fullPath"></p>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <label class="col-md-3 control-label">Log Mode:</label>
-                                <div class="col-md-9">
+                                <div class="flex-vertical">
+                                    <label class="small-label margin-bottom-xxs">Log Mode</label>
                                     <div class="dropdown">
                                         <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown" title="Set logs mode" id="selectedLogMode">
                                             <span data-bind="text: selectedLogMode"></span>&nbsp;&nbsp;
@@ -109,24 +105,21 @@
                                         </ul>
                                     </div>
                                 </div>
+                                <div class="flex-horizontal gap-3">
+                                    <div class="flex-vertical">
+                                        <label class="small-label">Retention Time</label>
+                                        <p class="m-0" data-bind="text: retentionTimeText"></p>
                             </div>
-                            <div class="row">
-                                <label class="col-md-3 control-label">Retention Time:</label>
-                                <div class="col-md-9">
-                                    <p class="form-control-static" data-bind="text: retentionTimeText"></p>
+                                    <div class="flex-vertical">
+                                        <label class="small-label">Retention Size</label>
+                                        <p class="m-0" data-bind="text: retentionSizeText"></p>
                                 </div>
                             </div>
-                            <div class="row">
-                                <label class="col-md-3 control-label">Retention Size:</label>
-                                <div class="col-md-9">
-                                    <p class="form-control-static" data-bind="text: retentionSizeText"></p>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <label class="col-md-3 control-label">Traffic Watch Log:</label>
-                                <div class="col-md-9">
-                                    <div class="form-control-static">
-                                        <button type="button" class="btn btn-default btn-sm close-panel margin-right" id="js-traffic-watch-config" data-bind="click: $root.configureTrafficWatch">
+                                <div class="flex-horizontal gap-3">
+                                    <div class="flex-vertical">
+                                        <label class="small-label">Traffic Watch Log</label>
+                                        <div>
+                                            <button type="button" class="btn btn-default btn-sm close-panel margin-right-sm" id="js-traffic-watch-config" data-bind="click: $root.configureTrafficWatch">
                                             <i class="icon-settings"></i>
                                             <span>Configure</span>
                                         </button>
@@ -134,12 +127,10 @@
                                         <span class="text-default" data-bind="visible: !$root.trafficWatchEnabled()">Disabled</span>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <label class="col-md-3 control-label">Microsoft logs:</label>
-                                <div class="col-md-9">
-                                    <div class="form-control-static">
-                                        <button type="button" class="btn btn-default btn-sm close-panel margin-right" data-bind="click: $root.configureMicrosoftLogs">
+                                    <div class="flex-vertical">
+                                        <label class="small-label">Microsoft logs</label>
+                                        <div>
+                                            <button type="button" class="btn btn-default btn-sm close-panel margin-right-sm" data-bind="click: $root.configureMicrosoftLogs">
                                             <i class="icon-settings"></i>
                                             <span>Configure</span>
                                         </button>
@@ -148,11 +139,12 @@
                                     </div>
                                 </div>
                             </div>
-                        </form>
                         <div class="flex-horizontal">
-                            <div class="flex-separator"></div>
-                            <button class="btn btn-success btn-sm close-panel"><span>Close</span></button>
+                                    <div class="flex-grow"></div>
+                                    <button class="btn btn-success btn-sm close-panel margin-top-sm"><span>Close</span></button>
                         </div>
+                        
+                            </form>
                     </div>
                 </div>
             </div>
@@ -162,6 +154,7 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu slidein-style" data-bind="dropdownPanel: true">
+                        <div class="dropdown-extended">
                     <form class="flex-form" autocomplete="off">
                         <div class="modal-dialog">
                             <div class="modal-content">
@@ -180,8 +173,9 @@
                                                     <span class="margin-left-xs">Use minimum</span>
                                                 </label>
                                             </div>
-                                            <code class="form-control-static pull-right" data-bind="text: dateFormattedAsUtc(startDate()), visible: !useMinStartDate()"></code>
-                                            <div class="input-group margin-top margin-top-sm" data-bind="visible: !useMinStartDate(), validationElement: startDate">
+                                            <code class="form-control-static" data-bind="text: dateFormattedAsUtc(startDate()), visible: !useMinStartDate()"></code>
+                                        </div>
+                                        <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMinStartDate(), validationElement: startDate">
                                                 <input type="text" class="form-control" id="startDate" placeholder="Start date"
                                                        data-bind="datePicker: startDate, datepickerOptions: datePickerOptions" />
                                                 <div class="input-group-addon">(local)</div>
@@ -198,8 +192,9 @@
                                                     <span class="margin-left-xs">Use maximum</span>
                                                 </label>
                                             </div>
-                                            <code class="form-control-static pull-right" data-bind="text: dateFormattedAsUtc(endDate()), visible: !useMaxEndDate()"></code>
-                                            <div class="input-group margin-top margin-top-sm" data-bind="visible: !useMaxEndDate(), validationElement: endDate">
+                                            <code class="form-control-static" data-bind="text: dateFormattedAsUtc(endDate()), visible: !useMaxEndDate()"></code>
+                                        </div>
+                                        <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMaxEndDate(), validationElement: endDate">
                                                 <input type="text" class="form-control" id="endDate" placeholder="End date"
                                                        data-bind="datePicker: endDate, datepickerOptions: datePickerOptions" />
                                                 <div class="input-group-addon">(local)</div>
@@ -207,8 +202,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="modal-footer">
                                     <div class="flex-horizontal">
                                         <div class="flex-separator"></div>
                                         <div class="btn-group">
@@ -220,12 +213,10 @@
                                             </button>
                                         </div>
                                     </div>
+                            </form>
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
             <small class="margin-left margin-left-sm">
                 <label>Log Level:</label>
                 <strong data-bind="text: onDiskConfiguration().selectedLogMode"></strong>

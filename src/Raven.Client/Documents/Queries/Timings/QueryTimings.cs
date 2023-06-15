@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Timings
 {
-    public class QueryTimings : IFillFromBlittableJson
+    public class QueryTimings : IFillFromBlittableJson, IDynamicJson
     {
         public long DurationInMs { get; set; }
 
@@ -48,6 +49,35 @@ namespace Raven.Client.Documents.Queries.Timings
 
             DurationInMs = queryResult.Timings.DurationInMs;
             Timings = queryResult.Timings.Timings;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            DynamicJsonValue djv = new DynamicJsonValue
+            {
+                [nameof(DurationInMs)] = DurationInMs,
+                [nameof(Timings)] = InnerToJson(Timings)
+            };
+
+            return djv;
+
+            DynamicJsonValue InnerToJson(IDictionary<string, QueryTimings> queryTimings)
+            {
+                DynamicJsonValue json = new DynamicJsonValue();
+                if (queryTimings == null)
+                    return null;
+                foreach (var kvp in queryTimings)
+                {
+                    DynamicJsonValue innerJson = new DynamicJsonValue()
+                    {
+                        [nameof(DurationInMs)] = kvp.Value.DurationInMs
+                    };
+                    innerJson[nameof(Timings)] = InnerToJson(kvp.Value.Timings);
+                    json[kvp.Key] = innerJson;
+                }
+
+                return json;
+            }
         }
     }
 }

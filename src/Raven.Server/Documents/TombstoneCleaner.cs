@@ -9,6 +9,7 @@ using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -120,9 +121,49 @@ namespace Raven.Server.Documents
             return numberOfTombstonesDeleted;
         }
 
+        private void CreateWarningIfThereAreBlockingTombstones(HashSet<string> tombstoneCollections)
+        {
+            var currentBlockingTombstones = new Dictionary<(string Source, string Collection), long>();
+            var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            bool needToWarn = false;
+
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var subscription in _subscriptions)
+                {
+                    var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections);
+                    foreach (var disabledSubscriber in disabledSubscribers.Keys)
+                    {
+                        HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
+                        foreach (var tombstoneCollection in blockedTombstoneCollections)
+                        {
+                            if (tombstonesPerCollection.TryGetValue(tombstoneCollection, out var tombstonesCount) == false)
+                            {
+                                tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
+                                tombstonesPerCollection[tombstoneCollection] = tombstonesCount;
+                            }
+
+                            if (tombstonesCount > 0)
+                            {
+                                needToWarn = true;
+                                currentBlockingTombstones.Add((disabledSubscriber, tombstoneCollection), tombstonesCount);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (needToWarn)
+                _documentDatabase.NotificationCenter.TombstoneNotifications.Add(currentBlockingTombstones);
+            else
+                _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
+        }
+
         internal TombstonesState GetState(bool addInfoForDebug = false)
         {
             var result = new TombstonesState();
+            HashSet<string> tombstoneCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (CancellationToken.IsCancellationRequested)
                 return result;
@@ -134,7 +175,10 @@ namespace Raven.Server.Documents
             using (var tx = storageEnvironment.ReadTransaction())
             {
                 foreach (var tombstoneCollection in _documentDatabase.DocumentsStorage.GetTombstoneCollections(tx))
+                {
+                    tombstoneCollections.Add(tombstoneCollection);
                     result.Tombstones[tombstoneCollection] = new StateHolder();
+            }
             }
 
             if (result.Tombstones.Count == 0)
@@ -185,6 +229,16 @@ namespace Raven.Server.Documents
                             }
                         }
                     }
+                }
+
+                try
+                {
+                    CreateWarningIfThereAreBlockingTombstones(tombstoneCollections);
+            }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to notify on blocking tombstones in database '{_documentDatabase.Name}'", e);
                 }
             }
             finally
@@ -433,6 +487,8 @@ namespace Raven.Server.Documents
         string TombstoneCleanerIdentifier { get; }
 
         Dictionary<string, long> GetLastProcessedTombstonesPerCollection(TombstoneType type);
+
+        Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections);
 
         public enum TombstoneType
         {

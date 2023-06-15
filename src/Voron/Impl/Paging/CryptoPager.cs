@@ -83,6 +83,20 @@ namespace Voron.Impl.Paging
         public NativeMemory.ThreadStats AllocatingThread;
         public long Generation;
         public bool SkipOnTxCommit;
+
+        public int Usages { get; private set; }
+
+        public bool CanRelease => Usages == 0;
+
+        public void AddRef()
+        {
+            Usages++;
+        }
+
+        public void ReleaseRef()
+        {
+            Usages--;
+        }
     }
 
     public sealed unsafe class CryptoPager : AbstractPager
@@ -179,6 +193,8 @@ namespace Voron.Impl.Paging
             {
                 if (size == buffer.Size)
                 {
+                    buffer.AddRef();
+
                     Sodium.sodium_memzero(buffer.Pointer, (UIntPtr)size);
 
                     buffer.SkipOnTxCommit = false;
@@ -200,7 +216,10 @@ namespace Voron.Impl.Paging
             var state = GetTransactionState(tx);
 
             if (state.TryGetValue(pageNumber, out var buffer))
+            {
+                buffer.AddRef();
                 return buffer.Pointer;
+            }
 
             var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
 
@@ -219,6 +238,41 @@ namespace Voron.Impl.Paging
             DecryptPage((PageHeader*)buffer.Pointer);
 
             return buffer.Pointer;
+        }
+
+        public override T AcquirePagePointerHeaderForDebug<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        {
+            var state = GetTransactionState(tx);
+            if (state.TryGetValue(pageNumber, out var buffer))
+                return *(T*)buffer.Pointer;
+
+            return Inner.AcquirePagePointerHeaderForDebug<T>(tx, pageNumber, pagerState);
+        }
+
+        public override void TryReleasePage(IPagerLevelTransactionState tx, long page)
+        {
+            if (tx.CryptoPagerTransactionState == null)
+                return;
+
+            if (tx.CryptoPagerTransactionState.TryGetValue(this, out var state) == false)
+                return;
+
+            if (state.TryGetValue(page, out var buffer) == false)
+                return;
+
+            if (buffer.Modified)
+                return;
+
+            if (CanReturnBuffer(buffer) == false)
+                return;
+
+            buffer.ReleaseRef();
+
+            if (buffer.CanRelease)
+            {
+                state.RemoveBuffer(page);
+                ReturnBuffer(buffer);
+            }
         }
 
         [Conditional("DEBUG")]
@@ -285,6 +339,7 @@ namespace Voron.Impl.Paging
                 AllocatingThread = thread
             };
 
+            buffer.AddRef();
             state[pageNumber] = buffer;
             return buffer;
         }
@@ -364,6 +419,8 @@ namespace Voron.Impl.Paging
             {
                 if (CanReturnBuffer(buffer.Value) == false)
                     continue;
+
+                buffer.Value.ReleaseRef();
 
                 ReturnBuffer(buffer.Value);
             }

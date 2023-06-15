@@ -850,6 +850,39 @@ namespace Raven.Server.Documents.ETL
             return lastProcessedTombstones;
         }
 
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (ElasticSearchEtlConfiguration config in ElasticSearchDestinations)
+            {
+                if (config.Disabled)
+                    dict[config.Name] = tombstoneCollections;
+            }
+            foreach (OlapEtlConfiguration config in OlapDestinations)
+            {
+                if (config.Disabled)
+                    dict[config.Name] = tombstoneCollections;
+            }
+            foreach (QueueEtlConfiguration config in QueueDestinations)
+            {
+                if (config.Disabled)
+                    dict[config.Name] = tombstoneCollections;
+            }
+
+            foreach (RavenEtlConfiguration config in RavenDestinations)
+            {
+                if (config.Disabled)
+                    dict[config.Name] = tombstoneCollections;
+            }
+            foreach (SqlEtlConfiguration config in SqlDestinations)
+            {
+                if (config.Disabled)
+                    dict[config.Name] = tombstoneCollections;
+            }
+
+            return dict;
+        }
+
         private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
