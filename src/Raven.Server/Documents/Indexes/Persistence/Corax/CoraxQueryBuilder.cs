@@ -1057,7 +1057,11 @@ internal static class CoraxQueryBuilder
         {
             if (field.OrderingType == OrderByFieldType.Random)
             {
-                throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support OrderByRandom.");
+                var seed = field.Arguments.Length > 0 ? 
+                    field.Arguments[0].GetString(builderParameters.QueryParameters).GetHashCode() :
+                    Random.Shared.Next(); // use a random seed if none is provided  
+                sortArray[sortIndex++] = new OrderMetadata(seed);
+                continue;
             }
 
             if (field.OrderingType == OrderByFieldType.Score)

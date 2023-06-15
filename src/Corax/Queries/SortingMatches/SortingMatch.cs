@@ -59,8 +59,46 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Int64LookupKey, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
                 MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  DoubleLookupKey,Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
                 MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
+                MatchCompareFieldType.Random => SortBy<EntryComparerByTerm, CompactTree.CompactKeyLookup, RandomDirection, RandomDirection>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
+        }
+    }
+    private struct RandomDirection : ILookupIterator
+    {
+        public void Init<T>(T parent)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Fill(Span<long> results)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Skip(long count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool MoveNext(out long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool MoveNext<TLookupKey>(out TLookupKey key, out long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Seek<TLookupKey>(TLookupKey key)
+        {
+            throw new NotImplementedException();
         }
     }
     
@@ -139,7 +177,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 return 0;
 
             const int IndexSortingThreshold = 4096;
-            if (typeof(TDirection) == typeof(NoIterationOptimization) || 
+            if (typeof(TDirection) == typeof(RandomDirection))
+            {
+                SortByRandom(ref match, allMatches);
+            }
+            else if (typeof(TDirection) == typeof(NoIterationOptimization) || 
                 match.TotalResults < IndexSortingThreshold)
             {
                 SortResults<TEntryComparer>(ref match, allMatches);
@@ -159,6 +201,22 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         match._entriesBufferScope.Dispose();
 
         return 0;
+    }
+
+    private static void SortByRandom(ref SortingMatch<TInner> match, Span<long> results)
+    {
+        var random = new Random(match._orderMetadata.RandomSeed);
+        var take = Math.Min(match._take, results.Length);
+        while (match._results.Count < take)
+        {
+            int index = random.Next(match._results.Count, results.Length);
+            // fisher yates
+            var replaced = results[match._results.Count];
+            var selected = results[index];
+            results[match._results.Count] = selected;
+            results[index] = replaced;
+            match._results.Add(selected);
+        }
     }
 
     private ref struct SortedIndexReader<TDirection>
