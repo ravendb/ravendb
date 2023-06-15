@@ -2,7 +2,6 @@ import React from "react";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import AdminJsConsole from "./AdminJsConsole";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/ManageServer",
@@ -11,5 +10,5 @@ export default {
 } as ComponentMeta<typeof AdminJsConsole>;
 
 export const JSConsole: ComponentStory<typeof AdminJsConsole> = () => {
-    return <AdminJsConsole db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <AdminJsConsole />;
 };

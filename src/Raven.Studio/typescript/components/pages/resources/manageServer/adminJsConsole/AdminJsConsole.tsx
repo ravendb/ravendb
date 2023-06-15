@@ -1,32 +1,59 @@
-import React, { useState } from "react";
-import {
-    Card,
-    Alert,
-    CardHeader,
-    CardBody,
-    DropdownMenu,
-    DropdownToggle,
-    DropdownItem,
-    UncontrolledDropdown,
-    Row,
-    Col,
-    Button,
-} from "reactstrap";
+import React from "react";
+import { Card, Alert, CardHeader, CardBody, Row, Col, Button, Form, Spinner } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import AboutView from "components/common/AboutView";
-import "./AdminJsConsole.scss";
-import database from "models/resources/database";
 import AceEditor from "components/common/AceEditor";
 import { todo } from "common/developmentHelper";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { tryHandleSubmit } from "components/utils/common";
+import { AdminJsConsoleFormData, adminJsConsoleYupResolver } from "./AdminJsConsoleValidation";
+import { useServices } from "components/hooks/useServices";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useAsyncCallback } from "react-async-hook";
+import { FormAceEditor, FormSelect } from "components/common/Form";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { SelectOption } from "components/common/Select";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import "./AdminJsConsole.scss";
 
-interface AdminJSConsoleProps {
-    db: database;
-}
+const serverTargetValue = "Server";
 
-export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
-    const [script, setScript] = useState("");
-
+export default function AdminJSConsole() {
     todo("Feature", "Damian", "issue: RavenDB-7588");
+
+    const { manageServerService } = useServices();
+    const { reportEvent } = useEventsCollector();
+    const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
+    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
+
+    const allTargets: SelectOption<string>[] = [
+        { value: serverTargetValue, label: "Server", icon: "server", horizontalSeparatorLine: true },
+        ...allDatabaseNames.map((x) => ({ value: x, label: x, icon: "database" } satisfies SelectOption<string>)),
+    ];
+
+    const { handleSubmit, control, reset, formState } = useForm<AdminJsConsoleFormData>({
+        resolver: adminJsConsoleYupResolver,
+        mode: "all",
+        defaultValues: {
+            target: allTargets[0].value,
+            scriptText: "",
+        },
+    });
+
+    useDirtyFlag(formState.isDirty);
+
+    const onSave: SubmitHandler<AdminJsConsoleFormData> = async (formData) => {
+        reportEvent("console", "execute");
+        tryHandleSubmit(async () => {
+            const databaseTarget = formData.target !== serverTargetValue ? formData.target : undefined;
+
+            todo("Sharding", "Damian", "pass location");
+            await asyncRunAdminJsScript.execute(formData.scriptText, databaseTarget);
+
+            reset(formData);
+        });
+    };
 
     return (
         <div className="content-margin">
@@ -82,59 +109,59 @@ export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
                         </div>
                     </Alert>
 
-                    <Card>
-                        <CardHeader className="hstack gap-4">
-                            <h3 className="m-0">Script target</h3>
-                            <UncontrolledDropdown>
-                                <DropdownToggle caret>Server</DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem>
-                                        <Icon icon="server" /> Server
-                                    </DropdownItem>
-                                    <DropdownItem divider />
-                                    <DropdownItem>
-                                        <Icon icon="database" />
-                                        DbName 1
-                                    </DropdownItem>
-                                    <DropdownItem>
-                                        <Icon icon="database" />
-                                        DbName 2
-                                    </DropdownItem>
-                                    <DropdownItem>
-                                        <Icon icon="database" />
-                                        DbName 3
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                            <div className="text-info">
-                                Accessible within the script under <code>server</code> variable
-                            </div>
-                        </CardHeader>
-                        <CardBody>
-                            <div className="admin-js-console-grid">
-                                <div>
-                                    <h3>Script</h3>
+                    <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
+                        <Card>
+                            <CardHeader className="hstack gap-4">
+                                <h3 className="m-0">Script target</h3>
+                                <FormSelect control={control} name="target" options={allTargets} />
+                                <div className="text-info">
+                                    Accessible within the script under <code>server</code> variable
                                 </div>
-                                <AceEditor
-                                    mode="javascript"
-                                    onChange={setScript}
-                                    validationErrorMessage={!script && "This field is required."}
-                                />
-                                <div className="run-script-button">
-                                    <Button color="primary" size="lg" className="px-4 py-2">
-                                        <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
-                                        <div className="kbd">
-                                            <kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd>
-                                        </div>
-                                    </Button>
+                            </CardHeader>
+                            <CardBody>
+                                <div className="admin-js-console-grid">
+                                    <div>
+                                        <h3>Script</h3>
+                                    </div>
+                                    <FormAceEditor
+                                        control={control}
+                                        name="scriptText"
+                                        mode="javascript"
+                                        height="200px"
+                                    />
+
+                                    {/* TODO: @kalczur create component */}
+                                    {/* TODO: @kalczur implement run on control + enter */}
+                                    <div className="run-script-button">
+                                        <Button
+                                            color="primary"
+                                            size="lg"
+                                            className="px-4 py-2"
+                                            disabled={!formState.isDirty || asyncRunAdminJsScript.status === "loading"}
+                                        >
+                                            {asyncRunAdminJsScript.status === "loading" ? (
+                                                <Spinner />
+                                            ) : (
+                                                <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
+                                            )}
+                                            <div className="kbd">
+                                                <kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd>
+                                            </div>
+                                        </Button>
+                                    </div>
+                                    <div>
+                                        <h3>Script result</h3>
+                                    </div>
+                                    <AceEditor
+                                        mode="javascript"
+                                        readOnly
+                                        value={JSON.stringify(asyncRunAdminJsScript.result?.Result)}
+                                        height="300px"
+                                    />
                                 </div>
-                                <div>
-                                    <h3>Script result</h3>
-                                </div>
-                                <AceEditor mode="javascript" readOnly />
-                            </div>
-                        </CardBody>
-                    </Card>
+                            </CardBody>
+                        </Card>
+                    </Form>
                 </Col>
             </Row>
         </div>

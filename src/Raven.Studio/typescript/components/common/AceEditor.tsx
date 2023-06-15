@@ -6,7 +6,7 @@ import { todo } from "common/developmentHelper";
 
 const langTools = ace.require("ace/ext/language_tools");
 
-interface AceEditorProps extends IAceEditorProps {
+export interface AceEditorProps extends IAceEditorProps {
     mode: AceEditorMode;
     languageService?: LanguageService;
     validationErrorMessage?: string;

@@ -2,8 +2,14 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class adminJsScriptCommand extends commandBase {
-    constructor(private script: string, private targetDatabase?: string) {
+    
+    private readonly script: string;
+    private readonly targetDatabase: string;
+    
+    constructor(script: string, targetDatabase?: string) {
         super();
+        this.script = script;
+        this.targetDatabase = targetDatabase;
     }
 
     execute(): JQueryPromise<{Result: any}> {
