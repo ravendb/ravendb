@@ -1,4 +1,37 @@
+export interface LanguageService {
+    syntaxCheck: (editor: AceAjax.Editor) => void;
+    complete: (
+        editor: AceAjax.Editor,
+        session: AceAjax.IEditSession,
+        pos: AceAjax.Position,
+        prefix: string,
+        callback: (errors: any[], wordList: autoCompleteWordList[]) => void
+    ) => void;
+    dispose: () => void;
+}
+
+type RavenAceModes =
+    | "raven_diff"
+    | "checkNumber"
+    | "checkNumericKey"
+    | "json_parse_with_number_check"
+    | "json_newline_friendly_highlight_rules"
+    | "json_newline_friendly"
+    | "raven_document_diff"
+    | "raven_document_highlight_rules"
+    | "raven_document_newline_friendly_highlight_rules"
+    | "raven_document_newline_friendly"
+    | "raven_document_worker"
+    | "raven_document"
+    | "ravenMapLinq_highlight_rules"
+    | "ravenMapLinq"
+    | "ravenReduceLinq_highlight_rules"
+    | "ravenReduceLinq"
+    | "rql_highlight_rules"
+    | "rql";
+
 export type AceEditorMode =
+    | RavenAceModes
     | "abap"
     | "abc"
     | "actionscript"
@@ -112,7 +145,6 @@ export type AceEditorMode =
     | "rdoc"
     | "red"
     | "rhtml"
-    | "rql"
     | "rst"
     | "ruby"
     | "rust"

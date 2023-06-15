@@ -1,10 +1,10 @@
 ﻿
-type Feature = "Sharding" | "Styling" | "Other";
+type TodoType = "Sharding" | "Styling" | "Feature" | "BugFix" | "Other";
 
-type TeamMember = "Marcin" | "Danielle" | "Kwiato" | "Damian" | "ANY";
+type TeamMember = "Marcin" | "Danielle" | "Kwiato" | "Damian" | "Matteo" | "ANY";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function todo(feature: Feature, member: TeamMember, message = "TODO") {
+export function todo(feature: TodoType, member: TeamMember, message: string) {
     // empty
 }
 

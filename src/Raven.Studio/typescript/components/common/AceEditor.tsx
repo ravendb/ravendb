@@ -1,25 +1,23 @@
-import rqlLanguageService from "common/rqlLanguageService";
 import { Ace } from "ace-builds";
-import { AceEditorMode } from "components/models/aceEditor";
-import React, { useRef, useId, useEffect, useState } from "react";
+import { AceEditorMode, LanguageService } from "components/models/aceEditor";
+import React, { useEffect, useState } from "react";
 import ReactAce, { IAceEditorProps, IAceOptions } from "react-ace";
 import { todo } from "common/developmentHelper";
 
 const langTools = ace.require("ace/ext/language_tools");
 
-type AceEditorProps = IAceEditorProps & { validationErrorMessage?: string } & (
-        | {
-              rqlLanguageService?: never;
-              mode: Exclude<AceEditorMode, "rql">;
-          }
-        | {
-              rqlLanguageService: rqlLanguageService;
-              mode: Extract<AceEditorMode, "rql">;
-          }
-    );
+interface AceEditorProps extends IAceEditorProps {
+    mode: AceEditorMode;
+    languageService?: LanguageService;
+    validationErrorMessage?: string;
+}
 
 export default function AceEditor(props: AceEditorProps) {
-    const { setOptions, rqlLanguageService, validationErrorMessage, ...rest } = props;
+    const { setOptions, languageService, validationErrorMessage, ...rest } = props;
+
+    todo("BugFix", "Damian", "fix langTools import and autocomplete in storybook");
+    todo("Feature", "Damian", "fullscreen (shift + F11)");
+    todo("Feature", "Damian", "allow to pass shortcut + callback");
 
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
@@ -29,33 +27,29 @@ export default function AceEditor(props: AceEditorProps) {
         ...setOptions,
     };
 
-    const editor = useRef();
-    const id = "ace-editor" + useId();
     const [aceErrorMessage, setAceErrorMessage] = useState<string>(null);
 
     useEffect(() => {
-        langTools.setCompleters([
-            {
-                moduleId: "aceEditorBindingHandler",
-                getCompletions: (
-                    editor: AceAjax.Editor,
-                    session: AceAjax.IEditSession,
-                    pos: AceAjax.Position,
-                    prefix: string,
-                    callback: (errors: any[], wordList: autoCompleteWordList[]) => void
-                ) => {
-                    if (rqlLanguageService) {
-                        rqlLanguageService.complete(editor, session, pos, prefix, callback);
-                    } else {
-                        callback([{ error: "notext" }], null);
-                    }
+        if (languageService) {
+            langTools.setCompleters([
+                {
+                    moduleId: "aceEditor",
+                    getCompletions: (
+                        editor: AceAjax.Editor,
+                        session: AceAjax.IEditSession,
+                        pos: AceAjax.Position,
+                        prefix: string,
+                        callback: (errors: any[], wordList: autoCompleteWordList[]) => void
+                    ) => {
+                        languageService.complete(editor, session, pos, prefix, callback);
+                    },
+                    identifierRegexps: [/[a-zA-Z_0-9'"$\-\u00A2-\uFFFF]/],
                 },
-                identifierRegexps: [/[a-zA-Z_0-9'"$\-\u00A2-\uFFFF]/],
-            },
-        ]);
+            ]);
+        }
 
-        return () => rqlLanguageService?.dispose();
-    }, [rqlLanguageService]);
+        return () => languageService?.dispose();
+    }, [languageService]);
 
     const onValidate = (annotations: Ace.Annotation[]) => {
         const firstError = annotations.find((x) => x.type === "error");
@@ -69,16 +63,14 @@ export default function AceEditor(props: AceEditorProps) {
 
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
-    todo("Styling", "Kwiato", "fix ReactAce colors (class .ace-tm causes a problem)");
+    todo("Styling", "Kwiato", "fix ReactAce styling in storybook");
     todo("Styling", "Kwiato", "remove inline styles, and add scss classes for handling validation error");
 
     return (
         <div>
             <ReactAce
-                ref={editor}
-                name={id}
                 mode="rql"
-                className="ace-raven"
+                theme="raven"
                 style={{ border: "1px solid #424554", borderColor: errorMessage ? "#f06582" : "#424554" }}
                 editorProps={{ $blockScrolling: true }}
                 fontSize={14}
@@ -86,7 +78,7 @@ export default function AceEditor(props: AceEditorProps) {
                 showGutter={true}
                 highlightActiveLine={true}
                 width="100%"
-                height="300px"
+                height="200px"
                 setOptions={overriddenSetOptions}
                 onValidate={onValidate}
                 {...rest}

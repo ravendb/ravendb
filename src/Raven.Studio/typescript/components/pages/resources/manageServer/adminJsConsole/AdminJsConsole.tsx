@@ -17,15 +17,16 @@ import AboutView from "components/common/AboutView";
 import "./AdminJsConsole.scss";
 import database from "models/resources/database";
 import AceEditor from "components/common/AceEditor";
+import { todo } from "common/developmentHelper";
 
 interface AdminJSConsoleProps {
     db: database;
 }
 
 export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
-    // TODO: remove after testing
-
     const [script, setScript] = useState("");
+
+    todo("Feature", "Damian", "issue: RavenDB-7588");
 
     return (
         <div className="content-margin">
@@ -114,9 +115,11 @@ export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
                                 <div>
                                     <h3>Script</h3>
                                 </div>
-
-                                <AceEditor mode="javascript" onChange={setScript} />
-
+                                <AceEditor
+                                    mode="javascript"
+                                    onChange={setScript}
+                                    validationErrorMessage={!script && "This field is required."}
+                                />
                                 <div className="run-script-button">
                                     <Button color="primary" size="lg" className="px-4 py-2">
                                         <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
@@ -128,7 +131,6 @@ export default function AdminJSConsole({ db }: AdminJSConsoleProps) {
                                 <div>
                                     <h3>Script result</h3>
                                 </div>
-
                                 <AceEditor mode="javascript" readOnly />
                             </div>
                         </CardBody>
