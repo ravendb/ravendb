@@ -4,8 +4,15 @@ import endpoints = require("endpoints");
 
 class getCollectionFieldsCommand extends commandBase {
 
-    constructor(private database: database, private collectionName: string, private prefix: string) {
+    private readonly database: database;
+    private readonly collectionName: string;
+    private readonly prefix: string;
+
+    constructor(database: database, collectionName: string, prefix: string) {
         super();
+        this.database = database;
+        this.collectionName = collectionName;
+        this.prefix = prefix;
     }
 
     execute(): JQueryPromise<dictionary<string>> {
