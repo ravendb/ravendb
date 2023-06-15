@@ -17,6 +17,7 @@ public readonly struct OrderMetadata
     public readonly IPoint Point;
     public readonly double Round;
     public readonly SpatialUnits Units;
+    public readonly int RandomSeed;
 
     public override string ToString()
     {
@@ -38,10 +39,25 @@ public readonly struct OrderMetadata
         Unsafe.SkipInit(out Point);
         Unsafe.SkipInit(out Round);
         Unsafe.SkipInit(out Units);
+        Unsafe.SkipInit(out RandomSeed);
 
         HasBoost = hasBoost;
         Ascending = ascending;
         FieldType = fieldType;
+    }
+    
+    public OrderMetadata(int randomSeed)
+    {
+        Unsafe.SkipInit(out Field);
+        Unsafe.SkipInit(out Point);
+        Unsafe.SkipInit(out Round);
+        Unsafe.SkipInit(out Units);
+
+        HasBoost = false;
+        Ascending = true;
+        FieldType = MatchCompareFieldType.Random;
+        RandomSeed = randomSeed;
+
     }
 
     public OrderMetadata(FieldMetadata field, bool ascending, MatchCompareFieldType fieldType)
@@ -50,6 +66,7 @@ public readonly struct OrderMetadata
         Unsafe.SkipInit(out Point);
         Unsafe.SkipInit(out Round);
         Unsafe.SkipInit(out Units);
+        Unsafe.SkipInit(out RandomSeed);
 
         Field = field;
         Ascending = ascending;
@@ -58,7 +75,9 @@ public readonly struct OrderMetadata
 
     public OrderMetadata(FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units)
     {
-        Unsafe.SkipInit(out HasBoost);
+        Unsafe.SkipInit(out HasBoost);  
+        Unsafe.SkipInit(out RandomSeed);
+
         Field = field;
         Ascending = ascending;
         FieldType = fieldType;

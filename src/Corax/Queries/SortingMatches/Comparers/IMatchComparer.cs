@@ -14,7 +14,8 @@ namespace Corax.Queries.SortingMatches.Comparers
         Floating,
         Score,
         Alphanumeric,
-        Spatial
+        Spatial,
+        Random
     }
 
     public interface IMatchComparer
