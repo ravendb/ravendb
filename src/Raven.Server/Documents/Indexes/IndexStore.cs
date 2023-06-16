@@ -713,7 +713,10 @@ namespace Raven.Server.Documents.Indexes
 
             var testIndex = CreateIndexFromDefinition(indexDefinition, documentDatabase, testIndexConfiguration);
 
-            testIndex.InitializeTestRun(context, maxDocumentsPerIndex);
+            var numberOfCollections = testIndex.Collections.Count;
+            var docsToProcessPerCollection = maxDocumentsPerIndex / numberOfCollections;
+
+            testIndex.InitializeTestRun(context, docsToProcessPerCollection, numberOfCollections);
 
             return testIndex;
         }

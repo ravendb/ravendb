@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Utils;
@@ -9,18 +12,29 @@ namespace Raven.Server.Documents.Indexes.Test;
 
 public class TestIndexRun
 {
-    private readonly JsonOperationContext _context;
+    private class CollectionIterationStats
+    {
+        public int CountOfReturnedItems;
+        public bool Completed;
+    }
+    
     public List<BlittableJsonReaderObject> MapResults;
     public List<BlittableJsonReaderObject> ReduceResults;
-    private Dictionary<string, bool> _collectionTracker;
-    private readonly int _maxDocumentsPerIndex;
+    public ManualResetEventSlim BatchCompleted;
+    private readonly JsonOperationContext _context;
+    private Dictionary<string, CollectionIterationStats> _collectionTracker;
+    private readonly int _docsToProcessPerCollection;
+    private int _collectionsCount;
 
-    public TestIndexRun(JsonOperationContext context, int maxDocumentsPerIndex)
+    public TestIndexRun(JsonOperationContext context, int docsToProcessPerCollection, int numberOfCollections)
     {
         _context = context;
+        _docsToProcessPerCollection = docsToProcessPerCollection;
+        _collectionsCount = numberOfCollections;
+        _collectionTracker = new Dictionary<string, CollectionIterationStats>();
         MapResults = new List<BlittableJsonReaderObject>();
         ReduceResults = new List<BlittableJsonReaderObject>();
-        _maxDocumentsPerIndex = maxDocumentsPerIndex;
+        BatchCompleted = new ManualResetEventSlim();
     }
 
     public TestIndexWriteOperation CreateIndexWriteOperationWrapper(IndexWriteOperationBase writer, Index index)
@@ -28,14 +42,54 @@ public class TestIndexRun
         return new TestIndexWriteOperation(writer, index);
     }
 
-    public IIndexedItemEnumerator CreateEnumeratorWrapper(IIndexedItemEnumerator enumerator, string collection, int collectionsCount)
+    public IEnumerable<IndexItem> CreateEnumeratorWrapper(IEnumerable<IndexItem> enumerator, string collection)
     {
-        _collectionTracker ??= new Dictionary<string, bool>();
-        if (_collectionTracker.ContainsKey(collection))
-            return new EmptyItemEnumerator();
-                
-        _collectionTracker[collection] = true;
-        return new TestIndexItemEnumerator(enumerator, collectionsCount, _maxDocumentsPerIndex);
+        if (_collectionTracker.TryGetValue(collection, out var stats) == false)
+            _collectionTracker[collection] = stats = new CollectionIterationStats();
+        
+        foreach (IndexItem item in enumerator)
+        {
+            if (++stats.CountOfReturnedItems > _docsToProcessPerCollection)
+            {
+                stats.Completed = true;
+                yield break;
+            }
+            
+            yield return item;
+        }
+
+        stats.Completed = true;
+    }
+
+    public void WaitForProcessingOfSampleDocs(TimeSpan waitForProcessingTimespan)
+    {
+        var sw = new Stopwatch();
+        
+        sw.Start();
+        
+        while (sw.Elapsed < waitForProcessingTimespan)
+        {
+            BatchCompleted.Wait();
+
+            BatchCompleted.Reset();
+            
+            if (_collectionTracker == null)
+                continue;
+
+            if (_collectionTracker.Count < _collectionsCount)
+                continue;
+
+            var missing = false;
+
+            foreach (var tracker in _collectionTracker)
+            {
+                if (tracker.Value.Completed == false)
+                    missing = true;
+            }
+
+            if (missing == false)
+                return;
+        }
     }
 
     public void AddMapResult(object result)

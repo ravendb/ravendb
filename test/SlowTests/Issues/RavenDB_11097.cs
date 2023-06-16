@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using FastTests;
 using Newtonsoft.Json;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Test;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -884,7 +886,12 @@ public class RavenDB_11097 : RavenTestBase
                         IndexDefinition = new IndexDefinition()
                         {
                             Name = "<TestIndexName>",
-                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }", "from cat in docs.Cats select new { Name = cat.Name, Age = cat.Age }", "from dto in docs.Dtos select new { Name = dto.Name, Age = 2137 }" }
+                            Maps = new HashSet<string>
+                            {
+                                "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }", 
+                                "from cat in docs.Cats select new { Name = cat.Name, Age = cat.Age }", 
+                                "from dto in docs.Dtos select new { Name = dto.Name, Age = 2137 }"
+                            }
                         },
                         MaxDocumentsToProcess = 4
                     };
@@ -909,6 +916,169 @@ public class RavenDB_11097 : RavenTestBase
                     Assert.Equal(6, indexEntriesObjectList.Count);
                     Assert.Equal(4, queryResultsObjectList.Count);
                     Assert.Equal(6, mapResultsObjectList.Count);
+                    Assert.Empty(reduceResultsObjectList);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void TestMaxDocumentsToProcessParameterWithMultipleBatches()
+    {
+        using (var server = GetNewServer(new ServerCreationOptions()
+               {
+                   CustomSettings = new Dictionary<string, string>
+                   {
+                       [RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = "200" 
+                   }
+               }))
+        {
+            using (var store = GetDocumentStore(new Options(){ Server = server }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        for (var i = 0; i < 600; i++)
+                        {
+                            bulkInsert.Store(new Dto() { Age = i, Name = "Dto" + i });
+                        }
+
+                        for (var i = 0; i < 600; i++)
+                        {
+                            bulkInsert.Store(new Cat() { Age = i, Name = "Cat" + i });
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    using (var commands = store.Commands())
+                    {
+                        var payload = new TestIndexParameters()
+                        {
+                            IndexDefinition = new IndexDefinition()
+                            {
+                                Name = "<TestIndexName>",
+                                Maps = new HashSet<string>
+                                {
+                                    "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }",
+                                    "from cat in docs.Cats select new { Name = cat.Name, Age = cat.Age }",
+                                    "from dto in docs.Dtos select new { Name = dto.Name, Age = 2137 }"
+                                }
+                            },
+                            MaxDocumentsToProcess = 500
+                        };
+
+                        var cmd = new PutTestIndexCommand(payload);
+                        commands.Execute(cmd);
+
+                        var res = cmd.Result as BlittableJsonReaderObject;
+
+                        Assert.NotNull(res);
+
+                        res.TryGet(nameof(TestIndexResult.IndexEntries), out BlittableJsonReaderArray indexEntries);
+                        res.TryGet(nameof(TestIndexResult.QueryResults), out BlittableJsonReaderArray queryResults);
+                        res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                        res.TryGet(nameof(TestIndexResult.ReduceResults), out BlittableJsonReaderArray reduceResults);
+
+                        var indexEntriesObjectList = JsonConvert.DeserializeObject<List<Dto>>(indexEntries.ToString());
+                        var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
+                        var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
+                        var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                        
+                        var dtoIndexEntries = indexEntriesObjectList.Where(entry => entry.Name.StartsWith("dto")).ToList();
+                        Assert.Equal(500, dtoIndexEntries.Count);
+
+                        var catIndexEntries = indexEntriesObjectList.Where(entry => entry.Name.StartsWith("cat")).ToList();
+                        Assert.Equal(250, catIndexEntries.Count);
+
+                        var dtoQueryResults = queryResultsObjectList.Where(result => result.Name.StartsWith("Dto")).ToList();
+                        Assert.Equal(250, dtoQueryResults.Count);
+                        
+                        var catQueryResults = queryResultsObjectList.Where(result => result.Name.StartsWith("Cat")).ToList();
+                        Assert.Equal(250, catQueryResults.Count);
+                        
+                        var dtoMapResults = mapResultsObjectList.Where(entry => entry.Name.StartsWith("Dto")).ToList();
+                        Assert.Equal(500, dtoMapResults.Count);
+
+                        var catMapResults = mapResultsObjectList.Where(entry => entry.Name.StartsWith("Cat")).ToList();
+                        Assert.Equal(250, catMapResults.Count);
+                        
+                        Assert.Empty(reduceResultsObjectList);
+                    }
+                }
+            }
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void MapWithLoadDocument()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+                var dto2 = new Dto() { Name = "Name2", Age = 37 };
+
+                session.Store(dto1);
+                session.Store(dto2);
+
+                session.SaveChanges();
+
+                var cdto1 = new ClassWithDtoReference() { Name = "UpperName1", DtoReference = dto1.Id };
+                var cdto2 = new ClassWithDtoReference() { Name = "UpperName2", DtoReference = dto2.Id };
+
+                session.Store(cdto1);
+                session.Store(cdto2);
+
+                session.SaveChanges();
+                
+                WaitForUserToContinueTheTest(store);
+                
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "<TestIndexName>",
+                            Maps = new HashSet<string>
+                            {
+                                "from cdto in docs.ClassWithDtoReferences select new { Name = cdto.Name, Age = LoadDocument(cdto.DtoReference, \"Dtos\").Age }"
+                            }
+                        }
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload);
+                    commands.Execute(cmd);
+                    
+                    var res = cmd.Result as BlittableJsonReaderObject;
+                    
+                    Assert.NotNull(res);
+                    
+                    res.TryGet(nameof(TestIndexResult.IndexEntries), out BlittableJsonReaderArray indexEntries);
+                    res.TryGet(nameof(TestIndexResult.QueryResults), out BlittableJsonReaderArray queryResults);
+                    res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                    res.TryGet(nameof(TestIndexResult.ReduceResults), out BlittableJsonReaderArray reduceResults);
+                
+                    var indexEntriesObjectList = JsonConvert.DeserializeObject<List<Dto>>(indexEntries.ToString());
+                    var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
+                    var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
+                    var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                    
+                    Assert.Equal(21, indexEntriesObjectList[0].Age);
+                    Assert.Equal(37, indexEntriesObjectList[1].Age);
+                    Assert.Equal(2, indexEntriesObjectList.Count);
+                    
+                    Assert.Equal(0, queryResultsObjectList[0].Age);
+                    Assert.Equal(0, queryResultsObjectList[1].Age);
+                    Assert.Equal(2, queryResultsObjectList.Count);
+                    
+                    Assert.Equal(21, mapResultsObjectList[0].Age);
+                    Assert.Equal(37, mapResultsObjectList[1].Age);
+                    Assert.Equal(2, mapResultsObjectList.Count);
+                    
                     Assert.Empty(reduceResultsObjectList);
                 }
             }
@@ -1085,5 +1255,11 @@ public class RavenDB_11097 : RavenTestBase
     {
         public string UpperName { get; set; }
         public string LowerName { get; set; }
+    }
+
+    private class ClassWithDtoReference
+    {
+        public string Name { get; set; }
+        public string DtoReference { get; set; }
     }
 }
