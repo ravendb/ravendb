@@ -16,11 +16,12 @@ namespace Corax.Queries.SortingMatches;
 public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
+    private const int NextComparerOffset = 3;
     private readonly IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref NewMultiSortingMatch<TInner>, Span<long>, int> _fillFunc;
-    private readonly IEntryComparer[] _nextComparers;
+    private IEntryComparer[] _nextComparers;
 
     private readonly int _take;
     private const int NotStarted = -1;
@@ -42,13 +43,17 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
         TotalResults = NotStarted;
         AssertNoScoreInnerComparer(orderMetadata);
         _fillFunc = SortBy(orderMetadata);
+        
+        _nextComparers = orderMetadata.Length > NextComparerOffset 
+            ? HandleNextComparers() 
+            : Array.Empty<IEntryComparer>();
 
-        if (orderMetadata.Length > 3)
+        IEntryComparer[] HandleNextComparers()
         {
-            _nextComparers = new IEntryComparer[orderMetadata.Length - 3];
-            for (int comparerId = 3; comparerId < orderMetadata.Length; ++comparerId)
+            var nextComparers = new IEntryComparer[orderMetadata.Length - NextComparerOffset];
+            for (int metadataId = NextComparerOffset; metadataId < orderMetadata.Length; ++metadataId)
             {
-                _nextComparers[comparerId - 3] = orderMetadata[comparerId].FieldType switch
+                nextComparers[metadataId - NextComparerOffset] = orderMetadata[metadataId].FieldType switch
                 {
                     MatchCompareFieldType.Alphanumeric => new EntryComparerByTermAlphaNumeric(),
                     MatchCompareFieldType.Floating => new EntryComparerByDouble(),
@@ -58,12 +63,12 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
                     _ => throw new NotSupportedException()
                 };
 
-                if (orderMetadata[comparerId].Ascending == false)
-                    _nextComparers[comparerId - 3] = new Descending(_nextComparers[comparerId - 3]);
+                if (orderMetadata[metadataId].Ascending == false)
+                    nextComparers[metadataId - NextComparerOffset] = new Descending(nextComparers[metadataId - NextComparerOffset]);
             }
+
+            return nextComparers;
         }
-        else
-            _nextComparers = Array.Empty<IEntryComparer>();
     }
 
     private void AssertNoScoreInnerComparer(in OrderMetadata[] orderMetadata)
@@ -76,8 +81,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
         {
             if (orderMetadata[comparerId].FieldType is MatchCompareFieldType.Score && comparerId != 0)
             {
-                throw new NotSupportedException(
-                    $"{nameof(NewMultiSortingMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.");
+                throw new NotSupportedException(ScoreComparerAsInnerExceptionMessage);
             }
         }
     }
@@ -156,22 +160,21 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
         TComparer1 entryComparer = new();
         entryComparer.Init(ref match, default, 0);
         var pageCache = new PageLocator(llt, 1024);
-        fixed (long* ptr = batchResults)
+        fixed (long* ptrBatchResults = batchResults)
         {
-            var batchResultsAsPtr = new UnmanagedSpan<long>(ptr, sizeof(long)* batchResults.Length);
+            var resultsPtr = new UnmanagedSpan<long>(ptrBatchResults, sizeof(long)* batchResults.Length);
             var comp2 = new TComparer2();
-            comp2.Init(ref match, batchResultsAsPtr, 1);
+            comp2.Init(ref match, resultsPtr, 1);
             var comp3 = new TComparer3();
-            comp3.Init(ref match, batchResultsAsPtr, 2);
-
-            int cmprId = 3;
-            for (int index = 0; index < match._nextComparers.Length; index++)
+            comp3.Init(ref match, resultsPtr, 2);
+            
+            for (int comparerId = 0; comparerId < match._nextComparers.Length; comparerId++)
             {
-                IEntryComparer add = match._nextComparers[index];
-                add.Init(ref match, batchResultsAsPtr, cmprId++);
+                IEntryComparer add = match._nextComparers[comparerId];
+                add.Init(ref match, resultsPtr, NextComparerOffset + comparerId);
             }
 
-            entryComparer.SortBatch(ref match, llt, pageCache, batchResultsAsPtr, batchTermIds, termsPtr, match._orderMetadata, comp2, comp3);
+            entryComparer.SortBatch(ref match, llt, pageCache, resultsPtr, batchTermIds, termsPtr, match._orderMetadata, comp2, comp3);
         }
 
         pageCache.Release();
@@ -212,4 +215,5 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
     }
 
     string DebugView => Inspect().ToString();
+    private static string ScoreComparerAsInnerExceptionMessage => $"{nameof(NewMultiSortingMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.";
 }

@@ -25,7 +25,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
             (MatchCompareFieldType.Spatial, false) => SortBy<Descending<EntryComparerBySpatial>>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, true) => SortBy<EntryComparerByTermAlphaNumeric>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, false) => SortBy<Descending<EntryComparerByTermAlphaNumeric>>(orderMetadata),
-            _ => &Fill<EmptyComparer, EmptyComparer, EmptyComparer>
+            _ => &Fill<NullComparer, NullComparer, NullComparer>
         };
     }
 
@@ -33,7 +33,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan>
     {
         if (orderMetadata.Length == 1)
-            return &Fill<TComparer1, EmptyComparer, EmptyComparer>;
+            return &Fill<TComparer1, NullComparer, NullComparer>;
 
         return (orderMetadata[1].FieldType, orderMetadata[1].Ascending) switch
         {
@@ -47,7 +47,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
             (MatchCompareFieldType.Spatial, false) => SortBy<TComparer1, Descending<EntryComparerBySpatial>>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, true) => SortBy<TComparer1, EntryComparerByTermAlphaNumeric>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, false) => SortBy<TComparer1, Descending<EntryComparerByTermAlphaNumeric>>(orderMetadata),
-            _ => &Fill<TComparer1, EmptyComparer, EmptyComparer>
+            _ => &Fill<TComparer1, NullComparer, NullComparer>
         };
     }
 
@@ -56,7 +56,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
         where TComparer2 : struct, IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan>
     {
         if (orderMetadata.Length == 2)
-            return &Fill<TComparer1, TComparer2, EmptyComparer>;
+            return &Fill<TComparer1, TComparer2, NullComparer>;
 
         return (orderMetadata[2].FieldType, orderMetadata[2].Ascending) switch
         {
@@ -70,13 +70,13 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
             (MatchCompareFieldType.Spatial, false) => &Fill<TComparer1, TComparer2, Descending<EntryComparerBySpatial>>,
             (MatchCompareFieldType.Alphanumeric, true) => &Fill<TComparer1, TComparer2, EntryComparerByTermAlphaNumeric>,
             (MatchCompareFieldType.Alphanumeric, false) => &Fill<TComparer1, TComparer2, Descending<EntryComparerByTermAlphaNumeric>>,
-            _ => &Fill<TComparer1, TComparer2, EmptyComparer>
+            _ => &Fill<TComparer1, TComparer2, NullComparer>
         };
     }
     
     private struct EntryComparerHelper
     {
-        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(ref NewMultiSortingMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3, OrderMetadata[] orderMetadata)
+        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(ref NewMultiSortingMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TComparer1 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer

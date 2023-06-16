@@ -32,9 +32,9 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer;
     }
 
-    private readonly struct Descending : IEntryComparer
+    private struct Descending : IEntryComparer
     {
-        private readonly IEntryComparer _innerCmp;
+        private IEntryComparer _innerCmp;
 
         public Descending(IEntryComparer inner)
         {
@@ -71,11 +71,6 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
         public Descending(TInnerCmp cmp)
         {
             this.cmp = cmp;
-        }
-
-        public Descending()
-        {
-            cmp = new();
         }
 
         public Slice GetSortFieldName(ref NewMultiSortingMatch<TInner> match)
@@ -184,7 +179,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
 
         public int Compare(int x, int y)
         {
-            throw new NotSupportedException("unsupported");
+            throw new NotSupportedException(ScoreComparerAsInnerExceptionMessage);
         }
     }
 
@@ -341,17 +336,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
 
         public int Compare(int x, int y)
         {
-            var readX = _termsReader.TryGetTermFor(_batchResults[x], out var term1);
-            var readY = _termsReader.TryGetTermFor(_batchResults[y], out var term2);
-
-            //TODO PERF!!!
-            return readX switch
-            {
-                true when readY == false => -1,
-                false when readY == false => 0,
-                false => 1,
-                _ => term1.CompareTo(term2)
-            };
+            return _termsReader.Compare(_batchResults[x], _batchResults[y]);
         }
     }
 
@@ -387,7 +372,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
             }
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByLong(), comparer2, comparer3, orderMetadata);
+            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByLong(), comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
@@ -403,23 +388,23 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
                 return 0;
-
             Span<long> buffer = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
             _lookup.GetFor(buffer.Slice(0, 2), buffer.Slice(2), long.MinValue);
-
             return buffer[2].CompareTo(buffer[3]);
         }
     }
 
-    private struct EmptyComparer : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
+    private struct NullComparer : IEntryComparer, IComparer<UnmanagedSpan>
     {
+        private const string NullComparerExceptionMessage = $"{nameof(NullComparer)} is for type-relaxation. You should not use it";
         public Slice GetSortFieldName(ref NewMultiSortingMatch<TInner> match)
         {
-            throw new NotSupportedException($"{nameof(EmptyComparer)} is for type-relaxation. You should not use it");
+            throw new NotSupportedException(NullComparerExceptionMessage);
         }
 
         public void Init(ref NewMultiSortingMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
         {
+            //sometimes we can call init on this struct
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref NewMultiSortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -428,15 +413,18 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
-            throw new NotSupportedException($"{nameof(EmptyComparer)} is for type-relaxation. You should not use it");
+            throw new NotSupportedException(NullComparerExceptionMessage);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            return 0; //how it goes
+            throw new NotSupportedException(NullComparerExceptionMessage);
         }
 
-        public int Compare(int x, int y) => 0; // how it goes
+        public int Compare(int x, int y)
+        {
+            throw new NotSupportedException(NullComparerExceptionMessage);
+        }
     }
 
     private struct EntryComparerByDouble : IEntryComparer, IComparer<UnmanagedSpan>
@@ -458,7 +446,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
             }
 
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
-            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByDouble(), comparer2, comparer3, orderMetadata);
+            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByDouble(), comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
@@ -654,11 +642,11 @@ public unsafe partial struct NewMultiSortingMatch<TInner> : IQueryMatch
             _cmp3 = cmp3;
             _nextComparers = match._nextComparers;
 
-            if (typeof(TComparer1) == typeof(EmptyComparer))
+            if (typeof(TComparer1) == typeof(NullComparer))
                 _maxDegreeOfInnerComparer = 0;
-            else if (typeof(TComparer2) == typeof(EmptyComparer))
+            else if (typeof(TComparer2) == typeof(NullComparer))
                 _maxDegreeOfInnerComparer = 1;
-            else if (typeof(TComparer3) == typeof(EmptyComparer))
+            else if (typeof(TComparer3) == typeof(NullComparer))
                 _maxDegreeOfInnerComparer = 2;
             else
                 _maxDegreeOfInnerComparer = 3;
