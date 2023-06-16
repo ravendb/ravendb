@@ -37,7 +37,7 @@ export default function AdminJSConsole() {
         ...allDatabaseNames.map((x) => ({ value: x, label: x, icon: "database" } satisfies SelectOption<string>)),
     ];
 
-    const { handleSubmit, control, reset, formState } = useForm<AdminJsConsoleFormData>({
+    const { handleSubmit, control, reset, formState, watch } = useForm<AdminJsConsoleFormData>({
         resolver: adminJsConsoleYupResolver,
         mode: "all",
         defaultValues: {
@@ -50,15 +50,16 @@ export default function AdminJSConsole() {
 
     const onSave: SubmitHandler<AdminJsConsoleFormData> = async (formData) => {
         reportEvent("console", "execute");
+
         tryHandleSubmit(async () => {
             const databaseTarget = formData.target !== serverTargetValue ? formData.target : undefined;
-
-            todo("Sharding", "Damian", "pass location");
             await asyncRunAdminJsScript.execute(formData.scriptText, databaseTarget);
 
             reset(formData);
         });
     };
+
+    const accessibleVariable = watch("target") === serverTargetValue ? "server" : "database";
 
     return (
         <div className="content-margin">
@@ -120,7 +121,7 @@ export default function AdminJSConsole() {
                                 <h3 className="m-0">Script target</h3>
                                 <FormSelect control={control} name="target" options={allTargets} />
                                 <div className="text-info">
-                                    Accessible within the script under <code>server</code> variable
+                                    Accessible within the script under <code>{accessibleVariable}</code> variable
                                 </div>
                             </CardHeader>
                             <CardBody>
@@ -131,12 +132,13 @@ export default function AdminJSConsole() {
                                     <FormAceEditor
                                         control={control}
                                         name="scriptText"
+                                        execute={handleSubmit(onSave)}
                                         mode="javascript"
                                         height="200px"
                                     />
 
                                     {/* TODO: @kalczur create component */}
-                                    {/* TODO: @kalczur implement run on control + enter */}
+                                    {/* TODO: @kalczur implement run on control + enter <now*/}
                                     <div className="run-script-button">
                                         <Button
                                             color="primary"
