@@ -61,10 +61,9 @@ namespace Raven.Server.Documents.Queries.Results
             return string.IsNullOrEmpty(key) == false;
         }
 
-        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
+        public override bool TryGetKeyCorax(TermsReader searcher, long id, out UnmanagedSpan key)
         {
-            key = searcher.GetRawIdentityFor(id);
-            return key.Length > 0;
+            return searcher.TryGetRawTermFor(id, out key);
         }
 
         public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)

@@ -47,7 +47,10 @@ namespace FastTests.Corax
                 {
                     read = match.Fill(ids);
                     for (int i = 0; i < read; ++i)
-                        sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                    {
+                        long id = ids[i];
+                        sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    }
                 }
                 while (read != 0);
 
@@ -91,7 +94,7 @@ namespace FastTests.Corax
                 {
                     using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
                     {
-                        indexWriter.Index(entry.Id, data.ToSpan());
+                        indexWriter.Index(data.ToSpan());
                     }
                 }
                 indexWriter.Commit();

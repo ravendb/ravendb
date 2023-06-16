@@ -32,7 +32,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var match1 = searcher.GreaterThanQuery<long>(_longItemFieldMetadata, 3);
             var expectedList = GetExpectedResult(3);
             expectedList.Sort();
@@ -49,7 +49,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             Slice.From(ctx, "3", out var three);
             var match0 = searcher.AllEntries();
             var match1 = searcher.UnaryQuery(match0, _longItemFieldMetadata, three, UnaryMatchOperation.GreaterThan);
@@ -68,7 +68,7 @@ namespace FastTests.Corax
             PrepareData(1);
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             Slice.From(ctx, "entries/0", out var id);
             var match0 = searcher.AllEntries();
             var match1 = searcher.UnaryQuery(match0, searcher.FieldMetadataBuilder("Id", IndexId), id, UnaryMatchOperation.LessThan);
@@ -83,7 +83,7 @@ namespace FastTests.Corax
             PrepareData(1);
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match1 = searcher.LessThanQuery<long>(_longItemFieldMetadata, 0);
             var ids = new long[16];
@@ -97,7 +97,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             Slice.From(ctx, "991", out var low);
             Slice.From(ctx, "995", out var high);
 
@@ -117,7 +117,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95L, 212L);
             var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
@@ -136,7 +136,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95.2, 213.2);
             var expectedList = _entries.Where(x => (double)x.LongValue is >= 95.2 and <= 213.2).Select(x => x.Id).ToList();
@@ -155,7 +155,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match0 = searcher.AllEntries();
             var match1 = searcher.UnaryQuery<AllEntriesMatch, long>(match0, _longItemFieldMetadata, 3, UnaryMatchOperation.GreaterThan);
@@ -174,7 +174,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             
             var match0 = searcher.AllEntries();
             var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 3L, UnaryMatchOperation.GreaterThan), new(_doubleItemFieldMetadata, 20.5, UnaryMatchOperation.LessThan)};
@@ -196,7 +196,7 @@ namespace FastTests.Corax
             IndexEntries();
             
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var match0 = searcher.TermQuery(_doubleItemFieldMetadata, 0.0D);
             var ids = new long[16];
             Assert.Equal(1, match0.Fill(ids)); //match one doc
@@ -218,7 +218,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match0 = searcher.TermQuery(_longItemFieldMetadata, "1");
             var match1 = searcher.StartWithQuery("Id", "ent");
@@ -239,14 +239,19 @@ namespace FastTests.Corax
         private List<string> FetchFromCorax<TMatch>(ref TMatch match)
             where TMatch : IQueryMatch
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var indexSearcher = new IndexSearcher(Env, _knownFields);
+
             List<string> list = new();
             Span<long> ids = stackalloc long[256];
             int read = match.Fill(ids);
             while (read != 0)
             {
                 for (int i = 0; i < read; ++i)
-                    list.Add(indexSearcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    list.Add(indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
+
                 read = match.Fill(ids);
             }
 
@@ -273,7 +278,7 @@ namespace FastTests.Corax
             foreach (var entry in _entries)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id, data.ToSpan());
+                indexWriter.Index(data.ToSpan());
             }
 
             indexWriter.Commit();
@@ -318,14 +323,18 @@ namespace FastTests.Corax
 
         private List<string> FetchFromCorax(ref UnaryMatch match)
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var indexSearcher = new IndexSearcher(Env, _knownFields);
             List<string> list = new();
             Span<long> ids = stackalloc long[256];
             int read = match.Fill(ids);
             while (read != 0)
             {
                 for (int i = 0; i < read; ++i)
-                    list.Add(indexSearcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    list.Add(indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
+
                 read = match.Fill(ids);
             }
 

@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
 using Amazon.SQS.Model;
+using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.SortingMatches;
@@ -28,6 +29,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Impl;
+using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 
@@ -55,6 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         protected readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
         private readonly int _maxNumberOfOutputsPerDocument;
+        private TermsReader _documentIdReader;
 
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
@@ -62,6 +65,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
+            if (index.Type.IsMap())
+            {
+                _documentIdReader = _indexSearcher.TermsReaderFor(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+            }
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
         }
 
@@ -300,18 +307,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             private GrowableHashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
             private GrowableHashSet<ulong> _alreadySeenProjections;
             public long QueryStart;
+            private TermsReader _documentIdReader;
 
-            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
+            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
                 _index = index;
                 _query = query;
                 _searcher = searcher;
+               
                 _fieldsMapping = fieldsMapping;
                 _retriever = retriever;
-
+                _documentIdReader = documentIdReader; 
                 _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
                 QueryStart = _query.Start;
                 _isMap = index.Type.IsMap();
+               
             }
 
             public long RegisterDuplicates<TProjection>(ref TProjection hasProjection, long currentIdx, ReadOnlySpan<long> ids, CancellationToken token)
@@ -341,7 +351,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // Assumptions: we're in Map, so that mean we have ID of the doc saved in the tree. So we want to keep track what we returns
                     foreach (var id in distinctIds)
                     {
-                        var key = _searcher.GetRawIdentityFor(id);
+                        _documentIdReader.TryGetRawTermFor(id, out var key);
                         _alreadySeenDocumentKeysInPreviousPage.Add(key);
                     }
 
@@ -355,7 +365,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var retriever = _retriever;
                     foreach (var id in distinctIds)
                     {
-                        var coraxEntry = _searcher.GetReaderAndIdentifyFor(id, out var key);
+                        var coraxEntry = _searcher.GetEntryReaderFor(id);
+                        var key = _documentIdReader.GetTermFor(id);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, coraxEntry, key, _index.IndexFieldsPersistence);
                         var result = retriever.Get(ref retrieverInput, token);
 
@@ -488,7 +499,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
 
             var identityTracker = new IdentityTracker<TDistinct>();
-            identityTracker.Initialize(_index, query, _indexSearcher, _fieldMappings, fieldsToFetch, retriever);
+            identityTracker.Initialize(_index, query, _indexSearcher, _documentIdReader, _fieldMappings, fieldsToFetch, retriever);
 
             long pageSize = query.PageSize;
 
@@ -584,7 +595,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             goto Include;
 
                         // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
-                        var identityExists = retriever.TryGetKeyCorax(_indexSearcher, ids[i], out var rawIdentity);
+                        var identityExists = retriever.TryGetKeyCorax(_documentIdReader, ids[i], out var rawIdentity);
 
                         // If we have figured out that this document identity has already been seen, we are skipping it.
                         if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
@@ -597,8 +608,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                     Include:
-                        var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key,
-                            _index.IndexFieldsPersistence);
+                        IndexEntryReader indexEntryReader = _indexSearcher.GetEntryReaderFor(ids[i]);
+                        var key = _documentIdReader.GetTermFor(ids[i]);
+                        var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -1216,7 +1228,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (hit == baseDocId)
                         continue;
 
-                    var reader = _indexSearcher.GetReaderAndIdentifyFor(hit, out string id);
+                    var reader = _indexSearcher.GetEntryReaderFor(hit);
+                    var id = _documentIdReader.GetTermFor(hit);
 
                     if (ravenIds.Add(id) == false)
                         continue;
@@ -1272,7 +1285,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var id);
+                    var reader = _indexSearcher.GetEntryReaderFor(ids[i]);
+                    var id = _documentIdReader.GetTermFor(ids[i]);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }
 

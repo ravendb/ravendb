@@ -53,7 +53,7 @@ public class RawCoraxFlag : StorageTest
                 }
 
                 using var _ = entry.Finish(out var output);                
-                writer.Index(id, output.ToSpan());
+                writer.Index(output.ToSpan());
             }
 
             writer.Commit();
@@ -89,7 +89,8 @@ public class RawCoraxFlag : StorageTest
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
             var match = searcher.AllEntries();
             Assert.Equal(1, match.Fill(mem));
-            Assert.Equal("2", searcher.GetIdentityFor(mem[0]));
+            long id = mem[0];
+            Assert.Equal("2", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
         }
         
     }
@@ -117,7 +118,7 @@ public class RawCoraxFlag : StorageTest
                 }
 
                 using var _ = entry.Finish(out var output);                
-                writer.Index(id, output.ToSpan());
+                writer.Index(output.ToSpan());
             }
 
             writer.Commit();
@@ -156,7 +157,8 @@ public class RawCoraxFlag : StorageTest
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
             var match = searcher.AllEntries();
             Assert.Equal(1, match.Fill(mem));
-            Assert.Equal("2", searcher.GetIdentityFor(mem[0]));
+            long id = mem[0];
+            Assert.Equal("2", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
         }
     }
 

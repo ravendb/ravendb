@@ -94,7 +94,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         
         using (var indexer = new IndexWriter(Env, knownFields))
         {
-            indexer.Index(IdString, element.ToSpan());
+            indexer.Index(element.ToSpan());
             indexer.Commit();
         }
 
@@ -149,7 +149,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
             entry.WriteSpatialDynamic("Coordinates_Home", spatialEntry);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(IdString, preparedItem.ToSpan());
+            writer.Index(preparedItem.ToSpan());
             writer.Commit();
         }
 

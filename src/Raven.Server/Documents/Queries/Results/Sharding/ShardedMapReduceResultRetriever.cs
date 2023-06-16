@@ -29,7 +29,7 @@ public class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
         throw new NotImplementedException();
     }
 
-    public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
+    public override bool TryGetKeyCorax(TermsReader searcher, long id, out UnmanagedSpan key)
     {
         throw new NotImplementedException();
     }

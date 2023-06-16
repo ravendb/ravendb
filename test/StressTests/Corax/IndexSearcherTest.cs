@@ -52,7 +52,7 @@ public class IndexSearcherTest : StorageTest
         foreach (var entry in list)
         {
             using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id, data.ToSpan());
+            indexWriter.Index(data.ToSpan());
         }
 
         indexWriter.Commit();
@@ -101,7 +101,7 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var searcher = new IndexSearcher(Env);
+        using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
         var allEntries = searcher.AllEntries();
         var allEntriesMemoized = searcher.Memoize(allEntries);
@@ -150,7 +150,8 @@ public class IndexSearcherTest : StorageTest
 
                 for (int i = 0; i < read; i++)
                 {
-                    var id = searcher.GetIdentityFor(ids[i]);
+                    long id1 = ids[i];
+                    var id = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1);
                     Assert.False(id.StartsWith("entry/00"));
                     entriesLookup.Add(id);
                 }
@@ -173,7 +174,8 @@ public class IndexSearcherTest : StorageTest
 
                 for (int i = 0; i < read; i++)
                 {
-                    var id = searcher.GetIdentityFor(ids[i]);
+                    long id1 = ids[i];
+                    var id = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1);
                     Assert.False(id.StartsWith("entry/00"));
                     entriesLookup.Add(id);
                 }
@@ -206,7 +208,7 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var searcher = new IndexSearcher(base.Env);
+        using var searcher = new IndexSearcher(base.Env, CreateKnownFields(bsc));
 
         {
             var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
@@ -252,7 +254,8 @@ public class IndexSearcherTest : StorageTest
 
                 for (int i = 0; i < read; i++)
                 {
-                    var id = searcher.GetIdentityFor(ids[i]);
+                    long id1 = ids[i];
+                    var id = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1);
                     Assert.False(id.StartsWith("entry/00"));
                     entriesLookup.Add(id);
                 }
@@ -275,7 +278,8 @@ public class IndexSearcherTest : StorageTest
 
                 for (int i = 0; i < read; i++)
                 {
-                    var id = searcher.GetIdentityFor(ids[i]);
+                    long id1 = ids[i];
+                    var id = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1);
                     Assert.False(id.StartsWith("entry/00"));
                     entriesLookup.Add(id);
                 }
@@ -378,6 +382,6 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var searcher = new IndexSearcher(Env);
+        using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
     }
 }

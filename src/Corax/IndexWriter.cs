@@ -476,42 +476,25 @@ namespace Corax
 
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
         }
-
-        /// <returns>Encoded id (with freq/container_type)</returns>
-        public long Index(string id, Span<byte> data)
+        
+        public long Index(Span<byte> data, float documentBoost)
         {
-            _indexDebugDumper.Index(id, data);
-            using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
-            return Index(idSlice, data);
-        }
-
-        public long Index(string id, Span<byte> data, float documentBoost)
-        {
-            var idInTree = Index(id, data);
+            var idInTree = Index(data);
             AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost);
             return idInTree;
         }
         
         /// <returns>Encoded id (with freq/container_type)</returns>
-        private unsafe long Index(Slice id, Span<byte> data)
+        public unsafe long Index(Span<byte> data)
         {
             _numberOfModifications++;
-            Span<byte> buf = stackalloc byte[10];
-            var idLen = ZigZagEncoding.Encode(buf, id.Size);
-            int requiredSize = idLen + id.Size + data.Length;
             // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
-            requiredSize += 16 - (requiredSize % 16);
-            var entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
-            buf.Slice(0, idLen).CopyTo(space);
-            space = space.Slice(idLen);
-            id.CopyTo(space);
-            space = space.Slice(id.Size);
+            var entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, data.Length, out var space);
             data.CopyTo(space);
             space = space.Slice(data.Length);
             space.Clear();// clean any old data that may have already been there
 
             var context = Transaction.Allocator;
-            
             
             var entryId = ++_lastEntryId;
             _entryIdToOffset.Add(entryId, entryContainerId);
@@ -582,26 +565,26 @@ namespace Corax
             _documentBoost.Delete(entryId);
         }
         
-        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, float documentBoost)
+        public unsafe long Update(string field, Span<byte> key, Span<byte> data, float documentBoost)
         {
-            var idInTree = Update(field, key, id, data);
+            var idInTree = Update(field, key,  data);
             AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost, true);
             return idInTree;
         }
         
        /// <returns>Encoded entryId</returns>
-        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        public unsafe long Update(string field, Span<byte> key, Span<byte> data)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
-                return Index(id, data);
+                return Index(data);
             }
             // if there is more than a single entry for this key, delete & index from scratch
             // this is checked by calling code, but cheap to do this here as well.
             if((idInTree & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
                 RecordDeletion(idInTree);
-                return Index(id, data);
+                return Index(data);
             }
             
             Page lastVisitedPage = default;
@@ -614,10 +597,7 @@ namespace Corax
             
             if (oldEntryReader.Buffer.SequenceEqual(data))
                 return idInTree; // no change, can skip all work here, joy!
-           
-            Span<byte> buf = stackalloc byte[10];
-            var idLen = ZigZagEncoding.Encode(buf, id.Size);
-
+        
             var context = Transaction.Allocator;
 
             // we can fit it in the old space, let's, great!
@@ -639,22 +619,17 @@ namespace Corax
             oldEntryReader = default; // this is here to ensure that no one is going to try to *use* the old reader after we modify it
 
             // can't fit in old size, have to update the location
-            int reqSize = idLen + id.Size + data.Length;
-            if (rawSize < reqSize)
+            if (rawSize != data.Length)
             {
                 // remove the existing entry
                 Container.Delete(Transaction.LowLevelTransaction, _entriesContainerId, entryContainerId);
                 // allocate enough space for the new size 
-                entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, reqSize, out _);
+                entryContainerId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, data.Length, out _);
                 _entryIdToOffset.Add(entryId, entryContainerId);
             }
 
             // now we can update the actual details here...
             var space = Container.GetMutable(Transaction.LowLevelTransaction, entryContainerId);
-            buf.Slice(0, idLen).CopyTo(space);
-            space = space.Slice(idLen);
-            id.AsSpan().CopyTo(space);
-            space = space.Slice(id.Size);
             data.CopyTo(space);
             space = space.Slice(data.Length);
             space.Clear(); // remove any extra data from old value
