@@ -1,26 +1,24 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
     public static class EventPipeDotNetHeapDumper
     {
-        internal static volatile bool eventPipeDataPresent = false;
-        internal static volatile bool dumpComplete = false;
+        internal static volatile bool eventPipeDataPresent;
+        internal static volatile bool dumpComplete;
 
         /// <summary>
         /// Given a factory for creating an EventPipe session with the appropriate provider and keywords turned on,
@@ -35,10 +33,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         public static bool DumpFromEventPipe(CancellationToken ct, int processID, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
         {
-            var startTicks = Stopwatch.GetTimestamp();
-            Func<TimeSpan> getElapsed = () => TimeSpan.FromTicks(Stopwatch.GetTimestamp() - startTicks);
+            DateTime start = DateTime.Now;
+            Func<TimeSpan> getElapsed = () => DateTime.Now - start;
 
-            var dumper = new DotNetHeapDumpGraphReader(log)
+            DotNetHeapDumpGraphReader dumper = new(log)
             {
                 DotNetHeapInfo = dotNetInfo
             };
@@ -49,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 bool fDone = false;
                 log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
 
-                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processID, new List<EventPipeProvider> {
+                using (EventPipeSessionController typeFlushSession = new(processID, new List<EventPipeProvider> {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 }, false))
                 {
@@ -58,8 +56,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         if (!fDone)
                         {
                             fDone = true;
-                            Task.Run(() => typeFlushSession.EndSession())
-                                .ContinueWith(_ => typeFlushSession.Source.StopProcessing());
+                            Task.Run(
+                                () => {
+                                    typeFlushSession.EndSession();
+                                    typeFlushSession.Source.StopProcessing();
+                                });
                         }
                     };
 
@@ -68,10 +69,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
 
-                // Start the providers and trigger the GCs.  
+                // Start the providers and trigger the GCs.
                 log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
 
-                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processID, new List<EventPipeProvider> {
+                using EventPipeSessionController gcDumpSession = new(processID, new List<EventPipeProvider> {
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
                 });
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
@@ -130,12 +131,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processID.ToString());
                 }
 
-                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded. 
-                Task readerTask = Task.Run(() =>
-                {
+                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
+                Task readerTask = Task.Run(() => {
                     // cancelled before we began
                     if (ct.IsCancellationRequested)
+                    {
                         return;
+                    }
+
                     log.WriteLine("{0,5:n1}s: Starting to process events", getElapsed().TotalSeconds);
                     gcDumpSession.Source.Process();
                     log.WriteLine("{0,5:n1}s: EventPipe Listener dying", getElapsed().TotalSeconds);
@@ -154,7 +157,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.  
+                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
                     {
                         log.WriteLine("{0,5:n1}s: Assume no .NET Heap", getElapsed().TotalSeconds);
                         break;
@@ -172,8 +175,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 }
 
-                var stopTask = Task.Run(() =>
-                {
+                Task stopTask = Task.Run(() => {
                     log.WriteLine("{0,5:n1}s: Shutting down gcdump EventPipe session", getElapsed().TotalSeconds);
                     gcDumpSession.EndSession();
                     log.WriteLine("{0,5:n1}s: gcdump EventPipe session shut down", getElapsed().TotalSeconds);
@@ -182,13 +184,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 try
                 {
                     while (!Task.WaitAll(new Task[] { readerTask, stopTask }, 1000))
+                    {
                         log.WriteLine("{0,5:n1}s: still reading...", getElapsed().TotalSeconds);
+                    }
                 }
                 catch (AggregateException ae) // no need to throw if we're just cancelling the tasks
                 {
-                    foreach (var e in ae.Flatten().InnerExceptions)
+                    foreach (Exception e in ae.Flatten().InnerExceptions)
                     {
-                        if (!(e is TaskCanceledException))
+                        if (e is not TaskCanceledException)
                         {
                             throw;
                         }
@@ -198,16 +202,18 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session closed", getElapsed().TotalSeconds);
 
                 if (ct.IsCancellationRequested)
+                {
                     return false;
+                }
 
                 if (eventPipeDataPresent)
                 {
-                    dumper.ConvertHeapDataToGraph();        // Finish the conversion.  
+                    dumper.ConvertHeapDataToGraph();        // Finish the conversion.
                 }
             }
             catch (Exception e)
             {
-                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e.ToString()}");
+                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
             }
 
             log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
@@ -216,7 +222,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
     }
 
-    internal class EventPipeSessionController : IDisposable
+    internal sealed class EventPipeSessionController : IDisposable
     {
         private List<EventPipeProvider> _providers;
         private DiagnosticsClient _client;
@@ -242,9 +248,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
