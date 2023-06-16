@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
-        private static LuceneCleaner _luceneCleaner;
+        //private static LuceneCleaner _luceneCleaner;
 
         static IndexReadOperation()
         {
