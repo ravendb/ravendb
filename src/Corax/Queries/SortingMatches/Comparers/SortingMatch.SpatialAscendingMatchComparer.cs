@@ -9,7 +9,7 @@ using Spatial4n.Shapes;
 
 namespace Corax.Queries.SortingMatches.Comparers;
 
-unsafe partial struct LegacySortingMatch
+public unsafe partial struct LegacySortingMatch
 {
     public struct SpatialAscendingMatchComparer : ISpatialComparer
     {

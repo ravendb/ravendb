@@ -7,9 +7,9 @@ using Sparrow;
 
 namespace Corax.Queries.SortingMatches;
 
-public unsafe partial struct NewMultiSortingMatch<TInner>
+public unsafe partial struct SortingMultiMatch<TInner>
 {
-    private static delegate*<ref NewMultiSortingMatch<TInner>, Span<long>, int> SortBy(OrderMetadata[] orderMetadata)
+    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy(OrderMetadata[] orderMetadata)
     {
         return (orderMetadata[0].FieldType, orderMetadata[0].Ascending) switch
         {
@@ -29,7 +29,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
         };
     }
 
-    private static delegate*<ref NewMultiSortingMatch<TInner>, Span<long>, int> SortBy<TComparer1>(OrderMetadata[] orderMetadata)
+    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1>(OrderMetadata[] orderMetadata)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan>
     {
         if (orderMetadata.Length == 1)
@@ -51,7 +51,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
         };
     }
 
-    private static delegate*<ref NewMultiSortingMatch<TInner>, Span<long>, int> SortBy<TComparer1, TComparer2>(OrderMetadata[] orderMetadata)
+    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1, TComparer2>(OrderMetadata[] orderMetadata)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan>
         where TComparer2 : struct, IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan>
     {
@@ -76,7 +76,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
     
     private struct EntryComparerHelper
     {
-        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(ref NewMultiSortingMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
+        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TComparer1 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
@@ -93,7 +93,7 @@ public unsafe partial struct NewMultiSortingMatch<TInner>
             return indexes;
         }
 
-        public static void IndirectSort<TComparer1, TComparer2, TComparer3>(ref NewMultiSortingMatch<TInner> match, Span<int> indexes,
+        public static void IndirectSort<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<int> indexes,
             UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TComparer1 : struct, IComparer<UnmanagedSpan>, IEntryComparer
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer

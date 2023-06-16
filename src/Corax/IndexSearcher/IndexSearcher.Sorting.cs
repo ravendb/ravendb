@@ -19,10 +19,10 @@ public unsafe partial class IndexSearcher
     
         
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public NewMultiSortingMatch OrderByMulti<TInner>(in TInner set, OrderMetadata[] metadata,
+    public SortingMultiMatch OrderBy<TInner>(in TInner set, OrderMetadata[] metadata,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
-        return NewMultiSortingMatch.Create(new NewMultiSortingMatch<TInner>(this,  set, metadata, take));
+        return SortingMultiMatch.Create(new SortingMultiMatch<TInner>(this,  set, metadata, take));
     }
 }
