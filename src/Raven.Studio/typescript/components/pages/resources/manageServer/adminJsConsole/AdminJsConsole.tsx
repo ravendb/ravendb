@@ -16,6 +16,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { SelectOption } from "components/common/Select";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
+import { ShardedDatabaseSharedInfo } from "components/models/databases";
 
 const serverTargetValue = "Server";
 
@@ -25,7 +26,11 @@ export default function AdminJSConsole() {
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
     const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
-    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
+    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
+
+    const allDatabaseNames = allDatabases.flatMap((db) =>
+        db.sharded ? (db as ShardedDatabaseSharedInfo).shards.map((x) => x.name) : [db.name]
+    );
 
     const allTargets: SelectOption<string>[] = [
         { value: serverTargetValue, label: "Server", icon: "server", horizontalSeparatorLine: true },
