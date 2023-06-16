@@ -112,17 +112,7 @@ namespace Voron.Benchmark.Corax
         private static void GenerateData(StorageEnvironment env)
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
-            Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
-            Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
-            Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
-
-            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
-                .AddBinding(0, nameSlice)
-                .AddBinding(1, familySlice)
-                .AddBinding(2, ageSlice)
-                .AddBinding(3, typeSlice);
-            using var fields = builder.Build();
+            IndexFieldsMapping fields = CreateFieldsMapping(bsc);
 
             using (var writer = new IndexWriter(env, fields))
             {
@@ -134,7 +124,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/arava", entry.ToSpan());
+                        writer.Index(entry.ToSpan());
                     }
                 }
 
@@ -146,7 +136,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/phoebe", entry.ToSpan());
+                        writer.Index(entry.ToSpan());
                     }
                 }
 
@@ -160,12 +150,28 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/" + i, entry.ToSpan());
+                        writer.Index( entry.ToSpan());
                     }
                 }
 
                 writer.Commit();
             }
+        }
+
+        private static IndexFieldsMapping CreateFieldsMapping(ByteStringContext bsc)
+        {
+            Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
+            Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
+            Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
+            Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
+
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+                .AddBinding(0, nameSlice)
+                .AddBinding(1, familySlice)
+                .AddBinding(2, ageSlice)
+                .AddBinding(3, typeSlice);
+            using var fields = builder.Build();
+            return fields;
         }
 
         [GlobalSetup]
@@ -224,7 +230,10 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void RuntimeQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
+            var identityReader = indexSearcher.TermsReaderFor("id()");
             var typeTerm = indexSearcher.TermQuery("Type", "Dog");
             var familyTerm = indexSearcher.TermQuery("Age", "15");
             var query = indexSearcher.And(typeTerm, familyTerm);
@@ -235,7 +244,7 @@ namespace Voron.Benchmark.Corax
             {
                 read = query.Fill(ids);
                 for (int i = 0; i < read; i++)
-                    indexSearcher.GetIdentityFor(ids[i]);
+                    identityReader.GetTermFor(ids[i]);
             }
             while (read != 0);
         }
@@ -243,7 +252,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void RuntimeQueryOnlyIteration()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var typeTerm = indexSearcher.TermQuery("Type", "Dog");
             var familyTerm = indexSearcher.TermQuery("Age", "15");
             var query = indexSearcher.And(typeTerm, familyTerm);
@@ -255,7 +266,10 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void ParserQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
+            var identityReader = indexSearcher.TermsReaderFor("id()");
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryDefinition.Query.Where);
 
@@ -265,7 +279,7 @@ namespace Voron.Benchmark.Corax
             {
                 read = query.Fill(ids);
                 for (int i = 0; i < read; i++)
-                    indexSearcher.GetIdentityFor(ids[i]);
+                    identityReader.GetTermFor(ids[i]);
             }
             while (read != 0);
         }
@@ -273,7 +287,8 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void ParserQueryOnlyIteration()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryDefinition.Query.Where);
 

@@ -41,7 +41,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match = searcher.TermQuery("Content", "road");
                 Assert.Equal(2, match.Count);
                 Assert.Equal(2, match.Fill(ids));
@@ -65,7 +65,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match = searcher.TermQuery("Content", "road");
                 Assert.Equal(2, match.Count);
                 Assert.Equal(2, match.Fill(ids));
@@ -98,7 +98,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match = searcher.TermQuery("Unknown", "1");
                 Assert.Equal(0, match.Count);
                 Assert.Equal(0, match.Fill(ids));
@@ -120,7 +120,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match = searcher.TermQuery("Id", "entry/1");
                 Assert.Equal(1, match.Count);
                 Assert.Equal(1, match.Fill(ids));
@@ -144,7 +144,7 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[12];
                 ids.Fill(-1);
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match = searcher.TermQuery("Content", "road");
 
                 Assert.Equal(16, match.Count);
@@ -170,7 +170,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -191,7 +191,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
                 var match2 = searcher.ExistsQuery(searcher.FieldMetadataBuilder("Content"));
                 var andMatch = searcher.And(in match1, in match2);
@@ -212,7 +212,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -233,7 +233,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -254,7 +254,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.AllEntries();
                 var match2 = searcher.TermQuery("Id", "Maciej");
                 var andMatch = searcher.And(in match1, in match2);
@@ -274,7 +274,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
                 var match1 = searcher.Memoize(searcher.TermQuery("Id", "entry/1"));
                 var match2 = searcher.Memoize(searcher.TermQuery("Content", "mountain"));
@@ -301,7 +301,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/3");
                 var match2 = searcher.TermQuery("Content", "highway");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -324,7 +324,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "highway");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -351,7 +351,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -374,7 +374,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -397,7 +397,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -411,7 +411,7 @@ namespace FastTests.Corax
             }
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -465,7 +465,7 @@ namespace FastTests.Corax
             var matchesId = matches.Select(x => x.IndexEntryId).ToList();
             matchesId.Sort();
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
                 var match1 = searcher.TermQuery("Content", "lake");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -510,7 +510,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match = searcher.InQuery("Content", new() {"road", "space"});
 
@@ -581,7 +581,7 @@ namespace FastTests.Corax
 
             var matchIds = matches.Select(x => x.IndexEntryId).ToArray();
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -740,7 +740,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
             
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             {
@@ -843,7 +843,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match = searcher.StartWithQuery("Content", "a");
 
@@ -894,7 +894,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry3}, CreateKnownFields(bsc));
             IndexEntries(bsc, new[] {entry2}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
@@ -919,7 +919,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry3}, CreateKnownFields(bsc));
             IndexEntries(bsc, new[] {entry2}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
@@ -951,7 +951,7 @@ namespace FastTests.Corax
 
             list.Add(new IndexSingleEntry() {Id = $"entry/{i + 1}"});
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var all = searcher.AllEntries();
                 var results = new List<string>();
@@ -960,7 +960,10 @@ namespace FastTests.Corax
                 while ((read = all.Fill(ids)) != 0)
                 {
                     for (i = 0; i < read; ++i)
-                        results.Add(searcher.GetIdentityFor(ids[i]));
+                    {
+                        long id = ids[i];
+                        results.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    }
                 }
 
                 results.Sort();
@@ -992,9 +995,12 @@ namespace FastTests.Corax
                 Assert.Equal(3, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
 
-                Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
-                Assert.Equal("entry/2", searcher.GetIdentityFor(ids[1]));
-                Assert.Equal("entry/1", searcher.GetIdentityFor(ids[2]));
+                long id = ids[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                long id1 = ids[1];
+                Assert.Equal("entry/2", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1));
+                long id2 = ids[2];
+                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id2));
             }
 
             {
@@ -1003,12 +1009,15 @@ namespace FastTests.Corax
 
                 Span<long> ids1 = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids1));
-                Assert.Equal("entry/3", searcher.GetIdentityFor(ids1[0]));
-                Assert.Equal("entry/2", searcher.GetIdentityFor(ids1[1]));
+                long id = ids1[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                long id1 = ids1[1];
+                Assert.Equal("entry/2", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1));
                 
                 Span<long> ids2 = stackalloc long[2];
                 Assert.Equal(1, match.Fill(ids2));
-                Assert.Equal("entry/1", searcher.GetIdentityFor(ids2[0]));
+                long id2 = ids2[0];
+                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id2));
 
                 Assert.Equal(0, match.Fill(ids2));
             }
@@ -1023,7 +1032,7 @@ namespace FastTests.Corax
             List<string> qids = new();
             IndexEntriesDouble(list);
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             Span<long> ids = stackalloc long[1024];
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
@@ -1033,7 +1042,10 @@ namespace FastTests.Corax
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
                 while (--read >= 0)
-                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                {
+                    long id = ids[read];
+                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -1051,7 +1063,8 @@ namespace FastTests.Corax
                 var read = matchBetween.Fill(ids);
                 while (--read >= 0)
                 {
-                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                    long id = ids[read];
+                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 }
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
@@ -1070,7 +1083,8 @@ namespace FastTests.Corax
                 var read = matchBetween.Fill(ids);
                 while (--read >= 0)
                 {
-                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                    long id = ids[read];
+                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 }
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
@@ -1095,7 +1109,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             Slice.From(bsc, "1", out var one);
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
@@ -1147,7 +1161,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             Slice.From(bsc, "1", out var one);
@@ -1199,7 +1213,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             using var _ = Slice.From(bsc, "ing", out var ingSlice);
 
@@ -1218,7 +1232,8 @@ namespace FastTests.Corax
                 var match = searcher.ContainsQuery(contentMetadata, "er");
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
-                Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
+                long id = ids[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
             }
 
             {
@@ -1226,7 +1241,8 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
-                Assert.Equal("entry/1", searcher.GetIdentityFor(ids[0]));
+                long id = ids[0];
+                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
             }
 
             {
@@ -1234,7 +1250,9 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
-                var results = new string[] {searcher.GetIdentityFor(ids[0]), searcher.GetIdentityFor(ids[1])};
+                long id = ids[0];
+                long id1 = ids[1];
+                var results = new string[] {searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id), searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1)};
                 Array.Sort(results);
                 Assert.Equal("entry/1", results[0]);
                 Assert.Equal("entry/2", results[1]);
@@ -1245,7 +1263,8 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
-                Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
+                long id = ids[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
             }
 
             {
@@ -1289,7 +1308,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             Slice.From(bsc, "0", out var zero);
@@ -1340,7 +1359,7 @@ namespace FastTests.Corax
             var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() {Id = $"entry{i}", Content = Convert.ToDouble(i)}).ToList();
             IndexEntriesDouble(entries);
             int? read;
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             {
@@ -1406,7 +1425,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             Slice.From(bsc, "0", out var zero);
             Slice.From(bsc, "1", out var one); //
@@ -1485,7 +1504,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc, analyzer));
 
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -1642,7 +1661,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 Span<long> ids = stackalloc long[1024];
                 var match = searcher.AndNot(searcher.AllEntries(), searcher.InQuery(searcher.FieldMetadataBuilder("Content", ContentIndex), listForNotIn.Select(l => l.Content).ToList()));
@@ -1666,7 +1685,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             {
                 var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "Run"));
@@ -1734,7 +1753,7 @@ namespace FastTests.Corax
             //":{"p0":"8 9 10"}}
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             Slice.From(bsc, "1", out var one);
             Slice.From(bsc, "2", out var two);
@@ -1768,7 +1787,7 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[256];
                 var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
                 Assert.Equal(7, orResult.Fill(ids));
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a)
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).OrderBy(a => a)
                     .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
@@ -1777,7 +1796,7 @@ namespace FastTests.Corax
                 var startsWith = searcher.StartWithQuery("Id", "e");
                 Assert.Equal(7, startsWith.Fill(ids));
 
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a)
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).OrderBy(a => a)
                     .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
@@ -1792,7 +1811,7 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[256];
                 var amount = result.Fill(ids.Slice(14));
-                var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.GetIdentityFor(x)).ToList();
+                var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).ToList();
                 Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
                 Assert.Equal(7, amount);
                 Assert.True(idsOfResult.SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
@@ -1823,7 +1842,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries.ToArray(), CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 //MultiTermMatch And TermMatch
                 var match0 = searcher.InQuery("Content", new List<string>() {"maciej", "poland"});
@@ -1853,7 +1872,10 @@ namespace FastTests.Corax
                 while ((read = query.Fill(ids)) != 0)
                 {
                     for (int i = 0; i < read; ++i)
-                        stringIds.Add(searcher.GetIdentityFor(ids[i]));
+                    {
+                        long id = ids[i];
+                        stringIds.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    }
                 }
 
                 return stringIds.Distinct().ToList();
@@ -1898,7 +1920,7 @@ namespace FastTests.Corax
             Slice.From(bsc, "1", out var one);
             Slice.From(bsc, "2", out var two);
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
                 
@@ -1909,7 +1931,7 @@ namespace FastTests.Corax
                 List<string> xd = new();
                 foreach (var id in ids.Slice(0, result))
                 {
-                    xd.Add(searcher.GetIdentityFor(id));
+                    xd.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 }
 
                 Assert.Equal(3, result);
@@ -1922,7 +1944,7 @@ namespace FastTests.Corax
                 List<string> xd = new();
                 foreach (var id in ids.Slice(0, result))
                 {
-                    xd.Add(searcher.GetIdentityFor(id));
+                    xd.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 }
 
 
@@ -2011,7 +2033,7 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                entry.IndexEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(indexWriter.Index(entry.Id, data.ToSpan()));
+                entry.IndexEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(indexWriter.Index(data.ToSpan()));
             }
             indexWriter.Commit();
             mapping.Dispose();
@@ -2025,7 +2047,7 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id, data.ToSpan());
+                indexWriter.Index(data.ToSpan());
             }
 
             indexWriter.Commit();
@@ -2043,7 +2065,7 @@ namespace FastTests.Corax
                 foreach (var entry in list)
                 {
                     var data = CreateIndexEntryDouble(ref entryWriter, entry, out var buffer);
-                    indexWriter.Index(entry.Id, buffer.ToSpan());
+                    indexWriter.Index(buffer.ToSpan());
                 }
 
                 indexWriter.Commit();

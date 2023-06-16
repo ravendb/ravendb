@@ -54,7 +54,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
     public bool TryGetByFieldName(Slice fieldName, out IndexFieldBinding binding) => _fields.TryGetValue(fieldName, out binding);
 
     public bool TryGetByFieldId(int fieldId, out IndexFieldBinding binding) => _fieldsById.TryGetValue(fieldId, out binding);
-    
+
+    public IndexFieldBinding GetFirstField() => _fieldsById.First().Value;
     
     public IndexFieldBinding GetByFieldId(int fieldId) => _fieldsById[fieldId];
     

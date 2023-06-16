@@ -38,14 +38,14 @@ public class FacetIndexingRepro : StorageTest
         string entryKey = "users/00000001";
         entryWriter.Write(0, Encoding.UTF8.GetBytes(entryKey));
         entryWriter.Finish(out var s);
-        var entryIdEncoded = iw.Index(entryKey, s.ToSpan());
+        var entryIdEncoded = iw.Index(s.ToSpan());
         var entryId = EntryIdEncodings.Decode(entryIdEncoded).EntryId;
         iw.Commit();
         
         {
             var searcher = new IndexSearcher(wtx, fields);
             TermsReader termsReader = searcher.TermsReaderFor(id);
-            Assert.Equal(searcher.GetIdentityFor(entryId), termsReader.GetTermFor(entryId));
+            Assert.Equal(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(entryId), termsReader.GetTermFor(entryId));
         }
         
         // here we force it to take place
@@ -55,7 +55,7 @@ public class FacetIndexingRepro : StorageTest
             var searcher = new IndexSearcher(wtx, fields);
         
             TermsReader termsReader = searcher.TermsReaderFor(id);
-            Assert.Equal(searcher.GetIdentityFor(entryId), termsReader.GetTermFor(entryId));
+            Assert.Equal(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(entryId), termsReader.GetTermFor(entryId));
         }
     }
 
@@ -146,7 +146,7 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(id, buffer);
+                iw.Index(buffer);
                 items++;
             }
 
@@ -243,7 +243,7 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(id, buffer);
+                iw.Index(buffer);
 
             }
         }

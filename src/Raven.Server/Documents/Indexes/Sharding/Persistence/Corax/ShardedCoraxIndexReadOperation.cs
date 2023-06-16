@@ -71,7 +71,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
             var orderByFieldMetadata = orderByFields[i];
 
-            IndexEntryReader entryReader = _indexSearcher.GetReaderAndIdentifyFor(indexEntryId, out _);
+            IndexEntryReader entryReader = _indexSearcher.GetEntryReaderFor(indexEntryId);
             IndexEntryReader.FieldReader reader = entryReader.GetFieldReaderFor(orderByFieldMetadata.Field);
 
             switch (orderByField.OrderingType)

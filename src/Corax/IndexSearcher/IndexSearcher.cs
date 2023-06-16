@@ -65,7 +65,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
+    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
@@ -75,7 +75,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
     }
 
-    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
+    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
@@ -118,53 +118,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public static IndexEntryReader GetEntryReaderForEntryContainerId(Transaction transaction,  long id, ref Page page,out int rawSize)
     {
-        
         var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
-        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
-
         rawSize = item.Length;
-        int headerSize = size + len;
-        return new IndexEntryReader(item.Address + headerSize, item.Length - headerSize);
+        return new IndexEntryReader(item.Address, item.Length);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IndexEntryReader GetReaderAndIdentifyFor(long id, out string key)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
 
-        
-        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
-
-        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
-
-        var idSpan = new ReadOnlySpan<byte>(item.Address + len, size);
-        key = Encoding.UTF8.GetString(idSpan);
-
-        int headerSize = size + len;
-        return new(item.Address + headerSize, item.Length - headerSize);
-    }
-
-    public string GetIdentityFor(long id)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId).ToSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        return Encoding.UTF8.GetString(data.Slice(len, size));
-    }
-
-    public UnmanagedSpan GetRawIdentityFor(long id)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId).ToUnmanagedSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        return data.Slice(len, size);
-    }
-    
     internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term, bool canReturnEmptySlice = false)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
@@ -468,4 +427,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_ownsIndexMapping)
             _fieldMapping?.Dispose();
     }
+
+    // this is meant for debugging / tests only
+    public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
 }

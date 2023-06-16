@@ -159,7 +159,7 @@ public class DeleteTest : StorageTest
         foreach (var entry in _longList)
         {
             using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id, data.ToSpan());
+            indexWriter.Index(data.ToSpan());
         }
 
         indexWriter.Commit();

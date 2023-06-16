@@ -35,7 +35,7 @@ public class IndexSearcherTest : StorageTest
         IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
         {
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var match = searcher.TermQuery("Content", "road");
 
             Assert.Equal(100000, match.Count);
@@ -133,7 +133,7 @@ public class IndexSearcherTest : StorageTest
         foreach (var entry in list)
         {
             using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id, data.ToSpan());
+            indexWriter.Index(data.ToSpan());
         }
 
         indexWriter.Commit();

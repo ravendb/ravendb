@@ -34,8 +34,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             entry.Finish(out var entrySpan);
 
             using var _ = Allocator.From("cars/1", ByteStringType.Immutable, out var str);
-            var lowerId = new LazyStringValue(null, str.Ptr, str.Size, JsonOperationContext.ShortTermSingleUse());
-            oldId = indexWriter.Update("id()", str.ToSpan(), lowerId, entrySpan.ToSpan());
+            oldId = indexWriter.Update("id()", str.ToSpan(), entrySpan.ToSpan());
             
             indexWriter.Commit();
         }
@@ -59,8 +58,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             entry.Finish(out var entrySpan);
 
             using var _ = Allocator.From("cars/1", ByteStringType.Immutable, out var str);
-            var lowerId = new LazyStringValue(null, str.Ptr, str.Size, JsonOperationContext.ShortTermSingleUse());
-            newId = indexWriter.Update("id()", str.ToSpan(), lowerId, entrySpan.ToSpan());
+            newId = indexWriter.Update("id()", str.ToSpan(), entrySpan.ToSpan());
             
             indexWriter.Commit();
         }

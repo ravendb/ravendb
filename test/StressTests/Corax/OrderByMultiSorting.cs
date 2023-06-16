@@ -41,7 +41,7 @@ namespace StressTests.Corax
             // of the sorter logic.
             longList.Sort(CompareDescendingThenAscending);
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match1 = searcher.AllEntries();
 
@@ -56,7 +56,10 @@ namespace StressTests.Corax
                 {
                     read = match.Fill(ids);
                     for (int i = 0; i < read; ++i)
-                        sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                    {
+                        long id = ids[i];
+                        sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    }
                 }
                 while (read != 0);
 
@@ -75,7 +78,7 @@ namespace StressTests.Corax
 
             IndexEntries();
             longList.Sort(CompareAscendingThenDescending);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match1 = searcher.AllEntries();
 
@@ -91,7 +94,10 @@ namespace StressTests.Corax
                 {
                     read = match.Fill(ids);
                     for (int i = 0; i < read; ++i)
-                        sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                    {
+                        long id = ids[i];
+                        sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    }
                 }
                 while (read != 0);
 
@@ -115,7 +121,7 @@ namespace StressTests.Corax
 
             IndexEntries();
             longList.Sort(CompareDescending);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 //var match = searcher.Or(searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), Content1, 2137), 1000),
                 //    searcher.LessThan(searcher.AllEntries(), Content1, 99L));
@@ -129,7 +135,10 @@ namespace StressTests.Corax
 
                 var realIds = new List<string>();
                 for (var i = 0; i < localResult.Count; ++i)
-                    realIds.Add(searcher.GetIdentityFor(_buffer[i]));
+                {
+                    long id = _buffer[i];
+                    realIds.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 Assert.True(localResult.SequenceEqual(realIds));
             }
@@ -187,7 +196,7 @@ namespace StressTests.Corax
                 {
                     using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
                     {
-                        indexWriter.Index(entry.Id, data.ToSpan());
+                        indexWriter.Index(data.ToSpan());
                     }
                 }
                 indexWriter.Commit();

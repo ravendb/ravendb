@@ -109,9 +109,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 if (documentBoost.HasValue)
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), documentBoost.Value);
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan(), documentBoost.Value);
                 else
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan());
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan());
             }
         }
 
@@ -137,9 +137,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 using (Stats.AddStats.Start())
                 {
                     if (documentBoost.HasValue)
-                        _indexWriter.Index(lowerId, data.ToSpan(), documentBoost.Value);
+                        _indexWriter.Index(data.ToSpan(), documentBoost.Value);
                     else
-                        _indexWriter.Index(lowerId, data.ToSpan());
+                        _indexWriter.Index(data.ToSpan());
                 }
 
                 stats.RecordIndexingOutput();

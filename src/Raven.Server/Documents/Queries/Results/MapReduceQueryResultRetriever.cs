@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
         
-        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
+        public override bool TryGetKeyCorax(TermsReader searcher, long id, out UnmanagedSpan key)
         {
             key = default;
             return false;

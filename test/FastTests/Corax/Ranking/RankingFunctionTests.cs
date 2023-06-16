@@ -106,8 +106,8 @@ public class RankingFunctionTests : StorageTest
         Assert.Equal(3, read);
         
         MemoryExtensions.Sort(ids.Slice(0, read), scores.Slice(0, read));
-        
-        Assert.Equal("id/3", indexSearcher.GetIdentityFor(ids[2]));
+        long id = ids[2];
+        Assert.Equal("3", indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
     }
     
     [Fact]
@@ -170,7 +170,10 @@ public class RankingFunctionTests : StorageTest
         scores.Slice(0,4).Sort(matches.Slice(0, 4));
         var ids = new List<string>();
         for (int i = 0; i < 4; ++i)
-            ids.Add(indexSearcher.GetIdentityFor(matches[i]));
+        {
+            long id = matches[i];
+            ids.Add(indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
+        }
     }
     
     private void IndexEntries(IEnumerable<EntryData> entries)
@@ -183,7 +186,7 @@ public class RankingFunctionTests : StorageTest
             entry.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
             entry.Write(ContentIndex, dto.ContentAsSpan);
             using var _ = entry.Finish(out var data);
-            var entryId = indexWriter.Index($"id/{dto.Id}", data.ToSpan());
+            var entryId = indexWriter.Index(data.ToSpan());
         }
 
         indexWriter.Commit();

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
 
-        bool TryGetKeyCorax(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
+        bool TryGetKeyCorax(TermsReader searcher, long id, out UnmanagedSpan key);
 
         Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 

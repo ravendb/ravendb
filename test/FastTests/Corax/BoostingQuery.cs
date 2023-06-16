@@ -32,7 +32,7 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var match = searcher.AllEntries();
                 var boostedMatch = searcher.Boost(match, 10);
@@ -62,7 +62,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2});
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", hasBoost: true), "list/1");
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -76,7 +76,10 @@ namespace FastTests.Corax
 
                 List<string> idsName = new();
                 for (int i = 0; i < read; ++i)
-                    idsName.Add(searcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    idsName.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 Assert.Equal("list/1", idsName[0]); // most unique 
                 Assert.Equal("list/11", idsName[1]); // 2nd
@@ -96,7 +99,7 @@ namespace FastTests.Corax
         {
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> {Id = $"list/{i}", Content1 = i % mod}).ToList();
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
                 IQueryMatch match = searcher.Boost(
@@ -109,7 +112,8 @@ namespace FastTests.Corax
                 List<string> result = new();
                 for (int i = 0; i < read; ++i)
                 {
-                    result.Add(searcher.GetIdentityFor(ids[i]));
+                    long id = ids[i];
+                    result.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 }
 
                 Assert.Equal(result.Count, result.Distinct().Count());
@@ -133,7 +137,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -150,7 +154,10 @@ namespace FastTests.Corax
 
                 List<string> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
-                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
@@ -169,7 +176,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -187,7 +194,10 @@ namespace FastTests.Corax
 
                 List<string> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
-                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 for (int i = 0; i < 4; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
@@ -210,7 +220,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/6", Content1 = 1}); // 1/4            
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
                 var boostedContent0 = searcher.Boost(content0Match, 1);
@@ -227,9 +237,12 @@ namespace FastTests.Corax
 
                 List<string> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
-                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
-                
+
                 for (int i = 0; i < longList.Count; ++i)
                 {
                     if (longList[i].Id != sortedByCorax[i])
@@ -257,7 +270,7 @@ namespace FastTests.Corax
 
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
                 var query = searcher.OrderBy(searcher.InQuery(contentMetadata, new List<string>() {"0", "1"})
@@ -268,7 +281,10 @@ namespace FastTests.Corax
 
                 List<string> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
-                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+                {
+                    long id = ids[i];
+                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                }
 
                 for (int i = 0; i < longList.Count; ++i)
                 {
@@ -291,7 +307,7 @@ namespace FastTests.Corax
             IndexEntries();
             var ids = new long[16];
             
-            using (var searcher = new IndexSearcher(Env))
+            using(var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)))
             {
                 var read = searcher.AllEntries().Fill(ids);
                 Assert.True(searcher.DocumentsAreBoosted);
@@ -309,7 +325,7 @@ namespace FastTests.Corax
                 indexWriter.Commit();
             }
             
-            using (var searcher = new IndexSearcher(Env))
+            using(var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)))
             {
                 var read = searcher.AllEntries().Fill(ids);
                 Assert.False(searcher.DocumentsAreBoosted);
@@ -336,7 +352,7 @@ namespace FastTests.Corax
             IndexEntries();
 
             longList.Sort(CompareAscending);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, hasBoost: true);
             {
                 var query = searcher.InQuery(contentMetadata, new List<string>() {"0", "1", "2", "3"});
@@ -377,9 +393,9 @@ namespace FastTests.Corax
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 if (entry.Boost.HasValue == false)
-                    indexWriter.Index(entry.Id, data.ToSpan());
+                    indexWriter.Index(data.ToSpan());
                 else
-                    indexWriter.Index(entry.Id, data.ToSpan(), entry.Boost.Value);
+                    indexWriter.Index(data.ToSpan(), entry.Boost.Value);
             }
 
             indexWriter.Commit();

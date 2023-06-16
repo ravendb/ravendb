@@ -65,7 +65,7 @@ public class SpatialTests : StorageTest
             var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
             entry.WriteSpatial(CoordinatesIndex, spatialEntry);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(IdString, preparedItem.ToSpan());
+            writer.Index(preparedItem.ToSpan());
             writer.Commit();
         }
 

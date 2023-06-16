@@ -43,9 +43,23 @@ public unsafe struct TermsReader : IDisposable
         return s;
     }
     
-    public bool TryGetTermFor(long id, out string term)
+    public bool TryGetRawTermFor(long id, out UnmanagedSpan term)
     {
         if (_lookup.TryGetValue(id, out var termContainerId) == false)
+        {
+            term = default;
+            return false;
+        }
+
+        var item = Container.Get(_llt, termContainerId);
+        term = item.ToUnmanagedSpan();
+        return true;
+    }
+    
+    public bool TryGetTermFor(long id, out string term)
+    {
+        if (_lookup == null || 
+            _lookup.TryGetValue(id, out var termContainerId) == false)
         {
             term = null;
             return false;

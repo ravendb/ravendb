@@ -113,18 +113,8 @@ namespace Voron.Benchmark.Corax
         private static void GenerateData(StorageEnvironment env)
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
-            Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
-            Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
-            Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
+            IndexFieldsMapping fields = CreateFieldsMapping(bsc);
 
-            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
-                .AddBinding(0, nameSlice)
-                .AddBinding(1, familySlice)
-                .AddBinding(2, ageSlice)
-                .AddBinding(3, typeSlice);
-            using var fields = builder.Build();
-            
             using (var writer = new IndexWriter(env, fields))
             {
                 {
@@ -135,7 +125,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/arava", entry.ToSpan());
+                        writer.Index(entry.ToSpan());
                     }
                 }
 
@@ -147,7 +137,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/phoebe", entry.ToSpan());
+                        writer.Index(entry.ToSpan());
                     }
                 }
 
@@ -161,12 +151,28 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     using (var _ = entryWriter.Finish(out var entry))
                     {
-                        writer.Index("dogs/" + i, entry.ToSpan());
+                        writer.Index(entry.ToSpan());
                     }
                 }
 
                 writer.Commit();
             }
+        }
+
+        private static IndexFieldsMapping CreateFieldsMapping(ByteStringContext bsc)
+        {
+            Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
+            Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
+            Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
+            Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
+
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+                .AddBinding(0, nameSlice)
+                .AddBinding(1, familySlice)
+                .AddBinding(2, ageSlice)
+                .AddBinding(3, typeSlice);
+            using var fields = builder.Build();
+            return fields;
         }
 
         [GlobalSetup]
@@ -240,7 +246,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void InFirstRuntimeQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var typeTerm = indexSearcher.TermQuery("Type", "Dog");
             var ageTerm = indexSearcher.InQuery("Age", new() { "15", "16" });
             var query = indexSearcher.And(typeTerm, ageTerm);
@@ -252,7 +260,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void InSecondRuntimeQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var typeTerm = indexSearcher.TermQuery("Type", "Dog");
             var ageTerm = indexSearcher.InQuery("Age", new() { "15", "16" });
             var query = indexSearcher.And(ageTerm, typeTerm);
@@ -264,7 +274,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void OrFirstParserQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryOrFirst.Query.Where);
 
@@ -276,7 +288,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void OrSecondParserQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryOrSecond.Query.Where);
 
@@ -288,7 +302,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void InFirstParserQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryInFirst.Query.Where);
 
@@ -300,7 +316,9 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void InSecondParserQuery()
         {
-            using var indexSearcher = new IndexSearcher(Env);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
+
             var evaluator = new CoraxQueryEvaluator(indexSearcher);
             var query = evaluator.Search(_queryInSecond.Query.Where);
 
