@@ -338,17 +338,13 @@ namespace Voron.Data.Containers
 
             var p = rootContainer.GetNextFreePage();
             var activePage = llt.ModifyPage(p);
-            if((p == 698 || p == 699) && size == 1062)
-            {
-                Console.WriteLine();
-            }
             var container = new Container(activePage);
             
             var (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
             bool pageMatch = PageMetadataMatch(container, pageLevelMetadata) &&
                              // we limit the number of entries per page to ensure we always
                              // have the bottom 3 bits free, see also IndexToOffset
-                             pos <= 1024;
+                             pos < 1024;
             if (pageMatch == false || 
                 container.HasEnoughSpaceFor(reqSize) == false)
             {
@@ -367,7 +363,7 @@ namespace Voron.Data.Containers
                     container = MoveToNextPage(llt, containerId, pageLevelMetadata, container, size);
                 
                 (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
-                Debug.Assert(pos <= 1024, "pos <= 1024");
+                Debug.Assert(pos < 1024, "pos < 1024");
             }
 
             if (container.HasEnoughSpaceFor(reqSize) == false)
@@ -380,6 +376,7 @@ namespace Voron.Data.Containers
 
         private long Allocate(int size, int pos, out Span<byte> allocatedSpace)
         {
+            Debug.Assert(pos < 1024, "pos < 1024");
             var reqSize = ComputeRequiredSize(size);
             Debug.Assert(HasEnoughSpaceFor(reqSize));
 
