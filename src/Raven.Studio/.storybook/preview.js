@@ -53,11 +53,6 @@ import {createStoreConfiguration} from "components/store";
 import {setEffectiveTestStore} from "components/storeCompat";
 window.jest = new ModuleMocker(window);
 
-// mock ace
-window.ace = {
-    require: () => ({})
-}
-
 commonInit();
 
 import { Provider } from "react-redux";
