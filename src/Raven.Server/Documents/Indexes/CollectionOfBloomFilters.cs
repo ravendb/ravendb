@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly ulong _m;
             private readonly int _ptrSize;
             private readonly uint _partitionCount;
-            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>(NumericEqualityComparer.BoxedInstanceUInt64);
+            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>();
             private readonly ByteStringContext _allocator;
             private readonly long _initialCount;
 
