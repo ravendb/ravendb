@@ -17,8 +17,6 @@ export interface AceEditorProps extends IAceEditorProps {
 export default function AceEditor(props: AceEditorProps) {
     const { setOptions, languageService, validationErrorMessage, execute, ...rest } = props;
 
-    todo("BugFix", "Damian", "fix langTools import and autocomplete in storybook");
-
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
         enableLiveAutocompletion: true,
@@ -64,7 +62,6 @@ export default function AceEditor(props: AceEditorProps) {
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
     todo("Styling", "Kwiato", "increase code line height (.ace_line class)");
-    todo("Styling", "Kwiato", "fix ReactAce styling in storybook");
     todo("Styling", "Kwiato", "remove inline styles, and add scss classes for handling validation error");
     todo("Styling", "Kwiato", "scrollbar styles");
 

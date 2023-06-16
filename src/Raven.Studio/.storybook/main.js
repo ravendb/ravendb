@@ -1,5 +1,7 @@
 ﻿const webpackConfigFunc = require('../webpack.config');
 const path = require("path");
+const CopyPlugin = require("copy-webpack-plugin");
+
 const webpackConfig = webpackConfigFunc(null, {
     mode: "development",
     watch: false
@@ -52,6 +54,17 @@ module.exports = {
                 || (x.test && x.test.toString().includes(".scss")));
         
         config.plugins.push(webpackConfig.plugins[0]); // MiniCssExtractPlugin
+
+        const copyPlugin = new CopyPlugin({
+          patterns: [
+                {
+                  from: path.resolve(__dirname, '../wwwroot/Content/ace/'),
+                  to: './ace/'
+                },
+            ]
+        });
+
+        config.plugins.push(copyPlugin);
         
         config.module.rules.push(...incomingRules);
         
