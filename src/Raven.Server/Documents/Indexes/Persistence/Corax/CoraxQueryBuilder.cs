@@ -1164,7 +1164,7 @@ internal static class CoraxQueryBuilder
             case 1:
                 return indexSearcher.OrderBy(match, orderMetadata[0], take);
             default:
-                return indexSearcher.OrderByMulti(match, orderMetadata, take);
+                return indexSearcher.OrderBy(match, orderMetadata, take);
         }
     }
 }
