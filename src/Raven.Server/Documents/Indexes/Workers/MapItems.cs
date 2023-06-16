@@ -75,7 +75,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             var items = GetItemsEnumerator(queryContext, collection, lastEtag, pageSize);
 
-                            using (var itemEnumerator = _index.EnumerateIndexedItems(items, collection, indexContext, collectionStats, _index.Type))
+                            if (_index.TestRun != null)
+                                items = _index.TestRun.CreateEnumeratorWrapper(items, collection);
+                            
+                            using (var itemEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                             {
                                 while (true)
                                 {

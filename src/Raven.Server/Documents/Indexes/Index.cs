@@ -1951,6 +1951,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 _didWork = true;
                 _firstBatchTimeout = null;
+                TestRun?.BatchCompleted.Set();
             }
 
             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
@@ -2320,9 +2321,9 @@ namespace Raven.Server.Documents.Indexes
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
 
-        public void InitializeTestRun(DocumentsOperationContext context, int maxDocumentsPerIndex)
+        public void InitializeTestRun(DocumentsOperationContext context, int docsToProcessPerCollection, int numberOfCollections)
         {
-            TestRun = new TestIndexRun(context, maxDocumentsPerIndex);
+            TestRun = new TestIndexRun(context, docsToProcessPerCollection, numberOfCollections);
         }
 
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
@@ -2478,17 +2479,6 @@ namespace Raven.Server.Documents.Indexes
                 if (writeOperation.IsValueCreated)
                     writeOperation.Value.Dispose();
             }
-        }
-        
-        public IIndexedItemEnumerator EnumerateIndexedItems(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
-            IndexingStatsScope stats, IndexType type)
-        {
-            var enumerator = GetMapEnumerator(items, collection, indexContext, stats, type);
-            
-            if (IsTestRun)
-                return TestRun.CreateEnumeratorWrapper(enumerator, collection, Collections.Count);
-
-            return enumerator;
         }
         
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,

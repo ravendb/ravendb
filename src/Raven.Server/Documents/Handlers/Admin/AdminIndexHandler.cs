@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var query = testIndexParameters.Query;
                 var queryParameters = testIndexParameters.QueryParameters;
                 int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
-                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeoutInSec ?? 15;
+                int waitForNonStaleResultsTimeoutInSec = testIndexParameters.WaitForNonStaleResultsTimeoutInSec ?? 15;
 
                 const int documentsPerIndexUpperLimit = 10_000;
                 const int documentsPerIndexLowerLimit = 1;
@@ -94,17 +94,18 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     index.Start();
 
+                    var timespanToWaitForProcessing = TimeSpan.FromSeconds(waitForNonStaleResultsTimeoutInSec);
+                    index.TestRun.WaitForProcessingOfSampleDocs(timespanToWaitForProcessing);
+                    
                     using (var token = CreateTimeLimitedQueryToken())
                     using (var queryContext = QueryOperationContext.Allocate(Database))
                     {
-                        indexQueryServerSide.WaitForNonStaleResults = true;
-                        indexQueryServerSide.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(waitForNonStaleResultsTimeout);
+                        indexQueryServerSide.WaitForNonStaleResults = false;
 
                         var entries = await index.IndexEntries(indexQueryServerSide, queryContext, ignoreLimit: false, token);
-                        var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
                         var mapResults = index.TestRun.MapResults;
                         var reduceResults = index.TestRun.ReduceResults;
-
+                        var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
                         var hasDynamicFields = index.Definition.HasDynamicFields;
 
                         var result = new TestIndexResult()
