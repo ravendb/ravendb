@@ -155,7 +155,7 @@ export default function AdminJSConsole() {
                                     <AceEditor
                                         mode="javascript"
                                         readOnly
-                                        value={JSON.stringify(asyncRunAdminJsScript.result?.Result)}
+                                        value={JSON.stringify(asyncRunAdminJsScript.result?.Result, null, 4)}
                                         height="300px"
                                     />
                                 </div>

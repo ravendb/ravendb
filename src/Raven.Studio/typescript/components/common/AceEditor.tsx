@@ -23,7 +23,7 @@ export default function AceEditor(props: AceEditorProps) {
         enableBasicAutocompletion: true,
         enableLiveAutocompletion: true,
         showLineNumbers: true,
-        tabSize: 2,
+        tabSize: 4,
         ...setOptions,
     };
 
@@ -63,6 +63,7 @@ export default function AceEditor(props: AceEditorProps) {
 
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
+    todo("Styling", "Kwiato", "change code line height (.ace_line class)");
     todo("Styling", "Kwiato", "fix ReactAce styling in storybook");
     todo("Styling", "Kwiato", "remove inline styles, and add scss classes for handling validation error");
 

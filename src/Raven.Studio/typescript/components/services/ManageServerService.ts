@@ -23,7 +23,7 @@ export default class ManageServerService {
         return new saveClientConfigurationCommand(dto, db).execute();
     }
 
-    async runAdminJsScript(script: string, targetDatabaseName?: string): Promise<{ Result: string }> {
+    async runAdminJsScript(script: string, targetDatabaseName?: string): Promise<{ Result: any }> {
         return new adminJsScriptCommand(script, targetDatabaseName).execute();
     }
 }
