@@ -17,6 +17,7 @@ import { SelectOption } from "components/common/Select";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
+import RunScriptButton from "components/common/RunScriptButton";
 
 const serverTargetValue = "Server";
 
@@ -136,26 +137,11 @@ export default function AdminJSConsole() {
                                         mode="javascript"
                                         height="200px"
                                     />
-
-                                    {/* TODO: @kalczur create component */}
-                                    {/* TODO: @kalczur implement run on control + enter <now*/}
-                                    <div className="run-script-button">
-                                        <Button
-                                            color="primary"
-                                            size="lg"
-                                            className="px-4 py-2"
-                                            disabled={!formState.isDirty || asyncRunAdminJsScript.status === "loading"}
-                                        >
-                                            {asyncRunAdminJsScript.status === "loading" ? (
-                                                <Spinner />
-                                            ) : (
-                                                <Icon icon="play" className="fs-1 d-inline-block" margin="mb-2" />
-                                            )}
-                                            <div className="kbd">
-                                                <kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd>
-                                            </div>
-                                        </Button>
-                                    </div>
+                                    <RunScriptButton
+                                        type="submit"
+                                        isSpinning={asyncRunAdminJsScript.status === "loading"}
+                                        disabled={!formState.isDirty}
+                                    />
                                     <div>
                                         <h3>Script result</h3>
                                     </div>
