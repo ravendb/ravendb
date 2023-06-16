@@ -387,9 +387,14 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
                 return 0;
+
             Span<long> buffer = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
-            _lookup.GetFor(buffer.Slice(0, 2), buffer.Slice(2), long.MinValue);
-            return buffer[2].CompareTo(buffer[3]);
+            var swap = buffer[0] > buffer[1];
+            if (swap)
+                (buffer[0], buffer[1]) = (buffer[1], buffer[0]);
+            
+            _lookup.GetFor(buffer[..2], buffer[2..], long.MinValue);
+            return buffer[swap ? 3 : 2].CompareTo(buffer[swap ? 2 : 3]);
         }
     }
 
@@ -476,9 +481,12 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 return 0;
 
             Span<long> buffer = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
-            _lookup.GetFor(buffer.Slice(0, 2), buffer.Slice(2), BitConverter.DoubleToInt64Bits(double.MinValue));
-
-            return BitConverter.Int64BitsToDouble(buffer[2]).CompareTo(BitConverter.Int64BitsToDouble(buffer[3]));
+            var swap = buffer[0] > buffer[1];
+            if (swap)
+                (buffer[0], buffer[1]) = (buffer[1], buffer[0]);
+            
+            _lookup.GetFor(buffer[..2], buffer[2..], BitConverter.DoubleToInt64Bits(double.MinValue));
+            return buffer[swap ? 3 : 2].CompareTo(buffer[swap ? 2 : 3]);
         }
     }
 
