@@ -86,29 +86,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         }
     }
 
-    private struct NoIterationOptimization : ITreeIterator
-    {
-        public void Init<T>(T parent)
-        {
-            throw new NotSupportedException();
-        }
-
-        public void Reset()
-        {
-            throw new NotSupportedException();
-        }
-
-        public bool MoveNext(out long value)
-        {
-            throw new NotSupportedException();
-        }
-
-        public int Fill(Span<long> results)
-        {
-            throw new NotSupportedException();
-        }
-    }
-    
     private static int Fill<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> matches)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan> 
         where TComparer2 : struct, IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan> 

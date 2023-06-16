@@ -207,7 +207,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private struct EntryComparerByTerm : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
         private CompactKeyComparer _cmpTerm;
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
         private TermsReader _termsReader;
@@ -341,7 +341,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     private struct EntryComparerByLong : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
 
@@ -429,7 +429,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private struct EntryComparerByDouble : IEntryComparer, IComparer<UnmanagedSpan>
     {
         private int _comparerId;
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -486,7 +486,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     {
         private TermsReader _reader;
         private long _dictionaryId;
-        private Lookup<long> _lookup;
+        private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
 
