@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
-                var totalResults = new Reference<int>();
+                var totalResults = new Reference<long>();
                 var skippedResults = new Reference<long>();
                 var scannedResults = new Reference<int>();
                 IEnumerator<Document> enumerator;

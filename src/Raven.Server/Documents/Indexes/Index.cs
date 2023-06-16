@@ -760,7 +760,9 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(cts.Token);
+
                 _isRunningQueriesWriteLockTaken.Value = true;
             }
             catch (OperationCanceledException)
@@ -1858,8 +1860,8 @@ namespace Raven.Server.Documents.Indexes
                         Size totalSizeOfJournals = Size.Zero;
                         foreach (var journalSize in _environment.Journal.Files.Select(i => i.JournalSize))
                             totalSizeOfJournals += journalSize;
-                        
-                        
+
+
                         if (totalSizeOfJournals >= Configuration.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex)
                             FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
 
@@ -2438,11 +2440,11 @@ namespace Raven.Server.Documents.Indexes
         {
             if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler == null || CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty)
                 return;
-            
-            MismatchedReferencesLoadWarning warning = new (Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
+
+            MismatchedReferencesLoadWarning warning = new(Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
 
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(warning);
-                
+
             CurrentIndexingScope.Current.MismatchedReferencesWarningHandler = null;
         }
 
@@ -2988,7 +2990,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (calculateLastBatchStats)
                         stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
-                    
+
                     stats.LastQueryingTime = _lastQueryingTime;
 
                     if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
@@ -4663,7 +4665,7 @@ namespace Raven.Server.Documents.Indexes
                         break;
                 }
             }
-            
+
             stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations);
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
@@ -5126,7 +5128,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(new CancellationTokenSource(timeout).Token);
+                    using (var cts = new CancellationTokenSource(timeout))
+                        _lock = _parent._currentlyRunningQueriesLock.ReaderLock(cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -5145,7 +5148,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(new CancellationTokenSource(timeout).Token);
+                    using (var cts = new CancellationTokenSource(timeout))
+                        _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
