@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -18,14 +17,14 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.NotificationCenter;
-using Raven.Server.Utils;
-using Xunit;
-using Constants = Raven.Client.Constants;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
+using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Replication
 {
@@ -220,10 +219,12 @@ namespace SlowTests.Server.Replication
         }
 
 
-        [Fact]
-        public async Task Conflict_same_time_with_master_slave()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_same_time_with_master_slave(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -233,9 +234,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -245,6 +247,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -266,9 +269,11 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task DatabaseChangeVectorShouldBeIdentical()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DatabaseChangeVectorShouldBeIdentical(Options options)
         {
+            var modifyRecord = options.ModifyDatabaseRecord;
             using (var store1 = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record =>
@@ -278,6 +283,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options
@@ -289,6 +295,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -311,8 +318,12 @@ namespace SlowTests.Server.Replication
                 conflicts = WaitUntilHasConflict(store1, "foo/bar");
                 Assert.Equal(2, conflicts.Length);
 
-                var db1 = await GetDatabase(store1.Database);
-                var db2 = await GetDatabase(store2.Database);
+                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single ?
+                    store1.Database :
+                    await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar"));
+                var db2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
+                    ? store2.Database
+                    : await Sharding.GetShardDatabaseNameForDocAsync(store2, "foo/bar"));
                 using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx1))
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
                 using (ctx1.OpenReadTransaction())
@@ -325,10 +336,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_insensitive_check()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_insensitive_check(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -338,6 +351,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options
@@ -350,6 +364,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -383,10 +398,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_then_data_query_will_return_409_and_conflict_data()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_then_data_query_will_return_409_and_conflict_data(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -396,9 +413,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -408,6 +426,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -439,10 +458,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_then_delete_query_will_return_409_and_conflict_data()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_then_delete_query_will_return_409_and_conflict_data(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -452,9 +473,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -464,6 +486,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -492,10 +515,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_then_patching_query_will_return_409_and_conflict_data()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_then_patching_query_will_return_409_and_conflict_data(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -505,9 +530,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -517,6 +543,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -549,10 +576,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -562,9 +591,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -574,6 +604,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -601,10 +632,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_then_patch_request_will_return_409_and_conflict_data()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_then_patch_request_will_return_409_and_conflict_data(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
                 ModifyDatabaseRecord = record =>
@@ -614,9 +647,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
                 ModifyDatabaseRecord = record =>
@@ -626,6 +660,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -660,13 +695,15 @@ namespace SlowTests.Server.Replication
             Assert.Equal("foo/bar", e.DocId);
         }
 
-        [Fact]
-        public async Task Conflict_should_work_on_master_slave_slave()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_should_work_on_master_slave_slave(Options options)
         {
+            var modifyRecord = options.ModifyDatabaseRecord;
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}",
                 ModifyDatabaseRecord = record =>
@@ -676,9 +713,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}",
                 ModifyDatabaseRecord = record =>
@@ -688,9 +726,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store3 = GetDocumentStore(new Options
+            using (var store3 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName3}",
                 ModifyDatabaseRecord = record =>
@@ -700,6 +739,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -721,17 +761,19 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(store1, store3);
                 await SetupReplicationAsync(store2, store3);
-                WaitForUserToContinueTheTest(store1);
+
                 Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Length);
             }
         }
 
-        [Fact]
-        public async Task Conflict_should_be_created_for_document_in_different_collections()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_should_be_created_for_document_in_different_collections(Options options)
         {
+            var modifyRecord = options.ModifyDatabaseRecord;
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}",
                 ModifyDatabaseRecord = record =>
@@ -741,9 +783,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}",
                 ModifyDatabaseRecord = record =>
@@ -753,6 +796,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -832,12 +876,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution(Options options)
         {
+            var modifyRecord = options.ModifyDatabaseRecord;
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}",
                 ModifyDatabaseRecord = record =>
@@ -847,9 +893,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}",
                 ModifyDatabaseRecord = record =>
@@ -859,6 +906,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -897,12 +945,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection(Options options)
         {
+            var modifyRecord = options.ModifyDatabaseRecord;
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}",
                 ModifyDatabaseRecord = record =>
@@ -912,9 +962,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}",
                 ModifyDatabaseRecord = record =>
@@ -924,6 +975,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
             {
@@ -1025,10 +1077,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ConflictOnEmptyCollection()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConflictOnEmptyCollection(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(options: new Options(options)
             {
                 ModifyDatabaseRecord = record =>
                 {
@@ -1037,11 +1091,11 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                },
+                    modifyRecord(record);
+                }
             }))
-            using (var store2 = GetDocumentStore())
+            using (var store2 = GetDocumentStore(options))
             {
-
                 using (var session = store1.OpenSession())
                 {
                     var user = new User
@@ -1066,16 +1120,19 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store2, store1);
-                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "test");
+                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage.ConflictsStorage;
 
                 Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
             }
         }
 
-        [Fact]
-        public async Task ExistingConflictShouldNotReflectOnOtherDocuments()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExistingConflictShouldNotReflectOnOtherDocuments(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(options: new Options(options)
             {
                 ModifyDatabaseRecord = record =>
                 {
@@ -1084,11 +1141,11 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                },
+                    modifyRecord(record);
+                }
             }))
-            using (var store2 = GetDocumentStore())
+            using (var store2 = GetDocumentStore(options))
             {
-
                 using (var session = store1.OpenSession())
                 {
                     var user = new User
@@ -1109,9 +1166,9 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store2, store1);
-                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage.ConflictsStorage;
                 Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
-
 
                 using (var session = store1.OpenSession())
                 {
@@ -1128,13 +1185,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task BackgroundResolveToLatestInCluster()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BackgroundResolveToLatestInCluster(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var leader = cluster.Leader;
-
-            using (var store1 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 Server = leader,
                 ReplicationFactor = 3,
@@ -1145,9 +1203,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 Server = leader,
                 ReplicationFactor = 1
@@ -1184,11 +1243,10 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
-        [Fact]
-        public async Task BackgroundResolutionIsTheSameAsOnTheFly()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BackgroundResolutionIsTheSameAsOnTheFly(Options options)
         {
-
             //          no resolution      auto resolution  
             //  s1    ->      s2      ->      s3
 
@@ -1200,8 +1258,9 @@ namespace SlowTests.Server.Replication
 
             // replicate between s2 and s3
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore(new Options
+            var modifyRecord = options.ModifyDatabaseRecord;
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseRecord = record =>
                 {
@@ -1210,9 +1269,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyRecord(record);
                 }
             }))
-            using (var store3 = GetDocumentStore())
+            using (var store3 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store2, store3);
 
@@ -1225,7 +1285,6 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Karmel"));
-
 
                 await SetupReplicationAsync(store1, store2);
                 using (var session = store1.OpenAsyncSession())
@@ -1265,17 +1324,18 @@ namespace SlowTests.Server.Replication
         }
 
 
-        [Fact]
-        public async Task ResolveToLatestInClusterOnTheFly()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolveToLatestInClusterOnTheFly(Options options)
         {
             var (_, leader1) = await CreateRaftCluster(3);
 
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 Server = leader1,
                 ReplicationFactor = 3
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 Server = leader1,
                 ReplicationFactor = 1
@@ -1308,11 +1368,10 @@ namespace SlowTests.Server.Replication
                     var reivisions = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
                     Assert.Equal(3, reivisions.Count);
                 }
-
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
         public async Task DistributedDatabaseWithRevision_WhenReAadNodeToGroup_ShouldNotHaveConflicts()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -1411,11 +1470,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ResolveToLatestInClusterWithCounter()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolveToLatestInClusterWithCounter(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store2, store1);
 
@@ -1438,7 +1498,8 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
 
-                var database = await GetDatabase(store1.Database);
+                var databaseName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1446,8 +1507,6 @@ namespace SlowTests.Server.Replication
                     var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                     Assert.Equal(3, count);
                 }
-
-                WaitForUserToContinueTheTest(store1);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -1464,11 +1523,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ResolveToLatestInClusterWithAttachment()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolveToLatestInClusterWithAttachment(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store2, store1);
 
@@ -1491,7 +1551,8 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
 
-                var database = await GetDatabase(store1.Database);
+                var databaseName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1499,8 +1560,6 @@ namespace SlowTests.Server.Replication
                     var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                     Assert.Equal(3, count);
                 }
-
-                WaitForUserToContinueTheTest(store1);
 
                 using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
@@ -1516,11 +1575,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ModifyResolvedDocumentShouldKeepTheRevisions()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ModifyResolvedDocumentShouldKeepTheRevisions(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store2, store1);
 
