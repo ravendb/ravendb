@@ -7,7 +7,6 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
@@ -28,11 +27,13 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task ScriptResolveToTombstone()
+
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ScriptResolveToTombstone(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
 
                 await SetScriptResolutionAsync(slave, "return resolveToTombstone;", "Users");
@@ -64,15 +65,15 @@ namespace SlowTests.Server.Replication
                     VerifyRevisionsAfterConflictResolving(session);
                     session.SaveChanges();
                 }
-                
             }
         }
 
-        [Fact]
-        public async Task ScriptComplexResolution()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ScriptComplexResolution(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
 
                 await SetScriptResolutionAsync(slave, @"
@@ -138,11 +139,12 @@ return out;
             }
         }
 
-        [Fact]
-        public async Task ScriptUnableToResolve()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ScriptUnableToResolve(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(master, slave);
                 await SetScriptResolutionAsync(slave, @"return;", "Users");
@@ -184,7 +186,7 @@ return out;
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Load<User>("users/1");
-                    if (ChangeVectorUtils.GetConflictStatus(session.Advanced.GetChangeVectorFor(doc),changeVector) == ConflictStatus.Update)
+                    if (ChangeVectorUtils.GetConflictStatus(session.Advanced.GetChangeVectorFor(doc), changeVector) == ConflictStatus.Update)
                         return true;
                 }
                 Thread.Sleep(10);
@@ -214,11 +216,12 @@ return out;
             return false;
         }
 
-        [Fact]
-        public async Task Should_resolve_conflict_with_scripts()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_resolve_conflict_with_scripts(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
 
                 await SetScriptResolutionAsync(slave, "return {Name:docs[0].Name + '123'};", "Users");
@@ -263,18 +266,18 @@ return out;
             }
         }
 
-        [Fact]
-        public async Task ShouldResolveDocumentConflictInFavorOfLatestVersion()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldResolveDocumentConflictInFavorOfLatestVersion(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
-                
                     session.Store(new User
                     {
                         Name = "1st"
@@ -340,11 +343,12 @@ return out;
         }
 
         //resolve conflict between incoming document and tombstone
-        [Fact]
-        public async Task Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 using (var session = master.OpenSession())
                 {
@@ -398,13 +402,15 @@ return out;
                 }
             }
         }
-        [Fact]
-        public async Task ResolveConflictToTombstone()
+
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolveConflictToTombstone(Options options)
         {
-            using (var first = GetDocumentStore())
-            using (var second = GetDocumentStore())
-            using (var third = GetDocumentStore())
-            using (var fourth = GetDocumentStore())
+            using (var first = GetDocumentStore(options))
+            using (var second = GetDocumentStore(options))
+            using (var third = GetDocumentStore(options))
+            using (var fourth = GetDocumentStore(options))
             {
                 using (var session = first.OpenSession())
                 {
@@ -441,7 +447,7 @@ return out;
 
                     session.SaveChanges();
                 }
-               
+
                 await SetupReplicationAsync(first, second);
                 await SetupReplicationAsync(second, third);
                 await SetupReplicationAsync(third, fourth);
@@ -468,10 +474,10 @@ return out;
                 Assert.True(WaitForDocument(first, "marker2"));
 
 
-                await EnsureNoReplicationLoop(Server, first.Database);
-                await EnsureNoReplicationLoop(Server, second.Database);
-                await EnsureNoReplicationLoop(Server, third.Database);
-                await EnsureNoReplicationLoop(Server, fourth.Database);
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? first.Database : await Sharding.GetShardDatabaseNameForDocAsync(first, "users/1"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? second.Database : await Sharding.GetShardDatabaseNameForDocAsync(second, "users/1"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? third.Database : await Sharding.GetShardDatabaseNameForDocAsync(third, "users/1"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? fourth.Database : await Sharding.GetShardDatabaseNameForDocAsync(fourth, "users/1"));
             }
         }
 
