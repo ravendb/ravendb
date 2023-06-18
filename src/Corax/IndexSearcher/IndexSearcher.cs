@@ -104,8 +104,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
         var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
-        int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
-        return data.ToUnmanagedSpan().Slice(size + len);
+        return data.ToUnmanagedSpan();
     }
 
     public IndexEntryReader GetEntryReaderFor(long id)
