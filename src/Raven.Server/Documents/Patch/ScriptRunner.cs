@@ -2065,7 +2065,12 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (val.IsNull())
                         return null;
-                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode, isNested);
+                    
+                    var instance = val.AsObject();
+                    if (instance is BlittableObjectInstance boi && boi.TryGetOriginalDocumentIfUnchanged(out var doc))
+                        return doc;
+                    
+                    return JsBlittableBridge.Translate(context, ScriptEngine, instance, modifier, usageMode, isNested);
                 }
                 if (val.IsNumber())
                     return val.AsNumber();
