@@ -2517,7 +2517,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, _parameterName, out var innerExpression) == false)
+                if (CanConvert(context.Node, _conventions, _parameterName, out var innerExpression, out var innerMember) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2531,17 +2531,26 @@ namespace Raven.Client.Util
                         context.Visitor.Visit(innerExpression);
                     }
 
+                    if (_conventions.PropertyNameConverter != null)
+                    {
+                        writer.Write(",'");
+                        writer.Write(_conventions.PropertyNameConverter(innerMember));
+                        writer.Write("'");
+                    }
+
                     writer.Write(")");
                 }
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, out Expression innerExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, out Expression innerExpression, out MemberInfo usedMember)
             {
                 innerExpression = null;
+                usedMember = null;
 
                 if (expression is not MemberExpression member ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
+                usedMember = member.Member;
 
                 if (member.Expression is ParameterExpression parameter)
                 {
@@ -2553,7 +2562,6 @@ namespace Raven.Client.Util
                     return false;
 
                 innerExpression = innerMember;
-
                 var p = GetParameter(innerMember)?.Name;
                 return p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName);
             }

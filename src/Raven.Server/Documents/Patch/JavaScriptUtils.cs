@@ -333,8 +333,8 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue GetDocumentId(JsValue self, JsValue[] args)
         {
-            if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
-                throw new InvalidOperationException("id(doc) must be called with a single argument");
+            if (args.Length < 1) 
+                throw new InvalidOperationException("id(doc) must be called with a single argument or id(doc,'id-prop-name')");
 
             if (args[0].IsNull() || args[0].IsUndefined())
                 return args[0];
@@ -351,14 +351,17 @@ namespace Raven.Server.Documents.Patch
             // search either @metadata.@id or @id
             var metadata = jsValue.IsObject() == false || jsValue is BlittableObjectInstance blittableJsValue && blittableJsValue.Blittable.Count == 0 ? objectInstance : jsValue.AsObject();
             var value = metadata.Get(Constants.Documents.Metadata.Id);
-            if (value.IsString() == false)
-            {
-                // search either @metadata.Id or Id
-                value = metadata.Get(Constants.Documents.Metadata.IdProperty);
-                if (value.IsString() == false)
-                    return JsValue.Null;
-            }
-            return value;
+            if (value.IsString()) 
+                return value;
+            // search either @metadata.Id or Id
+            value = metadata.Get(Constants.Documents.Metadata.IdProperty);
+            if (value.IsString()) 
+                return value;
+            if (args.Length == 1 || args[1].IsString() == false) 
+                return JsValue.Null;
+            
+            value = metadata.Get(args[1].AsString());
+            return value.IsString() ? value : JsValue.Null;
         }
 
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o, bool needsClone = true)
