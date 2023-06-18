@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
@@ -18,10 +17,12 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task CanAutomaticlyResolveConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAutomaticlyResolveConflict(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            using (var master = GetDocumentStore(options: new Options(options)
             {
                 ModifyDatabaseRecord = record =>
                 {
@@ -30,9 +31,10 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyDatabaseRecord(record);
                 }
             }))
-            using (var slave = GetDocumentStore(options: new Options
+            using (var slave = GetDocumentStore(options: new Options(options)
             {
                 ModifyDatabaseRecord = record =>
                 {
@@ -41,6 +43,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
+                    modifyDatabaseRecord(record);
                 }
             }))
             {
