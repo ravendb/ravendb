@@ -366,7 +366,6 @@ public partial class RavenTestBase
             }
         }
 
-
         public IDisposable ReadOnly(string path)
         {
             var allFiles = new List<string>();
