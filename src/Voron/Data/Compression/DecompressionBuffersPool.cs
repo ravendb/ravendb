@@ -25,12 +25,12 @@ namespace Voron.Data.Compression
         private ConcurrentQueue<DecompressionBuffer>[] _pool;
         private long _decompressionPagerCounter;
         private long _lastUsedPage;
-        private AbstractPager _compressionPager;
+        private PagerInfo _compressionPager;
         private bool _initialized;
 
         private long _currentlyUsedBytes;
 
-        private ImmutableAppendOnlyList<AbstractPager> _oldPagers;
+        private ImmutableAppendOnlyList<PagerInfo> _oldPagers;
         private readonly long _maxNumberOfPagesInScratchBufferPool;
 
         internal int NumberOfScratchFiles => 1 + _oldPagers.Count;
@@ -50,18 +50,18 @@ namespace Voron.Data.Compression
 
                 if (_compressionPager != null)
                 {
-                    _compressionPager.Dispose();
+                    _compressionPager._pager.Dispose();
 
-                    _scratchSpaceMonitor.Decrease(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    _scratchSpaceMonitor.Decrease(_compressionPager._pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                 }
 
                 foreach (var pager in _oldPagers)
                 {
-                    if (pager.Disposed == false)
+                    if (pager._pager.Disposed == false)
                     {
-                        pager.Dispose();
+                        pager._pager.Dispose();
 
-                        _scratchSpaceMonitor.Decrease(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                        _scratchSpaceMonitor.Decrease(pager._pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     }
                 }
             });
@@ -126,18 +126,13 @@ namespace Voron.Data.Compression
 
             while (queue.TryDequeue(out buffer))
             {
-                if (buffer.CanReuse == false)
+                if (buffer._pagerInfo.TryIncreaseNumberOfUsages() == false)
                     continue;
-
                 try
                 {
                     buffer.EnsureValidPointer(tx);
                     tmp = buffer.TempPage;
                     break;
-                }
-                catch (ObjectDisposedException)
-                {
-                    // we could dispose the pager during the cleanup
                 }
                 catch (Exception)
                 {
@@ -156,12 +151,12 @@ namespace Voron.Data.Compression
 
                     try
                     {
-                        var numberOfPagesBeforeAllocate = _compressionPager.NumberOfAllocatedPages;
+                        var numberOfPagesBeforeAllocate = _compressionPager._pager.NumberOfAllocatedPages;
 
-                        _compressionPager.EnsureContinuous(_lastUsedPage, allocationInPages);
+                        _compressionPager._pager.EnsureContinuous(_lastUsedPage, allocationInPages);
 
-                        if (_compressionPager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
-                            _scratchSpaceMonitor.Increase((_compressionPager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
+                        if (_compressionPager._pager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
+                            _scratchSpaceMonitor.Increase((_compressionPager._pager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
                     }
                     catch (InsufficientMemoryException)
                     {
@@ -172,13 +167,13 @@ namespace Voron.Data.Compression
                     }
 
                     buffer = new DecompressionBuffer(_compressionPager, _lastUsedPage, pageSize, this, index, tx);
-
+                    _compressionPager.TryIncreaseNumberOfUsages();
                     _lastUsedPage += allocationInPages;
 
                     void CreateNewBuffersPager(long size)
                     {
                         _oldPagers = _oldPagers.Append(_compressionPager);
-                        _compressionPager = CreateDecompressionPager(size);
+                        _compressionPager = new PagerInfo(CreateDecompressionPager(size));
                         _lastUsedPage = 0;
                     }
                 }
@@ -214,8 +209,8 @@ namespace Voron.Data.Compression
                     return;
 
                 _pool = new[] { new ConcurrentQueue<DecompressionBuffer>() };
-                _compressionPager = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize);
-                _oldPagers = ImmutableAppendOnlyList<AbstractPager>.Empty;
+                _compressionPager = new PagerInfo(CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize));
+                _oldPagers = ImmutableAppendOnlyList<PagerInfo>.Empty;
                 _initialized = true;
             }
         }
@@ -243,17 +238,19 @@ namespace Voron.Data.Compression
             _disposeOnceRunner.Dispose();
         }
 
-        public void Cleanup()
+        public int Cleanup()
         {
+            var disposedCount = 0;
+
             if (_initialized == false)
-                return;
+                return disposedCount;
 
             if (_oldPagers.Count == 0)
-                return;
+                return disposedCount;
 
             var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / Constants.Storage.PageSize;
 
-            var availablePages = _compressionPager.NumberOfAllocatedPages;
+            var availablePages = _compressionPager._pager.NumberOfAllocatedPages;
 
             var pagers = _oldPagers;
 
@@ -261,40 +258,43 @@ namespace Voron.Data.Compression
             {
                 var old = pagers[i];
 
+                if ( old.TryDispose() == false )
+                    continue;
                 if (availablePages >= necessaryPages)
                 {
-                    old.Dispose();
-                    _scratchSpaceMonitor.Decrease(old.NumberOfAllocatedPages * Constants.Storage.PageSize);
-
+                    old._pager.Dispose();
+                    _scratchSpaceMonitor.Decrease(old._pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    disposedCount++;
                     continue;
                 }
 
                 // PERF: We dont care about the pager data content anymore. So we can discard the whole context to
                 //       clean up the modified bit.
-                old.DiscardWholeFile();
-                availablePages += old.NumberOfAllocatedPages;
+                old._pager.DiscardWholeFile();
+                availablePages += old._pager.NumberOfAllocatedPages;
             }
 
-            _oldPagers = _oldPagers.RemoveWhile(x => x.Disposed);
+            _oldPagers = _oldPagers.RemoveWhile(x => x._pager.Disposed);
+            return disposedCount;
         }
 
         private class DecompressionBuffer : IDisposable
         {
-            private readonly AbstractPager _pager;
+            internal readonly PagerInfo _pagerInfo;
             private readonly long _position;
             private readonly int _size;
             private readonly DecompressionBuffersPool _pool;
             private readonly int _index;
 
-            public DecompressionBuffer(AbstractPager pager, long position, int size, DecompressionBuffersPool pool, int index, LowLevelTransaction tx)
+            public DecompressionBuffer(PagerInfo pagerInfo, long position, int size, DecompressionBuffersPool pool, int index, LowLevelTransaction tx)
             {
-                _pager = pager;
+                _pagerInfo = pagerInfo;
                 _position = position;
                 _size = size;
                 _pool = pool;
                 _index = index;
-                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                var ptr = _pager.AcquirePagePointer(tx, position);
+                _pagerInfo._pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
+                var ptr = _pagerInfo._pager.AcquirePagePointer(tx, position);
 
                 TempPage = new TemporaryPage(ptr, size) { ReturnTemporaryPageToPool = this };
             }
@@ -303,23 +303,54 @@ namespace Voron.Data.Compression
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
-                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                var p = _pager.AcquirePagePointer(tx, _position);
+                _pagerInfo._pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
+                var p = _pagerInfo._pager.AcquirePagePointer(tx, _position);
 
                 TempPage.SetPointer(p);
             }
 
-            public bool CanReuse => _pager.Disposed == false;
-
             public void Dispose()
             {
-                if (_pager.Options.Encryption.IsEnabled)
+                if (_pagerInfo._pager.Options.Encryption.IsEnabled)
                     Sodium.sodium_memzero(TempPage.TempPagePointer, (UIntPtr)TempPage.PageSize);
 
                 // return it to the pool
                 _pool._pool[_index].Enqueue(this);
 
                 Interlocked.Add(ref _pool._currentlyUsedBytes, -_size);
+                _pagerInfo.DecreaseNumberOfUsages();
+            }
+        }
+
+        private class PagerInfo
+        {
+            internal readonly AbstractPager _pager;
+            private long _numberOfUsages;
+
+            public PagerInfo(AbstractPager pager)
+            {
+                _pager = pager;
+            }
+
+            public bool TryIncreaseNumberOfUsages()
+            {
+                return Interlocked.Increment(ref _numberOfUsages) > 0;
+            }
+
+            public void DecreaseNumberOfUsages()
+            {
+                Interlocked.Decrement(ref _numberOfUsages);
+            }
+
+            public bool TryDispose()
+            {
+                if (Interlocked.Read(ref _numberOfUsages) > 0)
+                    return false;
+
+                if (Interlocked.CompareExchange(ref _numberOfUsages, -(1000 * 1000), 0) != 0)
+                    return false;
+
+                return true;
             }
         }
     }
