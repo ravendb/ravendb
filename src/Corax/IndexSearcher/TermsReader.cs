@@ -69,12 +69,17 @@ public unsafe struct TermsReader : IDisposable
         }
 
         var item = Container.Get(_llt, termContainerId);
+        Set(_xKeyScope.Key, item, _dictionaryId);
+        term = _xKeyScope.Key.ToString();
+        return true;
+    }
+
+    public static void Set(CompactKey key, in Container.Item item, long dictionaryId)
+    {
         int remainderBits = item.Address[0] >> 4;
         int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
 
-        _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], _dictionaryId);
-        term = _xKeyScope.Key.ToString();
-        return true;
+        key.Set(encodedKeyLengthInBits, item.Address + 1, dictionaryId);
     }
     
     public void GetDecodedTerms(long dictionaryId, UnmanagedSpan x, out ReadOnlySpan<byte> xTerm, UnmanagedSpan y, out ReadOnlySpan<byte> yTerm)
