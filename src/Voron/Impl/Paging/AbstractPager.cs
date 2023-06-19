@@ -351,10 +351,10 @@ namespace Voron.Impl.Paging
         {
             return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
-
+        
         public virtual T AcquirePagePointerHeaderForDebug<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null) where T : unmanaged
         {
-            var pointer = AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            var pointer = AcquirePagePointer(tx, pageNumber, pagerState);
             return *(T*)pointer;
         }
 

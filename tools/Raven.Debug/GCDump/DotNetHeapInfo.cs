@@ -1,12 +1,14 @@
-﻿using FastSerialization;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Generic;
-using Address = System.UInt64;
+using FastSerialization;
 
 public class DotNetHeapInfo : IFastSerializable
 {
     /// <summary>
-    /// If we could not properly walk an object, this is incremented. 
-    /// Hopefully this is zero.  
+    /// If we could not properly walk an object, this is incremented.
+    /// Hopefully this is zero.
     /// </summary>
     public int CorruptedObject { get; internal set; }
     /// <summary>
@@ -15,7 +17,7 @@ public class DotNetHeapInfo : IFastSerializable
     public long UndumpedSegementRegion { get; internal set; }
 
     /// <summary>
-    /// This is the sum of all space in the GC segments.    
+    /// This is the sum of all space in the GC segments.
     /// </summary>
     public long SizeOfAllSegments { get; internal set; }
     /// <summary>
@@ -24,11 +26,11 @@ public class DotNetHeapInfo : IFastSerializable
     public List<GCHeapDumpSegment> Segments { get; internal set; }
     /// <summary>
     /// Given an object, determine what GC generation it is in.  Gen 3 is the large object heap
-    /// returns -1 if the object is not in any GC segment. 
+    /// returns -1 if the object is not in any GC segment.
     /// </summary>
-    public int GenerationFor(Address obj)
+    public int GenerationFor(ulong obj)
     {
-        // Find the segment 
+        // Find the segment
         if ((m_lastSegment == null) || !(m_lastSegment.Start <= obj && obj < m_lastSegment.End))
         {
             if (Segments == null)
@@ -43,13 +45,18 @@ public class DotNetHeapInfo : IFastSerializable
                     return -1;
                 }
 
-                var segment = Segments[i];
+                GCHeapDumpSegment segment = Segments[i];
                 if (segment.Start <= obj && obj < segment.End)
                 {
                     m_lastSegment = segment;
                     break;
                 }
             }
+        }
+
+        if (obj < m_lastSegment.Gen4End)
+        {
+            return 4;
         }
 
         if (obj < m_lastSegment.Gen3End)
@@ -82,7 +89,7 @@ public class DotNetHeapInfo : IFastSerializable
         if (Segments != null)
         {
             serializer.Write(Segments.Count);
-            foreach (var segment in Segments)
+            foreach (GCHeapDumpSegment segment in Segments)
             {
                 serializer.Write(segment);
             }
@@ -95,7 +102,7 @@ public class DotNetHeapInfo : IFastSerializable
     void IFastSerializable.FromStream(Deserializer deserializer)
     {
         SizeOfAllSegments = deserializer.ReadInt64();
-        var count = deserializer.ReadInt();
+        int count = deserializer.ReadInt();
         Segments = new List<GCHeapDumpSegment>(count);
         for (int i = 0; i < count; i++)
         {
@@ -107,14 +114,21 @@ public class DotNetHeapInfo : IFastSerializable
     #endregion
 }
 
-public class GCHeapDumpSegment : IFastSerializable
+public class GCHeapDumpSegment : IFastSerializable, IFastSerializableVersion
 {
-    public Address Start { get; internal set; }
-    public Address End { get; internal set; }
-    public Address Gen0End { get; internal set; }
-    public Address Gen1End { get; internal set; }
-    public Address Gen2End { get; internal set; }
-    public Address Gen3End { get; internal set; }
+    public ulong Start { get; internal set; }
+    public ulong End { get; internal set; }
+    public ulong Gen0End { get; internal set; }
+    public ulong Gen1End { get; internal set; }
+    public ulong Gen2End { get; internal set; }
+    public ulong Gen3End { get; internal set; }
+    public ulong Gen4End { get; internal set; }
+
+    public int Version => 1;
+
+    public int MinimumVersionCanRead => 0;
+
+    public int MinimumReaderVersion => 1;
 
     #region private
     void IFastSerializable.ToStream(Serializer serializer)
@@ -125,16 +139,21 @@ public class GCHeapDumpSegment : IFastSerializable
         serializer.Write((long)Gen1End);
         serializer.Write((long)Gen2End);
         serializer.Write((long)Gen3End);
+        serializer.Write((long)Gen4End);
     }
 
     void IFastSerializable.FromStream(Deserializer deserializer)
     {
-        Start = (Address)deserializer.ReadInt64();
-        End = (Address)deserializer.ReadInt64();
-        Gen0End = (Address)deserializer.ReadInt64();
-        Gen1End = (Address)deserializer.ReadInt64();
-        Gen2End = (Address)deserializer.ReadInt64();
-        Gen3End = (Address)deserializer.ReadInt64();
+        Start = (ulong)deserializer.ReadInt64();
+        End = (ulong)deserializer.ReadInt64();
+        Gen0End = (ulong)deserializer.ReadInt64();
+        Gen1End = (ulong)deserializer.ReadInt64();
+        Gen2End = (ulong)deserializer.ReadInt64();
+        Gen3End = (ulong)deserializer.ReadInt64();
+        if (deserializer.VersionBeingRead >= 1)
+        {
+            Gen4End = (ulong)deserializer.ReadInt64();
+        }
     }
     #endregion
 }
