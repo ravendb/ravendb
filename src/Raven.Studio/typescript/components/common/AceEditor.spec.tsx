@@ -5,7 +5,7 @@ import { composeStories } from "@storybook/react";
 
 const { JavascriptEditor } = composeStories(stories);
 
-describe("AdminJsConsole", function () {
+describe("AceEditor", function () {
     it("can render", async () => {
         const { screen } = rtlRender(<JavascriptEditor />);
 
