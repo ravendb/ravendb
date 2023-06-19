@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents;
@@ -28,32 +27,23 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicateAConflictThenResolveIt(Options options)
         {
-            options.ModifyDatabaseRecord = record =>
-            {
-                record.ConflictSolverConfig = new ConflictSolver
-                {
-                    ResolveToLatest = false,
-                    ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                };
-            };
-
+            options = GetOptionsInternal(options);
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.Store(new User { Name = "Oren" }, "foo/bar");
                     session.SaveChanges();
                 }
 
@@ -68,7 +58,7 @@ namespace SlowTests.Server.Replication
                 // adding new document, resolve the conflict
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new User {Name = "Resolved"}, "foo/bar");
+                    session.Store(new User { Name = "Resolved" }, "foo/bar");
                     session.SaveChanges();
                 }
 
@@ -76,7 +66,7 @@ namespace SlowTests.Server.Replication
 
                 var resolvedConflicts = (await store1.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
                 Assert.Equal(1, resolvedConflicts.Count);
-                
+
                 var resolvedConflicts2 = (await store2.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
                 Assert.Equal(1, resolvedConflicts2.Count);
 
@@ -84,7 +74,7 @@ namespace SlowTests.Server.Replication
                 Assert.Empty(store2.Commands().GetConflictsFor("foo/bar"));
             }
         }
-        
+
         public class GetResolvedRevisionsOperation : IMaintenanceOperation<ResolvedRevisions>
         {
             private readonly DateTime? _since;
@@ -102,31 +92,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task CanManuallyResolveConflict_with_tombstone()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanManuallyResolveConflict_with_tombstone(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
                 await SetupReplicationAsync(master, slave);
 
@@ -182,53 +154,24 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ReplicateAConflictOnThreeDBsAndResolve()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicateAConflictOnThreeDBsAndResolve(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
+            options = GetOptionsInternal(options);
+            using (var store1 = GetDocumentStore(options: options))
+            using (var store2 = GetDocumentStore(options: options))
+            using (var store3 = GetDocumentStore(options: options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store3 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.Store(new User { Name = "Oren" }, "foo/bar");
                     session.SaveChanges();
                 }
 
@@ -243,7 +186,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new User {Name = "Resolved"}, "foo/bar");
+                    session.Store(new User { Name = "Resolved" }, "foo/bar");
                     session.SaveChanges();
                 }
 
@@ -252,37 +195,19 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ReplicateTombstoneConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicateTombstoneConflict(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var store1 = GetDocumentStore(options: options))
+            using (var store2 = GetDocumentStore(options: options))
             {
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
                 Assert.True(WaitForDocument(store2, "foo/bar"));
@@ -296,7 +221,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.Store(new User { Name = "Oren" }, "foo/bar");
                     session.SaveChanges();
                 }
 
@@ -308,50 +233,33 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ResolveHiLoConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolveHiLoConflict(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var store1 = GetDocumentStore(options: options))
+            using (var store2 = GetDocumentStore(options: options))
             {
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"});
+                    session.Store(new User { Name = "Karmel" });
                     session.SaveChanges();
                 }
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new User {Name = "Oren"});
+                    session.Store(new User { Name = "Oren" });
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "users/1-A").Length);
-           
-                Assert.Equal(2,WaitUntilHasConflict(store2, "users/1-A").Length);
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "users/1-A").Length);
+
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1-A");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     long etag;
@@ -368,86 +276,27 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task TombstoneAndDocumentConflictFromDifferentCollections()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TombstoneAndDocumentConflictFromDifferentCollections(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            using (var store3 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
+            using (var store3 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new Company() {Name = "Karmel"}, "foo/bar");
+                    session.Store(new Company() { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
                 using (var session = store1.OpenSession())
-                {
-                    session.Delete("foo/bar");
-                    session.SaveChanges();
-                }
-               
-                await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
-
-                using (var session = store2.OpenSession())
-                {
-                    session.Delete("foo/bar");
-                    session.SaveChanges();
-                }
-
-                await SetupReplicationAsync(store2, store1);
-
-                await SetupReplicationAsync(store1, store3);
-                await SetupReplicationAsync(store2, store3);
-
-                await SetupReplicationAsync(store3, store1);
-                await SetupReplicationAsync(store3, store2);
-
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store2, store3);
-                await EnsureReplicatingAsync(store3, store1);
-            }
-        }
-
-        [Fact]
-        public async Task RemoveDeleteRevisionFromDifferentCollection()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            using (var store3 = GetDocumentStore())
-            {
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
-                    session.SaveChanges();
-                }
-
-                using (var session = store2.OpenSession())
-                {
-                    session.Store(new Company() {Name = "Karmel"}, "foo/bar");
-                    session.SaveChanges();
-                }
-
-                using (var session = store1.OpenSession())
-                {
-                    session.Delete("foo/bar");
-                    session.SaveChanges();
-                }
-               
-                using (var session = store3.OpenSession())
-                {
-                    session.Store(new Address {Street = "Karmel"}, "foo/bar");
-                    session.SaveChanges();
-                }
-
-                using (var session = store3.OpenSession())
                 {
                     session.Delete("foo/bar");
                     session.SaveChanges();
@@ -473,10 +322,70 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
+            }
+        }
 
-                WaitForUserToContinueTheTest(store1);
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveDeleteRevisionFromDifferentCollection(Options options)
+        {
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
+            using (var store3 = GetDocumentStore(options))
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
 
-                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new Company() { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store3.OpenSession())
+                {
+                    session.Store(new Address { Street = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store3.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store2, store1);
+
+                await SetupReplicationAsync(store1, store3);
+                await SetupReplicationAsync(store2, store3);
+
+                await SetupReplicationAsync(store3, store1);
+                await SetupReplicationAsync(store3, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store3);
+                await EnsureReplicatingAsync(store3, store1);
+
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
                 var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
                 await db1.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token);
 
@@ -484,6 +393,22 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
             }
+        }
+
+        private Options GetOptionsInternal(Options options)
+        {
+            return new Options(options)
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                    options.ModifyDatabaseRecord(record);
+                }
+            };
         }
     }
 }
