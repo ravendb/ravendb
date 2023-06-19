@@ -369,10 +369,12 @@ namespace Raven.Server.Commercial
                 CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest())
             }, token);
 
+            var finalizeLocation = response.Location;
+
             while (true)
             {
                 // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, response.Location, string.Empty, token);
+                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, finalizeLocation, string.Empty, token);
 
                 if (response.Status == "valid")
                 {
