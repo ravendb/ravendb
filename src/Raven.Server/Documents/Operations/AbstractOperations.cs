@@ -147,6 +147,9 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
 
     public async ValueTask KillOperationAsync(long id, CancellationToken token)
     {
+        if (Completed.ContainsKey(id))
+            return;
+
         if (Active.TryGetValue(id, out AbstractOperation operation) == false)
             throw new ArgumentException($"Operation {id} was not registered");
 

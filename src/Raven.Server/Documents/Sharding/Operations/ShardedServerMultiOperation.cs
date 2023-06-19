@@ -50,11 +50,5 @@ public class ShardedServerMultiOperation : AbstractShardedMultiOperation
 
             await Task.WhenAll(tasks);
         }
-
-        var serverOperation = ShardedDatabaseContext.ServerStore.Operations.GetOperation(Id);
-        if (serverOperation == null)
-            return;
-
-        await serverOperation.KillAsync(waitForCompletion: true, token);
     }
 }

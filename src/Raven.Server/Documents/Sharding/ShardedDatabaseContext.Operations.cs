@@ -127,6 +127,7 @@ public partial class ShardedDatabaseContext
             {
                 if (token != null)
                     await multiOperation.KillAsync(t);
+                throw;
             }
 
             return await multiOperation.WaitForCompletionAsync<TOrchestratorResult>(t);
