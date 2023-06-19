@@ -119,7 +119,7 @@ namespace Raven.Server.Rachis
                 {
                     _leader._newEntry.Set();
                 }
-                catch (ObjectDisposedException ex)
+                catch (ObjectDisposedException)
                 {
                     // _newEntry is disposed because _leader is already disposed
                 }
