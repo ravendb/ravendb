@@ -18,14 +18,12 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
@@ -402,8 +400,8 @@ namespace Corax
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
         private readonly HashSet<long> _deletedEntries = new();
 
-        private readonly long _postingListContainerId, _entriesContainerId;
-        private readonly Lookup<Int64LookupKey> _entryIdToOffset;
+        private readonly long _postingListContainerId, _entriesContainerId, _entriesTermsContainerId;
+        private readonly Lookup<Int64LookupKey> _entryIdToOffset, _entryIdToLocation;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
 
@@ -445,7 +443,9 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            _entriesTermsContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToOffset = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
+            _entryIdToLocation = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
@@ -468,8 +468,10 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            _entriesTermsContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToOffset = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
-
+            _entryIdToLocation = Transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+            
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
             _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
@@ -881,6 +883,7 @@ namespace Corax
         private readonly IndexOperationsDumper _indexDebugDumper;
         private long _lastEntryId;
         private FastPForEncoder _pForEncoder;
+        private Dictionary<long, NativeIntegersList> _termsPerEntryId;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1474,7 +1477,7 @@ namespace Corax
             return fieldTree.TryGetValue(termValue, out idInTree);
         }
         
-        public void Commit()
+        public unsafe void Commit()
         {
             _indexDebugDumper.Commit();
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
@@ -1488,7 +1491,7 @@ namespace Corax
             ProcessDeletes();
 
             Slice[] keys = Array.Empty<Slice>();
-
+            _termsPerEntryId = new();
             _pForEncoder = new FastPForEncoder(Transaction.LowLevelTransaction.Allocator);
 
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
@@ -1513,9 +1516,19 @@ namespace Corax
 
                 }
             }
-            
+
+            foreach (var (entry, terms) in _termsPerEntryId)
+            {
+                terms.SortAndRemoveDuplicates();
+                int sizeRequired = FastPForEncoder.ComputeVarIntDeltaSize(0, terms.RawItems, terms.Count);
+                long entryTermsId = Container.Allocate(Transaction.LowLevelTransaction, _entriesTermsContainerId, sizeRequired, out var space);
+                FastPForEncoder.WriteVarIntDelta(0, terms.RawItems, terms.Count, space);
+                _entryIdToLocation.Add(entry, entryTermsId);
+            }
+
             _pForEncoder.Dispose();
             _pForEncoder = null;
+            _termsPerEntryId = null;
             
             if(keys.Length>0)
                 ArrayPool<Slice>.Shared.Return(keys);
@@ -1565,7 +1578,7 @@ namespace Corax
             }
         }
 
-        private void InsertTextualField(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private unsafe void InsertTextualField(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
@@ -1591,6 +1604,8 @@ namespace Corax
 
             fieldTree.InitializeStateForTryGetNextValue();
             long totalLengthOfTerm = 0;
+
+            var newAdditions = new NativeIntegersList(Transaction.Allocator);
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
@@ -1599,6 +1614,8 @@ namespace Corax
                 if (entries.HasChanges() == false)
                     continue;
 
+                newAdditions.InitCopyFrom(entries.Additions);
+                
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
                     SetRange(_additionsForTerm, entries.Additions);
@@ -1653,6 +1670,15 @@ namespace Corax
                     {
                         throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                     }
+                }
+
+                for (int i = 0; i < newAdditions.Count; i++)
+                {
+                    var entry = newAdditions.RawItems[i];
+                    ref var list = ref CollectionsMarshal.GetValueRefOrAddDefault(_termsPerEntryId, entry, out var exists);
+                    if (exists == false) 
+                        list = new NativeIntegersList(Transaction.Allocator);
+                    list.Add(termContainerId);
                 }
 
                 if (indexedField.Spatial == null)

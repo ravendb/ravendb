@@ -57,7 +57,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice, EntryIdToOffsetSlice, LastEntryIdSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;            public const int IntKnownFieldMask = unchecked((int)0x80000000);
+            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice, EntryIdToOffsetSlice, EntryIdToLocationSlice, LastEntryIdSlice, EntriesContainerSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;            public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
             public const int DynamicField = -2;
@@ -69,7 +69,9 @@ namespace Corax
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                     Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
                     Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
+                    Slice.From(ctx, "EntriesTerms", ByteStringType.Immutable, out EntriesTermsContainerSlice);
                     Slice.From(ctx, "EntryIdToOffset", ByteStringType.Immutable, out EntryIdToOffsetSlice);
+                    Slice.From(ctx, "EntryIdToLocation", ByteStringType.Immutable, out EntryIdToLocationSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "LastEntryId", ByteStringType.Immutable, out LastEntryIdSlice);
                     Slice.From(ctx, "EntriesToTerms", ByteStringType.Immutable, out EntriesToTermsSlice);

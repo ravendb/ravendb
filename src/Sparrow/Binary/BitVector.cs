@@ -142,10 +142,10 @@ namespace Sparrow.Binary
             int N = sizeof(long);
             int value;
 
-            nint index = 0;
+            var index = 0;
             for (; index + N <= lengthInBytes; index += N)
             {
-                var input = Unsafe.ReadUnaligned<long>(ref Unsafe.AddByteOffset(ref storage, index));
+                var input = Unsafe.ReadUnaligned<long>(ref Unsafe.AddByteOffset(ref storage, (nuint)index));
                 if (input == 0)
                     continue;
 
@@ -155,14 +155,14 @@ namespace Sparrow.Binary
 
             for (; index < lengthInBytes; index++)
             {
-                if (Unsafe.AddByteOffset(ref storage, index) != 0)
+                if (Unsafe.AddByteOffset(ref storage, (nuint)index) != 0)
                     goto Done;
             }
 
             return -1;
 
             Done:
-            value = Unsafe.AddByteOffset(ref storage, index) << ((sizeof(int) - 1) * 8);
+            value = Unsafe.AddByteOffset(ref storage, (nuint)index) << ((sizeof(int) - 1) * 8);
             value = LeadingZeroes((uint)value);
             return (value < 8) ? (int)index * 8 + value : -1;
         }

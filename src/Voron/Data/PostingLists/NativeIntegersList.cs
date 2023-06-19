@@ -100,4 +100,14 @@ public unsafe struct NativeIntegersList : IDisposable
         Count--;
         return val;
     }
+
+    public void InitCopyFrom(ReadOnlySpan<long> items)
+    {
+        if (items.Length >= Capacity)
+        {
+            GrowListUnlikely(items.Length);
+        }
+        Count = items.Length;
+        items.CopyTo(Items);
+    }
 }
