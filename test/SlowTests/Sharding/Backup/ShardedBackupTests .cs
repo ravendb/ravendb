@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Smuggler;
@@ -13,7 +14,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -23,6 +23,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using BackupTask = Raven.Server.Documents.PeriodicBackup.BackupTask;
 
 namespace SlowTests.Sharding.Backup
 {
@@ -615,6 +616,31 @@ namespace SlowTests.Sharding.Backup
                         Assert.Contains(store2.Database, serverWideConfig.ExcludedDatabases);
                         Assert.Contains(store4.Database, serverWideConfig.ExcludedDatabases);
                     }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanKillShardedBackupOperation()
+        {
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await Sharding.Backup.InsertData(store);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1");
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var backupTaskId = result.TaskId;
+
+                using (var reqEx = store.GetRequestExecutor())
+                using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                    await reqEx.ExecuteAsync(new KillOperationCommand(op.Id), context);
+
+                    Assert.Throws<TaskCanceledException>(() => op.WaitForCompletion());
                 }
             }
         }
