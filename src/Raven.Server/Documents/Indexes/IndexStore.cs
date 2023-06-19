@@ -1265,7 +1265,7 @@ namespace Raven.Server.Documents.Indexes
             if ((differences & IndexDefinitionCompareDifferences.DeploymentMode) == IndexDefinitionCompareDifferences.DeploymentMode)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
-            return IndexCreationOptions.Update;
+            return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
         }
 
         public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
