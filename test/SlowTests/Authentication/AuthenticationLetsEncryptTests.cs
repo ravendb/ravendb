@@ -20,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,7 +32,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
