@@ -19,6 +19,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Changes;
+using Raven.Server.Documents.Archival;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
@@ -264,6 +265,8 @@ namespace Raven.Server.Documents
         public DocumentsStorage DocumentsStorage { get; private set; }
 
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
+        
+        public DocumentsArchiver DocumentsArchiver{ get; private set; }
 
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
 
@@ -1670,6 +1673,7 @@ namespace Raven.Server.Documents
             InitializeCompressionFromDatabaseRecord(record);
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
+            DocumentsArchiver = DocumentsArchiver.LoadConfigurations(this, record, DocumentsArchiver);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
         }

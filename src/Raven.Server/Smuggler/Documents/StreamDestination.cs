@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.Archival;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -297,6 +298,13 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
                     WriteExpiration(databaseRecord.Expiration);
+                }
+                
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Archival))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Archival));
+                    WriteArchival(databaseRecord.Archival);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
@@ -822,6 +830,17 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _context.Write(_writer, expiration.ToJson());
+            }
+            
+            private void WriteArchival(ArchivalConfiguration archival)
+            {
+                if (archival == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+
+                _context.Write(_writer, archival.ToJson());
             }
 
             private void WriteRevisions(RevisionsConfiguration revisions)

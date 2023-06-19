@@ -2009,6 +2009,18 @@ namespace Raven.Server.ServerWide
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
+        
+        public Task<(long Index, object Result)> ModifyDatabaseArchive(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var archive = JsonDeserializationCluster.ArchivalConfiguration(configurationJson);
+            if (archive.ArchiveFrequencyInSec <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Archive frequency for database '{databaseName}' must be greater than 0.");
+            }
+            var editArchive = new EditArchivalCommand(archive, databaseName, raftRequestId);
+            return SendToLeaderAsync(editArchive);
+        }
 
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {

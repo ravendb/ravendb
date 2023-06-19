@@ -449,7 +449,7 @@ namespace Raven.Server.Documents
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix,
-            Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames, string changeVector)
+            Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames, string changeVector, long? newEtag = null)
         {
             var (fst, snd) = SplitCounterDocument(context, values, dbIds, originalNames);
 
@@ -459,7 +459,7 @@ namespace Raven.Server.Documents
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(countersGroupKey);
-                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(newEtag ?? context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
                     tvb.Add(cv);
                     tvb.Add(fst.BasePointer, fst.Size);
                     tvb.Add(collectionSlice);
@@ -793,7 +793,7 @@ namespace Raven.Server.Documents
         }
 
         public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, string changeVector,
-            BlittableJsonReaderObject sourceData)
+            BlittableJsonReaderObject sourceData, long? counterEtag = null)
         {
             if (context.Transaction == null)
             {
@@ -822,11 +822,11 @@ namespace Raven.Server.Documents
 
                     sourceData.TryGet(CounterNames, out BlittableJsonReaderObject sourceCounterNames);
                     BlittableJsonReaderObject data;
-
-                    if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out _) == false)
+                    
+                    
+                    if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out _) == false || counterEtag != null)
                     {
                         // simplest case of having no counters for this document, can use the raw data from the source as-is
-
                         if (sourceCounterNames == null)
                         {
                             // 4.2 source
@@ -857,13 +857,25 @@ namespace Raven.Server.Documents
                             };
                         }
 
+                        if (sourceData.Size > MaxCounterDocumentSize)
+                        {
+                            if (sourceCounterNames == null)
+                            {
+                                sourceData = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                sourceData.TryGet(CounterNames, out sourceCounterNames);
+                            }
+                            SplitCounterGroup(context, collectionName, table, documentKeyPrefix,documentKeyPrefix, sourceCounters, sourceDbIds, sourceCounterNames, changeVector,counterEtag);
+                            return true;
+                        }
+                        
+                        
                         data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         using (Slice.From(context.Allocator, changeVector, out var cv))
                         using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
                         {
                             tvb.Add(documentKeyPrefix);
-                            tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                            tvb.Add(Bits.SwapBytes(counterEtag ?? _documentsStorage.GenerateNextEtag()));
                             tvb.Add(cv);
                             tvb.Add(data.BasePointer, data.Size);
                             tvb.Add(collectionSlice);
@@ -1114,102 +1126,102 @@ namespace Raven.Server.Documents
             switch (incomingCountersProp.Value)
             {
                 case BlittableJsonReaderObject.RawBlob sourceBlob:
+                {
+                    if (deletedLocalCounter != null)
                     {
-                        if (deletedLocalCounter != null)
+                        // blob + delete => resolve conflict
+
+                        var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, remoteDelete: false, docId, counterName, out _);
+
+                        switch (conflictStatus)
                         {
-                            // blob + delete => resolve conflict
+                            case ConflictStatus.Update:
+                            // raw blob is more up to date => put counter
+                            case ConflictStatus.Conflict:
+                                // conflict => resolve to raw blob
+                                localCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                break;
 
-                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, remoteDelete: false, docId, counterName, out _);
-
-                            switch (conflictStatus)
-                            {
-                                case ConflictStatus.Update:
-                                // raw blob is more up to date => put counter
-                                case ConflictStatus.Conflict:
-                                    // conflict => resolve to raw blob
-                                    localCounterValues = new BlittableJsonReaderObject.RawBlob();
-                                    break;
-
-                                case ConflictStatus.AlreadyMerged:
-                                    //delete is more up do date (no change)
-                                    return false;
-                            }
+                            case ConflictStatus.AlreadyMerged:
+                                //delete is more up do date (no change)
+                                return false;
                         }
-                        else if (localCounterValues == null)
-                        {
-                            // put new counter
-                            localCounterValues = new BlittableJsonReaderObject.RawBlob();
-
-                            // need to add original counter name to 'CounterNames' array
-
-                            AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
-                        }
-
-                        // blob + blob => put counter
-                        changeType = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
-                        if (changeType == CounterChangeTypes.None)
-                            return false;
-
-                        return true;
                     }
+                    else if (localCounterValues == null)
+                    {
+                        // put new counter
+                        localCounterValues = new BlittableJsonReaderObject.RawBlob();
+
+                        // need to add original counter name to 'CounterNames' array
+
+                        AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
+                    }
+
+                    // blob + blob => put counter
+                    changeType = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
+                    if (changeType == CounterChangeTypes.None)
+                        return false;
+
+                    return true;
+                }
 
                 case LazyStringValue deletedSourceCounter:
+                {
+                    if (deletedLocalCounter != null)
                     {
-                        if (deletedLocalCounter != null)
-                        {
-                            // delete + delete => merge change vectors if needed
+                        // delete + delete => merge change vectors if needed
 
-                            if (deletedLocalCounter == deletedSourceCounter)
-                                return false;
+                        if (deletedLocalCounter == deletedSourceCounter)
+                            return false;
 
-                            var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter, docId, counterName);
+                        var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter, docId, counterName);
 
-                            localCounters.Modifications ??= new DynamicJsonValue(localCounters);
-                            localCounters.Modifications[counterName] = mergedCv;
-                            return true;
-                        }
-
-                        if (localCounterValues != null)
-                        {
-                            // delete + blob => resolve conflict
-
-                            var conflictStatus =
-                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, remoteDelete: true, docId, counterName, out var deletedCv);
-
-                            switch (conflictStatus)
-                            {
-                                case ConflictStatus.Update:
-                                    //delete is more up do date
-                                    break;
-
-                                case ConflictStatus.Conflict:
-                                    // conflict => resolve to raw blob and merge change vectors
-                                    MergeBlobAndDeleteVector(context, dbIdsHolder, localCounterValues, deletedCv);
-
-                                    localCounters.Modifications ??= new DynamicJsonValue(localCounters);
-                                    localCounters.Modifications[counterName] = localCounterValues;
-                                    return true;
-
-                                case ConflictStatus.AlreadyMerged:
-                                    // raw blob is more up to date (no change)
-                                    return false;
-
-                                default:
-                                    return false;
-                            }
-                        }
-                        else
-                        {
-                            AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
-                        }
-
-                        // put deleted counter
-
-                        changeType = CounterChangeTypes.Delete;
                         localCounters.Modifications ??= new DynamicJsonValue(localCounters);
-                        localCounters.Modifications[counterName] = deletedSourceCounter;
+                        localCounters.Modifications[counterName] = mergedCv;
                         return true;
                     }
+
+                    if (localCounterValues != null)
+                    {
+                        // delete + blob => resolve conflict
+
+                        var conflictStatus =
+                            CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, remoteDelete: true, docId, counterName, out var deletedCv);
+
+                        switch (conflictStatus)
+                        {
+                            case ConflictStatus.Update:
+                                //delete is more up do date
+                                break;
+
+                            case ConflictStatus.Conflict:
+                                // conflict => resolve to raw blob and merge change vectors
+                                MergeBlobAndDeleteVector(context, dbIdsHolder, localCounterValues, deletedCv);
+
+                                localCounters.Modifications ??= new DynamicJsonValue(localCounters);
+                                localCounters.Modifications[counterName] = localCounterValues;
+                                return true;
+
+                            case ConflictStatus.AlreadyMerged:
+                                // raw blob is more up to date (no change)
+                                return false;
+
+                            default:
+                                return false;
+                        }
+                    }
+                    else
+                    {
+                        AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
+                    }
+
+                    // put deleted counter
+
+                    changeType = CounterChangeTypes.Delete;
+                    localCounters.Modifications ??= new DynamicJsonValue(localCounters);
+                    localCounters.Modifications[counterName] = deletedSourceCounter;
+                    return true;
+                }
 
                 default:
                     return false;
@@ -2596,8 +2608,8 @@ namespace Raven.Server.Documents
                     using (DocumentIdWorker.GetLower(context.Allocator, counterName, out var counterNameSlice))
                     {
                         var size = documentId.Size
-                           + 1 // separator
-                           + counterNameSlice.Size;
+                                   + 1 // separator
+                                   + counterNameSlice.Size;
 
                         using (context.Allocator.Allocate(size, out var buffer))
                         {

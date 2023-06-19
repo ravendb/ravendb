@@ -273,6 +273,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsHiLo == false)
                 {
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
+                    _documentsStorage.ArchivalStorage.Put(context, lowerId, document);
                 }
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);

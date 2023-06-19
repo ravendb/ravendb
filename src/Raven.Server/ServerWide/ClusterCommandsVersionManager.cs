@@ -172,7 +172,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutShardedSubscriptionCommand)] = 60_000,
             [nameof(CreateNewShardCommand)] = 60_000,
             [nameof(UpdateServerPublishedUrlsCommand)] = 60_000,
-            [nameof(PutShardedSubscriptionBatchCommand)] = 60_000
+            [nameof(PutShardedSubscriptionBatchCommand)] = 60_000,
+            [nameof(EditArchivalCommand)] = 60_000
         };
 
         public bool CanPutCommand(string command)

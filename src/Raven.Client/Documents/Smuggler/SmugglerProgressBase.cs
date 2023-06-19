@@ -95,6 +95,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool ExpirationConfigurationUpdated { get; set; }
 
         public bool RefreshConfigurationUpdated { get; set; }
+        
+        public bool ArchivalConfigurationUpdated { get; set; }
 
         public bool RavenConnectionStringsUpdated { get; set; }
 
@@ -140,6 +142,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (RefreshConfigurationUpdated)
                 json[nameof(RefreshConfigurationUpdated)] = RefreshConfigurationUpdated;
+            
+            if (ArchivalConfigurationUpdated)
+                json[nameof(ArchivalConfigurationUpdated)] = ArchivalConfigurationUpdated;
 
             if (RavenConnectionStringsUpdated)
                 json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
@@ -221,6 +226,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (RefreshConfigurationUpdated)
                 sb.AppendLine("- Refresh");
+            
+            if (ArchivalConfigurationUpdated)
+                sb.AppendLine("- Archival");
 
             if (RavenConnectionStringsUpdated)
                 sb.AppendLine("- RavenDB Connection Strings");

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.Archival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
@@ -507,6 +508,23 @@ namespace Raven.Server.ServerWide
                 return _refreshConfiguration;
             }
         }
+        
+        private ArchivalConfiguration _archivalConfiguration;
+        
+        public ArchivalConfiguration ArchivalConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Archival;
+
+                if (_archivalConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Archival), out BlittableJsonReaderObject config) && config != null)
+                    _archivalConfiguration = JsonDeserializationCluster.ArchivalConfiguration(config);
+
+                return _archivalConfiguration;
+            }
+        }
+                
 
         private List<ExternalReplication> _externalReplications;
 

@@ -189,6 +189,21 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skipping.", e);
                     }
                 }
+                
+                if (reader.TryGet(nameof(databaseRecord.Archival), out BlittableJsonReaderObject archival) &&
+                    archival != null)
+                {
+                    try
+                    {
+                        databaseRecord.Archival = JsonDeserializationCluster.ArchivalConfiguration(archival);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the archival configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
 
                 if (reader.TryGet(nameof(databaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject conflictSolverConfig) &&
                     conflictSolverConfig != null)

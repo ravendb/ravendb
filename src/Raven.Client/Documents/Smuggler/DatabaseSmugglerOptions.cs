@@ -43,7 +43,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration |
                                                                                   DatabaseRecordItemType.QueueConnectionStrings |
                                                                                   DatabaseRecordItemType.QueueEtls |
-                                                                                  DatabaseRecordItemType.IndexesHistory;
+                                                                                  DatabaseRecordItemType.IndexesHistory |
+                                                                                  DatabaseRecordItemType.Archival;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |
@@ -51,7 +52,7 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Identities |
                                                               DatabaseItemType.Subscriptions;
 
-        internal const DatabaseRecordItemType ShardingNotSupportedDatabaseSmugglerOptions = DatabaseRecordItemType.HubPullReplications | 
+        internal const DatabaseRecordItemType ShardingNotSupportedDatabaseSmugglerOptions = DatabaseRecordItemType.HubPullReplications |
                                                                                             DatabaseRecordItemType.SinkPullReplications |
                                                                                             DatabaseRecordItemType.PostgreSQLIntegration |
                                                                                             DatabaseRecordItemType.QueueEtls;

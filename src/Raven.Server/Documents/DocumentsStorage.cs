@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
+using Raven.Server.Documents.Archival;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
@@ -61,6 +62,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         public RevisionsStorage RevisionsStorage;
         public ExpirationStorage ExpirationStorage;
+        public ArchivalStorage ArchivalStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public CountersStorage CountersStorage;
@@ -256,10 +258,11 @@ namespace Raven.Server.Documents
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx, RevisionsSchema, CompressedRevisionsSchema);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
+                    ArchivalStorage = new ArchivalStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
-                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, CounterTombstonesSchema);
-                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TimeSeriesDeleteRangesSchema);
+                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, TombstonesSchema);
+                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TombstonesSchema);
 
                     DocumentPut = CreateDocumentPutAction();
 
@@ -1576,7 +1579,7 @@ namespace Raven.Server.Documents
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
-            DocumentFlags documentFlags = DocumentFlags.None)
+            DocumentFlags documentFlags = DocumentFlags.None, bool deleteCounters = true)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1756,7 +1759,7 @@ namespace Raven.Server.Documents
                 if (flags.Contain(DocumentFlags.HasAttachments))
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks, documentFlags);
 
-                if (flags.Contain(DocumentFlags.HasCounters))
+                if (flags.Contain(DocumentFlags.HasCounters) && deleteCounters)
                     CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
                 if (flags.Contain(DocumentFlags.HasTimeSeries))
