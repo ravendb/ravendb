@@ -8,15 +8,14 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Xunit;
-using Raven.Server.Documents.Replication;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
@@ -27,38 +26,19 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task CanReplicateDocument()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateDocument(Options options)
         {
-            using (var source = GetDocumentStore(options: new Options
+            options = GetOptionsInternal(options);
+            using (var source = GetDocumentStore(options: options))
+            using (var destination = GetDocumentStore(options: options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var destination = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 await SetupReplicationAsync(source, destination);
                 string id;
                 using (var session = source.OpenAsyncSession())
                 {
-                    var user = new User {Name = "Arek"};
+                    var user = new User { Name = "Arek" };
 
                     await session.StoreAsync(user);
 
@@ -74,31 +54,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateDocumentDeletion()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateDocumentDeletion(Options options)
         {
-            using (var source = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var destination = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var source = GetDocumentStore(options: options))
+            using (var destination = GetDocumentStore(options: options))
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -125,43 +87,25 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task GetConflictsResult_command_should_work_properly()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetConflictsResult_command_should_work_properly(Options options)
         {
-            using (var source = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var destination = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var source = GetDocumentStore(options: options))
+            using (var destination = GetDocumentStore(options: options))
             {
                 using (var sourceCommands = source.Commands())
                 using (var destinationCommands = destination.Commands())
                 {
-                    sourceCommands.Put("docs/1", null, new {Key = "Value"}, null);
-                    destinationCommands.Put("docs/1", null, new {Key = "Value2"}, null);
+                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
+                    destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
 
                     await SetupReplicationAsync(source, destination);
 
-                    sourceCommands.Put("marker", null, new {Key = "Value"}, null);
+                    sourceCommands.Put("marker$docs/1", null, new { Key = "Value" }, null);
 
-                    Assert.True(WaitForDocument(destination, "marker"));
+                    Assert.True(WaitForDocument(destination, "marker$docs/1"));
 
                     var conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
@@ -175,31 +119,13 @@ namespace SlowTests.Server.Replication
         }
 
 
-        [Fact]
-        public async Task ShouldCreateConflictThenResolveIt()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldCreateConflictThenResolveIt(Options options)
         {
-            using (var source = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var destination = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = GetOptionsInternal(options);
+            using (var source = GetDocumentStore(options: options))
+            using (var destination = GetDocumentStore(options: options))
             {
                 GetConflictsResult.Conflict[] conflicts;
                 using (var sourceCommands = source.Commands())
@@ -210,9 +136,9 @@ namespace SlowTests.Server.Replication
 
                     await SetupReplicationAsync(source, destination);
 
-                    sourceCommands.Put("marker", null, new { Key = "Value" }, null);
+                    sourceCommands.Put("marker$docs/1", null, new { Key = "Value" }, null);
 
-                    Assert.True(WaitForDocument(destination, "marker"));
+                    Assert.True(WaitForDocument(destination, "marker$docs/1"));
 
                     conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
@@ -235,11 +161,27 @@ namespace SlowTests.Server.Replication
                 var fetchedVal = fetchedDoc["Key"] as LazyStringValue;
 
                 ////not null asserts -> precaution
-                Assert.NotNull(actualVal); 
+                Assert.NotNull(actualVal);
                 Assert.NotNull(fetchedVal);
 
                 Assert.Equal(fetchedVal.ToString(), actualVal.ToString());
             }
+        }
+
+        private Options GetOptionsInternal(Options options)
+        {
+            return new Options(options)
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                    options.ModifyDatabaseRecord(record);
+                }
+            };
         }
     }
 }
