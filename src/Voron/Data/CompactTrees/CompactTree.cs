@@ -191,7 +191,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             // the term in the container is:  [ metadata -1 byte ] [ term bytes ]
             // the metadata is composed of two nibbles - the first says the *remainder* of bits in the last byte in the term
             // the second nibble is the reference count
-            var id = Container.Allocate(llt, state.TermsContainerId, encodedKey.Length + 1, state.DictionaryId, out var allocated);
+            var id = Container.Allocate(llt, state.TermsContainerId, encodedKey.Length + 1, state.RootPage, out var allocated);
             encodedKey.CopyTo(allocated[1..]);
             var remainderBits = encodedKey.Length * 8 - encodedKeyLengthInBits;
             Debug.Assert(remainderBits is >= 0 and < 8);
@@ -283,7 +283,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
             
-            // This will be created a single time and stored in the root page.                 
+            // This will be created a single time and stored in the root page.
             var dictionaryId = PersistentDictionary.CreateDefault(llt);
             long containerId = Container.Create(llt);
             inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);

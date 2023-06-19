@@ -24,6 +24,7 @@ public unsafe struct TermsReader : IDisposable
     private readonly (long Key, UnmanagedSpan Term)* _cache;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _cacheScope;
     private Page _lastPage;
+    private long _dictionaryId;
 
     public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, Slice name)
     {
@@ -35,6 +36,8 @@ public unsafe struct TermsReader : IDisposable
         _lookup = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
+        // temporary: until we move to proper single dic
+        _dictionaryId = PersistentDictionary.CreateDefault(llt);
     }
 
     public string GetTermFor(long id)
@@ -69,7 +72,7 @@ public unsafe struct TermsReader : IDisposable
         int remainderBits = item.Address[0] >> 4;
         int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
 
-        _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
+        _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], _dictionaryId);
         term = _xKeyScope.Key.ToString();
         return true;
     }
