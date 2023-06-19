@@ -1033,9 +1033,7 @@ public class RavenDB_11097 : RavenTestBase
                 session.Store(cdto2);
 
                 session.SaveChanges();
-                
-                WaitForUserToContinueTheTest(store);
-                
+
                 using (var commands = store.Commands())
                 {
                     var payload = new TestIndexParameters()
