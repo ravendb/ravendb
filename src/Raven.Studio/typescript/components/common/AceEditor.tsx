@@ -1,11 +1,10 @@
-import { Ace } from "ace-builds";
-import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import React, { useEffect, useState } from "react";
+import { AceEditorMode, LanguageService } from "components/models/aceEditor";
+import { Ace } from "ace-builds";
+import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
 import ReactAce, { IAceEditorProps, IAceOptions, ICommand } from "react-ace";
 import { todo } from "common/developmentHelper";
 import "./AceEditor.scss";
-
-const langTools = ace.require("ace/ext/language_tools");
 
 export interface AceEditorProps extends IAceEditorProps {
     mode: AceEditorMode;
@@ -29,7 +28,7 @@ export default function AceEditor(props: AceEditorProps) {
 
     useEffect(() => {
         if (languageService) {
-            langTools.setCompleters([
+            setCompleters([
                 {
                     moduleId: "aceEditor",
                     getCompletions: (
@@ -86,7 +85,7 @@ export default function AceEditor(props: AceEditorProps) {
                     mode="csharp"
                     theme="raven"
                     style={{ border: "1px solid #424554", borderColor: errorMessage ? "#f06582" : "#424554" }}
-                    editorProps={{ $blockScrolling: true }}
+                    editorProps={{ $blockScrolling: Infinity }}
                     fontSize={14}
                     showPrintMargin={true}
                     showGutter={true}

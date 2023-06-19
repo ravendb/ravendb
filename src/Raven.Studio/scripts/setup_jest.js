@@ -31,3 +31,17 @@ jest.mock('plugins/dialog', () => ({
 }));
 jest.mock('durandal/app', () => ({
 }));
+
+const ace = require("ace-builds/src-noconflict/ace");
+ace.config.set("basePath", "../node_modules/ace-builds/src-noconflict");
+window.ace = ace;
+
+window.Worker = class Worker {
+    constructor(stringUrl) {
+      this.url = stringUrl;
+    }
+
+    onmessage = () => null;
+    postMessage = () => null;
+    terminate = () => null;
+}

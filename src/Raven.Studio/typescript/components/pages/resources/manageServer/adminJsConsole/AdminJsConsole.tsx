@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Alert, CardHeader, CardBody, Row, Col, Button, Form, Spinner } from "reactstrap";
+import { Card, Alert, CardHeader, CardBody, Row, Col, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import AboutView from "components/common/AboutView";
 import AceEditor from "components/common/AceEditor";
