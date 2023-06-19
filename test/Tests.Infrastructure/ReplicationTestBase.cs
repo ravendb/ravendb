@@ -415,10 +415,21 @@ namespace Tests.Infrastructure
             return handler;
         }
 
-        protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
+        protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null, Options options = null)
         {
             var (_, leader) = await CreateRaftCluster(2);
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
+
+            var record = new DatabaseRecord(caller);
+            if (options != null)
+            {
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                modifyDatabaseRecord(record);
+            }
+
+            var res = await CreateDatabaseInCluster(record, replicationFactor: 2, leadersUrl: leader.WebUrl);
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.Index, TimeSpan.FromSeconds(5));
+
             var source = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -432,10 +443,7 @@ namespace Tests.Infrastructure
             source.Initialize();
             destination.Initialize();
 
-            var res = CreateClusterDatabase(caller, source, 2);
-            //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
-            //var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
+         
             return (source, destination);
         }
 

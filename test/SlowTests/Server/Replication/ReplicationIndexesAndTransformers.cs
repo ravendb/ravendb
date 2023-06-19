@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
@@ -37,14 +36,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
         private class UserByNameIndex : AbstractIndexCreationTask<User>
         {
             private readonly string _indexName;
 
             public override string IndexName =>
                 string.IsNullOrEmpty(_indexName) ? base.IndexName : _indexName;
-
 
             public UserByNameIndex(string name = null)
             {
@@ -74,16 +71,16 @@ namespace SlowTests.Server.Replication
                                };
             }
         }
-        
-        [Fact]
-        public async Task Can_replicate_index()
+
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_replicate_index(Options options)
         {
-            var (source, destination) = await CreateDuoCluster();
-            
+            var (source, destination) = await CreateDuoCluster(options: options);
+
             using (source)
             using (destination)
             {
-
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
 
@@ -99,10 +96,11 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Can_replicate_multiple_indexes()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_replicate_multiple_indexes(Options options)
         {
-            var (source, destination) = await CreateDuoCluster();
+            var (source, destination) = await CreateDuoCluster(options: options);
 
             using (source)
             using (destination)
@@ -128,10 +126,11 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Can_replicate_multiple_indexes_and_multiple_transformers()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_replicate_multiple_indexes_and_multiple_transformers(Options options)
         {
-            var (source, destination) = await CreateDuoCluster();
+            var (source, destination) = await CreateDuoCluster(options: options);
 
             using (source)
             using (destination)
@@ -154,8 +153,6 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, destIndexNames.Length);
                 Assert.True(destIndexNames.Contains(userByAge.IndexName));
                 Assert.True(destIndexNames.Contains(userByName.IndexName));
-
-                WaitForUserToContinueTheTest(source);
             }
         }
     }
