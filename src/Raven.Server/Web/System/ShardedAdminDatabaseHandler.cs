@@ -64,7 +64,7 @@ namespace Raven.Server.Web.System
                     if (url == null)
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
 
-                    if (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
+                    if (Server.AllowEncryptedDatabasesOverHttp == false && databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
                 }
 
@@ -272,7 +272,7 @@ namespace Raven.Server.Web.System
                     if (url == null)
                         throw new InvalidOperationException($"Can't create new shard on node {node} for database '{database}' because node {node} is not part of the cluster");
 
-                    if (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
+                    if (Server.AllowEncryptedDatabasesOverHttp == false && databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
                         throw new InvalidOperationException($"Can't create node {node} for database '{database}' because database {database} is encrypted but node {node} doesn't have an SSL certificate.");
                 }
 

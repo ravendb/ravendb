@@ -112,8 +112,12 @@ public partial class RavenTestBase
         {
             var dbName = _parent.GetDatabaseName(caller);
             string base64Key = CreateMasterKey(out masterKey);
-            EnsureServerMasterKeyIsSetup(_parent.Server);
-            _parent.Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            foreach (var server in _parent.GetServers())
+            {
+                var copy = new string(base64Key);
+                EnsureServerMasterKeyIsSetup(server);
+                server.ServerStore.PutSecretKey(copy, dbName, true);
+            }
             return dbName;
         }
 
