@@ -22,12 +22,6 @@ public class ShardedDatabaseMultiOperation : AbstractShardedMultiOperation
             tasks.Add(ShardedDatabaseContext.ShardExecutor.ExecuteSingleShardAsync(new KillOperationCommand(op.Id, key.NodeTag), key.ShardNumber, token));
 
         await Task.WhenAll(tasks);
-
-        var shardedOperation = ShardedDatabaseContext.Operations.GetOperation(Id);
-        if (shardedOperation == null)
-            return;
-
-        await shardedOperation.KillAsync(waitForCompletion: true, token);
     }
 
     public override async ValueTask<TResult> ExecuteCommandForShard<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token)
