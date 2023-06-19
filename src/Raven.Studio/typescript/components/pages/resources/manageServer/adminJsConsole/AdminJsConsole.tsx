@@ -18,12 +18,14 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import RunScriptButton from "components/common/RunScriptButton";
+import useBoolean from "components/hooks/useBoolean";
 
 const serverTargetValue = "Server";
 
 export default function AdminJSConsole() {
     todo("Feature", "Damian", "issue: RavenDB-7588");
 
+    const { value: isScriptValid, setValue: setIsScriptValid } = useBoolean(true);
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
     const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
@@ -136,11 +138,12 @@ export default function AdminJSConsole() {
                                         execute={handleSubmit(onSave)}
                                         mode="javascript"
                                         height="200px"
+                                        setIsValid={(x) => setIsScriptValid(x)}
                                     />
                                     <RunScriptButton
                                         type="submit"
                                         isSpinning={asyncRunAdminJsScript.status === "loading"}
-                                        disabled={!formState.isDirty}
+                                        disabled={!formState.isDirty || !isScriptValid}
                                     />
                                     <div>
                                         <h3>Script result</h3>

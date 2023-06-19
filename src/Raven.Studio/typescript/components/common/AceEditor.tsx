@@ -11,10 +11,11 @@ export interface AceEditorProps extends IAceEditorProps {
     languageService?: LanguageService;
     validationErrorMessage?: string;
     execute?: (...args: any) => any;
+    setIsValid?: (isValid: boolean) => void;
 }
 
 export default function AceEditor(props: AceEditorProps) {
-    const { setOptions, languageService, validationErrorMessage, execute, ...rest } = props;
+    const { setOptions, languageService, validationErrorMessage, execute, setIsValid, ...rest } = props;
 
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
@@ -47,6 +48,18 @@ export default function AceEditor(props: AceEditorProps) {
 
         return () => languageService?.dispose();
     }, [languageService]);
+
+    useEffect(() => {
+        if (!setIsValid) {
+            return;
+        }
+
+        if (aceErrorMessage) {
+            setIsValid(false);
+        } else {
+            setIsValid(true);
+        }
+    }, [aceErrorMessage, setIsValid]);
 
     const onValidate = (annotations: Ace.Annotation[]) => {
         const firstError = annotations.find((x) => x.type === "error");
