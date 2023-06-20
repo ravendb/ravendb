@@ -38,10 +38,10 @@ public unsafe struct NativeList<T> : IDisposable
     private void GrowListUnlikely(int addition)
     {
         Capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
-        var scope = _ctx.Allocate(Capacity * sizeof(long), out var mem);
+        var scope = _ctx.Allocate(Capacity * sizeof(T), out var mem);
         if (RawItems != null)
         {
-            Memory.Copy(mem.Ptr, RawItems, Count * sizeof(long));
+            Memory.Copy(mem.Ptr, RawItems, Count * sizeof(T));
             _releaseItems.Dispose();
         }
         _releaseItems = scope;

@@ -493,7 +493,7 @@ namespace Corax
         }
         
         /// <returns>Encoded id (with freq/container_type)</returns>
-        public unsafe long Index(Span<byte> data)
+        public long Index(Span<byte> data)
         {
             _numberOfModifications++;
             // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
@@ -502,12 +502,16 @@ namespace Corax
             space = space.Slice(data.Length);
             space.Clear();// clean any old data that may have already been there
 
-            var context = Transaction.Allocator;
             
             var entryId = ++_lastEntryId;
             _entryIdToOffset.Add(entryId, entryContainerId);
 
+            return IndexEntry(entryId, data);
+        }
 
+        private unsafe long IndexEntry(long entryId, Span<byte> data)
+        {
+            var context = Transaction.Allocator;
             fixed (byte* newEntryDataPtr = data)
             {
                 var entryReader = new IndexEntryReader(newEntryDataPtr, data.Length);
@@ -583,10 +587,12 @@ namespace Corax
        /// <returns>Encoded entryId</returns>
         public long Update(string field, ReadOnlySpan<byte> key, Span<byte> data)
         {
-            if (TryGetEntryTermId(field, key, out var idInTree) == false)
+            if (TryGetEntryTermId(field, key, out var idInTree))
             {
                 RecordDeletion(idInTree);
+                return IndexEntry(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree),data);
             }
+
             return Index(data);
         }
         
