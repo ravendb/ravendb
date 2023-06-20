@@ -29,7 +29,6 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = GetDocumentStore())
             {
-
                 using (var session = store.OpenAsyncSession())
                 {
                     for (var i = 0; i < 10; i++)
@@ -90,6 +89,51 @@ namespace SlowTests.Core.Indexing
                             Assert.Equal(10, collection.CurrentFilterCount);
                         }
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Delete_From_Index_If_The_Document_Isnt_Relevant_For_The_Index_Anymore()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await new Index().ExecuteAsync(store);
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Age = 38
+                    }, "test");
+                    await session.SaveChangesAsync();
+                }
+
+                await new Index().ExecuteAsync(store);
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var resultsCount = await session.Query<User, Index>().CountAsync();
+                    Assert.Equal(1, resultsCount);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Age = 37
+                    }, "test");
+                    await session.SaveChangesAsync();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var resultsCount = await session.Query<User, Index>().CountAsync();
+                    Assert.Equal(0, resultsCount);
                 }
             }
         }
