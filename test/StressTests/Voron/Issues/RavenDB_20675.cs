@@ -57,7 +57,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUsePagerAfterDispose()
+        public void DonotDisposePagerWhenStillInUse()
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -67,8 +67,10 @@ namespace SlowTests.Issues
                 var page3 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
 
                 page1.Dispose();
+                // old pager is still in use with page2
                 Assert.Equal(0, Env.DecompressionBuffers.Cleanup());
                 page2.Dispose();
+                // we dispose the old pager and stay only with one pager
                 Assert.Equal(1, Env.DecompressionBuffers.Cleanup());
 
             }
@@ -76,7 +78,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUsePagerAfterDispose1()
+        public void CleanupPagerWhenNotInUse()
         {
             using (var tx = Env.ReadTransaction())
             {
@@ -95,13 +97,14 @@ namespace SlowTests.Issues
                 page2.Dispose();
                 page3.Dispose();
 
-                Env.DecompressionBuffers.Cleanup();
+                //cleanup the first pager
+                Assert.Equal(1, Env.DecompressionBuffers.Cleanup());
                 Assert.Equal(1, Env.DecompressionBuffers.NumberOfScratchFiles);
             }
         }
 
         [Fact]
-        public void CanUsePagerAfterDispose2()
+        public void UsePagerFromThePool()
         {
             using (var tx = Env.ReadTransaction())
             {
@@ -122,10 +125,11 @@ namespace SlowTests.Issues
                 page2.Dispose();
                 page3.Dispose();
 
-                // will taken from the pool
+                // will take it from the pool . page1 and page2 not in use but we didn't dispose the pager yet
                 var page4 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
 
-                Env.DecompressionBuffers.Cleanup();
+                // nothing to cleanup
+                Assert.Equal(0, Env.DecompressionBuffers.Cleanup());
                 Assert.Equal(2, Env.DecompressionBuffers.NumberOfScratchFiles);
             }
 
