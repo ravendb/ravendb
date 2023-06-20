@@ -279,16 +279,16 @@ namespace Raven.Server.Documents.Archival
                     
         }
 
-        private bool MigrateDocument(DocumentsOperationContext context, (Slice LowerId, string Id) ids, DateTime currentTime)
+        private bool MigrateDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
-            if (ids.Id == null)
-                throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {ids.LowerId}");
+            if (id == null)
+                throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {lowerId}");
 
-            using (var doc = _database.DocumentsStorage.Get(context, ids.LowerId, DocumentFields.Data, throwOnConflict: true))
+            using (var doc = _database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
             {
                 if (doc == null || !doc.TryGetMetadata(out var metadata))
                 {
-                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{ids.Id}'");
+                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                 }
                 if (HasPassed(metadata, currentTime) == false) return false;
                         
@@ -300,20 +300,20 @@ namespace Raven.Server.Documents.Archival
                 metadata.Modifications[Constants.Documents.Metadata.Collection] = archivedCollectionName;
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Archive);
 
-                var mergedCounterGroups = CollectArchivedDocumentCountersIfNeeded(context, doc, ids.Id,collectionName, archivedCollectionName);
-                ArchiveDocumentTimeSeriesIfNeeded(context, doc, ids.Id,collectionName, archivedCollectionName);
-                ArchiveDocumentAttachmentsIfNeeded(context, doc, ids.Id,collectionName, archivedCollectionName);
-                ArchiveDocumentRevisionsIfNeeded(context, doc, ids.Id,collectionName, archivedCollectionName);
+                var mergedCounterGroups = CollectArchivedDocumentCountersIfNeeded(context, doc, id, collectionName, archivedCollectionName);
+                ArchiveDocumentTimeSeriesIfNeeded(context, doc, id, collectionName, archivedCollectionName);
+                ArchiveDocumentAttachmentsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
+                ArchiveDocumentRevisionsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
 
                 // Save changes (Re-read) - ReadObject returns modified blittable document basing on the previous one
                 // We need to create a new blittable before deleting the previous document, delete frees the memory assigned to it
                 // ReadObject would try to fetch document from the memory that could have been already reused
-                using (var updated = context.ReadObject(doc.Data, ids.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null, deleteCounters: false);
+                    _database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null, deleteCounters: false);
                     if (mergedCounterGroups != null)
-                        PutArchivedCounters(context, ids.Id, archivedCollectionName, mergedCounterGroups);
-                    _database.DocumentsStorage.Put(context, ids.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                        PutArchivedCounters(context, id, archivedCollectionName, mergedCounterGroups);
+                    _database.DocumentsStorage.Put(context, id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
                 }
             }
 
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.Archival
             {
                 foreach (var ids in pair.Value)
                 {
-                    bool timePassed = MigrateDocument(context, ids, currentTime);
+                    bool timePassed = MigrateDocument(context, ids.LowerId, ids.Id, currentTime);
                     if (timePassed == false) continue;
                     archiveTree.MultiDelete(pair.Key, ids.LowerId);
                     archivedCount++;
