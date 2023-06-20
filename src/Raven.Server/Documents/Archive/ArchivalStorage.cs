@@ -151,31 +151,6 @@ namespace Raven.Server.Documents.Archival
                 return toArchive;
             }
         }
-
-        // private (bool AllExpired, string Id) GetConflictedArchival(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
-        // {
-        //     string id = null;
-        //     var allToArchive = true;
-        //     var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
-        //     if (conflicts.Count > 0)
-        //     {
-        //         foreach (var conflict in conflicts)
-        //         {
-        //             using (conflict)
-        //             {
-        //                 id = conflict.Id;
-        //
-        //                 if (HasPassed(conflict.Doc, currentTime))
-        //                     continue;
-        //
-        //                 allToArchive = false;
-        //                 break;
-        //             }
-        //         }
-        //     }
-        //
-        //     return (allToArchive, id);
-        // }
         
         private static bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime)
         {
