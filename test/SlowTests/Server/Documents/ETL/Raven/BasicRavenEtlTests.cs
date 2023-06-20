@@ -633,7 +633,7 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Update_of_disassembled_document(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Update_of_disassembled_document(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -686,7 +686,9 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                var timeout = TimeSpan.FromSeconds(30);
+
+                Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(src.Database, timeout, srcDbMode));
 
                 using (var session = dest.OpenSession())
                 {
@@ -734,7 +736,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                etlDone.Wait(timeout);
 
                 using (var session = dest.OpenSession())
                 {
