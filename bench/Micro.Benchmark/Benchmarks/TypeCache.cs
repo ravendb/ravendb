@@ -163,12 +163,14 @@ namespace Micro.Benchmark.Benchmarks
             {
                 unsafe
                 {
+#pragma warning disable CS8500
                     // PERF: This only works because we assume that Type will not change the memory location over time.
                     // If that would not be the case we would be causing lots of cache misses, which is not the intended
                     // use of this facility. The idea is to be incredibly fast to retrieve a value if it exist in the cache
                     // even at the expense of failing to recognize that it is there.
                     TypedReference reference = __makeref(t);
                     ulong extremelyUnsafeAddress = **(ulong**)&reference;
+#pragma warning restore CS8500
 
                     var position = (int)extremelyUnsafeAddress & _andMask;
 
@@ -202,12 +204,14 @@ namespace Micro.Benchmark.Benchmarks
             {
                 unsafe
                 {
+#pragma warning disable CS8500
                     // PERF: This only works because we assume that Type will not change the memory location over time.
                     // If that would not be the case we would be causing lots of cache misses, which is not the intended
                     // use of this facility. The idea is to be incredibly fast to retrieve a value if it exist in the cache
                     // even at the expense of failing to recognize that it is there.
                     TypedReference reference = __makeref(t);
                     ulong extremelyUnsafeAddress = **(ulong**)&reference;
+#pragma warning restore CS8500
 
                     var position = (int)extremelyUnsafeAddress & _andMask;
 
