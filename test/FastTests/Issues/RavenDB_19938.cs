@@ -53,6 +53,14 @@ public class RavenDB_19938 : RavenTestBase
         );
 
         Assert.Equal(new[] { "B", "C" }, record.Topology.Members);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .WithReplicationFactor(3)
+        );
+
+        Assert.Empty(record.Topology.Members);
+        Assert.Equal(3, record.Topology.ReplicationFactor);
     }
 
     [Fact]
@@ -69,14 +77,24 @@ public class RavenDB_19938 : RavenTestBase
         Assert.Equal(new[] { "B", "C" }, record.Sharding.Shards[1].Members);
         Assert.Equal(new[] { "C", "A" }, record.Sharding.Shards[2].Members);
 
-        record = CreateDatabaseRecord(builder => builder.Sharded("DB1", topology =>
+        var e = Assert.Throws<InvalidOperationException>(() => CreateDatabaseRecord(builder => builder.Sharded("DB1", topology =>
             topology.Orchestrator(new OrchestratorTopology { Members = new List<string> { "A" } })
+        )));
+
+        Assert.Equal("At least one shard is required. Use 'AddShard' to add a shard to the topology.", e.Message);
+
+        record = CreateDatabaseRecord(builder => builder.Sharded("DB1", topology =>
+            topology
+                .Orchestrator(new OrchestratorTopology { Members = new List<string> { "A" } })
+                .AddShard(1, new DatabaseTopology())
         ));
 
         Assert.Equal(new[] { "A" }, record.Sharding.Orchestrator.Topology.Members);
 
         record = CreateDatabaseRecord(builder => builder.Sharded("DB1", topology =>
-            topology.Orchestrator(orchestrator => orchestrator.AddNode("B").AddNode("C"))
+            topology
+                .Orchestrator(orchestrator => orchestrator.AddNode("B").AddNode("C"))
+                .AddShard(1, new DatabaseTopology())
         ));
 
         Assert.Equal(new[] { "B", "C" }, record.Sharding.Orchestrator.Topology.Members);
