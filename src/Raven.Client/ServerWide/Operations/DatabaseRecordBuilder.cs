@@ -105,144 +105,6 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.Disabled()
-    {
-        HandleDisabled();
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.Encrypted()
-    {
-        HandleEncryption();
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithLockMode(DatabaseLockMode lockMode)
-    {
-        HandleLockMode(lockMode);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration)
-    {
-        HandleDocumentsCompression(configuration);
-
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithSorters(params SorterDefinition[] sorterDefinitions)
-    {
-        HandleSorters(sorterDefinitions);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions)
-    {
-        HandleAnalyzers(analyzerDefinitions);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithIndexes(params IndexDefinition[] indexDefinitions)
-    {
-        HandleIndexes(indexDefinitions);
-
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithSettings(Dictionary<string, string> settings)
-    {
-        HandleSettings(settings);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithSettings(Action<Dictionary<string, string>> builder)
-    {
-        HandleSettings(builder);
-
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureRevisions(RevisionsConfiguration configuration)
-    {
-        HandleRevisions(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithEtls(Action<IEtlConfigurationBuilder> builder)
-    {
-        HandleEtls(builder);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithBackups(Action<IBackupConfigurationBuilder> builder)
-    {
-        HandleBackups(builder);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithReplication(Action<IReplicationConfigurationBuilder> builder)
-    {
-        HandleReplication(builder);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder)
-    {
-        HandleConnectionStrings(builder);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureClient(ClientConfiguration configuration)
-    {
-        HandleClient(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureStudio(StudioConfiguration configuration)
-    {
-        HandleStudio(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureRefresh(RefreshConfiguration configuration)
-    {
-        HandleRefresh(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureExpiration(ExpirationConfiguration configuration)
-    {
-        HandleExpiration(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.ConfigureTimeSeries(TimeSeriesConfiguration configuration)
-    {
-        HandleTimeSeries(configuration);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>.WithIntegrations(Action<IIntegrationConfigurationBuilder> builder)
-    {
-        HandleIntegrations(builder);
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilder.WithTopology(DatabaseTopology topology)
-    {
-        DatabaseRecord.Topology = topology ?? throw new ArgumentNullException(nameof(topology));
-        return this;
-    }
-
-    IDatabaseRecordBuilder IDatabaseRecordBuilder.WithTopology(Action<ITopologyConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-        return this;
-    }
-
     IDatabaseRecordBuilder IDatabaseRecordBuilderInitializer.Regular(string databaseName)
     {
         WithName(databaseName);
@@ -340,6 +202,29 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
+    ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IShardTopologyConfigurationBuilder>.EnableDynamicNodesDistribution()
+    {
+        _shardTopology.DynamicNodesDistribution = true;
+        return this;
+    }
+
+    ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IOrchestratorTopologyConfigurationBuilder>.EnableDynamicNodesDistribution()
+    {
+        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        DatabaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
+        DatabaseRecord.Sharding.Orchestrator.Topology.DynamicNodesDistribution = true;
+
+        return this;
+    }
+
+    ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<ITopologyConfigurationBuilder>.EnableDynamicNodesDistribution()
+    {
+        DatabaseRecord.Topology ??= new DatabaseTopology();
+        DatabaseRecord.Topology.DynamicNodesDistribution = true;
+
+        return this;
+    }
+
     IReplicationConfigurationBuilder IReplicationConfigurationBuilder.AddExternalReplication(ExternalReplication configuration)
     {
         if (configuration == null)
@@ -373,121 +258,121 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.Encrypted()
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.Encrypted()
     {
         HandleEncryption();
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithLockMode(DatabaseLockMode lockMode)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithLockMode(DatabaseLockMode lockMode)
     {
         HandleLockMode(lockMode);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration)
     {
         HandleDocumentsCompression(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithSorters(params SorterDefinition[] sorterDefinitions)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSorters(params SorterDefinition[] sorterDefinitions)
     {
         HandleSorters(sorterDefinitions);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions)
     {
         HandleAnalyzers(analyzerDefinitions);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithIndexes(params IndexDefinition[] indexDefinitions)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithIndexes(params IndexDefinition[] indexDefinitions)
     {
         HandleIndexes(indexDefinitions);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithSettings(Dictionary<string, string> settings)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSettings(Dictionary<string, string> settings)
     {
         HandleSettings(settings);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithSettings(Action<Dictionary<string, string>> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSettings(Action<Dictionary<string, string>> builder)
     {
         HandleSettings(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureRevisions(RevisionsConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureRevisions(RevisionsConfiguration configuration)
     {
         HandleRevisions(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithEtls(Action<IEtlConfigurationBuilder> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithEtls(Action<IEtlConfigurationBuilder> builder)
     {
         HandleEtls(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithBackups(Action<IBackupConfigurationBuilder> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithBackups(Action<IBackupConfigurationBuilder> builder)
     {
         HandleBackups(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithReplication(Action<IReplicationConfigurationBuilder> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithReplication(Action<IReplicationConfigurationBuilder> builder)
     {
         HandleReplication(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder)
     {
         HandleConnectionStrings(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureClient(ClientConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureClient(ClientConfiguration configuration)
     {
         HandleClient(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureStudio(StudioConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureStudio(StudioConfiguration configuration)
     {
         HandleStudio(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureRefresh(RefreshConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureRefresh(RefreshConfiguration configuration)
     {
         HandleRefresh(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureExpiration(ExpirationConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureExpiration(ExpirationConfiguration configuration)
     {
         HandleExpiration(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.ConfigureTimeSeries(TimeSeriesConfiguration configuration)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureTimeSeries(TimeSeriesConfiguration configuration)
     {
         HandleTimeSeries(configuration);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.WithIntegrations(Action<IIntegrationConfigurationBuilder> builder)
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithIntegrations(Action<IIntegrationConfigurationBuilder> builder)
     {
         HandleIntegrations(builder);
         return this;
     }
 
-    IShardedDatabaseRecordBuilder IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>.Disabled()
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.Disabled()
     {
         HandleDisabled();
         return this;
@@ -560,13 +445,28 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
-    //ITopologyConfigurationBuilder ITopologyConfigurationBuilder.EnableDynamicNodesDistribution()
-    //{
-    //    DatabaseRecord.Topology ??= new DatabaseTopology();
-    //    DatabaseRecord.Topology.DynamicNodesDistribution = true;
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilder.WithTopology(DatabaseTopology topology)
+    {
+        DatabaseRecord.Topology = topology ?? throw new ArgumentNullException(nameof(topology));
+        return this;
+    }
 
-    //    return this;
-    //}
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilder.WithTopology(Action<ITopologyConfigurationBuilder> builder)
+    {
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+        return this;
+    }
+
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilder.WithReplicationFactor(int replicationFactor)
+    {
+        DatabaseRecord.Topology ??= new DatabaseTopology();
+        DatabaseRecord.Topology.ReplicationFactor = replicationFactor;
+
+        return this;
+    }
 
     private void HandleDisabled()
     {
@@ -719,68 +619,71 @@ public interface IDatabaseRecordBuilderInitializer
     public IShardedDatabaseRecordBuilder Sharded(string databaseName, Action<IShardedTopologyConfigurationBuilder> builder);
 }
 
-public interface IDatabaseRecordBuilder : IDatabaseRecordBuilderBase<IDatabaseRecordBuilder>
+public interface IDatabaseRecordBuilder : IDatabaseRecordBuilderBase
 {
-    public IDatabaseRecordBuilder WithTopology(DatabaseTopology topology);
+    public IDatabaseRecordBuilderBase WithTopology(DatabaseTopology topology);
 
-    public IDatabaseRecordBuilder WithTopology(Action<ITopologyConfigurationBuilder> builder);
+    public IDatabaseRecordBuilderBase WithTopology(Action<ITopologyConfigurationBuilder> builder);
+
+    public IDatabaseRecordBuilderBase WithReplicationFactor(int replicationFactor);
 }
 
-public interface IShardedDatabaseRecordBuilder : IDatabaseRecordBuilderBase<IShardedDatabaseRecordBuilder>
+public interface IShardedDatabaseRecordBuilder : IDatabaseRecordBuilderBase
 {
 }
 
-public interface IDatabaseRecordBuilderBase<out TSelf>
+public interface IDatabaseRecordBuilderBase
 {
-    TSelf Disabled();
+    IDatabaseRecordBuilderBase Disabled();
 
-    TSelf Encrypted();
+    IDatabaseRecordBuilderBase Encrypted();
 
-    TSelf WithLockMode(DatabaseLockMode lockMode);
+    IDatabaseRecordBuilderBase WithLockMode(DatabaseLockMode lockMode);
 
-    TSelf ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration);
 
-    TSelf WithSorters(params SorterDefinition[] sorterDefinitions);
+    IDatabaseRecordBuilderBase WithSorters(params SorterDefinition[] sorterDefinitions);
 
-    TSelf WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions);
+    IDatabaseRecordBuilderBase WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions);
 
-    TSelf WithIndexes(params IndexDefinition[] indexDefinitions);
+    IDatabaseRecordBuilderBase WithIndexes(params IndexDefinition[] indexDefinitions);
 
-    TSelf WithSettings(Dictionary<string, string> settings);
+    IDatabaseRecordBuilderBase WithSettings(Dictionary<string, string> settings);
 
-    TSelf WithSettings(Action<Dictionary<string, string>> builder);
+    IDatabaseRecordBuilderBase WithSettings(Action<Dictionary<string, string>> builder);
 
-    TSelf ConfigureRevisions(RevisionsConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureRevisions(RevisionsConfiguration configuration);
 
-    TSelf WithEtls(Action<IEtlConfigurationBuilder> builder);
+    IDatabaseRecordBuilderBase WithEtls(Action<IEtlConfigurationBuilder> builder);
 
-    TSelf WithBackups(Action<IBackupConfigurationBuilder> builder);
+    IDatabaseRecordBuilderBase WithBackups(Action<IBackupConfigurationBuilder> builder);
 
-    TSelf WithReplication(Action<IReplicationConfigurationBuilder> builder);
+    IDatabaseRecordBuilderBase WithReplication(Action<IReplicationConfigurationBuilder> builder);
 
-    TSelf WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder);
+    IDatabaseRecordBuilderBase WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder);
 
-    TSelf ConfigureClient(ClientConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureClient(ClientConfiguration configuration);
 
-    TSelf ConfigureStudio(StudioConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureStudio(StudioConfiguration configuration);
 
-    TSelf ConfigureRefresh(RefreshConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureRefresh(RefreshConfiguration configuration);
 
-    TSelf ConfigureExpiration(ExpirationConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureExpiration(ExpirationConfiguration configuration);
 
-    TSelf ConfigureTimeSeries(TimeSeriesConfiguration configuration);
+    IDatabaseRecordBuilderBase ConfigureTimeSeries(TimeSeriesConfiguration configuration);
 
-    TSelf WithIntegrations(Action<IIntegrationConfigurationBuilder> builder);
+    IDatabaseRecordBuilderBase WithIntegrations(Action<IIntegrationConfigurationBuilder> builder);
 }
 
 public interface ITopologyConfigurationBuilderBase<out TSelf>
 {
     TSelf AddNode(string nodeTag);
+
+    ITopologyConfigurationBuilder EnableDynamicNodesDistribution();
 }
 
 public interface ITopologyConfigurationBuilder : ITopologyConfigurationBuilderBase<ITopologyConfigurationBuilder>
 {
-    //ITopologyConfigurationBuilder EnableDynamicNodesDistribution();
 }
 
 public interface IOrchestratorTopologyConfigurationBuilder : ITopologyConfigurationBuilderBase<IOrchestratorTopologyConfigurationBuilder>
