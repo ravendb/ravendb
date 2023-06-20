@@ -124,11 +124,14 @@ namespace Raven.Server.Documents.Indexes
         {
             if (indexItem.SkipLuceneDelete == false)
             {
+                bool mustDelete;
                 using (_stats.BloomStats.Start())
                 {
-                    if (_filters.Add(indexItem.LowerId) == false)
-                        writer.Value.Delete(indexItem.LowerId, stats);
+                    mustDelete = _filters.Add(indexItem.LowerId) == false;
                 }
+
+                if (mustDelete)
+                    writer.Value.Delete(indexItem.LowerId, stats);
             }
 
             var numberOfOutputs = 0;
