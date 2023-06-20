@@ -183,7 +183,10 @@ namespace Raven.Server.Documents.Archival
             {
                 if (DateTime.TryParseExact(archiveDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date))
                 {
-                    if (currentTime >= date.ToUniversalTime())
+                    if (date.Kind != DateTimeKind.Utc) 
+                        date = date.ToUniversalTime();
+                    
+                    if (currentTime >= date)
                         return true;
                 }
             }
