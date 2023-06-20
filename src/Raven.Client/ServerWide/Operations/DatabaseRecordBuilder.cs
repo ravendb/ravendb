@@ -121,6 +121,9 @@ internal class DatabaseRecordBuilder :
         DatabaseRecord.Sharding = new ShardingConfiguration();
         builder(this);
 
+        if (DatabaseRecord.Sharding.Shards == null || DatabaseRecord.Sharding.Shards.Count == 0)
+            throw new InvalidOperationException($"At least one shard is required. Use '{nameof(IShardedTopologyConfigurationBuilder.AddShard)}' to add a shard to the topology.");
+
         return this;
     }
 
