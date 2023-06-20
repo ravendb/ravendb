@@ -241,6 +241,37 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
+        public void DirectAdd(LazyStringValue key)
+        {
+            if (Consumed)
+                return;
+
+            var primaryHash = BloomFilter.CalculatePrimaryHash(key);
+            var secondaryHash = BloomFilter.CalculateSecondaryHash(key);
+
+            if (_currentFilter.Add(primaryHash, secondaryHash))
+            {
+                ExpandFiltersIfNecessary();
+            }
+        }
+
+        public bool Contains(LazyStringValue key)
+        {
+            if (Consumed)
+                return true;
+
+            var primaryHash = BloomFilter.CalculatePrimaryHash(key);
+            var secondaryHash = BloomFilter.CalculateSecondaryHash(key);
+
+            for (var i = 0; i < _filters.Length; i++)
+            {
+                if (_filters[i].Contains(primaryHash, secondaryHash))
+                    return true;
+            }
+
+            return false;
+        }
+
         private void ExpandFiltersIfNecessary()
         {
             if (_currentFilter.Count < _currentFilter.Capacity)

@@ -122,32 +122,55 @@ namespace Raven.Server.Documents.Indexes
 
         private int UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (indexItem.SkipLuceneDelete == false)
-            {
-                bool mustDelete;
-                using (_stats.BloomStats.Start())
-                {
-                    mustDelete = _filters.Add(indexItem.LowerId) == false;
-                }
-
-                if (mustDelete)
-                    writer.Value.Delete(indexItem.LowerId, stats);
-            }
-
             var numberOfOutputs = 0;
+            var first = true;
+
             foreach (var mapResult in mapResults)
             {
+                if (first)
+                {
+                    if (indexItem.SkipLuceneDelete)
+                    {
+                        // we skip deleting from lucene for the initial indexing run.
+                        // we already know that the ids that we get here are unique,
+                        // so we can directly add the id to the current filter without checking if it was already added.
+                        using (_stats.BloomStats.Start())
+                            _filters.DirectAdd(indexItem.LowerId);
+                    }
+                    else
+                    {
+                        // this isn't the initial indexing run.
+                        // if we already indexed that document in the past, we must delete it from the index before we index it again.
+                        bool mustDelete;
+                        using (_stats.BloomStats.Start())
+                        {
+                            mustDelete = _filters.Add(indexItem.LowerId) == false;
+                        }
+
+                        if (mustDelete)
+                            writer.Value.Delete(indexItem.LowerId, stats);
+                    }
+
+                    first = false;
+                }
+
                 writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
 
                 numberOfOutputs++;
             }
 
-            if (indexItem.SkipLuceneDelete && numberOfOutputs > 0)
+            if (indexItem.SkipLuceneDelete == false && numberOfOutputs == 0)
             {
-                // we skip deleting from lucene for the initial indexing run
-                // but we must update the bloom filters if we actually indexed that document
+                // this isn't the first indexing run and we didn't have any outputs for this document.
+                // however, if the document was already indexed in the past and now it isn't, we must delete it from the index.
+                bool mustDelete;
                 using (_stats.BloomStats.Start())
-                    _filters.Add(indexItem.LowerId);
+                {
+                    mustDelete = _filters.Contains(indexItem.LowerId);
+                }
+
+                if (mustDelete)
+                    writer.Value.Delete(indexItem.LowerId, stats);
             }
 
             return numberOfOutputs;
