@@ -1162,17 +1162,16 @@ namespace SlowTests.Client.Attachments
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 Assert.Equal(2, conflicts.Length);
                 var hash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
-                var sorted = conflicts.OrderBy(x => x.ChangeVector).ToList();
-                Assert.Equal(2, sorted.Count);
-                AssertConflict(sorted[0], "a1", hash, "a1/png", 3);
-                AssertConflict(sorted[1], "a1", hash, "a2/jpeg", 3);
+
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", hash, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash, "a2/jpeg", 3);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
                 Assert.Equal(2, conflicts.Length);
-                sorted = conflicts.OrderBy(x => x.ChangeVector).ToList();
-                Assert.Equal(2, sorted.Count);
-                AssertConflict(sorted[0], "a1", hash, "a1/png", 3);
-                AssertConflict(sorted[1], "a1", hash, "a2/jpeg", 3);
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", hash, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash, "a2/jpeg", 3);
 
                 await ResolveConflict(store1, store2, conflicts[0].Doc, "a1", hash, "a1/png", 3);
             }
@@ -1249,18 +1248,16 @@ namespace SlowTests.Client.Attachments
                 var hash2 = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
-                var sorted = conflicts.OrderBy(x => x.LastModified).ToList();
                 Assert.Equal(2, conflicts.Length);
-                AssertConflict(sorted[0], "a1", hash1, "a1/png", 3);
-                AssertConflict(sorted[1], "a1", hash2, "a1/png", 5);
+                AssertConflict(conflicts[0], "a1", hash1, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash2, "a1/png", 5);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
-                sorted = conflicts.OrderBy(x => x.LastModified).ToList();
                 Assert.Equal(2, conflicts.Length);
-                AssertConflict(sorted[0], "a1", hash1, "a1/png", 3);
-                AssertConflict(sorted[1], "a1", hash2, "a1/png", 5);
+                AssertConflict(conflicts[0], "a1", hash1, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash2, "a1/png", 5);
 
-                await ResolveConflict(store1, store2, sorted[1].Doc, "a1", hash2, "a1/png", 5);
+                await ResolveConflict(store1, store2, conflicts[1].Doc, "a1", hash2, "a1/png", 5);
             }
         }
 
@@ -2038,8 +2035,7 @@ namespace SlowTests.Client.Attachments
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGOR", cv));
                 }
-
-                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                cvs.Sort(ChangeVectorComparer.Instance);
                 var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -2174,7 +2170,7 @@ namespace SlowTests.Client.Attachments
                     cvs.Add(("EGR", cv));
                 }
 
-                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                cvs.Sort(ChangeVectorComparer.Instance);
                 var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -2319,7 +2315,8 @@ namespace SlowTests.Client.Attachments
                     cvs.Add(("EGOR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
                 }
 
-                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                cvs.Sort(ChangeVectorComparer.Instance);
+
                 var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -2505,7 +2502,8 @@ namespace SlowTests.Client.Attachments
                     cvs.Add(("EGR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
                 }
 
-                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                cvs.Sort(ChangeVectorComparer.Instance);
+
                 var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -3424,6 +3422,22 @@ namespace SlowTests.Client.Attachments
                 return true;
             return false;
         }
+        
+        private class ChangeVectorComparer : IComparer<(string Name, string ChangeVector)>, IComparer<(string Name, string ChangeVector, string Hash)> 
+        {
+            public static ChangeVectorComparer Instance = new ChangeVectorComparer();
 
+            public int Compare((string Name, string ChangeVector) x, (string Name, string ChangeVector) y) => Compare(x.ChangeVector, y.ChangeVector);
+
+            public int Compare((string Name, string ChangeVector, string Hash) x, (string Name, string ChangeVector, string Hash) y) => Compare(x.ChangeVector, y.ChangeVector);
+
+            private int Compare(string x, string y)
+            {
+                var cvx = new ChangeVector(x, NoChangeVectorContext.Instance).Version.AsString();
+                var cvy = new ChangeVector(y, NoChangeVectorContext.Instance).Version.AsString();
+
+                return string.CompareOrdinal(cvx,cvy);
+            }
+        }
     }
 }

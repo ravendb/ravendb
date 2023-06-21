@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
@@ -12,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
@@ -389,6 +391,54 @@ public partial class RavenTestBase
             }
 
             return docIdPerShard;
+        }
+
+        public async Task EnsureNoDatabaseChangeVectorLeakAsync(string database)
+        {
+            var ids = new Dictionary<string, int>(StringComparer.Ordinal);
+
+            await foreach (var shard in GetShardsDocumentDatabaseInstancesFor(database))
+            {
+                if (ids.TryAdd(shard.DbBase64Id, shard.ShardNumber) == false)
+                {
+                    throw new InvalidOperationException("this shouldn't happened and means that different databases has same ID");
+                }
+            }
+
+            await foreach (var shard in GetShardsDocumentDatabaseInstancesFor(database))
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var databaseChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(ctx);
+                    if (string.IsNullOrEmpty(databaseChangeVector))
+                        continue;
+
+                    foreach (var entry in databaseChangeVector.ToChangeVectorList())
+                    {
+                        if (entry.NodeTag == ChangeVectorParser.RaftInt)
+                            continue;
+
+                        if (entry.NodeTag == ChangeVectorParser.TrxnInt)
+                            continue;
+
+                        if (entry.NodeTag == ChangeVectorParser.MoveInt)
+                            continue;
+
+                        if (ids.TryGetValue(entry.DbId, out var shardNumber))
+                        {
+                            if (shardNumber == shard.ShardNumber)
+                                continue; // this database has a replication factor > 1
+
+                            var sb = new StringBuilder();
+                            sb.AppendLine("There was database change vector leaked detected");
+                            sb.AppendLine($"The entry '{entry.DbId}' exists in shards {ids[entry.DbId]} and {shard.ShardNumber}");
+
+                            throw new InvalidOperationException(sb.ToString());
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -24,6 +24,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -87,7 +89,10 @@ namespace Tests.Infrastructure
             {
                 var conflicts = store.Commands().GetConflictsFor(docId);
                 if (conflicts.Length >= count)
-                    return conflicts;
+                {
+                    // we need a stable order for testing purposes, should be good enough 
+                    return conflicts.OrderBy(x => x.LastModified).ToArray();
+                }
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {

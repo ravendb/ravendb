@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
@@ -164,6 +165,23 @@ public class ChangeVector
         var orderMerge = ChangeVectorUtils.MergeVectors(cv1.Order._changeVector, cv2.Order._changeVector);
         var versionMerge = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
         return context.GetChangeVector(versionMerge, orderMerge);
+    }
+
+    public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
+    {
+        if (changeVector == null)
+            return;
+
+        var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+        context.LastDatabaseChangeVector = databaseChangeVector.MergeOrderWith(changeVector, context);
+    }
+
+    public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+    {
+        if (changeVector == null)
+            return;
+
+        MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
     }
 
     public static ChangeVector Merge(List<ChangeVector> changeVectors, IChangeVectorOperationContext context)

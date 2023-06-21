@@ -406,6 +406,7 @@ namespace Raven.Server.Documents
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
                 items.Add(conflict);
             }
+
             return items;
         }
 
@@ -452,9 +453,9 @@ namespace Raven.Server.Documents
         }
 
         public (ChangeVector ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVector documentChangeVector,
-            DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
+            DocumentsOperationContext context, Slice lowerId, long newEtag, BlittableJsonReaderObject document)
         {
-            var result = DeleteConflictsFor(context, id, document);
+            var result = DeleteConflictsFor(context, lowerId, document);
             if (result.ChangeVectors == null ||
                 result.ChangeVectors.Count == 0)
             {
@@ -561,7 +562,7 @@ namespace Raven.Server.Documents
 
                         foreach (var conflict in conflicts)
                         {
-                            var conflictStatus = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                            var conflictStatus = _documentDatabase.DocumentsStorage.GetConflictStatus(context, incomingChangeVector, conflict.ChangeVector, ChangeVectorMode.Version);
                             switch (conflictStatus)
                             {
                                 case ConflictStatus.Update:
@@ -644,7 +645,7 @@ namespace Raven.Server.Documents
         }
 
         public DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context, Slice lowerId,
-            string expectedChangeVector, string changeVector)
+            string expectedChangeVector, ChangeVector changeVector)
         {
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -691,7 +692,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, string changeVector,
+        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, ChangeVector changeVector,
             IReadOnlyList<DocumentConflict> conflicts, out long etag)
         {
             var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out string mergedChangeVector);

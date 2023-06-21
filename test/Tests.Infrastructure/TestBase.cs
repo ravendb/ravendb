@@ -250,7 +250,7 @@ namespace FastTests
                 return Servers;
             }
 
-            return new List<RavenServer> { Server };
+            return new List<RavenServer> { _localServer ?? _globalServer ?? throw new ArgumentNullException(nameof(Server))};
         }
 
         private static void CheckServerLeak()

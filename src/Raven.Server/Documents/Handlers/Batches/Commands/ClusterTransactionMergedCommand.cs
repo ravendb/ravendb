@@ -125,7 +125,7 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                             {
                                 using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                 {
-                                    var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector,
+                                    var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: context.GetChangeVector(changeVector),
                                         documentFlags: DocumentFlags.FromClusterTransaction);
                                     AddDeleteResult(deleteResult, cmd.Id);
                                 }

@@ -378,7 +378,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedToNonSharded()
         {
             using (var store1 = GetDocumentStore())

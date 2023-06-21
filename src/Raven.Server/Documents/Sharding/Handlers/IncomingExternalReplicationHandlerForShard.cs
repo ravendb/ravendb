@@ -42,52 +42,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector);
+                var result = _database.DocumentsStorage.GetNewChangeVector(context);
 
-                if (IsRevisionType(item) || HasConflicts(context, item))
-                    return changeVector.Order;
+                var migratedChangeVector = context.GetChangeVector(changeVector.Version, result.ChangeVector);
+                item.ChangeVector = migratedChangeVector.AsString();
 
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                var etag = _database.DocumentsStorage.GenerateNextEtag();
-
-                if (current.IsNullOrEmpty)
-                    context.LastDatabaseChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, etag);
-
-                var dbId = _database.DbBase64Id;
-                if (changeVector.IsSingle)
-                {
-                    var version = changeVector.Version;
-                    var order = changeVector.UpdateOrder(_database.ServerStore.NodeTag, dbId, etag, context);
-                    item.ChangeVector = context.GetChangeVector(version, order);
-                }
-                else
-                {
-                    item.ChangeVector = changeVector.UpdateOrder(_database.ServerStore.NodeTag, dbId, etag, context);
-                }
-
-                return changeVector.Order;
-            }
-
-            private bool IsRevisionType(ReplicationBatchItem item)
-            {
-                if (item is AttachmentReplicationItem attachment &&
-                    AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision)
-                    return true;
-
-                if (item is DocumentReplicationItem doc &&
-                    (doc.Flags.Contain(DocumentFlags.Revision) ||
-                    doc.Flags.Contain(DocumentFlags.DeleteRevision)))
-                    return true;
-
-                return false;
-            }
-
-            private static bool HasConflicts(DocumentsOperationContext context, ReplicationBatchItem item)
-            {
-                // we only care about documents 
-                if (item is DocumentReplicationItem doc == false)
-                    return false;
-
-                return ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out _) == ConflictStatus.Conflict;
+                return result.ChangeVector;
             }
         }
     }

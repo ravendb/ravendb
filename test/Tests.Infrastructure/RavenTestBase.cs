@@ -287,12 +287,19 @@ namespace FastTests
                             if (CreatedStores.TryRemove(store) == false)
                                 return; // can happen if we are wrapping the store inside sharded one
 
+                            if (sharded && options.CreateDatabase)
+                            {
+                                if (Servers.Contains(serverToUse) || IsGlobalOrLocalServer(serverToUse))
+                                {
+                                    AsyncHelpers.RunSync(() => Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database));
+                                }
+                            }
+
                             DeleteDatabaseResult result = null;
-                            if (options.DeleteDatabaseOnDispose)
+                            if (options.DeleteDatabaseOnDispose && options.CreateDatabase)
                             {
                                 result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
                             }
-
                             if (Servers.Contains(serverToUse) && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
