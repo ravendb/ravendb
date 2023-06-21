@@ -138,8 +138,7 @@ namespace Raven.Server.Documents.Archival
             }
             catch (OperationCanceledException)
             {
-                // this will stop processing
-                throw;
+                // this will stop processing and return
             }
             catch (Exception e)
             {
