@@ -620,7 +620,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding, Skip = "waiting for RavenDB-20544")]
         public async Task CanKillShardedBackupOperation()
         {
             var backupPath = NewDataPath(suffix: "_BackupFolder");
