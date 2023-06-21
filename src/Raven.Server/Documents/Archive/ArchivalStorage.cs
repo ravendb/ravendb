@@ -151,9 +151,10 @@ namespace Raven.Server.Documents.Archival
         
         private static bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime)
         {
-            if (metadata.TryGet(Constants.Documents.Metadata.Archive, out string archiveDate))
+            
+            if (metadata.TryGet(Constants.Documents.Metadata.Archive, out LazyStringValue archiveDate))
             {
-                if (DateTime.TryParseExact(archiveDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date))
+                if (LazyStringParser.TryParseDateTime(archiveDate.Buffer, archiveDate.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) == LazyStringParser.Result.DateTime)
                 {
                     if (date.Kind != DateTimeKind.Utc) 
                         date = date.ToUniversalTime();
