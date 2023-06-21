@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     1 => "Heap Generation 1",
                                     2 => "Heap Generation 2",
                                     3 => "Large Object Heap",
-                                    4 => "Finalization Queue",
+                                    4 => "Pinned Object Heap",
                                     _ => "Unknown Generation"
                                 },
                             [nameof(x.FragmentationAfterBytes)] = x.FragmentationAfterBytes,
