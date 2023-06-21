@@ -308,9 +308,8 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public async Task ShouldDeleteExpiredDocumentsForSharding(Options options)
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        public async Task ShouldDeleteExpiredDocumentsForSharding()
         {
             var utcFormats = new Dictionary<string, DateTimeKind>
             {
@@ -328,17 +327,18 @@ namespace SlowTests.Server.Documents.Expiration
             var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
             await ShardingCluster.CreateShardedDatabaseInCluster(database2, replicationFactor: 2, cluster, shards: 3);
 
-            options.Server = cluster.Leader;
-            options.CreateDatabase = false;
-            options.ModifyDatabaseName = _ => database2;
-
             var configuration = new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 100
             };
 
-            using (var store = GetDocumentStore(options))
+            using (var store = Sharding.GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                CreateDatabase = false,
+                ModifyDatabaseName = _ => database2
+            }))
             {
                 foreach (var dateTimeFormat in utcFormats)
                 {
@@ -401,8 +401,10 @@ namespace SlowTests.Server.Documents.Expiration
                         foreach (var database in kvp.Value)
                         {
                             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                            var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-                            await expiredDocumentsCleaner?.CleanupExpiredDocs()!;
+                            if (database.ExpiredDocumentsCleaner == null)
+                                continue;
+
+                            await database.ExpiredDocumentsCleaner.CleanupExpiredDocs();
                         }
                     }
 
