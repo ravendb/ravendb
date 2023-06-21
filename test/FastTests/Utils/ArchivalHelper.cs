@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Archival;
-using Raven.Client.Documents.Operations.Archive;
 
 namespace FastTests.Utils
 {
