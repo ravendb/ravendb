@@ -360,13 +360,13 @@ public class DatabaseRecordActions : IDatabaseRecordActions
         }
         
         
-        if (databaseRecord.Archival != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Archival))
+        if (databaseRecord.DataArchival != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DataArchival))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring archival from smuggler");
 
-            tasks.Add(_server.SendToLeaderAsync(new EditArchivalCommand(databaseRecord.Archival, _name, RaftIdGenerator.DontCareId)));
-            result.DatabaseRecord.ArchivalConfigurationUpdated = true;
+            tasks.Add(_server.SendToLeaderAsync(new EditDataArchivalCommand(databaseRecord.DataArchival, _name, RaftIdGenerator.DontCareId)));
+            result.DatabaseRecord.DataArchivalConfigurationUpdated = true;
         }
 
         if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))

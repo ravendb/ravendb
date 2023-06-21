@@ -190,12 +190,12 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
                 
-                if (reader.TryGet(nameof(databaseRecord.Archival), out BlittableJsonReaderObject archival) &&
+                if (reader.TryGet(nameof(databaseRecord.DataArchival), out BlittableJsonReaderObject archival) &&
                     archival != null)
                 {
                     try
                     {
-                        databaseRecord.Archival = JsonDeserializationCluster.ArchivalConfiguration(archival);
+                        databaseRecord.DataArchival = JsonDeserializationCluster.DataArchivalConfiguration(archival);
                     }
                     catch (Exception e)
                     {

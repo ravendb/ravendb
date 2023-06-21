@@ -1,25 +1,25 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors.Archival
+namespace Raven.Server.Documents.Handlers.Processors.DataArchival
 {
-    internal abstract class AbstractArchivalHandlerProcessorForGet<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractDataArchivalHandlerProcessorForGet<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractArchivalHandlerProcessorForGet([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractDataArchivalHandlerProcessorForGet([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected abstract ArchivalConfiguration GetArchivalConfiguration();
+        protected abstract DataArchivalConfiguration GetDataArchivalConfiguration();
 
         public override async ValueTask ExecuteAsync()
         {
-            var archivalConfig = GetArchivalConfiguration();
+            var archivalConfig = GetDataArchivalConfiguration();
 
             using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {

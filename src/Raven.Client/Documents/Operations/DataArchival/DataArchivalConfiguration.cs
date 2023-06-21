@@ -1,8 +1,8 @@
 ﻿using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.Archival
+namespace Raven.Client.Documents.Operations.DataArchival
 {
-    public class ArchivalConfiguration : IDynamicJson
+    public class DataArchivalConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
 
@@ -21,10 +21,10 @@ namespace Raven.Client.Documents.Operations.Archival
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((ArchivalConfiguration)obj);
+            return Equals((DataArchivalConfiguration)obj);
         }
 
-        protected bool Equals(ArchivalConfiguration other)
+        protected bool Equals(DataArchivalConfiguration other)
         {
             return Disabled == other.Disabled && ArchiveFrequencyInSec == other.ArchiveFrequencyInSec;
         }

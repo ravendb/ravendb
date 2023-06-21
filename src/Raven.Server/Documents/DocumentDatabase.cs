@@ -19,7 +19,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Changes;
-using Raven.Server.Documents.Archival;
+using Raven.Server.Documents.DataArchival;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;

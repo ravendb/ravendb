@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -12,7 +13,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;
 
-namespace Raven.Server.Documents.Archival
+namespace Raven.Server.Documents.DataArchival
 {
     public class DataArchivist : BackgroundWorkBase
     {
@@ -23,20 +24,20 @@ namespace Raven.Server.Documents.Archival
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _archivePeriod;
 
-        public ArchivalConfiguration ArchivalConfiguration { get; }
+        public DataArchivalConfiguration DataArchivalConfiguration { get; }
 
-        private DataArchivist(DocumentDatabase database, ArchivalConfiguration archivalConfiguration) : base(database.Name, database.DatabaseShutdown)
+        private DataArchivist(DocumentDatabase database, DataArchivalConfiguration dataArchivalConfiguration) : base(database.Name, database.DatabaseShutdown)
         {
-            ArchivalConfiguration = archivalConfiguration;
+            DataArchivalConfiguration = dataArchivalConfiguration;
             _database = database;
-            _archivePeriod = TimeSpan.FromSeconds(ArchivalConfiguration?.ArchiveFrequencyInSec ?? 60);
+            _archivePeriod = TimeSpan.FromSeconds(DataArchivalConfiguration?.ArchiveFrequencyInSec ?? 60);
         }
 
         public static DataArchivist LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, DataArchivist dataArchivist)
         {
             try
             {
-                if (dbRecord.Archival == null)
+                if (dbRecord.DataArchival == null)
                 {
                     dataArchivist?.Dispose();
                     return null;
@@ -45,24 +46,24 @@ namespace Raven.Server.Documents.Archival
                 if (dataArchivist != null)
                 {
                     // no changes
-                    if (Equals(dataArchivist.ArchivalConfiguration, dbRecord.Archival))
+                    if (Equals(dataArchivist.DataArchivalConfiguration, dbRecord.DataArchival))
                         return dataArchivist;
                 }
 
                 dataArchivist?.Dispose();
 
-                var hasArchive = dbRecord.Archival?.Disabled == false;
+                var hasArchive = dbRecord.DataArchival?.Disabled == false;
 
                 if (hasArchive == false)
                     return null;
 
-                var archiver = new DataArchivist(database, dbRecord.Archival);
-                archiver.Start();
-                return archiver;
+                var archivist = new DataArchivist(database, dbRecord.DataArchival);
+                archivist.Start();
+                return archivist;
             }
             catch (Exception e)
             {
-                const string msg = "Cannot enable documents archiver as the configuration record is not valid.";
+                const string msg = "Cannot enable documents archivist as the configuration record is not valid.";
                 database.NotificationCenter.Add(AlertRaised.Create(
                     database.Name,
                     $"Archive error in {database.Name}", msg,
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Archival
 
         private async Task DoArchiveWork()
         {
-            while (ArchivalConfiguration?.Disabled == false)
+            while (DataArchivalConfiguration?.Disabled == false)
             {
                 await WaitOrThrowOperationCanceled(_archivePeriod);
 
@@ -120,9 +121,9 @@ namespace Raven.Server.Documents.Archival
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ArchivalStorage.ArchivedDocumentsOptions(context, currentTime, batchSize);
+                            var options = new DataArchivalStorage.ArchivedDocumentsOptions(context, currentTime, batchSize);
 
-                            var toArchive =_database.DocumentsStorage.ArchivalStorage.GetDocumentsToArchive(options, out var duration, CancellationToken);
+                            var toArchive =_database.DocumentsStorage.DataArchivalStorage.GetDocumentsToArchive(options, out var duration, CancellationToken);
 
                             if (toArchive == null || toArchive.Count == 0)
                                 return;
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents.Archival
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                DeletionCount = _database.DocumentsStorage.ArchivalStorage.ArchiveDocuments(context, _toArchive, _currentTime);
+                DeletionCount = _database.DocumentsStorage.DataArchivalStorage.ArchiveDocuments(context, _toArchive, _currentTime);
                 return DeletionCount;
             }
 

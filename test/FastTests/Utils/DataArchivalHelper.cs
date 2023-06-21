@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 
 namespace FastTests.Utils
 {
-    public static class ArchivalHelper
+    public static class DataArchivalHelper
     {
-        public static async Task SetupArchival(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, ArchivalConfiguration configuration)
+        public static async Task SetupDataArchival(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, DataArchivalConfiguration configuration)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
@@ -16,7 +16,7 @@ namespace FastTests.Utils
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
-            var result = await store.Maintenance.SendAsync(new ConfigureArchivalOperation(configuration));
+            var result = await store.Maintenance.SendAsync(new ConfigureDataArchivalOperation(configuration));
 
             var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);

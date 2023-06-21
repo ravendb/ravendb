@@ -444,7 +444,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
                     case nameof(EditRefreshCommand):
-                    case nameof(EditArchivalCommand):
+                    case nameof(EditDataArchivalCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
                     case nameof(CreateNewShardCommand):
@@ -2745,7 +2745,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditRevisionsForConflictsConfigurationCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(EditRefreshCommand):
-                case nameof(EditArchivalCommand):
+                case nameof(EditDataArchivalCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(EditLockModeCommand):
                 case nameof(EditPostgreSqlConfigurationCommand):

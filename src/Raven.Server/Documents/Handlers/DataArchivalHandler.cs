@@ -6,33 +6,33 @@
 
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Archival;
-using Raven.Server.Documents.Handlers.Processors.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Server.Documents.Handlers.Processors.DataArchival;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ArchivalHandler : DatabaseRequestHandler
+    public class DataArchivalHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/archival/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/data-archival/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetArchivalConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                ArchivalConfiguration archivalConfiguration;
+                DataArchivalConfiguration dataArchivalConfiguration;
                 using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    archivalConfiguration = recordRaw?.ArchivalConfiguration;
+                    dataArchivalConfiguration = recordRaw?.DataArchivalConfiguration;
                 }
 
-                if (archivalConfiguration != null)
+                if (dataArchivalConfiguration != null)
                 {
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, archivalConfiguration.ToJson());
+                        context.Write(writer, dataArchivalConfiguration.ToJson());
                     }
                 }
                 else
@@ -42,10 +42,10 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/archival/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/data-archival/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigArchival()
         {
-            using (var processor = new ArchivalHandlerProcessorForPost(this))
+            using (var processor = new DataArchivalHandlerProcessorForPost(this))
                 await processor.ExecuteAsync();
         }
     }

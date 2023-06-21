@@ -7,7 +7,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -194,7 +194,7 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
         
-        internal static readonly Func<BlittableJsonReaderObject, ConfigureArchivalOperationResult> ConfigureArchivalOperationResult = GenerateJsonDeserializationRoutine<ConfigureArchivalOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureDataArchivalOperationResult> ConfigureDataArchivalOperationResult = GenerateJsonDeserializationRoutine<ConfigureDataArchivalOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, DocumentCompressionConfigurationResult> DocumentCompressionConfigurationOperationResult = GenerateJsonDeserializationRoutine<DocumentCompressionConfigurationResult>();
 

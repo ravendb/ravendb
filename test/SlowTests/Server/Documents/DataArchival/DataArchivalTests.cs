@@ -13,13 +13,13 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Archival;
+using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -28,27 +28,27 @@ using Xunit;
 using Xunit.Abstractions;
 
 
-namespace SlowTests.Server.Documents.Archive
+namespace SlowTests.Server.Documents.DataArchival
 {
-    public class ArchiveTests : RavenTestBase
+    public class DataArchivalTests : RavenTestBase
     {
-        public ArchiveTests(ITestOutputHelper output) : base(output)
+        public DataArchivalTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        private async Task SetupArchival(DocumentStore store)
+        private async Task SetupDataArchival(DocumentStore store)
         {
-            var config = new ArchivalConfiguration
+            var config = new DataArchivalConfiguration
             {
                 Disabled = false,
                 ArchiveFrequencyInSec = 100,
             };
 
-            await ArchivalHelper.SetupArchival(store, Server.ServerStore, config);
+            await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
         }
 
         [Fact]
-        public async Task CanSetupArchive()
+        public async Task CanSetupDataArchival()
         {
             using (var store = GetDocumentStore())
             {
@@ -67,16 +67,16 @@ namespace SlowTests.Server.Documents.Archive
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new ArchivalStorage.ArchivedDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), 10);
+                    var options = new DataArchivalStorage.ArchivedDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), 10);
 
-                    var toArchive = database.DocumentsStorage.ArchivalStorage.GetDocumentsToArchive(options, out _, CancellationToken.None);
+                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocumentsToArchive(options, out _, CancellationToken.None);
                     Assert.Equal(1, toArchive.Count);
                 }
             }
         }
 
         [Fact]
-        public async Task CanAddEntityWithArchive_BeforeActivatingArchival_WillMigrateToAnotherCollectionAfterArchive()
+        public async Task CanAddEntityWithArchive_BeforeActivatingDataArchival_WillMigrateToAnotherCollectionAfterArchive()
         {
             using (var store = GetDocumentStore())
             {
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.Archive
                 }
 
                 // Activate the archival
-                await SetupArchival(store);
+                await SetupDataArchival(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -118,7 +118,7 @@ namespace SlowTests.Server.Documents.Archive
             using (var srcStore = GetDocumentStore())
             using (var dstStore = GetDocumentStore())
             {
-                await SetupArchival(srcStore);
+                await SetupDataArchival(srcStore);
 
                 var exportFile = GetTempFileName();
 
@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.Archive
                 
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 var destinationRecord = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
-                Assert.False(destinationRecord.Archival.Disabled); 
+                Assert.False(destinationRecord.DataArchival.Disabled); 
             }
         }
 
@@ -156,7 +156,7 @@ namespace SlowTests.Server.Documents.Archive
                     await session.SaveChangesAsync();
                 }
                 
-                await SetupArchival(store);
+                await SetupDataArchival(store);
                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -195,7 +195,7 @@ namespace SlowTests.Server.Documents.Archive
                     session.SaveChanges();
                 }
                 
-                await SetupArchival(store);
+                await SetupDataArchival(store);
                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.Archive
                         }
                     }));
                 }
-                await SetupArchival(store);
+                await SetupDataArchival(store);
                                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);

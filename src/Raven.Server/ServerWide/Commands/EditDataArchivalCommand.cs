@@ -1,30 +1,30 @@
-﻿using Raven.Client.Documents.Operations.Archival;
+﻿using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditArchivalCommand : UpdateDatabaseCommand
+    public class EditDataArchivalCommand : UpdateDatabaseCommand
     {
-        public ArchivalConfiguration Configuration;
+        public DataArchivalConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {
-            databaseRecord.Archival = Configuration;
+            databaseRecord.DataArchival = Configuration;
         }
 
-        public EditArchivalCommand()
+        public EditDataArchivalCommand()
         {
         }
 
-        public EditArchivalCommand(ArchivalConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
+        public EditDataArchivalCommand(DataArchivalConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Archival = Configuration;
+            record.DataArchival = Configuration;
         }
 
         public override void FillJson(DynamicJsonValue json)

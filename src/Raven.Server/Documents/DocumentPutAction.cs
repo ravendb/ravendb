@@ -273,7 +273,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsHiLo == false && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, metadata);
-                    _documentsStorage.ArchivalStorage.Put(context, lowerId, metadata);
+                    _documentsStorage.DataArchivalStorage.Put(context, lowerId, metadata);
                 }
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);

@@ -1,17 +1,11 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Microsoft.CodeAnalysis;
 using Raven.Client;
-using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -21,9 +15,9 @@ using Sparrow.Json.Parsing;
 using Voron.Impl;
 using Bits = Sparrow.Binary.Bits;
 
-namespace Raven.Server.Documents.Archival
+namespace Raven.Server.Documents.DataArchival
 {
-    public unsafe class ArchivalStorage
+    public unsafe class DataArchivalStorage
     {
         private const string DocumentsByArchiveDateTime = "DocumentsByArchiveDateTime";
         
@@ -31,11 +25,11 @@ namespace Raven.Server.Documents.Archival
         private readonly DocumentsStorage _documentsStorage;
         private readonly Logger _logger;
 
-        public ArchivalStorage(DocumentDatabase database, Transaction tx)
+        public DataArchivalStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<ArchivalStorage>(database.Name);
+            _logger = LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name);
 
             tx.CreateTree(DocumentsByArchiveDateTime);
         }
@@ -91,8 +85,8 @@ namespace Raven.Server.Documents.Archival
             var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
 
-            var archiveTree = options.Context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveDateTime);
-            using (var it = archiveTree.Iterate(false))
+            var documentsByArchiveDateTree = options.Context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveDateTime);
+            using (var it = documentsByArchiveDateTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                 {
@@ -113,7 +107,7 @@ namespace Raven.Server.Documents.Archival
 
                     var docsToArchive = new List<(Slice LowerId, string Id)>();
 
-                    using (var multiIt = archiveTree.MultiRead(it.CurrentKey))
+                    using (var multiIt = documentsByArchiveDateTree.MultiRead(it.CurrentKey))
                     {
                         if (multiIt.Seek(Slices.BeforeAllKeys))
                         {

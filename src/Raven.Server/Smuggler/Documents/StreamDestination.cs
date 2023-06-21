@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
-using Raven.Client.Documents.Operations.Archival;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -300,11 +300,11 @@ namespace Raven.Server.Smuggler.Documents
                     WriteExpiration(databaseRecord.Expiration);
                 }
                 
-                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Archival))
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.DataArchival))
                 {
                     _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(databaseRecord.Archival));
-                    WriteArchival(databaseRecord.Archival);
+                    _writer.WritePropertyName(nameof(databaseRecord.DataArchival));
+                    WriteDataArchival(databaseRecord.DataArchival);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
@@ -832,15 +832,15 @@ namespace Raven.Server.Smuggler.Documents
                 _context.Write(_writer, expiration.ToJson());
             }
             
-            private void WriteArchival(ArchivalConfiguration archival)
+            private void WriteDataArchival(DataArchivalConfiguration dataArchival)
             {
-                if (archival == null)
+                if (dataArchival == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
 
-                _context.Write(_writer, archival.ToJson());
+                _context.Write(_writer, dataArchival.ToJson());
             }
 
             private void WriteRevisions(RevisionsConfiguration revisions)

@@ -1,35 +1,34 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Archival;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.Archival
+namespace Raven.Client.Documents.Operations.DataArchival
 {
-    public class ConfigureArchivalOperation : IMaintenanceOperation<ConfigureArchivalOperationResult>
+    public class ConfigureDataArchivalOperation : IMaintenanceOperation<ConfigureDataArchivalOperationResult>
     {
-        private readonly ArchivalConfiguration _configuration;
+        private readonly DataArchivalConfiguration _configuration;
 
-        public ConfigureArchivalOperation(ArchivalConfiguration configuration)
+        public ConfigureDataArchivalOperation(DataArchivalConfiguration configuration)
         {
             _configuration = configuration;
         }
 
-        public RavenCommand<ConfigureArchivalOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<ConfigureDataArchivalOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureArchivalCommand(conventions, _configuration);
+            return new ConfigureDataArchivalCommand(conventions, _configuration);
         }
 
-        private class ConfigureArchivalCommand : RavenCommand<ConfigureArchivalOperationResult>, IRaftCommand
+        private class ConfigureDataArchivalCommand : RavenCommand<ConfigureDataArchivalOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
-            private readonly ArchivalConfiguration _configuration;
+            private readonly DataArchivalConfiguration _configuration;
 
-            public ConfigureArchivalCommand(DocumentConventions conventions, ArchivalConfiguration configuration)
+            public ConfigureDataArchivalCommand(DocumentConventions conventions, DataArchivalConfiguration configuration)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -39,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Archival
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/archival/config";
+                url = $"{node.Url}/databases/{node.Database}/admin/data-archival/config";
 
                 var request = new HttpRequestMessage
                 {
@@ -55,7 +54,7 @@ namespace Raven.Client.Documents.Operations.Archival
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ConfigureArchivalOperationResult(response);
+                Result = JsonDeserializationClient.ConfigureDataArchivalOperationResult(response);
             }
 
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();

@@ -63,6 +63,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                             prop.Name != Constants.Documents.Metadata.Expires &&
                             prop.Name != Constants.Documents.Metadata.Refresh &&
                             prop.Name != Constants.Documents.Metadata.Archive &&
+                            prop.Name != Constants.Documents.Metadata.Archived &&
                             prop.Name != Constants.Documents.Metadata.Edges)
                             continue; // system property, ignoring it
                     }
