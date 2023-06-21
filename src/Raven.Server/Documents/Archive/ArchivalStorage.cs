@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Archival
 
             using (var doc = _database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
             {
-                if (doc == null || !doc.TryGetMetadata(out var metadata))
+                if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                 {
                     throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                 }
