@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Archival
                     }
 
                     count += docsToArchive.Count;
-                    if (docsToArchive.Count>0)
+                    if (docsToArchive.Count > 0)
                         toArchive.Add(ticksAsSlice,docsToArchive);
                     
                     
