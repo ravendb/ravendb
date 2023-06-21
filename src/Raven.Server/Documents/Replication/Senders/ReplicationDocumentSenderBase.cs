@@ -588,8 +588,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (_parent.ForTestingPurposes?.OnMissingAttachmentStream != null &&
                 _parent.MissingAttachmentsRetries > 0)
             {
-                var replicaAttachmentStreams = _replicaAttachmentStreams;
-                _parent.ForTestingPurposes?.OnMissingAttachmentStream?.Invoke(replicaAttachmentStreams);
+                _parent.ForTestingPurposes?.OnMissingAttachmentStream?.Invoke(_replicaAttachmentStreams, _orderedReplicaItems);
             }
 
             var sw = Stopwatch.StartNew();

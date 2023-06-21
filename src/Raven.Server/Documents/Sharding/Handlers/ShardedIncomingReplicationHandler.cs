@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -11,6 +14,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -127,13 +131,34 @@ namespace Raven.Server.Documents.Sharding.Handlers
             // in case of failOver, send back to the source the last change vector & Etag received on shards
             // so the replication won't start from scratch
 
-            var lastAcceptedEtag = long.MaxValue;
+            long lastAcceptedEtag;
             var handlersChangeVector = new List<string>();
-            foreach (var handler in _handlers.Values)
+
+            if (ShardHelper.IsShardName(ConnectionInfo.SourceDatabaseName))
             {
-                var (acceptedChangeVector, acceptedEtag) = await handler.GetFirstChangeVectorFromShardAsync();
-                handlersChangeVector.Add(acceptedChangeVector);
-                lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
+                lastAcceptedEtag = 0;
+                foreach (var (shardNumber, _) in _handlers)
+                {
+                    var state = ShardReplicationLoader.GetShardedExternalReplicationState(_parent.Server, ShardHelper.ToShardName(_parent.DatabaseName, shardNumber), ConnectionInfo.SourceDatabaseName, ConnectionInfo.SourceDatabaseId);
+
+                    if (state != null)
+                    {
+                        lastAcceptedEtag = Math.Max(state.LastSentEtag, lastAcceptedEtag);
+
+                        if (string.IsNullOrEmpty(state.DestinationChangeVector) == false)
+                            handlersChangeVector.Add(state.DestinationChangeVector);
+                    }
+                }
+            }
+            else
+            {
+                lastAcceptedEtag = long.MaxValue;
+                foreach (var handler in _handlers.Values)
+                {
+                    var (acceptedChangeVector, acceptedEtag) = await handler.GetFirstChangeVectorFromShardAsync();
+                    handlersChangeVector.Add(acceptedChangeVector);
+                    lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
+                }
             }
 
             var mergedChangeVector = ChangeVectorUtils.MergeVectorsDown(handlersChangeVector);
@@ -189,6 +214,32 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
 
                 _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
+
+                if (ShardHelper.IsShardName(ConnectionInfo.SourceDatabaseName))
+                {
+                    foreach (var (shardNumber, handler) in _handlers)
+                    {
+                        if (batches[shardNumber].Items.Count == 0)
+                            continue;
+
+                        var node = handler.Node as ExternalReplication;
+                        var taskId = node!.TaskId;
+                        var command = new UpdateExternalReplicationStateCommand(ShardHelper.ToShardName(_parent.DatabaseName, shardNumber), RaftIdGenerator.NewId())
+                        {
+                            ExternalReplicationState = new ExternalReplicationState
+                            {
+                                NodeTag = _parent._server.NodeTag,
+                                LastSentEtag = _lastSentEtagPerDestination[shardNumber],
+                                DestinationChangeVector = handler.LastAcceptedChangeVector,
+                                SourceDatabaseName = ConnectionInfo.SourceDatabaseName,
+                                SourceDatabaseId = ConnectionInfo.SourceDatabaseId
+                            }
+                        };
+
+                        _parent._server.SendToLeaderAsync(command)
+                            .IgnoreUnobservedExceptions();
+                    }
+                }
             }
         }
 

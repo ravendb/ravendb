@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -35,7 +36,7 @@ public class ShardReplicationLoader : ReplicationLoader
     }
 
     protected override IncomingReplicationHandler CreateIncomingReplicationHandler(
-        TcpConnectionOptions tcpConnectionOptions, 
+        TcpConnectionOptions tcpConnectionOptions,
         JsonOperationContext.MemoryBuffer buffer,
         PullReplicationParams incomingPullParams,
         ReplicationLatestEtagRequest getLatestEtagMessage)
@@ -167,6 +168,17 @@ public class ShardReplicationLoader : ReplicationLoader
                     });
                 }
             }
+        }
+    }
+
+    public static ExternalReplicationState GetShardedExternalReplicationState(ServerStore server, string database, string source, string sourceDbId)
+    {
+        using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, source, sourceDbId));
+
+            return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : null;
         }
     }
 }
