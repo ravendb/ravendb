@@ -77,10 +77,8 @@ namespace Raven.Server.Web.System
 
             if (skipCollections == false)
             {
-                WriteCollectionMetrics(provider, databases);
+                WriteCollectionMetrics(databases);
             }
-
-            //TODO: server backup is missing in docs? + Database replication factor as well?
         }
 
         private void WriteServerMetrics(MetricsProvider provider)
@@ -317,7 +315,7 @@ namespace Raven.Server.Web.System
             }
         }
         
-        private void WriteCollectionMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
+        private void WriteCollectionMetrics(List<DocumentDatabase> databases)
         {
             var metrics = new List<CollectionMetrics>();
             var cachedTags = new List<string>();
@@ -396,7 +394,12 @@ namespace Raven.Server.Web.System
         private string SerializeTags(Dictionary<string, string> input)
         {
             //TODO: escape!
-            return string.Join(", ", input.Select(kvp => $"{kvp.Key}=\"{kvp.Value}\""));
+            return string.Join(", ", input.Select(kvp => $"{kvp.Key}=\"{EscapeValue(kvp.Value)}\""));
+        }
+
+        private static string EscapeValue(string input)
+        {
+            return input.Replace("\"", "\\\"");
         }
 
         private List<DocumentDatabase> GetDatabases()
