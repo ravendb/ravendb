@@ -262,6 +262,8 @@ namespace Raven.Client
                 public const string Refresh = "@refresh";
 
                 public const string Archive = "@archive";
+                
+                public const string Archived = "@archived";
 
                 public const string HasValue = "HasValue";
 

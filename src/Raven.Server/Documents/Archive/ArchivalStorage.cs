@@ -298,6 +298,7 @@ namespace Raven.Server.Documents.Archival
                 // Modify
                 metadata.Modifications = new DynamicJsonValue(metadata);
                 metadata.Modifications[Constants.Documents.Metadata.Collection] = archivedCollectionName;
+                metadata.Modifications[Constants.Documents.Metadata.Archived] = true;
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Archive);
 
                 var mergedCounterGroups = CollectArchivedDocumentCountersIfNeeded(context, doc, id, collectionName, archivedCollectionName);

@@ -105,7 +105,9 @@ namespace SlowTests.Server.Documents.Archive
                     var metadata = session.Advanced.GetMetadataFor(company2);
                     Assert.DoesNotContain(Constants.Documents.Metadata.Archive, metadata.Keys);
                     Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                    Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
                     Assert.Equal("CompaniesArchived", metadata[Constants.Documents.Metadata.Collection]);
+                    Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
                 }
             }
         }
