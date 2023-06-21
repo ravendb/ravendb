@@ -248,9 +248,7 @@ namespace Raven.Server.Documents.Archival
                 clonedCountersGroupsValues.Add(counterGroup.Values.Clone(context));
                                             
             var mergedCounterGroupsValues = BuildMergedCounterGroupValues(context, clonedCountersGroupsValues, documentId);
-                                                
-            _database.DocumentsStorage.CountersStorage.DeleteCountersForDocument(context, documentId, new CollectionName(collectionName));
-
+            
             return mergedCounterGroupsValues;
         }
 
@@ -299,6 +297,8 @@ namespace Raven.Server.Documents.Archival
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Archive);
 
                 var mergedCounterGroups = CollectArchivedDocumentCountersIfNeeded(context, doc, id, collectionName, archivedCollectionName);
+                _database.DocumentsStorage.CountersStorage.DeleteCountersForDocument(context, id, new CollectionName(collectionName));
+                
                 ArchiveDocumentTimeSeriesIfNeeded(context, doc, id, collectionName, archivedCollectionName);
                 ArchiveDocumentAttachmentsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
                 ArchiveDocumentRevisionsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
