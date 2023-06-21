@@ -67,7 +67,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
             var orderByFieldMetadata = orderByFields[i];
 
-            IndexEntryReader entryReader = _indexSearcher.GetEntryReaderFor(indexEntryId);
+            IndexEntryReader entryReader = IndexSearcher.GetEntryReaderFor(indexEntryId);
             IndexEntryReader.FieldReader reader = entryReader.GetFieldReaderFor(orderByFieldMetadata.Field);
 
             switch (orderByField.OrderingType)
@@ -82,7 +82,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     break;
                 case OrderByFieldType.Distance:
                 {
-                        var spatialReader = _indexSearcher.SpatialReader(orderByFieldMetadata.Field.FieldName);
+                        var spatialReader = IndexSearcher.SpatialReader(orderByFieldMetadata.Field.FieldName);
                         double distance;
                         if (spatialReader.TryGetSpatialPoint(indexEntryId, out var coords) == false)
                         {

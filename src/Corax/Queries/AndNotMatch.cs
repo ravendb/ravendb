@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using static Voron.Global.Constants;
@@ -18,7 +19,8 @@ namespace Corax.Queries
         private TOuter _outer;
 
         private long _totalResults;
-        private QueryCountConfidence _confidence;        
+        private QueryCountConfidence _confidence;
+        private readonly CancellationToken _token;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
         public long Count => _totalResults;
@@ -42,13 +44,14 @@ namespace Corax.Queries
 
         private AndNotMatch(ByteStringContext context, 
             in TInner inner, in TOuter outer,
-            long totalResults, QueryCountConfidence confidence)
+            long totalResults, QueryCountConfidence confidence, CancellationToken token)
         {
             _totalResults = totalResults;
 
             _inner = inner;
             _outer = outer;
             _confidence = confidence;
+            _token = token;
 
             _context = context;
 
@@ -86,6 +89,7 @@ namespace Corax.Queries
                     int bufferUsedItems = count + read;
                     if (bufferUsedItems > _bufferSize * 3 / 4)
                     {
+                        _token.ThrowIfCancellationRequested();
                         UnlikelyGrowBuffer(bufferUsedItems);
                         bufferState = new Span<long>(_buffer, _bufferSize).Slice(count);
                     }
@@ -103,6 +107,7 @@ namespace Corax.Queries
                 {
                     // We need to sort and remove duplicates.
                     var bufferBasePtr = _buffer;
+                    _token.ThrowIfCancellationRequested();
                     count = Sorting.SortAndRemoveDuplicates(bufferBasePtr, count);
                 }
 
@@ -138,6 +143,8 @@ namespace Corax.Queries
                 if (_doNotSortResults == false && iterations > 1)
                 {
                     // We need to sort and remove duplicates.
+                    
+                    _token.ThrowIfCancellationRequested();
                     totalResults = Sorting.SortAndRemoveDuplicates(matches.Slice(0, totalResults));
                 }
 
@@ -149,6 +156,7 @@ namespace Corax.Queries
                 // We have matches and therefore we need now to remove the ones found in the outer buffer.
                 Span<long> outerBuffer = new Span<long>(_buffer, _bufferIdx);
                 Span<long> innerBuffer = matches.Slice(0, totalResults);
+                _token.ThrowIfCancellationRequested();
                 totalResults = MergeHelper.AndNot(innerBuffer, innerBuffer, outerBuffer);
 
                 // Since we would require to sort again if we dont return, we return what we have instead.
@@ -220,10 +228,10 @@ namespace Corax.Queries
             // This is not an AndWith memoized buffer, therefore we need to acquire a buffer to store the results
             // before continuing.   
 
-            if (!_isAndWithBuffer)
+            if (_isAndWithBuffer == false)
             {
+                _token.ThrowIfCancellationRequested();
                 int bufferSizeInItems = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)_inner.Count), 16 * Size.Kilobyte);
-                
                 IDisposable scope = _context.Allocate(bufferSizeInItems * sizeof(long), out ByteString currentMatchesBuffer);
                 var currentMatches = MemoryMarshal.Cast<byte, long>(currentMatchesBuffer.ToSpan());
 
@@ -231,7 +239,7 @@ namespace Corax.Queries
 
                 // Now it is time to run the other part of the algorithm, which is getting the Inner data until we fill the buffer.
                 bool isDone = false;
-                while (!isDone)
+                while (isDone == false)
                 {
                     int iterations = 0;
 
@@ -249,7 +257,8 @@ namespace Corax.Queries
                         // We havent finished and probably we will need to expand the temporary buffer.
                         int bufferUsedItems = totalResults + read;
                         if (bufferUsedItems > bufferSizeInItems * 15 / 16)
-                        {                            
+                        {     
+                            _token.ThrowIfCancellationRequested();
                             (var newBufferHandler, currentMatchesBuffer) = UnlikelyGrowBuffer(currentMatchesBuffer, bufferUsedItems);
                             scope.Dispose();
                             scope = newBufferHandler;
@@ -271,6 +280,7 @@ namespace Corax.Queries
                     {
                         // We need to sort and remove duplicates.
                         var bufferBasePtr = (long*)currentMatchesBuffer.Ptr;
+                        _token.ThrowIfCancellationRequested();
                         totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
                     }
                 }
@@ -288,6 +298,7 @@ namespace Corax.Queries
             if (_bufferSize == 0)
                 return 0;
 
+            _token.ThrowIfCancellationRequested();
             return MergeHelper.And(buffer, buffer.Slice(0, matches), new Span<long>(_buffer, _bufferIdx));
         }
 
@@ -312,7 +323,7 @@ namespace Corax.Queries
         string DebugView => Inspect().ToString();
 
 
-        public static AndNotMatch<TInner, TOuter> Create(IndexSearcher searcher, in TInner inner, in TOuter outer)
+        public static AndNotMatch<TInner, TOuter> Create(IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             // Estimate Confidence values.
             QueryCountConfidence confidence;
@@ -323,7 +334,7 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new AndNotMatch<TInner, TOuter>(searcher.Allocator, in inner, in outer, inner.Count, confidence);
+            return new AndNotMatch<TInner, TOuter>(searcher.Allocator, in inner, in outer, inner.Count, confidence, token);
         }
     }
 }

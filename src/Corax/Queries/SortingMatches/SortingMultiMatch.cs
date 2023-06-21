@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Meta;
+using System.Threading;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
@@ -20,9 +21,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private readonly TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
-    private IEntryComparer[] _nextComparers;
+    private readonly IEntryComparer[] _nextComparers;
 
     private readonly int _take;
+    private readonly CancellationToken _token;
     private const int NotStarted = -1;
         
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
@@ -31,12 +33,13 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     public long TotalResults;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
-    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1)
+    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _take = take;
+        _token = token;
         _results = new NativeIntegersList(searcher.Allocator);
 
         TotalResults = NotStarted;
@@ -106,7 +109,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             {
                 memoizer = match._searcher.Memoize(match._inner).Replay();
             }
-
+            
+            match._token.ThrowIfCancellationRequested();
             var allMatches = memoizer.FillAndRetrieve();
             match.TotalResults = allMatches.Length;
             

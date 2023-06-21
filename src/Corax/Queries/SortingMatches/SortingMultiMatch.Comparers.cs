@@ -101,6 +101,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             // We perform the scoring process. 
             match._inner.Score(batchResults, readScores, 1f);
+            match._token.ThrowIfCancellationRequested();
 
             // If we need to do documents boosting then we need to modify the based on documents stored score. 
             if (match._searcher.DocumentsAreBoosted)
@@ -117,6 +118,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 indexes[i] = i;
             }
 
+            match._token.ThrowIfCancellationRequested();
             EntryComparerHelper.IndirectSort<EntryComparerByScore, TComparer2, TComparer3>(ref match, indexes, batchTerms, new(), comparer2, comparer3);
 
             for (int i = 0; i < indexes.Length; i++)
@@ -210,6 +212,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+            match._token.ThrowIfCancellationRequested();
             var indirectComparer =
                 new IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>(ref match, batchTerms, new CompactKeyComparer(), comparer2, comparer3);
             var indexes = SortByTerms(ref match, batchTermIds, batchTerms, orderMetadata[0].Ascending == false, indirectComparer);
@@ -346,6 +349,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+            match._token.ThrowIfCancellationRequested();
             var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByLong(), comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -429,6 +433,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
+            match._token.ThrowIfCancellationRequested();
             var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByDouble(), comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -514,7 +519,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             {
                 indexes[i] = i;
             }
-
+            
+            match._token.ThrowIfCancellationRequested();
             EntryComparerHelper.IndirectSort(ref match, indexes, batchTerms, this, comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -562,6 +568,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
+            match._token.ThrowIfCancellationRequested();
+
             if (_reader.IsValid == false) // field does not exist, so arbitrary sort order, whatever query said goes
             {
                 match._results.Add(batchResults);
@@ -585,7 +593,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 batchTerms[i] = new UnmanagedSpan(distance);
                 indexes[i] = i;
             }
-
+            
+            
+            match._token.ThrowIfCancellationRequested();
             EntryComparerHelper.IndirectSort<EntryComparerByDouble, TComparer2, TComparer3>(ref match, indexes, batchTerms, new(), comparer2, comparer3);
             for (int i = 0; i < indexes.Length; i++)
             {

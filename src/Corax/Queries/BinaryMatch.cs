@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -19,8 +20,9 @@ namespace Corax.Queries
         private ByteStringContext _ctx;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
-        
-        
+        private readonly CancellationToken _token;
+
+
         private bool _doNotSortResults;
 
         public bool DoNotSortResults()
@@ -43,7 +45,8 @@ namespace Corax.Queries
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
-            QueryCountConfidence confidence)
+            QueryCountConfidence confidence,
+            in CancellationToken token)
         {
             _totalResults = totalResults;
 
@@ -54,13 +57,13 @@ namespace Corax.Queries
             _inner = inner;
             _outer = outer;
             _confidence = confidence;
+            _token = token;
             _ctx = ctx;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
-            
             return _fillFunc(ref this, buffer);
         }
 

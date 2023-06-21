@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
@@ -46,6 +47,7 @@ internal static class CoraxQueryBuilder
         public readonly FieldsToFetch FieldsToFetch;
         public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
         public readonly int Take;
+        public readonly CancellationToken Token;
         public readonly List<string> BuildSteps;
         public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
         public readonly QueryMetadata Metadata;
@@ -57,7 +59,7 @@ internal static class CoraxQueryBuilder
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -70,6 +72,7 @@ internal static class CoraxQueryBuilder
             DocumentsContext = documentsContext;
             HighlightingTerms = highlightingTerms;
             Take = take;
+            Token = token;
             BuildSteps = buildSteps;
             AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
             Metadata = query.Metadata;
@@ -138,7 +141,6 @@ internal static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
             QueryBuilderHelper.ThrowQueryTooComplexException(metadata, queryParameters);
 
@@ -189,7 +191,7 @@ internal static class CoraxQueryBuilder
 
                             TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var merged, true);
 
-                            return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right));
+                            return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right), token: builderParameters.Token);
 
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(builderParameters, @where.Right, exact);
@@ -197,14 +199,14 @@ internal static class CoraxQueryBuilder
 
                             TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, true);
 
-                            return indexSearcher.AndNot(right, left);
+                            return indexSearcher.AndNot(right, left, token: builderParameters.Token);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(builderParameters, @where.Left, exact);
                             right = ToCoraxQuery(builderParameters, ne1.Expression, exact);
 
                             TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, true);
-                            return indexSearcher.AndNot(left, right);
+                            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
 
                         default:
                             left = ToCoraxQuery(builderParameters, @where.Left, exact);
@@ -214,7 +216,7 @@ internal static class CoraxQueryBuilder
                             if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged))
                                 return merged;
 
-                            return indexSearcher.And(left, right);
+                            return indexSearcher.And(left, right, token: builderParameters.Token);
                     }
                 }
                 case OperatorType.Or:
@@ -231,7 +233,7 @@ internal static class CoraxQueryBuilder
 
                     TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var _, true);
 
-                    return indexSearcher.Or(left, right);
+                    return indexSearcher.Or(left, right, token: builderParameters.Token);
                 }
                 default:
                 {
@@ -1162,9 +1164,9 @@ internal static class CoraxQueryBuilder
             case 0:
                 return match;
             case 1:
-                return indexSearcher.OrderBy(match, orderMetadata[0], take);
+                return indexSearcher.OrderBy(match, orderMetadata[0], take, builderParameters.Token);
             default:
-                return indexSearcher.OrderBy(match, orderMetadata, take);
+                return indexSearcher.OrderBy(match, orderMetadata, take, builderParameters.Token);
         }
     }
 }

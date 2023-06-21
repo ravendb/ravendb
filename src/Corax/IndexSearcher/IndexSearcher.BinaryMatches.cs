@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Queries;
 using Sparrow.Server;
 
@@ -7,7 +8,7 @@ namespace Corax;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public BinaryMatch And<TInner, TOuter>(in TInner set1, in TOuter set2)
+    public BinaryMatch And<TInner, TOuter>(in TInner set1, in TOuter set2, in CancellationToken token = default)
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
     {
@@ -22,26 +23,26 @@ public partial class IndexSearcher
         // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
 
-        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldAnd(Allocator, in set1, in set2));
+        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldAnd(Allocator, in set1, in set2, token));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public BinaryMatch Or<TInner, TOuter>( in TInner set1, in TOuter set2)
+    public BinaryMatch Or<TInner, TOuter>(in TInner set1, in TOuter set2, in CancellationToken token = default)
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
     {
@@ -53,26 +54,26 @@ public partial class IndexSearcher
         // do all the work to figure out what to emit. The cost is in instantiation not on execution. 
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
 
-        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(Allocator, in set1, in set2));
+        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(Allocator, in set1, in set2, token));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AndNotMatch AndNot<TInner, TOuter>(in TInner set1, in TOuter set2)
+    public AndNotMatch AndNot<TInner, TOuter>(in TInner set1, in TOuter set2, in CancellationToken token = default)
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
     {
@@ -81,21 +82,21 @@ public partial class IndexSearcher
         // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return AndNotMatch.Create(AndNotMatch<TermMatch, TermMatch>.Create(this, (TermMatch)(object)set1, (TermMatch)(object)set2));
+            return AndNotMatch.Create(AndNotMatch<TermMatch, TermMatch>.Create(this, (TermMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return AndNotMatch.Create(AndNotMatch<BinaryMatch, TermMatch>.Create(this, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
+            return AndNotMatch.Create(AndNotMatch<BinaryMatch, TermMatch>.Create(this, (BinaryMatch)(object)set1, (TermMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return AndNotMatch.Create(AndNotMatch<TermMatch, BinaryMatch>.Create(this, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
+            return AndNotMatch.Create(AndNotMatch<TermMatch, BinaryMatch>.Create(this, (TermMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return AndNotMatch.Create(AndNotMatch<BinaryMatch, BinaryMatch>.Create(this, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+            return AndNotMatch.Create(AndNotMatch<BinaryMatch, BinaryMatch>.Create(this, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2, token));
         }
 
-        return AndNotMatch.Create(AndNotMatch<TInner, TOuter>.Create(this, in set1, in set2));
+        return AndNotMatch.Create(AndNotMatch<TInner, TOuter>.Create(this, in set1, in set2, token));
     }
 }
