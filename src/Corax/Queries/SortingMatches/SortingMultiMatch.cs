@@ -1,13 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
-using Voron.Data.CompactTrees;
 using Voron.Data.PostingLists;
 
 namespace Corax.Queries.SortingMatches;

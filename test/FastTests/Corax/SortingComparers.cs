@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Corax.Queries;
+﻿using System.Text;
 using Corax.Queries.SortingMatches;
-using Corax.Queries.SortingMatches.Comparers;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -37,7 +31,7 @@ namespace FastTests.Corax
             var x = Encoding.UTF8.GetBytes(input);
             var y = Encoding.UTF8.GetBytes(compareWith);
 
-            var result = LegacySortingMatch.BasicComparers.CompareAlphanumericAscending(x, y);            
+            var result = BasicComparers.CompareAlphanumericAscending(x, y);            
             Assert.Equal(isAscending, result < 0);
         }
     }

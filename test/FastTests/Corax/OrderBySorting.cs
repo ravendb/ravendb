@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Corax.Queries;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Comparers;
+using Corax.Queries.SortingMatches;
 using Corax.Utils;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes;
 using Sparrow.Server;
 using Voron;
 using Xunit.Abstractions;

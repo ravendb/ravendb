@@ -540,7 +540,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
             _reader.GetDecodedTerms(_dictionaryId, x, out var xTerm, y, out var yTerm);
-            return Comparers.LegacySortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+            return BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
         }
 
         public int Compare(int x, int y)

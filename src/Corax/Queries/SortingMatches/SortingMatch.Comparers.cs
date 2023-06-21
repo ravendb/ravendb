@@ -439,7 +439,7 @@ namespace Corax.Queries.SortingMatches;
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
             _reader.GetDecodedTerms(_dictionaryId, x, out var xTerm, y, out var yTerm);
-            return Comparers.LegacySortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+            return BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
         }
     }
         

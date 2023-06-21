@@ -37,6 +37,7 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
 
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
     <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>
     <Optimize>true</Optimize>

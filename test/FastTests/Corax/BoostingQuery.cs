@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
-using Corax.Queries.SortingMatches.Comparers;
+using Corax.Queries.SortingMatches;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -15,7 +13,6 @@ using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
-using static Corax.Queries.SortingMatches.SortingMatch;
 
 namespace FastTests.Corax
 {
