@@ -181,7 +181,7 @@ public abstract class CGroup
     
     protected static string CombinePaths(string mountRoot, string mountPath, string pathForSubsystem)
     {
-        var toAppend = mountRoot.Length == 1 || pathForSubsystem.StartsWith(mountRoot)
+        var toAppend = mountRoot.Length == 1 || pathForSubsystem.StartsWith(mountRoot) == false
             ? pathForSubsystem
             : pathForSubsystem[mountRoot.Length..];
 
