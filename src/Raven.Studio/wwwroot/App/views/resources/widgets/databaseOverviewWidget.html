@@ -1,6 +1,6 @@
 <div>
     <div class="cluster-dashboard-item-header">
-        <h3><i class="icon-database"></i><span>Database Overview</span></h3>
+        <h3><i class="icon-database"></i><span>Databases Overview</span></h3>
         <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
@@ -8,6 +8,13 @@
             <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
                           attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
+    </div>
+    <div class="d-flex gap-3 margin-left-xxs margin-right-xxs padding-xs panel-bg-1 border-radius-xxs">
+        <div class="small-label">Total <span>{number}</span><i class="icon-database margin-left-xxs"></i></div>
+        <div class="flex-grow"></div>
+        <div class="small-label">Online <span>{number}</span><i class="icon-database-cutout icon-addon-check text-success margin-left-xxs"></i></div>
+        <div class="small-label">Offline <span>{number}</span><i class="icon-database-cutout icon-addon-clock margin-left-xxs"></i></div>
+        <div class="small-label">Disabled <span>{number}</span><i class="icon-database-cutout icon-addon-cancel text-warning margin-left-xxs"></i></div>
     </div>
     <div class="databases-list" style="position: relative;">
         <div class="list-container">

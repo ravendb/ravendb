@@ -165,7 +165,7 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
                 return [{
                     text: "Offline",
                     iconClass: "icon-database-cutout icon-addon-clock",
-                    textClass: "text-warning"
+                    textClass: null
                 }];
            } else {
                 return [{
