@@ -52,9 +52,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return _queryPool;
             }
         }
+        
+        protected readonly IndexSearcher IndexSearcher;
 
         private readonly IndexFieldsMapping _fieldMappings;
-        protected readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
         private readonly int _maxNumberOfOutputsPerDocument;
         private TermsReader _documentIdReader;
@@ -64,15 +65,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
-            _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
+            IndexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
             if (index.Type.IsMap())
             {
-                _documentIdReader = _indexSearcher.TermsReaderFor(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+                _documentIdReader = IndexSearcher.TermsReaderFor(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             }
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
         }
 
-        public override long EntriesCount() => _indexSearcher.NumberOfEntries;
+        public override long EntriesCount() => IndexSearcher.NumberOfEntries;
         
         protected interface ISupportsHighlighting
         {
@@ -499,7 +500,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
 
             var identityTracker = new IdentityTracker<TDistinct>();
-            identityTracker.Initialize(_index, query, _indexSearcher, _documentIdReader, _fieldMappings, fieldsToFetch, retriever);
+            identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, fieldsToFetch, retriever);
 
             long pageSize = query.PageSize;
 
@@ -507,7 +508,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 ThrowExplanationsIsNotImplementedInCorax();
 
             long take = pageSize + query.Start;
-            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
+            if (take > IndexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
@@ -545,8 +546,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             closeServerTransaction = serverContext.OpenReadTransaction();
                         }
 
-                        var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext, documentsContext, query, _index,
-                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, indexReadOperation: this);
+                        var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
+                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, indexReadOperation: this, token: token);
 
                         using (closeServerTransaction)
                         {
@@ -562,7 +563,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 highlightings.Setup(query, documentsContext);
 
-                int bufferSize = CoraxBufferSize(_indexSearcher, take, query);
+                int bufferSize = CoraxBufferSize(IndexSearcher, take, query);
                 var ids = QueryPool.Rent(bufferSize);
 
 
@@ -608,9 +609,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                     Include:
-                        IndexEntryReader indexEntryReader = _indexSearcher.GetEntryReaderFor(ids[i]);
+                        IndexEntryReader indexEntryReader = IndexSearcher.GetEntryReaderFor(ids[i]);
                         var key = _documentIdReader.GetTermFor(ids[i]);
-                        var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -1087,7 +1088,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             SortedSet<string> results = new();
 
-            if (_indexSearcher.TryGetTermsOfField(_indexSearcher.FieldMetadataBuilder(field), out var terms) == false)
+            if (IndexSearcher.TryGetTermsOfField(IndexSearcher.FieldMetadataBuilder(field), out var terms) == false)
                 return results;
 
             if (string.IsNullOrEmpty(fromValue) == false)
@@ -1130,8 +1131,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (closeServerTransaction)
                 {
-                    builderParameters = new(_indexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this);
+                    builderParameters = new(IndexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
             }
@@ -1157,8 +1158,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            builderParameters = new(_indexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this);
+            builderParameters = new(IndexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
             using var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
 
@@ -1200,7 +1201,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             mlt.SetFieldNames(fieldNames);
 
-            var pageSize = CoraxBufferSize(_indexSearcher, query.PageSize, query);
+            var pageSize = CoraxBufferSize(IndexSearcher, query.PageSize, query);
 
             IQueryMatch mltQuery;
             if (baseDocId.HasValue)
@@ -1215,7 +1216,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
             {
-                mltQuery = _indexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
+                mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
 
@@ -1234,13 +1235,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (hit == baseDocId)
                         continue;
 
-                    var reader = _indexSearcher.GetEntryReaderFor(hit);
+                    var reader = IndexSearcher.GetEntryReaderFor(hit);
                     var id = _documentIdReader.GetTermFor(hit);
 
                     if (ravenIds.Add(id) == false)
                         continue;
 
-                    var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, reader, id, _index.IndexFieldsPersistence);
+                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, reader, id, _index.IndexFieldsPersistence);
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {
@@ -1272,17 +1273,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     "Filter isn't supported in Raw Index View.");
 
             var take = pageSize + position;
-            if (take > _indexSearcher.NumberOfEntries)
+            if (take > IndexSearcher.NumberOfEntries)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, indexReadOperation: this);
+            var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, indexReadOperation: this, token: token);
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out _)) is null)
                 yield break;
 
-            var ids = QueryPool.Rent(CoraxBufferSize(_indexSearcher, take, query));
-            int docsToLoad = CoraxBufferSize(_indexSearcher, pageSize, query);
-            using var coraxEntryReader = new CoraxIndexedEntriesReader(_indexSearcher, _fieldMappings);
+            var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
+            int docsToLoad = CoraxBufferSize(IndexSearcher, pageSize, query);
+            using var coraxEntryReader = new CoraxIndexedEntriesReader(IndexSearcher, _fieldMappings);
             int read;
             long i = Skip();
             while (true)
@@ -1291,7 +1292,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = _indexSearcher.GetEntryReaderFor(ids[i]);
+                    var reader = IndexSearcher.GetEntryReaderFor(ids[i]);
                     var id = _documentIdReader.GetTermFor(ids[i]);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }
@@ -1330,7 +1331,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
         {
-            var fieldsInIndex = _indexSearcher.GetFields();
+            var fieldsInIndex = IndexSearcher.GetFields();
             foreach (var field in fieldsInIndex)
             {
                 if (staticFields.Contains(field))
@@ -1344,7 +1345,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             base.Dispose();
 
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
-            exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
+            exceptionAggregator.Execute(() => IndexSearcher?.Dispose());
             exceptionAggregator.ThrowIfNeeded();
         }
 

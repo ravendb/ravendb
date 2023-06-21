@@ -81,6 +81,7 @@ namespace Corax.Queries.SortingMatches;
             bool descending = false)
         {
             var readScores = MemoryMarshal.Cast<long, float>(batchTermIds)[..batchResults.Length];
+            match._cancellationToken.ThrowIfCancellationRequested();
 
             // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
             readScores.Fill(Bm25Relevance.InitialScoreValue);
@@ -181,6 +182,8 @@ namespace Corax.Queries.SortingMatches;
                 match._results.Add(batchResults);
                 return;
             }
+            
+            match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer());
@@ -340,6 +343,7 @@ namespace Corax.Queries.SortingMatches;
                 return;
             }
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+            match._cancellationToken.ThrowIfCancellationRequested();
             var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -367,6 +371,7 @@ namespace Corax.Queries.SortingMatches;
                 return;
             }
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
+            match._cancellationToken.ThrowIfCancellationRequested();
             var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -416,13 +421,17 @@ namespace Corax.Queries.SortingMatches;
                 match._results.Add(batchResults);
                 return;
             }
+            
+            match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            
             for (int i = 0; i < batchTermIds.Length; i++)
             {
                 indexes[i] = i;
             }
+
             EntryComparerHelper.IndirectSort(indexes, batchTerms, descending, this);
             for (int i = 0; i < indexes.Length; i++)
             {

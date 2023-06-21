@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Meta;
+using System.Threading;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Compression;
@@ -24,6 +25,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private readonly IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata _orderMetadata;
+    private readonly CancellationToken _cancellationToken;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
 
     private readonly int _take;
@@ -35,11 +37,12 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     public long TotalResults;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
-    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, int take = -1)
+    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
+        _cancellationToken = cancellationToken;
         _take = take;
         _results = new NativeIntegersList(searcher.Allocator);
 
@@ -393,6 +396,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var reader = GetReader(ref match, allMatches[0], allMatches[^1]);
         while (match._results.Count < maxResults)
         {
+            match._cancellationToken.ThrowIfCancellationRequested();
+
             var read = reader.Read(sortedIdBuffer);
             if (read == 0)
             {
