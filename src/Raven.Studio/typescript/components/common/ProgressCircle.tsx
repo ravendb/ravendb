@@ -20,18 +20,20 @@ const circumference = 2 * Math.PI * stateIndicatorProgressRadius;
 export function ProgressCircle(props: ProgressCircleProps) {
     const { state, children, inline, icon, progress, onClick } = props;
 
+    const showProgress = progress > 0 && progress < 1;
+
     return (
         <div
             className={classNames("progress-circle", state, { inline }, { "cursor-pointer": onClick })}
             onClick={onClick}
         >
             <div className="state-desc">
-                {progress != null && <strong>{(100 * progress).toFixed(0)}%</strong>}
+                {showProgress && <strong>{(100 * progress).toFixed(0)}%</strong>}
                 {children}
             </div>
             <div className="state-indicator">
                 {icon && <Icon icon={icon} margin="m-0" />}
-                {progress != null && (
+                {showProgress && (
                     <svg className="progress-ring">
                         <circle strokeDashoffset={circumference * (1.0 - progress)} />
                     </svg>

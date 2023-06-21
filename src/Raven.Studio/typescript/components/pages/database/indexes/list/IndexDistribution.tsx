@@ -275,7 +275,7 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
             inline
             state={getState(index)}
             icon={getIcon(index)}
-            progress={overallProgress !== 0 ? overallProgress : null}
+            progress={overallProgress}
             onClick={onClick}
         >
             {getStateText(index)}
