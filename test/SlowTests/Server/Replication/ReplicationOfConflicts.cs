@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +7,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.ServerWide;
@@ -31,7 +29,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicateAConflictThenResolveIt(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
@@ -96,7 +94,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanManuallyResolveConflict_with_tombstone(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var master = GetDocumentStore(options: options))
             using (var slave = GetDocumentStore(options: options))
             {
@@ -158,7 +156,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicateAConflictOnThreeDBsAndResolve(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options: options))
             using (var store2 = GetDocumentStore(options: options))
             using (var store3 = GetDocumentStore(options: options))
@@ -199,7 +197,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicateTombstoneConflict(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options: options))
             using (var store2 = GetDocumentStore(options: options))
             {
@@ -237,7 +235,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ResolveHiLoConflict(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options: options))
             using (var store2 = GetDocumentStore(options: options))
             {
@@ -393,22 +391,6 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
             }
-        }
-
-        private Options GetOptionsInternal(Options options)
-        {
-            return new Options(options)
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                    options.ModifyDatabaseRecord(record);
-                }
-            };
         }
     }
 }

@@ -487,6 +487,22 @@ namespace Tests.Infrastructure
             return res.DeletionInProgress.Count;
         }
 
+        protected Options UpdateConflictSolverAndGetMergedOptions(Options options)
+        {
+            return new Options(options)
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                    options.ModifyDatabaseRecord(record);
+                }
+            };
+        }
+
         private class GetConnectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
             public override bool IsReadRequest => true;

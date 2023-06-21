@@ -4,13 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -30,7 +28,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanReplicateDocument(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var source = GetDocumentStore(options: options))
             using (var destination = GetDocumentStore(options: options))
             {
@@ -58,7 +56,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanReplicateDocumentDeletion(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var source = GetDocumentStore(options: options))
             using (var destination = GetDocumentStore(options: options))
             {
@@ -91,7 +89,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetConflictsResult_command_should_work_properly(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var source = GetDocumentStore(options: options))
             using (var destination = GetDocumentStore(options: options))
             {
@@ -123,7 +121,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldCreateConflictThenResolveIt(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var source = GetDocumentStore(options: options))
             using (var destination = GetDocumentStore(options: options))
             {
@@ -166,22 +164,6 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(fetchedVal.ToString(), actualVal.ToString());
             }
-        }
-
-        private Options GetOptionsInternal(Options options)
-        {
-            return new Options(options)
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                    options.ModifyDatabaseRecord(record);
-                }
-            };
         }
     }
 }
