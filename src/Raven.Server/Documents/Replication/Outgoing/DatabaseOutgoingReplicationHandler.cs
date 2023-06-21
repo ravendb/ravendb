@@ -448,7 +448,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             public Action OnDocumentSenderFetchNewItem;
 
-            public Action<Dictionary<Slice, AttachmentReplicationItem>> OnMissingAttachmentStream;
+            public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
         }
     }
 

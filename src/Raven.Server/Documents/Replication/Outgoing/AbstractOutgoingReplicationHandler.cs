@@ -408,7 +408,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
                     }
 
-                    if (++MissingAttachmentsRetries > 1)
+                    MissingAttachmentsRetries++;
+                    if (MissingAttachmentsRetries > 1)
                     {
                         var msg = $"Failed to send batch successfully to {Destination.FromString()}. " +
                                   $"Destination reported missing attachments {MissingAttachmentsRetries} times.";

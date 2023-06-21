@@ -288,7 +288,11 @@ namespace Raven.Server.Utils
                 ChangeVectorParser.MergeChangeVectorDown(changeVectors[i], _mergeVectorBuffer);
             }
 
-            return _mergeVectorBuffer.SerializeVector();
+            var mergedChangeVector = _mergeVectorBuffer.SerializeVector();
+            if (string.Equals(changeVectors[0], mergedChangeVector, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return mergedChangeVector;
         }
 
         public static ChangeVector NewChangeVector(DocumentDatabase database, long etag, IChangeVectorOperationContext context)
