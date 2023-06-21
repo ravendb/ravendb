@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Archival
 {
     public unsafe class ArchivalStorage
     {
-        private const string DocumentsByArchive = "DocumentsByArchive";
+        private const string DocumentsByArchiveDateTime = "DocumentsByArchiveDateTime";
         
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Archival
             _documentsStorage = _database.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<ArchivalStorage>(database.Name);
 
-            tx.CreateTree(DocumentsByArchive);
+            tx.CreateTree(DocumentsByArchiveDateTime);
         }
 
         public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject metadata)
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Archival
             var archives = date.ToUniversalTime();
             var ticksBigEndian = Bits.SwapBytes(archives.Ticks);
 
-            var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsByArchive);
+            var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveDateTime);
             using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
                 tree.MultiAdd(ticksSlice, lowerId);
         }
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Archival
             var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
 
-            var archiveTree = options.Context.Transaction.InnerTransaction.ReadTree(DocumentsByArchive);
+            var archiveTree = options.Context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveDateTime);
             using (var it = archiveTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Archival
         public int ArchiveDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DateTime currentTime)
         {
             int archivedCount = 0;
-            var archiveTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByArchive);
+            var archiveTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveDateTime);
 
             foreach (var pair in toArchive)
             {
