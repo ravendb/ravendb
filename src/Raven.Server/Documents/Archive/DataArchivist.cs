@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Archival
 {
-    public class DocumentsArchivist : BackgroundWorkBase
+    public class DataArchivist : BackgroundWorkBase
     {
         internal static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
@@ -25,38 +25,38 @@ namespace Raven.Server.Documents.Archival
 
         public ArchivalConfiguration ArchivalConfiguration { get; }
 
-        private DocumentsArchivist(DocumentDatabase database, ArchivalConfiguration archivalConfiguration) : base(database.Name, database.DatabaseShutdown)
+        private DataArchivist(DocumentDatabase database, ArchivalConfiguration archivalConfiguration) : base(database.Name, database.DatabaseShutdown)
         {
             ArchivalConfiguration = archivalConfiguration;
             _database = database;
             _archivePeriod = TimeSpan.FromSeconds(ArchivalConfiguration?.ArchiveFrequencyInSec ?? 60);
         }
 
-        public static DocumentsArchivist LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, DocumentsArchivist documentsArchivist)
+        public static DataArchivist LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, DataArchivist dataArchivist)
         {
             try
             {
                 if (dbRecord.Archival == null)
                 {
-                    documentsArchivist?.Dispose();
+                    dataArchivist?.Dispose();
                     return null;
                 }
 
-                if (documentsArchivist != null)
+                if (dataArchivist != null)
                 {
                     // no changes
-                    if (Equals(documentsArchivist.ArchivalConfiguration, dbRecord.Archival))
-                        return documentsArchivist;
+                    if (Equals(dataArchivist.ArchivalConfiguration, dbRecord.Archival))
+                        return dataArchivist;
                 }
 
-                documentsArchivist?.Dispose();
+                dataArchivist?.Dispose();
 
                 var hasArchive = dbRecord.Archival?.Disabled == false;
 
                 if (hasArchive == false)
                     return null;
 
-                var archiver = new DocumentsArchivist(database, dbRecord.Archival);
+                var archiver = new DataArchivist(database, dbRecord.Archival);
                 archiver.Start();
                 return archiver;
             }
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Archival
                     $"Archive error in {database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
-                var logger = LoggingSource.Instance.GetLogger<DocumentsArchivist>(database.Name);
+                var logger = LoggingSource.Instance.GetLogger<DataArchivist>(database.Name);
                 if (logger.IsOperationsEnabled)
                     logger.Operations(msg, e);
 
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Archival
                 return DeletionCount;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentsArchivist.ArchiveDocumentsCommand> ToDto(DocumentsOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DataArchivist.ArchiveDocumentsCommand> ToDto(DocumentsOperationContext context)
             {
                 var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_toArchive.Count];
                 var i = 0;
@@ -188,16 +188,16 @@ namespace Raven.Server.Documents.Archival
         }
     }
 
-    internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentsArchivist.ArchiveDocumentsCommand>
+    internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DataArchivist.ArchiveDocumentsCommand>
     {
-        public DocumentsArchivist.ArchiveDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public DataArchivist.ArchiveDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var toArchive = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
             foreach (var item in Expired)
             {
                 toArchive[item.Key] = item.Value;
             }
-            var command = new DocumentsArchivist.ArchiveDocumentsCommand(toArchive, database, CurrentTime);
+            var command = new DataArchivist.ArchiveDocumentsCommand(toArchive, database, CurrentTime);
             return command;
         }
 
