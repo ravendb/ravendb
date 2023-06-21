@@ -7,9 +7,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Monitoring;
 using Sparrow;
 using Sparrow.LowMemory;
@@ -75,9 +75,12 @@ namespace Raven.Server.Web.System
                 WriteIndexMetrics(provider, databases);
             }
 
-            //TODO: server backup is missing in docs?
+            if (skipCollections == false)
+            {
+                WriteCollectionMetrics(provider, databases);
+            }
 
-            //TODO: other data
+            //TODO: server backup is missing in docs? + Database replication factor as well?
         }
 
         private void WriteServerMetrics(MetricsProvider provider)
@@ -214,7 +217,7 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of rehabs", "database_rehabs_count", metrics, x => x.Counts.Rehabs, cachedTags);
                     WriteGauges(writer, "Number of performance hints", "database_performance_hints_count", metrics, x => x.Counts.PerformanceHints, cachedTags);
                     WriteGauges(writer, "Database replication factor", "database_replication_factor", metrics, x => x.Counts.ReplicationFactor,
-                        cachedTags); //TODO: missing in docs?
+                        cachedTags);
 
                     // statistics 
                     
@@ -222,11 +225,11 @@ namespace Raven.Server.Web.System
                         x => x.Statistics.DocPutsPerSec, cachedTags);
                     WriteGauges(writer, "Number of indexed documents per second for map indexes (one minute rate)", "database_statistics_map_index_indexes_per_second",
                         metrics, x => x.Statistics.MapIndexIndexesPerSec, cachedTags);
-                    WriteGauges(writer, "Number of maps per second for map-reduce indexes (one minute rate)", "database_statistics_map_reduce_index_mapped_per_sec",
+                    WriteGauges(writer, "Number of maps per second for map-reduce indexes (one minute rate)", "database_statistics_map_reduce_index_mapped_per_second",
                         metrics, x => x.Statistics.MapReduceIndexMappedPerSec, cachedTags);
-                    WriteGauges(writer, "Number of reduces per second for map-reduce indexes (one minute rate)", "database_statistics_map_reduce_index_reduced_per_sec",
+                    WriteGauges(writer, "Number of reduces per second for map-reduce indexes (one minute rate)", "database_statistics_map_reduce_index_reduced_per_second",
                         metrics, x => x.Statistics.MapReduceIndexReducedPerSec, cachedTags);
-                    WriteGauges(writer, "Number of requests per second (one minute rate)", "database_statistics_requests_per_sec",
+                    WriteGauges(writer, "Number of requests per second (one minute rate)", "database_statistics_requests_per_second",
                         metrics, x => x.Statistics.RequestsPerSec, cachedTags);
                     WriteCounters(writer, "Number of requests from database start", "database_statistics_requests_count", metrics, x => x.Statistics.RequestsCount,
                         cachedTags);
@@ -306,8 +309,48 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of entries in the index", "index_entries_count", metrics, x => x.EntriesCount, cachedTags);
                     WriteGauges(writer, "Time since last indexing", "index_time_since_last_indexing_seconds", metrics, x => x.TimeSinceLastIndexingInSec, cachedTags);
                     WriteGauges(writer, "Time since last query", "index_time_since_last_query_seconds", metrics, x => x.TimeSinceLastQueryInSec, cachedTags);
-                    WriteGauges(writer, "Number of maps per second (one minute rate)", "index_mapped_per_sec", metrics, x => x.MappedPerSec, cachedTags);
-                    WriteGauges(writer, "Number of reduces per second (one minute rate)", "index_reduced_per_sec", metrics, x => x.ReducedPerSec, cachedTags);
+                    WriteGauges(writer, "Number of maps per second (one minute rate)", "index_mapped_per_second", metrics, x => x.MappedPerSec, cachedTags);
+                    WriteGauges(writer, "Number of reduces per second (one minute rate)", "index_reduced_per_second", metrics, x => x.ReducedPerSec, cachedTags);
+                }
+                
+                ms.WriteTo(ResponseBodyStream());
+            }
+        }
+        
+        private void WriteCollectionMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
+        {
+            var metrics = new List<CollectionMetrics>();
+            var cachedTags = new List<string>();
+
+            foreach (var database in databases)
+            {
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var collection in database.DocumentsStorage.GetCollections(context))
+                    {
+                        var details = database.DocumentsStorage.GetCollectionDetails(context, collection.Name);
+                        var collectionMetrics = new CollectionMetrics(details);
+                        
+                        metrics.Add(collectionMetrics);
+                        cachedTags.Add(SerializeTags(new Dictionary<string, string>
+                        {
+                            { "database_name", database.Name },
+                            { "collection_name", collection.Name }
+                        }));
+                    }
+                }
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = PrometheusWriter(ms))
+                {
+                    WriteGauges(writer, "Number of documents in collection", "collection_documents_count", metrics, x => x.DocumentsCount, cachedTags);
+                    WriteGauges(writer, "Size of documents", "collection_documents_size_bytes", metrics, x => x.DocumentsSizeInBytes, cachedTags);
+                    WriteGauges(writer, "Size of revisions", "collection_revisions_size_bytes", metrics, x => x.RevisionsSizeInBytes, cachedTags);
+                    WriteGauges(writer, "Size of tombstones", "collection_tombstones_size_bytes", metrics, x => x.TombstonesSizeInBytes, cachedTags);
+                    WriteGauges(writer, "Total size of collection", "collection_total_size_bytes", metrics, x => x.TotalSizeInBytes, cachedTags);
                 }
                 
                 ms.WriteTo(ResponseBodyStream());
