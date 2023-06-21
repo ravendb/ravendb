@@ -508,6 +508,9 @@ class editDocument extends viewModelBase {
         
         this.atomicGuardUrl = ko.pureComputed(() => {
             const id = this.document().getId();
+            if (!id) {
+                return null;
+            }
            
             return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.activeDatabase());
         });
