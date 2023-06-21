@@ -2198,6 +2198,10 @@ ul.properties {
     border-radius: @gutter-xs;
 }
 
+.border-radius-xxs {
+    border-radius: @gutter-xxs;
+}
+
 .resize-none {
     resize: none;
 }
@@ -2257,7 +2261,11 @@ ul.properties {
 }
 
 .text-shard {
-    color: @color-4-1;
+    color: @sharding-color;
+}
+
+.panel-bg-1 {
+    background-color: var(--panel-bg-1);
 }
 
 @import "prism.less";
@@ -2322,7 +2330,3 @@ ul.properties {
 @import "pages/database-settings.less";
 @import "pages/databaseIDs.less";
 @import "pages/sharding.less";
-
-.text-shard {
-    color: @sharding-color;
-}
