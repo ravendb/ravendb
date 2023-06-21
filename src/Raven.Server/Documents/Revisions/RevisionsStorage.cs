@@ -1625,7 +1625,7 @@ namespace Raven.Server.Documents.Revisions
                         {
                             var etag = documentsStorage.GenerateNextEtag();
                             var changeVector = documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, etag);
-                            documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: changeVector, documentFlags: DocumentFlags.Reverted);
+                            documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: context.GetChangeVector(changeVector), documentFlags: DocumentFlags.Reverted);
                         }
                     }
                 }

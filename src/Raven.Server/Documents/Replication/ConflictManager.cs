@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
             string collection,
             long lastModifiedTicks,
             BlittableJsonReaderObject doc,
-            string changeVector,
+            ChangeVector changeVector,
             DocumentFlags flags)
         {
             if (id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Replication
                         if (local != null)
                             conflicts.Add(local);
 
-                        var resolved = _conflictResolver.ResolveToLatest(conflicts);
+                        var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
 
                         _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
                         return;
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Replication
                 InvalidConflictWhenThereIsNone(conflict.Id);
 
             conflictedDocs.Add(conflict.Clone());
-            conflictedDocs.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
+            conflictedDocs.Sort((x, y) => Compare(x, y, documentsContext));
 
             if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string id,
             BlittableJsonReaderObject incomingDoc,
             long lastModifiedTicks,
-            string incomingChangeVector)
+            ChangeVector incomingChangeVector)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
             var existingDoc = existing.Document;
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
 
                 // no real conflict here, both documents have identical content so we only merge the change vector without increasing the local etag to prevent ping-pong replication
-                var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                var mergedChangeVector = incomingChangeVector.MergeWith(existingDoc.ChangeVector, context);
 
                 var nonPersistentFlags = NonPersistentDocumentFlags.FromResolver;
 
@@ -273,12 +273,20 @@ namespace Raven.Server.Documents.Replication
                 existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
                 using (Slice.External(context.Allocator, existingTombstone.LowerId, out Slice lowerId))
                 {
-                    _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, lowerId, null, existingTombstone.ChangeVector);
+                    _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, lowerId, null, context.GetChangeVector(existingTombstone.ChangeVector));
                 }
                 return true;
             }
 
             return false;
+        }
+
+        
+        public static int Compare(DocumentConflict x, DocumentConflict y, IChangeVectorOperationContext context)
+        {
+            var cvx = new ChangeVector(x.ChangeVector, context);
+            var cvy = new ChangeVector(y.ChangeVector, context);
+            return string.Compare(cvx.Version.AsString(), cvy.Version.AsString(), StringComparison.Ordinal);
         }
     }
 }

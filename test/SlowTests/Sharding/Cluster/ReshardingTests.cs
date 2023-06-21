@@ -686,6 +686,108 @@ namespace SlowTests.Sharding.Cluster
         }
 
         [RavenFact(RavenTestCategory.Sharding)]
+        public async Task BucketDeletionShouldMarkExistingTombstonesAsArtificial2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                const string suffix = "eu";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), $"users/1${suffix}");
+                    await session.StoreAsync(new User(), $"users/2${suffix}");
+                    await session.StoreAsync(new User(), $"users/3${suffix}");
+                    await session.StoreAsync(new User(), $"users/4${suffix}");
+
+                    await session.SaveChangesAsync();
+                }
+                
+                var id = $"users/1${suffix}";
+
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete($"users/2${suffix}");
+                    session.Delete($"users/3${suffix}");
+                    session.Delete($"users/4${suffix}");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var oldLocation = await Sharding.GetShardNumberForAsync(store, id);
+                var lastProcessedEtag = 0L;
+
+                var oldLocationShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
+                using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag).ToList();
+                    Assert.Equal(3, tombs.Count);
+
+                    foreach (var tomb in tombs)
+                    {
+                        var replicationItem = tomb as DocumentReplicationItem;
+
+                        Assert.NotNull(replicationItem);
+                        Assert.False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        Assert.False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+
+                        lastProcessedEtag = replicationItem.Etag;
+                    }
+                }
+
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, oldLocation)))
+                {
+                    var user = await session.LoadAsync<User>($"users/1${suffix}");
+                    Assert.Null(user);
+                }
+
+                using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag + 1).ToList();
+                    Assert.Equal(1, tombs.Count);
+
+                    var replicationItem = tombs[0] as DocumentReplicationItem;
+
+                    Assert.NotNull(replicationItem);
+                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+                }
+
+                var newLocation = await Sharding.GetShardNumberForAsync(store, id);
+                Assert.NotEqual(oldLocation, newLocation);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+                {
+                    var user = await session.LoadAsync<User>($"users/1${suffix}");
+                    Assert.NotNull(user);
+                }
+
+                var newLocationShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation));
+                using (newLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = newLocationShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(3, tombs.Count);
+
+                    foreach (var tomb in tombs)
+                    {
+                        var replicationItem = tomb as DocumentReplicationItem;
+
+                        Assert.NotNull(replicationItem);
+                        Assert.False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+                    }
+                }
+
+                await Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanMoveBucketWhenLastItemIsNotDocument()
         {
             using var store = Sharding.GetDocumentStore();

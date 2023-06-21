@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Replication
         public static readonly int RaftInt = RaftTag.ParseNodeTag();
         public static readonly int TrxnInt = TrxnTag.ParseNodeTag();
         public static readonly int SinkInt = SinkTag.ParseNodeTag();
+        public static readonly int MoveInt = MoveTag.ParseNodeTag();
         public static readonly int DbBase64IdSize = 23;
 
         private enum State

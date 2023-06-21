@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Replication
 
                             if (solver?.ResolveToLatest == true)
                             {
-                                resolved = ResolveToLatest(conflicts);
+                                resolved = ResolveToLatest(context, conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
                                 resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: true));
 
@@ -457,11 +457,11 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        public DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
+        public DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
         {
             // we have to sort this here because we need to ensure that all the nodes are always
             // arrive to the same conclusion, regardless of what time they go it
-            conflicts.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
+            conflicts.Sort((x, y) => ConflictManager.Compare(x, y, context));
 
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;

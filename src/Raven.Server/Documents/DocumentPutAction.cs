@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
+                var result = BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldChangeVector);
 
                 nonPersistentFlags |= result.NonPersistentFlags;
 
@@ -321,9 +321,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private (ChangeVector ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
-            DocumentsOperationContext context, string id, Slice lowerId, long newEtag,
-            BlittableJsonReaderObject document, ChangeVector changeVector, string expectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
+        public (ChangeVector ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
+            DocumentsOperationContext context, Slice lowerId, long newEtag,
+            BlittableJsonReaderObject document, ChangeVector changeVector, string expectedChangeVector, DocumentFlags flags, ChangeVector oldChangeVector)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = flags.Contain(DocumentFlags.FromReplication);
@@ -337,11 +337,11 @@ namespace Raven.Server.Documents
 
                 if (fromReplication)
                 {
-                    nonPersistentFlags = _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, id, document).NonPersistentFlags;
+                    nonPersistentFlags = _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, lowerId, document).NonPersistentFlags;
                 }
                 else
                 {
-                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
+                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, lowerId, newEtag, document);
                     nonPersistentFlags = result.NonPersistentFlags;
 
                     if (result.ChangeVector != null)
@@ -352,7 +352,6 @@ namespace Raven.Server.Documents
             if (changeVector != null)
                 return (changeVector, nonPersistentFlags);
 
-            var oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             if (fromReplication == false)
             {
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
@@ -366,7 +365,7 @@ namespace Raven.Server.Documents
             return (changeVector, nonPersistentFlags);
         }
 
-        private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        public static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             // if arrived from replication we keep the document with its original change vector
             // in that case the updating of the global change vector should happened upper in the stack

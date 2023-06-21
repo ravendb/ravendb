@@ -1574,7 +1574,7 @@ namespace Raven.Server.Documents
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
-            LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
+            LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, ChangeVector changeVector = null,
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
             DocumentFlags documentFlags = DocumentFlags.None)
         {
@@ -1610,7 +1610,7 @@ namespace Raven.Server.Documents
                 DocumentPut.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
 
                 DocumentFlags flags;
-                var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromResharding | DocumentFlags.Artificial);
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
                     //after enforce revision configuration we don't have revision and we want to remove the flag from tombstone
@@ -1693,7 +1693,7 @@ namespace Raven.Server.Documents
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromResharding | DocumentFlags.Artificial) | documentFlags;
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
@@ -1901,32 +1901,30 @@ namespace Raven.Server.Documents
             CollectionName collectionName,
             string docChangeVector,
             long lastModifiedTicks,
-            string changeVector,
+            ChangeVector changeVector,
             DocumentFlags flags,
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             var newEtag = GenerateNextEtag();
 
-            if (string.IsNullOrEmpty(changeVector) &&
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
             {
-                var mergedChangeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
-                    context,
-                    lowerId,
-                    newEtag,
-                    context.GetChangeVector(docChangeVector).Version);
-
-                if (string.IsNullOrEmpty(mergedChangeVector))
-                    ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
-
-                context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                context.LastDatabaseChangeVector = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(mergedChangeVector), context);
-                changeVector = context.LastDatabaseChangeVector;
+                flags |= DocumentFlags.FromReplication;
             }
             else
             {
-                ConflictsStorage.DeleteConflictsFor(context, lowerId, null);
+                flags = flags.Strip(DocumentFlags.FromReplication);
             }
+
+            var result = DocumentPut.BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document: null, changeVector, expectedChangeVector: null, flags,
+                oldChangeVector: context.GetChangeVector(docChangeVector));
+
+            if (DocumentPutAction.UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
+            {
+                changeVector = result.ChangeVector;
+            }
+
+            Debug.Assert(changeVector != null, "changeVector can't be null");
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
