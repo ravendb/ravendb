@@ -35,11 +35,8 @@ namespace Raven.Server.Documents.Expiration
             tx.CreateTree(DocumentsByRefresh);
         }
 
-        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
+        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject metadata)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return;
-
             var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
             var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
 

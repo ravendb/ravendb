@@ -40,11 +40,8 @@ namespace Raven.Server.Documents.Archival
             tx.CreateTree(DocumentsByArchive);
         }
 
-        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
+        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject metadata)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return;
-
             var hasArchiveDate = metadata.TryGet(Constants.Documents.Metadata.Archive, out string archiveDate);
             if (hasArchiveDate == false)
                 return;
