@@ -15,6 +15,8 @@ namespace Raven.Server.SqlMigration.Model
         
         public string CollectionNameToUseInLinks { get; set; }
         public IDataProvider<object> DataProvider {get; set; }
+        public IDataProvider<object> EmbeddedReferenceKeyDataProvider { get; set; }
+        public EmbeddedDocumentSqlKeysStorage EmbeddedDocumentsSqlKeysStorage { get; set; }
         public HashSet<string> TargetSpecialColumnsNames { get; set; }
         public Dictionary<string, string> TargetDocumentColumns { get; set; }
         public Dictionary<string, string> TargetAttachmentColumns { get; set; }

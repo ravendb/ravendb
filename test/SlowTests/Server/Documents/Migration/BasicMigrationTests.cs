@@ -738,5 +738,215 @@ namespace SlowTests.Server.Documents.Migration
                 }
             }
         }
+        
+        [Theory]
+        [RequiresMsSqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
+        [RequiresMySqlInlineData]
+        public async Task NestedEmbeddingWithSqlKeysInDocument(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                using (var store = GetDocumentStore())
+                {
+                    var collection = new RootCollection(schemaName, "order", "Orders")
+                    {
+                        NestedCollections = new List<EmbeddedCollection>
+                        {
+                            new EmbeddedCollection(schemaName, "order_item", RelationType.OneToMany, new List<string> { "order_id" }, "Items", EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty)
+                            {
+                                NestedCollections = new List<EmbeddedCollection>
+                                {
+                                    new EmbeddedCollection(schemaName, "product", RelationType.ManyToOne, new List<string> { "product_id" }, "Product", EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty)
+                                }
+                            }
+                        }
+                    };
+
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            collection
+                        },
+                    };
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var order = session.Load<JObject>("Orders/1");
+
+                        Assert.NotNull(order);
+                        Assert.NotNull(order["Items"]);
+
+                        var item = order["Items"][0];
+                        Assert.NotNull(item);
+                        Assert.NotNull(item["OrderId"]);
+
+                        var itemProduct = item["Product"];
+                        Assert.NotNull(itemProduct);
+                        Assert.NotNull(itemProduct["PId"]);
+                    }
+                }
+            }
+        }
+        
+        [Theory]
+        [RequiresMsSqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
+        [RequiresMySqlInlineData]
+        public async Task NestedEmbeddingWithNoSqlKeys(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                using (var store = GetDocumentStore())
+                {
+                    var collection = new RootCollection(schemaName, "order", "Orders")
+                    {
+                        NestedCollections = new List<EmbeddedCollection>
+                        {
+                            new EmbeddedCollection(schemaName, "order_item", RelationType.OneToMany, new List<string> { "order_id" }, "Items")
+                            {
+                                NestedCollections = new List<EmbeddedCollection>
+                                {
+                                    new EmbeddedCollection(schemaName, "product", RelationType.ManyToOne, new List<string> { "product_id" }, "Product")
+                                }
+                            }
+                        }
+                    };
+
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            collection
+                        }
+                    };
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var order = session.Load<JObject>("Orders/1");
+
+                        Assert.NotNull(order);
+                        Assert.NotNull(order["Items"]);
+
+                        var item = order["Items"][0];
+                        Assert.NotNull(item);
+                        Assert.Null(item["OrderId"]);
+
+                        var itemProduct = item["Product"];
+                        Assert.NotNull(itemProduct);
+                        Assert.Null(itemProduct["PId"]);
+                    }
+                }
+            }
+        }
+        
+        [Theory]
+        [RequiresMsSqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
+        [RequiresMySqlInlineData]
+        public async Task NestedEmbeddingWithSqlKeysInHierarchicalMetadata(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                using (var store = GetDocumentStore())
+                {
+                    var collection = new RootCollection(schemaName, "order", "Orders")
+                    {
+                        NestedCollections = new List<EmbeddedCollection>
+                        {
+                            new EmbeddedCollection(schemaName, "order_item", RelationType.OneToMany, new List<string> { "order_id" }, "Items", EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata)
+                            {
+                                NestedCollections = new List<EmbeddedCollection>
+                                {
+                                    new EmbeddedCollection(schemaName, "product", RelationType.ManyToOne, new List<string> { "product_id" }, "Product", EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata)
+                                }
+                            }
+                        }
+                    };
+
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            collection
+                        }
+                    };
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var order = session.Load<JObject>("Orders/1");
+
+                        Assert.NotNull(order);
+                        Assert.NotNull(order["Items"]);
+                        
+                        Assert.NotNull(order);
+                        Assert.NotNull(order["Items"]);
+                        Assert.NotNull(order["@metadata"]);
+                        Assert.NotNull(order["@metadata"]["@sql-keys"]);
+                        
+                        var sqlKeysMetadata = order["@metadata"]["@sql-keys"];
+                        Assert.Equal(1, sqlKeysMetadata["o_id"]);
+                        
+                        Assert.NotNull(sqlKeysMetadata["Items"]);
+                        var sqlKeysItem10 = sqlKeysMetadata["Items"]["Items/10"];
+                        Assert.NotNull(sqlKeysItem10);
+                        Assert.Equal(10, sqlKeysItem10["oi_id"]);
+                        Assert.NotNull(sqlKeysItem10["order_id"]);
+                        Assert.NotNull(sqlKeysItem10["product_id"]);
+
+                        var sqlKeysItem11 = sqlKeysMetadata["Items"]["Items/11"];
+                        Assert.NotNull(sqlKeysItem11);
+                        Assert.Equal(11,sqlKeysItem11["oi_id"]);
+                        Assert.NotNull(sqlKeysItem11["order_id"]);
+                        Assert.NotNull(sqlKeysItem11["product_id"]);
+                        
+                        var item = order["Items"][0];
+                        Assert.NotNull(item);
+                        Assert.Null(item["OrderId"]);
+
+                        var itemProduct = item["Product"];
+                        Assert.NotNull(itemProduct);
+                        Assert.Null(itemProduct["PId"]);
+                    }
+                }
+            }
+        }
     }
 }

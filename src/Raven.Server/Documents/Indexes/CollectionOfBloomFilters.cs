@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Indexes
         public bool Consumed;
         private static readonly long _consumed = -1L;
 
+        public long CurrentFilterCount => _currentFilter.Count;
+
         private CollectionOfBloomFilters(Mode mode, long version, Tree tree, TransactionOperationContext context)
         {
             _mode = mode;
@@ -210,9 +212,12 @@ namespace Raven.Server.Documents.Indexes
             if (Consumed)
                 return false;
 
+            var primaryHash = BloomFilter.CalculatePrimaryHash(key);
+            var secondaryHash = BloomFilter.CalculateSecondaryHash(key);
+
             if (_filters.Length == 1)
             {
-                if (_currentFilter.Add(key))
+                if (_currentFilter.Add(primaryHash, secondaryHash))
                 {
                     ExpandFiltersIfNecessary();
                     return true;
@@ -223,14 +228,45 @@ namespace Raven.Server.Documents.Indexes
 
             for (var i = 0; i < _filters.Length - 1; i++)
             {
-                if (_filters[i].Contains(key))
+                if (_filters[i].Contains(primaryHash, secondaryHash))
                     return false;
             }
 
-            if (_currentFilter.Add(key))
+            if (_currentFilter.Add(primaryHash, secondaryHash))
             {
                 ExpandFiltersIfNecessary();
                 return true;
+            }
+
+            return false;
+        }
+
+        public void DirectAdd(LazyStringValue key)
+        {
+            if (Consumed)
+                return;
+
+            var primaryHash = BloomFilter.CalculatePrimaryHash(key);
+            var secondaryHash = BloomFilter.CalculateSecondaryHash(key);
+
+            if (_currentFilter.Add(primaryHash, secondaryHash))
+            {
+                ExpandFiltersIfNecessary();
+            }
+        }
+
+        public bool Contains(LazyStringValue key)
+        {
+            if (Consumed)
+                return true;
+
+            var primaryHash = BloomFilter.CalculatePrimaryHash(key);
+            var secondaryHash = BloomFilter.CalculateSecondaryHash(key);
+
+            for (var i = 0; i < _filters.Length; i++)
+            {
+                if (_filters[i].Contains(primaryHash, secondaryHash))
+                    return true;
             }
 
             return false;
@@ -313,7 +349,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly ulong _m;
             private readonly int _ptrSize;
             private readonly uint _partitionCount;
-            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>(NumericEqualityComparer.BoxedInstanceUInt64);
+            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>();
             private readonly ByteStringContext _allocator;
             private readonly long _initialCount;
 
@@ -350,14 +386,20 @@ namespace Raven.Server.Documents.Indexes
                 return read.Reader.ReadLittleEndianInt64();
             }
 
-            public bool Add(LazyStringValue key)
+            internal bool Add(LazyStringValue key)
+            {
+                var primaryHash = CalculatePrimaryHash(key);
+                var secondaryHash = CalculateSecondaryHash(key);
+
+                return Add(primaryHash, secondaryHash);
+            }
+
+            public bool Add(ulong primaryHash, ulong secondaryHash)
             {
                 if (ReadOnly)
                     throw new InvalidOperationException($"Cannot add new item to a read-only bloom filter '{_key}'.");
 
                 var newItem = false;
-                var primaryHash = CalculatePrimaryHash(key);
-                var secondaryHash = CalculateSecondaryHash(key);
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
@@ -387,10 +429,16 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            public bool Contains(LazyStringValue key)
+            internal bool Contains(LazyStringValue key)
             {
                 var primaryHash = CalculatePrimaryHash(key);
                 var secondaryHash = CalculateSecondaryHash(key);
+
+                return Contains(primaryHash, secondaryHash);
+            }
+
+            public bool Contains(ulong primaryHash, ulong secondaryHash)
+            {
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
@@ -481,13 +529,13 @@ namespace Raven.Server.Documents.Indexes
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ulong CalculatePrimaryHash(LazyStringValue key)
+            public static ulong CalculatePrimaryHash(LazyStringValue key)
             {
                 return Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size, seed: 1);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ulong CalculateSecondaryHash(LazyStringValue key)
+            public static ulong CalculateSecondaryHash(LazyStringValue key)
             {
                 return Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size, seed: 1337);
             }
