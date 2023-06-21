@@ -16,6 +16,9 @@ import { getAllIndexes, useIndexesPage } from "components/pages/database/indexes
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { NoIndexes } from "components/pages/database/indexes/list/partials/NoIndexes";
 import { Icon } from "components/common/Icon";
+import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
+import ActionContextUtils from "components/utils/actionContextUtils";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface IndexesPageProps {
     database: database;
@@ -38,6 +41,7 @@ export function IndexesPage(props: IndexesPageProps) {
         setBulkOperationConfirm,
         resetIndexConfirm,
         setResetIndexConfirm,
+        swapSideBySideData,
         stats,
         selectedIndexes,
         toggleSelectAll,
@@ -46,9 +50,7 @@ export function IndexesPage(props: IndexesPageProps) {
         filterByStatusOptions,
         groups,
         replacements,
-        swapNowProgress,
         highlightCallback,
-        confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
         allIndexesCount,
         setIndexPriority,
@@ -161,20 +163,16 @@ export function IndexesPage(props: IndexesPageProps) {
                                                         <div className="title me-4">
                                                             <Icon icon="swap" /> Side by side
                                                         </div>
-                                                        <Button
+                                                        <ButtonWithSpinner
                                                             color="warning"
                                                             size="sm"
-                                                            disabled={swapNowProgress.includes(index.name)}
-                                                            onClick={() => confirmSwapSideBySide(index)}
+                                                            onClick={() => swapSideBySideData.setIndexName(index.name)}
                                                             title="Click to replace the current index definition with the replacement index"
+                                                            isSpinning={swapSideBySideData.inProgress(index.name)}
+                                                            icon="force"
                                                         >
-                                                            {swapNowProgress.includes(index.name) ? (
-                                                                <Spinner size={"sm"} />
-                                                            ) : (
-                                                                <Icon icon="force" />
-                                                            )}{" "}
                                                             Swap now
-                                                        </Button>
+                                                        </ButtonWithSpinner>
                                                     </div>
                                                 </Card>
                                             )}
@@ -211,12 +209,19 @@ export function IndexesPage(props: IndexesPageProps) {
             {bulkOperationConfirm && (
                 <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
             )}
-
             {resetIndexConfirm && (
                 <ConfirmResetIndex
                     {...resetIndexConfirm}
                     toggle={() => setResetIndexConfirm(null)}
                     onConfirm={() => onResetIndexConfirm(resetIndexConfirm.index)}
+                />
+            )}
+            {swapSideBySideData.indexName && (
+                <ConfirmSwapSideBySideIndex
+                    indexName={swapSideBySideData.indexName}
+                    toggle={() => swapSideBySideData.setIndexName(null)}
+                    onConfirm={(x) => swapSideBySideData.onConfirm(x)}
+                    allActionContexts={ActionContextUtils.getContexts(database.getLocations())}
                 />
             )}
         </>

@@ -4,11 +4,18 @@ import { ClientConfigurationFormData } from "./ClientConfigurationValidation";
 
 export default function useClientConfigurationFormController(
     control: Control<ClientConfigurationFormData>,
-    setValue: UseFormSetValue<ClientConfigurationFormData>
+    setValue: UseFormSetValue<ClientConfigurationFormData>,
+    shouldOverride: boolean
 ): ClientConfigurationFormData {
     const formValues = useWatch({ control });
 
     useEffect(() => {
+        if (!formValues.overrideConfig && shouldOverride) {
+            setValue("overrideConfig", true, { shouldValidate: true });
+        }
+        if (!formValues.identityPartsSeparatorEnabled && formValues.identityPartsSeparatorValue !== null) {
+            setValue("identityPartsSeparatorValue", null, { shouldValidate: true });
+        }
         if (!formValues.identityPartsSeparatorEnabled && formValues.identityPartsSeparatorValue !== null) {
             setValue("identityPartsSeparatorValue", null, { shouldValidate: true });
         }
@@ -27,7 +34,7 @@ export default function useClientConfigurationFormController(
         if (!formValues.readBalanceBehaviorEnabled && formValues.readBalanceBehaviorValue !== "None") {
             setValue("readBalanceBehaviorValue", "None", { shouldValidate: true });
         }
-    }, [formValues, setValue]);
+    }, [formValues, setValue, shouldOverride]);
 
     return formValues;
 }

@@ -75,7 +75,7 @@ export default class IndexesService {
         await new openFaultyIndexCommand(index.name, db, location).execute();
     }
 
-    async forceReplace(name: string, database: database) {
-        await new forceIndexReplace(name, database).execute();
+    async forceReplace(indexName: string, database: database, location: databaseLocationSpecifier) {
+        await new forceIndexReplace(indexName, database, location).execute();
     }
 }
