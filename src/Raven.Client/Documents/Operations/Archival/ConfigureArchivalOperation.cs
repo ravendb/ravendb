@@ -8,7 +8,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.Archive
+namespace Raven.Client.Documents.Operations.Archival
 {
     public class ConfigureArchivalOperation : IMaintenanceOperation<ConfigureArchivalOperationResult>
     {
