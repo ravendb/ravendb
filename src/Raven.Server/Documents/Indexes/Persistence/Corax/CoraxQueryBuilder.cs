@@ -7,7 +7,6 @@ using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.SortingMatches;
-using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;

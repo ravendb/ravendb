@@ -1,7 +1,7 @@
 using System.IO;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Comparers;
+using Corax.Queries.SortingMatches;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;

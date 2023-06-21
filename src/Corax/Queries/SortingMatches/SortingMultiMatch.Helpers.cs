@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Sparrow;
 

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Corax.Queries;
-using Corax.Queries.SortingMatches.Comparers;
 using Sparrow.Server;
 using Spatial4n.Context;
 using Spatial4n.Distance;
@@ -48,30 +46,8 @@ public class SpatialUtils
     ///  Minimum amount of terms in specific area required to start compressing query into smaller ones.
     /// </summary>
     private const int Threshold = 2 << 10;
-
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static double GetGeoDistance<TComparer>(in (double lat, double lng) fieldCoordinates, in TComparer comparer)
-        where TComparer : ISpatialComparer
-    {
-        var distance = HaverstineDistanceInInternationalNauticalMiles(comparer.Point.Center.Y, comparer.Point.Center.X, fieldCoordinates.lat, fieldCoordinates.lng);
-        const double NumberOfMilesInNauticalMile = 1.1515;
-        const double NumberOfKilometersInNauticalMile = 1.852;
-
-        distance = comparer.Units switch
-        {
-            SpatialUnits.Miles => distance * NumberOfMilesInNauticalMile,
-            SpatialUnits.Kilometers => distance * NumberOfKilometersInNauticalMile,
-            _ => distance
-        };
-
-        if (comparer.Round <= 0)
-            return distance;
-        
-        return distance - distance % comparer.Round;
-    }
     
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double GetGeoDistance(in (double lat, double lng) fieldCoordinates, (double X, double Y) center, double round, SpatialUnits units)
     {
         var distance = HaverstineDistanceInInternationalNauticalMiles(center.Y, center.X, fieldCoordinates.lat, fieldCoordinates.lng);

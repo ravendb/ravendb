@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
@@ -21,9 +20,6 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
 
 public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 {
-    private LegacySortingMatch.SpatialAscendingMatchComparer? _ascSpatialComparer;
-    private LegacySortingMatch.SpatialDescendingMatchComparer? _descSpatialComparer;
-
     public ShardedCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query)
     {
@@ -85,14 +81,18 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     result.AddDoubleOrderByField(doubleValue);
                     break;
                 case OrderByFieldType.Distance:
-                    {
-                        reader.Read(out (double lat, double lon) coordinates);
-
-                        ISpatialComparer comparer = orderByField.Ascending
-                            ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
-                            : _descSpatialComparer ??= new LegacySortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
-
-                        var distance = SpatialUtils.GetGeoDistance(in coordinates, in comparer);
+                {
+                        var spatialReader = _indexSearcher.SpatialReader(orderByFieldMetadata.Field.FieldName);
+                        double distance;
+                        if (spatialReader.TryGetSpatialPoint(indexEntryId, out var coords) == false)
+                        {
+                            distance = orderByFieldMetadata.Ascending == false ? double.MinValue : double.MaxValue;
+                        }
+                        else
+                        {
+                            distance = SpatialUtils.GetGeoDistance(coords, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
+                        }
+                        
                         result.AddDoubleOrderByField(distance);
                         break;
                     }
