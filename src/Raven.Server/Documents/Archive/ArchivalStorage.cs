@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Archival
                     
         }
 
-        private bool MigrateDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
+        private bool ArchiveDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
             if (id == null)
                 throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {lowerId}");
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Archival
             {
                 foreach (var ids in pair.Value)
                 {
-                    bool timePassed = MigrateDocument(context, ids.LowerId, ids.Id, currentTime);
+                    bool timePassed = ArchiveDocument(context, ids.LowerId, ids.Id, currentTime);
                     if (timePassed == false) continue;
                     archiveTree.MultiDelete(pair.Key, ids.LowerId);
                     archivedCount++;
