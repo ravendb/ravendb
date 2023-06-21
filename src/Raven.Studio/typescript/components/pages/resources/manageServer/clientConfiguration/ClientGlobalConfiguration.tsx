@@ -30,7 +30,7 @@ export default function ClientGlobalConfiguration() {
     });
 
     const popovers = useClientConfigurationPopovers();
-    const formValues = useClientConfigurationFormController(control, setValue);
+    const formValues = useClientConfigurationFormController(control, setValue, true);
 
     useEffect(() => {
         if (formState.isSubmitSuccessful) {

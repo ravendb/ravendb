@@ -4,19 +4,21 @@ import endpoints = require("endpoints");
 
 class forceIndexReplace extends commandBase {
 
-    private indexName: string;
+    private readonly indexName: string;
+    private readonly db: database;
+    private readonly location: databaseLocationSpecifier;
 
-    private db: database;
-
-    constructor(indexName: string, db: database) {
+    constructor(indexName: string, db: database, location: databaseLocationSpecifier) {
         super();
-        this.db = db;
         this.indexName = indexName;
+        this.db = db;
+        this.location = location;
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            name: this.indexName
+            name: this.indexName,
+            ...this.location
         }
         const url = endpoints.databases.index.indexesReplace + this.urlEncodeArgs(args);
 

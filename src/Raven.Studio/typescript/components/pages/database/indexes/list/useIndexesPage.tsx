@@ -71,6 +71,8 @@ export function useIndexesPage(database: database, stale: boolean) {
     const globalIndexingStatus: IndexRunningStatus = "Running"; //TODO:
 
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
+
+    const [swapSideBySideConfirmIndexName, setSwapSideBySideConfirmIndexName] = useState<string>(null);
     const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
 
     //TODO:
@@ -486,28 +488,21 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     };
 
-    const swapSideBySide = async (index: IndexSharedInfo) => {
-        setSwapNowProgress((x) => [...x, index.name]);
+    const onSwapSideBySideIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("index", "swap-side-by-side");
+        setSwapNowProgress((x) => [...x, swapSideBySideConfirmIndexName]);
+
         try {
-            await indexesService.forceReplace(index.name, database);
-        } finally {
-            setSwapNowProgress((item) => item.filter((x) => x !== index.name));
-        }
-    };
+            for (const { nodeTag, shardNumbers } of contexts) {
+                const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-    const confirmSwapSideBySide = (index: IndexSharedInfo) => {
-        const margin = `class="margin-bottom"`;
-        let text = `<li ${margin}>Index: <strong>${genUtils.escapeHtml(index.name)}</strong></li>`;
-        text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
-
-        viewHelpers
-            .confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
-            .done((result: canActivateResultDto) => {
-                if (result.can) {
-                    swapSideBySide(index);
+                for (const location of locations) {
+                    await indexesService.forceReplace(swapSideBySideConfirmIndexName, database, location);
                 }
-            });
+            }
+        } finally {
+            setSwapNowProgress((item) => item.filter((x) => x !== swapSideBySideConfirmIndexName));
+        }
     };
 
     const toggleSelectAll = () => {
@@ -569,6 +564,8 @@ export function useIndexesPage(database: database, stale: boolean) {
         setBulkOperationConfirm,
         resetIndexConfirm,
         setResetIndexConfirm,
+        resetIndex,
+        onResetIndexConfirm,
         stats,
         selectedIndexes,
         toggleSelectAll,
@@ -579,7 +576,6 @@ export function useIndexesPage(database: database, stale: boolean) {
         replacements,
         swapNowProgress,
         highlightCallback,
-        confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
         allIndexesCount: stats.indexes.length,
         setIndexPriority,
@@ -588,9 +584,13 @@ export function useIndexesPage(database: database, stale: boolean) {
         disableIndexes,
         pauseIndexes,
         setIndexLockMode,
-        resetIndex,
         toggleSelection,
-        onResetIndexConfirm,
+        swapSideBySideData: {
+            indexName: swapSideBySideConfirmIndexName,
+            setIndexName: setSwapSideBySideConfirmIndexName,
+            onConfirm: onSwapSideBySideIndexConfirm,
+            inProgress: (indexName: string) => swapNowProgress.includes(indexName),
+        },
         openFaulty,
         confirmDeleteIndexes,
         globalIndexingStatus,

@@ -40,14 +40,6 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
             ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false),
     });
 
-    const formValues = useClientConfigurationFormController(control, setValue);
-
-    useEffect(() => {
-        if (formState.isSubmitSuccessful) {
-            reset(formValues);
-        }
-    }, [formState.isSubmitSuccessful, reset, formValues]);
-
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
         if (!globalConfigResult) {
@@ -56,6 +48,19 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
         return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
     }, [asyncGetClientGlobalConfiguration.result]);
+
+    const formValues = useClientConfigurationFormController(
+        control,
+        setValue,
+        (asyncGetClientGlobalConfiguration.status === "success" && !globalConfig) ||
+            asyncGetClientGlobalConfiguration.status === "error"
+    );
+
+    useEffect(() => {
+        if (formState.isSubmitSuccessful) {
+            reset(formValues);
+        }
+    }, [formState.isSubmitSuccessful, reset, formValues]);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         tryHandleSubmit(async () => {
@@ -124,7 +129,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <Row>
                             {globalConfig && (
                                 <Col>
-                                    <RichPanel className={formValues.overrideConfig && "item-disabled"}>
+                                    <RichPanel className={canEditDatabaseConfig && "item-disabled"}>
                                         <RichPanelHeader className="px-4 py-2 gap-2">
                                             <h3 className="mb-0">
                                                 <Icon icon="server" />
@@ -196,7 +201,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </Col>
                             )}
                             <Col>
-                                <RichPanel className={!formValues.overrideConfig && "item-disabled"}>
+                                <RichPanel className={!canEditDatabaseConfig && "item-disabled"}>
                                     <RichPanelHeader className="px-4 py-2">
                                         <h3 className="mb-0">
                                             <Icon icon="database" />
@@ -299,7 +304,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             {globalConfig && (
                                 <Col>
                                     <RichPanel
-                                        className={classNames("p-4", { "item-disabled": formValues.overrideConfig })}
+                                        className={classNames("p-4", { "item-disabled": canEditDatabaseConfig })}
                                     >
                                         <div className="md-label">
                                             Load Balance Behavior{" "}
@@ -398,9 +403,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </Col>
                             )}
                             <Col>
-                                <RichPanel
-                                    className={classNames("p-4", { "item-disabled": !formValues.overrideConfig })}
-                                >
+                                <RichPanel className={classNames("p-4", { "item-disabled": !canEditDatabaseConfig })}>
                                     <div className="md-label">
                                         Load Balance Behavior <Icon id="SetSessionContext" icon="info" color="info" />
                                     </div>
