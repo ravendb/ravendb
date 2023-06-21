@@ -5,6 +5,8 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class innerSqlTable extends abstractSqlTable {
     parentReference: sqlReference;
+
+    sqlKeysStorage = ko.observable<Raven.Server.SqlMigration.Model.EmbeddedDocumentSqlKeysStorage>("None");
     
     constructor(parentReference: sqlReference) {
         super();

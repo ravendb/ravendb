@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
@@ -14,14 +15,16 @@ using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.DbProviderFactories;
 
 namespace Raven.Server.SqlMigration
 {
+    
     public abstract class GenericDatabaseMigrator : IDatabaseDriver
     {
         protected readonly string ConnectionString;
-        
+
         public abstract DatabaseSchema FindSchema();
 
         protected GenericDatabaseMigrator(string connectionString)
@@ -38,7 +41,11 @@ namespace Raven.Server.SqlMigration
                 var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
                 var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
 
-                string CollectionNameProvider(string schema, string name) => settings.CollectionsMapping.Single(x => x.TableSchema == schema && x.TableName == name).CollectionName;
+                string CollectionNameProvider(string schema, string name, bool isEmbeddedCollection)
+                {
+                    return isEmbeddedCollection? null : settings.CollectionsMapping.Single(x => 
+                        x.TableSchema == schema && x.TableName == name).CollectionName;
+                }
                 
                 using (var patcher = new JsPatcher(collectionToImport, context))
                 {
@@ -95,8 +102,24 @@ namespace Raven.Server.SqlMigration
             if (onProgress == null)
                 onProgress = progress => { };
 
-            string CollectionNameProvider(string tableSchema, string tableName) => settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
-
+            
+            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection)
+            {
+                string GetCollectionNameRecursivelyFromNestedCollections(CollectionWithReferences embeddedCollection)
+                {
+                    return embeddedCollection.SourceTableSchema == tableSchema && embeddedCollection.SourceTableName == tableName
+                        ? embeddedCollection.Name
+                        : embeddedCollection.NestedCollections.Select(GetCollectionNameRecursivelyFromNestedCollections)
+                            .FirstOrDefault(collectionNameResult => collectionNameResult != null);
+                }
+                
+                return isEmbeddedCollection
+                    ? settings.Collections.Select(GetCollectionNameRecursivelyFromNestedCollections)
+                        .FirstOrDefault(collectionName => collectionName != null)
+                    : settings.Collections.Where(collection => collection.SourceTableSchema == tableSchema && collection.SourceTableName == tableName)
+                        .Select(collection => collection.Name).FirstOrDefault();
+            }
+            
             await using (var enumerationConnection = OpenConnection())
             await using (var referencesConnection = OpenConnection())
             using (var writer = new SqlMigrationWriter(context, settings.BatchSize))
@@ -104,7 +127,6 @@ namespace Raven.Server.SqlMigration
                 foreach (var collectionToImport in settings.Collections)
                 {
                     var collectionCount = result.PerCollectionCount[collectionToImport.Name];
-
                     result.AddInfo($"Started processing collection {collectionToImport.Name}.");
                     onProgress.Invoke(result.Progress);
 
@@ -114,7 +136,6 @@ namespace Raven.Server.SqlMigration
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
                         var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
-
                         InitializeDataProviders(references, referencesConnection);
 
                         try
@@ -176,6 +197,29 @@ namespace Raven.Server.SqlMigration
             }
         }
 
+        private static (DynamicJsonArray Keys, DynamicJsonValue EmbeddedItemsSpecialColumnValues) BuildEmbeddedSqlKeysDictionary(ReferenceInformation refInfo, List<DynamicJsonValue> specialColumnsValues, DynamicJsonValue specialColumns)
+        {
+            var keys = (DynamicJsonArray)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
+            var embeddedItemsSpecialColumnValues = new DynamicJsonValue();
+            var i = 0;
+            foreach (var item in keys)
+                embeddedItemsSpecialColumnValues[item.ToString()] = specialColumnsValues[i++];
+
+            return (keys, embeddedItemsSpecialColumnValues);
+        }
+
+        private static string ConvertColumnNameToPascalCase(string columnName)
+        {
+            string[] parts = columnName.Split('_');
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = parts[i].First().ToString().ToUpper() + parts[i].Substring(1);
+            }
+
+            return string.Concat(parts);
+        }
+        
         private void FillDocumentFields(DynamicJsonValue value, DynamicJsonValue specialColumns, List<ReferenceInformation> references,
             string attachmentNamePrefix, Dictionary<string, byte[]> attachments)
         {
@@ -185,8 +229,33 @@ namespace Raven.Server.SqlMigration
                 {
                     case ReferenceType.ArrayEmbed:
                         var arrayWithEmbeddedObjects = (EmbeddedArrayValue)refInfo.DataProvider.Provide(specialColumns);
-                        value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
+                        if (refInfo.EmbeddedDocumentsSqlKeysStorage != EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty)
+                        {
+                            value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
+                        }
+                        else
+                        {
+                            // inject specialColumnsValues to nestedObjects
+                            List<object> nestedObjects = arrayWithEmbeddedObjects.ArrayOfNestedObjects.ToList();
+                            List<DynamicJsonValue> nestedObjectsSpecialFields = arrayWithEmbeddedObjects.SpecialColumnsValues.ToList();
+                            for (int i = 0; i < nestedObjects.Count; i++)
+                            {
+                                var nestedObject = (DynamicJsonValue)nestedObjects[i];
+                                foreach (var property in nestedObjectsSpecialFields[i].Properties)
+                                {
+                                    nestedObject[ConvertColumnNameToPascalCase(property.Name)] = property.Value;
+                                }
+                            }
+                            value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
+                        }
 
+                        if (refInfo.EmbeddedDocumentsSqlKeysStorage == EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata)
+                        {
+                            // add @sql-keys content in the metadata
+                            var specialColumnsKeysValues = BuildEmbeddedSqlKeysDictionary(refInfo, arrayWithEmbeddedObjects.SpecialColumnsValues, specialColumns);
+                            specialColumns[refInfo.PropertyName] = specialColumnsKeysValues.EmbeddedItemsSpecialColumnValues;
+                        }
+                        
                         if (refInfo.ChildReferences != null)
                         {
                             var idx = 0;
@@ -195,7 +264,7 @@ namespace Raven.Server.SqlMigration
                                 string innerAttachmentPrefix = GenerateAttachmentKey(attachmentNamePrefix, refInfo.PropertyName, idx.ToString());
                                 FillDocumentFields(arrayItem, arrayWithEmbeddedObjects.SpecialColumnsValues[idx], refInfo.ChildReferences, innerAttachmentPrefix,
                                     attachments);
-
+                                
                                 foreach (var kvp in arrayWithEmbeddedObjects.Attachments[idx])
                                 {
                                     attachments[GenerateAttachmentKey(innerAttachmentPrefix, kvp.Key)] = kvp.Value;
@@ -210,6 +279,23 @@ namespace Raven.Server.SqlMigration
                         var embeddedObjectValue = (EmbeddedObjectValue)refInfo.DataProvider.Provide(specialColumns);
                         value[refInfo.PropertyName] = embeddedObjectValue?.Object; // fill in value or null
 
+                        if (value[refInfo.PropertyName] != null && value[refInfo.PropertyName] is DynamicJsonValue)
+                        {
+                            switch (refInfo.EmbeddedDocumentsSqlKeysStorage)
+                            {
+                                case EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata:
+                                    value[Constants.Documents.Metadata.Key] = new DynamicJsonValue{["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues};
+                                    break;
+                                case EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty:
+                                    foreach (var specialField in embeddedObjectValue.SpecialColumnsValues.Properties)
+                                        ((DynamicJsonValue)value[refInfo.PropertyName])[ConvertColumnNameToPascalCase(specialField.Name)] = specialField.Value;
+                                    break;
+                                case EmbeddedDocumentSqlKeysStorage.None:
+                                    break;
+                            }
+                            
+                        }
+                            
                         if (embeddedObjectValue != null)
                         {
                             var innerAttachmentPrefix = GenerateAttachmentKey(attachmentNamePrefix, refInfo.PropertyName);
@@ -221,7 +307,7 @@ namespace Raven.Server.SqlMigration
                             if (refInfo.ChildReferences != null)
                             {
                                 FillDocumentFields(embeddedObjectValue.Object, embeddedObjectValue.SpecialColumnsValues, refInfo.ChildReferences, innerAttachmentPrefix,
-                                    attachments);
+                                        attachments);
                             }
                         }
 
@@ -264,12 +350,14 @@ namespace Raven.Server.SqlMigration
                 {
                     case ReferenceType.ArrayEmbed:
                         reference.DataProvider = CreateArrayEmbedDataProvider(reference, connection);
+                        reference.EmbeddedReferenceKeyDataProvider = CreateArrayLinkDataProvider(reference, connection);
                         break;
                     case ReferenceType.ArrayLink:
                         reference.DataProvider = CreateArrayLinkDataProvider(reference, connection);
                         break;
                     case ReferenceType.ObjectEmbed:
                         reference.DataProvider = CreateObjectEmbedDataProvider(reference, connection);
+                        reference.EmbeddedReferenceKeyDataProvider = CreateObjectLinkDataProvider(reference);
                         break;
                     case ReferenceType.ObjectLink:
                         reference.DataProvider = CreateObjectLinkDataProvider(reference);
@@ -284,7 +372,7 @@ namespace Raven.Server.SqlMigration
         }
 
         private List<ReferenceInformation> ResolveReferences(CollectionWithReferences sourceCollection, DatabaseSchema dbSchema, 
-            Func<string, string, string> collectionNameProvider)
+            Func<string, string, bool, string> collectionNameProvider)
         {
             var result = new List<ReferenceInformation>();
 
@@ -293,6 +381,7 @@ namespace Raven.Server.SqlMigration
                 foreach (var embeddedCollection in sourceCollection.NestedCollections)
                 {
                     var reference = CreateReference(dbSchema, collectionNameProvider, sourceCollection, embeddedCollection);
+                    reference.EmbeddedDocumentsSqlKeysStorage = embeddedCollection.SqlKeysStorage;
                     var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, collectionNameProvider);
                     reference.ChildReferences = resolvedReferences.Count > 0 ? resolvedReferences : null;
                     result.Add(reference);
@@ -309,7 +398,7 @@ namespace Raven.Server.SqlMigration
         }
 
         private ReferenceInformation CreateReference(DatabaseSchema dbSchema,
-            Func<string, string, string> collectionNameProvider, AbstractCollection sourceCollection,
+            Func<string, string, bool, string> collectionNameProvider, AbstractCollection sourceCollection,
             ICollectionReference destinationCollection)
         {
             var sourceSchema = dbSchema.GetTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName);
@@ -343,11 +432,7 @@ namespace Raven.Server.SqlMigration
                     : (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectLink : ReferenceType.ArrayLink),
             };
 
-            if (destinationCollection is LinkedCollection)
-            {
-                // linked connection
-                referenceInformation.CollectionNameToUseInLinks = collectionNameProvider(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
-            }
+            referenceInformation.CollectionNameToUseInLinks = collectionNameProvider(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, destinationCollection is EmbeddedCollection);
 
             return referenceInformation;
         }
@@ -600,12 +685,7 @@ namespace Raven.Server.SqlMigration
                     objectProperties.Add(ExtractFromReader(reader, refInfo.TargetDocumentColumns));
                     attachments.Add(ExtractAttachments(reader, refInfo.TargetAttachmentColumns));
                     
-                    if (refInfo.ChildReferences != null)
-                    {
-                        // fill only when used
-                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));    
-                        
-                    }
+                    specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));    
                 }
 
                 return new EmbeddedArrayValue

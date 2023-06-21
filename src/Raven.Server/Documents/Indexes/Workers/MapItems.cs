@@ -77,6 +77,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 while (true)
                                 {
+                                    var prevEtag = lastEtag;
+
                                     if (itemEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag) == false)
                                     {
                                         if (etag > lastEtag)
@@ -90,6 +92,26 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     token.ThrowIfCancellationRequested();
 
                                     var current = itemEnumerator.Current;
+
+                                    // we cannot break the indexing batch we are in the same etag batch
+                                    // this can happen for counters, because we are processing counters from counter group separately
+                                    if (prevEtag != current.Etag)
+                                    {
+                                        if (batchContinuationResult == Index.CanContinueBatchResult.False)
+                                        {
+                                            keepRunning = false;
+                                            break;
+                                        }
+
+                                        if (batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction)
+                                            break;
+
+                                        if (totalProcessedCount >= pageSize)
+                                        {
+                                            keepRunning = false;
+                                            break;
+                                        }
+                                    }
 
                                     totalProcessedCount++;
                                     collectionStats.RecordMapAttempt();
@@ -127,17 +149,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         lastEtag, lastCollectionEtag, totalProcessedCount, sw);
 
                                     batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
-                                    if (batchContinuationResult != Index.CanContinueBatchResult.True)
-                                    {
-                                        keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
-                                        break;
-                                    }
-
-                                    if (totalProcessedCount >= pageSize)
-                                    {
-                                        keepRunning = false;
-                                        break;
-                                    }
                                 }
                             }
                         }
