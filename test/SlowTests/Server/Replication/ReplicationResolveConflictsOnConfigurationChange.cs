@@ -18,7 +18,6 @@ namespace SlowTests.Server.Replication
         {
         }
 
-
         public async Task<List<ModifyOngoingTaskResult>> GenerateConflictsAndSetupMasterMasterReplication(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
         {
             using (var session = store1.OpenSession())
@@ -49,7 +48,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ResolveWhenScriptAdded(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options: options))
             using (var store2 = GetDocumentStore(options: options))
             {
@@ -77,7 +76,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ResolveWhenChangeToLatest(Options options)
         {
-            options = GetOptionsInternal(options);
+            options = UpdateConflictSolverAndGetMergedOptions(options);
             using (var store1 = GetDocumentStore(options: options))
             using (var store2 = GetDocumentStore(options: options))
             {
@@ -97,22 +96,6 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(3, count);
                 }
             }
-        }
-
-        private Options GetOptionsInternal(Options options)
-        {
-            return new Options(options)
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                    options.ModifyDatabaseRecord(record);
-                }
-            };
         }
     }
 }
