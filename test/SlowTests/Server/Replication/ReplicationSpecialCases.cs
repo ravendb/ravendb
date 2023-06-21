@@ -6,9 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
-using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -26,33 +26,14 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task NonIdenticalContentConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task NonIdenticalContentConflict(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -63,7 +44,6 @@ namespace SlowTests.Server.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
-
 
                 using (var session = master.OpenSession())
                 {
@@ -78,31 +58,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task NonIdenticalMetadataConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task NonIdenticalMetadataConflict(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
                 await SetupReplicationAsync(master, slave);
 
@@ -118,7 +80,6 @@ namespace SlowTests.Server.Replication
                     session.Store(user);
                     session.SaveChanges();
                 }
-
 
                 using (var session = master.OpenSession())
                 {
@@ -137,32 +98,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
-        [Fact]
-        public async Task UpdateConflictOnParentDocumentArrival()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task UpdateConflictOnParentDocumentArrival(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
                 await SetupReplicationAsync(master, slave);
 
@@ -198,33 +140,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task IdenticalContentConflictResolution()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IdenticalContentConflictResolution(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);
                 await SetupReplicationAsync(master, slave);
 
@@ -262,34 +185,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
-        [Fact]
-        public async Task TomstoneToTombstoneConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TomstoneToTombstoneConflict(Options options)
         {
-            using (var master = GetDocumentStore(options: new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);
                 await SetupReplicationAsync(master, slave);
 
@@ -333,14 +236,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData("users/1")]
-        [InlineData("users/1-A")]
-        [InlineData("FoObAr")]
-        public async Task ReplicationShouldSendMissingAttachments(string documentId)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData("users/1", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("users/1-A", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("FoObAr", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldSendMissingAttachments(Options options, string documentId)
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -393,7 +296,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         [InlineData("users/1")]
         [InlineData("users/1-A")]
         [InlineData("FoObAr")]
@@ -453,7 +356,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase2()
         {
             using (var source = GetDocumentStore())
@@ -553,7 +456,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         [InlineData("users/1")]
         [InlineData("users/1-A")]
         [InlineData("FoObAr")]
@@ -620,7 +523,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments2()
         {
             using (var source = GetDocumentStore())
@@ -716,7 +619,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments3()
         {
             using (var source = GetDocumentStore())
@@ -821,10 +724,9 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Encryption)]
         public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments_Encrypted()
         {
-           
             var databaseName = Encryption.SetupEncryptedDatabase(out var cert, out _);
             var databaseName2 = Encryption.SetupEncryptedDatabase(out var cert2, out _);
 
@@ -877,7 +779,6 @@ namespace SlowTests.Server.Replication
                     }
                 }
 
-                WaitForUserToContinueTheTest(source, clientCert: cert.ServerCertificate.Value);
                 using (var session = destination.OpenAsyncSession())
                 {
                     foreach (var kvp in docs)
@@ -906,7 +807,6 @@ namespace SlowTests.Server.Replication
                     }
                 }
 
-                WaitForUserToContinueTheTest(destination, clientCert: cert2.ServerCertificate.Value);
                 using (var session = destination.OpenAsyncSession())
                 {
                     foreach (var kvp in docs)
@@ -935,16 +835,15 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData("users/1", "users/2")]
-        [InlineData("users/1-A", "users/2-A")]
-        [InlineData("foo", "foo-2")]
-        [InlineData("FOO", "FOO-2")]
-        [InlineData("FoObAr", "FoObAr-2")]
-        public async Task ReplicationShouldSendMissingAttachmentsAlongWithNewOnes(string documentId1, string documentId2)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData("users/1", "users/2", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("users/1-A", "users/2-A", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("FOO", "FOO-2", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("FoObAr", "FoObAr-2", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldSendMissingAttachmentsAlongWithNewOnes(Options options, string documentId1, string documentId2)
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -1013,8 +912,9 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ShouldNotInterruptReplicationBatchWhenThereAreMissingAttachments()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotInterruptReplicationBatchWhenThereAreMissingAttachments(Options options)
         {
             var co = new ServerCreationOptions
             {
@@ -1026,8 +926,8 @@ namespace SlowTests.Server.Replication
                 RegisterForDisposal = false
             };
             using (var server = GetNewServer(co))
-            using (var source = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
-            using (var destination = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            using (var source = GetDocumentStore(new Options(options) { Server = server, RunInMemory = false }))
+            using (var destination = GetDocumentStore(new Options(options) { Server = server, RunInMemory = false }))
             {
                 const string documentId1 = "users/1-A";
                 const string attachmentName1 = "foo.png";
@@ -1049,7 +949,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                var databaseName = options.DatabaseMode == RavenDatabaseMode.Single ? source.Database : await Sharding.GetShardDatabaseNameForDocAsync(source, documentId1);
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 var documentsStorage = database.DocumentsStorage;
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
@@ -1083,13 +984,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ShouldNotThrowNREWhenCheckingForMissingAttachments()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotThrowNREWhenCheckingForMissingAttachments(Options options)
         {
             var documentId1 = "users/1";
             var documentId2 = "users/2";
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -1122,7 +1024,9 @@ namespace SlowTests.Server.Replication
                     doc2.LastName = "Bar";
                     await session.SaveChangesAsync();
                 }
-                EnsureReplicating(source, destination);
+
+                await EnsureReplicatingAsync(source, destination);
+
                 using (var session = destination.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>(documentId1);
@@ -1172,11 +1076,12 @@ namespace SlowTests.Server.Replication
         }
 
         // RavenDB-15820
-        [Fact]
-        public async Task ShouldResolveAttachmentConflictToLatestAndNotThrowNRE()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldResolveAttachmentConflictToLatestAndNotThrowNRE(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenAsyncSession())
                 using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
@@ -1188,7 +1093,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                EnsureReplicating(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store2.OpenAsyncSession())
                 using (var a1 = new MemoryStream(new byte[] { 6, 6, 6 }))
@@ -1204,7 +1109,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                EnsureReplicating(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store2.OpenAsyncSession())
                 {
@@ -1234,11 +1139,12 @@ namespace SlowTests.Server.Replication
         }
 
         // RavenDB-19516
-        [Fact]
-        public async Task ShouldDelayReplicationOnMissingAttachmentsLoop()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDelayReplicationOnMissingAttachmentsLoop(Options options)
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
             {
                 using (var session = source.OpenAsyncSession())
                 using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -1248,15 +1154,24 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                var sourceDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                var sourceDbName = options.DatabaseMode == RavenDatabaseMode.Single ? source.Database : await Sharding.GetShardDatabaseNameForDocAsync(source, "FoObAr/0");
+                var sourceDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(sourceDbName);
                 sourceDb.Configuration.Replication.RetryMaxTimeout = new TimeSetting((long)TimeSpan.FromMinutes(15).TotalMilliseconds, TimeUnit.Minutes);
                 sourceDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = (o) =>
                 {
                     if (o.Destination.Database == destination.Database)
                     {
-                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams) =>
+                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams, orderedReplicaItems) =>
                         {
                             replicaAttachmentStreams.Clear();
+
+                            foreach (var (_, item) in orderedReplicaItems)
+                            {
+                                if (item is AttachmentReplicationItem attachment == false)
+                                    continue;
+
+                                attachment.Stream = null;
+                            }
                         };
                     }
                 };
@@ -1296,7 +1211,7 @@ namespace SlowTests.Server.Replication
         }
 
         // RavenDB-19549
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task ShouldDelayReplicationFromNonShardedToShardedOnMissingAttachmentsLoop()
         {
             using (var source = GetDocumentStore())
@@ -1316,9 +1231,17 @@ namespace SlowTests.Server.Replication
                 {
                     if (o.Destination.Database == destination.Database)
                     {
-                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams) =>
+                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams, orderedReplicaItems) =>
                         {
                             replicaAttachmentStreams.Clear();
+
+                            foreach (var (_, item) in orderedReplicaItems)
+                            {
+                                if (item is AttachmentReplicationItem attachment == false)
+                                    continue;
+
+                                attachment.Stream = null;
+                            }
                         };
                     }
                 };
@@ -1358,7 +1281,7 @@ namespace SlowTests.Server.Replication
         }
 
         // RavenDB-19549
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task ShouldDelayReplicationFromShardedToNonShardedOnMissingAttachmentsLoop()
         {
             using (var source = Sharding.GetDocumentStore())
@@ -1379,9 +1302,17 @@ namespace SlowTests.Server.Replication
                 {
                     if (o.Destination.Database == destination.Database)
                     {
-                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams) =>
+                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams, orderedReplicaItems) =>
                         {
                             replicaAttachmentStreams.Clear();
+
+                            foreach (var (_, item) in orderedReplicaItems)
+                            {
+                                if (item is AttachmentReplicationItem attachment == false)
+                                    continue;
+
+                                attachment.Stream = null;
+                            }
                         };
                     }
                 };
