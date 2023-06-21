@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
+using Raven.Server.Utils.Monitoring;
 using Sparrow;
 using Sparrow.LowMemory;
 
@@ -27,7 +30,13 @@ namespace Raven.Server.Web.System
             public static readonly string LicenseType = FormatEnumHelp<LicenseType>();
             public static readonly string LowMemorySeverity = FormatEnumHelp<LowMemorySeverity>();
             public static readonly string RachisState = FormatEnumHelp<RachisState>();
-
+            public static readonly string IndexPriority = FormatEnumHelp<IndexPriority>();
+            public static readonly string IndexState = FormatEnumHelp<IndexState>();
+            public static readonly string IndexStatus = FormatEnumHelp<IndexRunningStatus>();
+            public static readonly string IndexLockMode = FormatEnumHelp<IndexLockMode>();
+            public static readonly string IndexRunningStatus = FormatEnumHelp<IndexRunningStatus>();
+            public static readonly string IndexType = FormatEnumHelp<IndexType>();
+            
             private static string FormatEnumHelp<TEnum>() where TEnum : struct, Enum
             {
                 var values = Enum.GetValues<TEnum>();
@@ -49,6 +58,8 @@ namespace Raven.Server.Web.System
 
             var provider = new MetricsProvider(Server);
 
+            var databases = GetDatabases();
+            
             if (skipServer == false)
             {
                 WriteServerMetrics(provider);
@@ -56,7 +67,12 @@ namespace Raven.Server.Web.System
 
             if (skipDatabases == false)
             {
-                WriteDatabaseMetrics(provider);
+                WriteDatabaseMetrics(provider, databases);
+            }
+
+            if (skipIndexes == false)
+            {
+                WriteIndexMetrics(provider, databases);
             }
 
             //TODO: server backup is missing in docs?
@@ -173,10 +189,8 @@ namespace Raven.Server.Web.System
             return new Size(input.Value, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
         }
 
-        private void WriteDatabaseMetrics(MetricsProvider provider)
+        private void WriteDatabaseMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
         {
-            var databases = GetDatabases();
-
             var metrics = databases.Select(provider.CollectDatabaseMetrics).ToList();
 
             var cachedTags = metrics.Select(x => SerializeTags(new Dictionary<string, string> {{"database_name", x.DatabaseName}})).ToList();
@@ -255,6 +269,47 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Disk Queue length", "database_storage_queue_length", metrics, x => x.Storage.QueueLength, cachedTags);
                 }
 
+                ms.WriteTo(ResponseBodyStream());
+            }
+        }
+
+        private void WriteIndexMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
+        {
+            var metrics = new List<IndexMetrics>();
+            var cachedTags = new List<string>();
+            
+            foreach (var database in databases)
+            {
+                foreach (var index in database.IndexStore.GetIndexes())
+                {
+                    var indexMetrics = provider.CollectIndexMetrics(index);
+                    metrics.Add(indexMetrics);
+                    cachedTags.Add(SerializeTags(new Dictionary<string, string>
+                    {
+                        { "database_name", database.Name },
+                        { "index_name", index.Name }
+                    }));
+                }
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = PrometheusWriter(ms))
+                {
+                    WriteGauges(writer, "Number of index errors", "index_errors", metrics, x => x.Errors, cachedTags);
+                    WriteGauges(writer, "Indicates if index is invalid", "index_is_invalid", metrics, x => x.IsInvalid ? 1 : 0, cachedTags);
+                    WriteGauges(writer, "Index priority, " + EnumHelp.IndexPriority, "index_priority", metrics, x => (int)x.Priority, cachedTags);
+                    WriteGauges(writer, "Index state, " + EnumHelp.IndexState, "index_state", metrics, x => (int)x.State, cachedTags);
+                    WriteGauges(writer, "Index lock mode, " + EnumHelp.IndexLockMode, "index_lock_mode", metrics, x => (int)x.LockMode, cachedTags);
+                    WriteGauges(writer, "Index status, " + EnumHelp.IndexStatus, "index_status", metrics, x => (int)x.Status, cachedTags);
+                    WriteGauges(writer, "Index type, " + EnumHelp.IndexType, "index_type", metrics, x => (int)x.Type, cachedTags);
+                    WriteGauges(writer, "Number of entries in the index", "index_entries_count", metrics, x => x.EntriesCount, cachedTags);
+                    WriteGauges(writer, "Time since last indexing", "index_time_since_last_indexing_seconds", metrics, x => x.TimeSinceLastIndexingInSec, cachedTags);
+                    WriteGauges(writer, "Time since last query", "index_time_since_last_query_seconds", metrics, x => x.TimeSinceLastQueryInSec, cachedTags);
+                    WriteGauges(writer, "Number of maps per second (one minute rate)", "index_mapped_per_sec", metrics, x => x.MappedPerSec, cachedTags);
+                    WriteGauges(writer, "Number of reduces per second (one minute rate)", "index_reduced_per_sec", metrics, x => x.ReducedPerSec, cachedTags);
+                }
+                
                 ms.WriteTo(ResponseBodyStream());
             }
         }
