@@ -96,7 +96,7 @@ namespace SlowTests.Server.Documents.Archive
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var documentsArchiver = database.DocumentsArchiver;
+                var documentsArchiver = database.DocumentsArchivist;
                 await documentsArchiver.ArchiveDocs();
 
                 using (var session = store.OpenAsyncSession())
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.Archive
                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var documentsArchiver = database.DocumentsArchiver;
+                var documentsArchiver = database.DocumentsArchivist;
                 await documentsArchiver.ArchiveDocs();
 
                 using (var session = store.OpenAsyncSession())
@@ -197,7 +197,7 @@ namespace SlowTests.Server.Documents.Archive
                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var documentsArchiver = database.DocumentsArchiver;
+                var documentsArchiver = database.DocumentsArchivist;
                 await documentsArchiver.ArchiveDocs();
 
                 using (var session = store.OpenSession())
@@ -288,7 +288,7 @@ namespace SlowTests.Server.Documents.Archive
                                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var documentsArchiver = database.DocumentsArchiver;
+                var documentsArchiver = database.DocumentsArchivist;
                 await documentsArchiver.ArchiveDocs();
                 for (int docId = 1; docId < docsPerCollection+1; docId++)
                 {
