@@ -53,11 +53,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly int _maxNumberOfOutputsPerDocument;
 
         protected readonly IState _state;
+        private readonly IDisposable _readLock;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
 
         protected readonly IndexSearcher _searcher;
+
+        private static readonly LuceneCleaner _luceneCleaner;
+
+        static LuceneIndexReadOperation()
+        {
+            _luceneCleaner = new LuceneCleaner();
+        }
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
@@ -76,6 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+            _readLock = _luceneCleaner.EnterRunningQueryReadLock();
         }
 
         public override long EntriesCount()
@@ -95,14 +104,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (isDistinctCount)
                 pageSize = int.MaxValue;
             var position = query.Start;
-            
+
             if (position > int.MaxValue || pageSize > int.MaxValue)
                 ThrowQueryWantToExceedsInt32();
-            
+
             pageSize = LuceneGetPageSize(_searcher, pageSize);
             var docsToGet = pageSize;
-    
-            
+
+
             QueryTimingsScope luceneScope = null;
             QueryTimingsScope highlightingScope = null;
             QueryTimingsScope explanationsScope = null;
@@ -288,7 +297,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 // We return the document to the caller. 
-                return new QueryResult {Result = doc, Highlightings = highlightings, Explanation = explanation};
+                return new QueryResult { Result = doc, Highlightings = highlightings, Explanation = explanation };
             }
 
             return default;
@@ -397,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var method = query.Metadata.Query.Where as MethodExpression;
             if (query.Start > int.MaxValue || query.PageSize > int.MaxValue)
                 ThrowQueryWantToExceedsInt32();
-            
+
             if (method == null)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
 
@@ -565,7 +574,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var minPageSize = LuceneGetPageSize(_searcher, (long)pageSize + start);
-    
+
             if (sort != null)
             {
                 _searcher.SetDefaultFieldSortScoring(true, false);
@@ -728,7 +737,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             sort = new Sort(sortArray);
             return new ReturnSort(sortArray);
         }
-        
+
         private readonly struct ReturnSort : IDisposable
         {
             private readonly ArraySegment<SortField> _sortArray;
@@ -936,7 +945,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (query.PageSize > int.MaxValue || query.Start > int.MaxValue)
                 ThrowQueryWantToExceedsInt32();
-            
+
             var docsToGet = LuceneGetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
@@ -988,10 +997,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
-            base.Dispose();
-            _analyzer?.Dispose();
-            _releaseSearcher?.Dispose();
-            _releaseReadTransaction?.Dispose();
+            using (_readLock)
+            {
+                base.Dispose();
+                _analyzer?.Dispose();
+                _releaseSearcher?.Dispose();
+                _releaseReadTransaction?.Dispose();
+            }
         }
 
         protected readonly struct CreateQueryResultParameters

@@ -43,7 +43,7 @@ namespace FastTests.Voron.LeafsCompression
                 
                 Env.DecompressionBuffers.Cleanup();
 
-                Assert.Equal(1, Env.DecompressionBuffers.NumberOfScratchFiles);
+                Assert.Equal(2, Env.DecompressionBuffers.NumberOfScratchFiles);
 
                 Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
             }
