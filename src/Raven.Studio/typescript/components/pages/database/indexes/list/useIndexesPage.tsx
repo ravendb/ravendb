@@ -395,6 +395,7 @@ export function useIndexesPage(database: database, stale: boolean) {
             app.showBootstrapDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
                 if (succeed) {
+                    setSelectedIndexes((x) => x.filter((x) => !deletedIndexNames.includes(x)));
                     dispatch({
                         type: "DeleteIndexes",
                         indexNames: deletedIndexNames,
