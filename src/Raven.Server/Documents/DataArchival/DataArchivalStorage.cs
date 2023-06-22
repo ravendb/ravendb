@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -14,6 +15,8 @@ using Voron;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
 using Bits = Sparrow.Binary.Bits;
+using Nest;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.DataArchival
 {
@@ -23,12 +26,14 @@ namespace Raven.Server.Documents.DataArchival
         
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
+        private readonly RevisionsStorage _revisionsStorage;
         private readonly Logger _logger;
 
         public DataArchivalStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
+            _revisionsStorage = _documentsStorage.RevisionsStorage;
             _logger = LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name);
 
             tx.CreateTree(DocumentsByArchiveDateTime);
@@ -259,9 +264,48 @@ namespace Raven.Server.Documents.DataArchival
             
         }
         
-        private void ArchiveDocumentRevisionsIfNeeded(DocumentsOperationContext context, Document doc, string documentId, string collectionName, string archivedCollectionName)
+        private void ArchiveDocumentRevisionsIfNeeded(DocumentsOperationContext context, string documentId, string collectionName, string archivedCollectionName)
         {
+            var archivedCollection = new CollectionName(archivedCollectionName);
+
+            var result = _revisionsStorage.GetRevisions(context, documentId, 0, long.MaxValue);
             
+            foreach (Document revision in result.Revisions)
+            {
+                using (revision)
+                {
+                    var revisionData = revision.Data;
+
+                    if (revisionData.TryGetMetadata(out var metadata) == false)
+                    {
+                        throw new InvalidOperationException($"Failed to fetch the metadata of revision '{documentId}', change vector: {revision.ChangeVector}");
+                    }
+
+                    var revisionChangeVector = context.GetChangeVector(revision.ChangeVector);
+
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.Collection] = archivedCollectionName, 
+                        [Constants.Documents.Metadata.Archived] = true
+                    };
+
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Archive);
+
+                    using (var updated = context.ReadObject(revisionData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out Slice idSlice))
+                    using (Slice.From(context.Allocator, revision.ChangeVector, out var changeVectorSlice))
+                    {
+                        _revisionsStorage.DeleteRevision(context, lowerId, collectionName, revision.ChangeVector, revision.LastModified.Ticks,
+                            changeVectorSlice);
+
+                        _revisionsStorage.PutDirect(context, documentId, updated, revision.Flags, revision.NonPersistentFlags, revisionChangeVector,
+                            revision.LastModified.Ticks,
+                            collectionName: archivedCollection);
+                    }
+
+
+                }
+            }
         }
         
         private void ArchiveDocumentAttachmentsIfNeeded(DocumentsOperationContext context, Document doc, string documentId, string collectionName, string archivedCollectionName)
@@ -274,7 +318,7 @@ namespace Raven.Server.Documents.DataArchival
             if (id == null)
                 throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {lowerId}");
 
-            using (var doc = _database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
+            using (var doc = _database.DocumentsStorage.Get(context, lowerId, DocumentFields.All,  throwOnConflict: true))
             {
                 if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                 {
@@ -292,21 +336,23 @@ namespace Raven.Server.Documents.DataArchival
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Archive);
 
                 var mergedCounterGroups = CollectArchivedDocumentCountersIfNeeded(context, doc, id, collectionName, archivedCollectionName);
-                _database.DocumentsStorage.CountersStorage.DeleteCountersForDocument(context, id, new CollectionName(collectionName));
                 
                 ArchiveDocumentTimeSeriesIfNeeded(context, doc, id, collectionName, archivedCollectionName);
                 ArchiveDocumentAttachmentsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
-                ArchiveDocumentRevisionsIfNeeded(context, doc, id, collectionName, archivedCollectionName);
+                ArchiveDocumentRevisionsIfNeeded(context, id, collectionName, archivedCollectionName);
 
                 // Save changes (Re-read) - ReadObject returns modified blittable document basing on the previous one
                 // We need to create a new blittable before deleting the previous document, delete frees the memory assigned to it
                 // ReadObject would try to fetch document from the memory that could have been already reused
                 using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    _database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null, deleteCounters: false);
+                    _database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null, deleteCounters: false, nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                    
                     if (mergedCounterGroups != null)
                         PutArchivedCounters(context, id, archivedCollectionName, mergedCounterGroups);
-                    _database.DocumentsStorage.Put(context, id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+
+                    _database.DocumentsStorage.Put(context, id, null, updated/*, changeVector: doc.ChangeVector*/, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction),
+                        nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
                 }
             }
 

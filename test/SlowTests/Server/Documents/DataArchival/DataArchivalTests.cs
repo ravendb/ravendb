@@ -156,12 +156,16 @@ namespace SlowTests.Server.Documents.DataArchival
                     await session.SaveChangesAsync();
                 }
                 
+                WaitForUserToContinueTheTest(store);
+
                 await SetupDataArchival(store);
                 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var documentsArchiver = database.DataArchivist;
                 await documentsArchiver.ArchiveDocs();
+
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

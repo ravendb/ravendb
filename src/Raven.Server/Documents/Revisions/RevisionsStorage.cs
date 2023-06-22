@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public unsafe bool Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+        public bool Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
         {
@@ -332,57 +332,95 @@ namespace Raven.Server.Documents.Revisions
             using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
+                
+                var putResult = PutInternal(context, id, document, flags, nonPersistentFlags, changeVector, lastModifiedTicks, table, changeVectorSlice, lowerId, idSlice);
 
-                if (revisionExists)
+                if (putResult)
+                    DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
+                
+                return putResult;
+            }
+        }
+
+        public bool PutDirect(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+            DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks,
+            RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
+        {
+            Debug.Assert(changeVector != null, "Change vector must be set");
+            Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
+
+            BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
+            using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
+            {
+                var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+                
+                var putResult = PutInternal(context, id, document, flags, nonPersistentFlags, changeVector, lastModifiedTicks, table, changeVectorSlice, lowerId, idSlice);
+
+                if (putResult)
                 {
-                    MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
-                    return false;
-                }
-
-                // We want the revision's attachments to have a lower etag than the revision itself
-                if (flags.Contain(DocumentFlags.HasAttachments) &&
-                    flags.Contain(DocumentFlags.Revision) == false)
-                {
-                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, document, lowerId, changeVectorSlice);
-                }
-
-                document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
-
-                document = PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
-
-                if (table.VerifyKeyExists(changeVectorSlice)) // we might create
-                    return true;
-
-                flags |= DocumentFlags.Revision;
-                var etag = _database.DocumentsStorage.GenerateNextEtag();
-                var newEtagSwapBytes = Bits.SwapBytes(etag);
-
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
-                    tvb.Add(lowerId);
-                    tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add(newEtagSwapBytes);
-                    tvb.Add(idSlice);
-                    tvb.Add(document.BasePointer, document.Size);
-                    tvb.Add((int)flags);
-                    tvb.Add(NotDeletedRevisionMarker);
-                    tvb.Add(lastModifiedTicks);
-                    tvb.Add(context.GetTransactionMarker());
-                    if (flags.Contain(DocumentFlags.Resolved))
+                    using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                     {
-                        tvb.Add((int)DocumentFlags.Resolved);
+                        IncrementCountOfRevisions(context, prefixSlice, 1);
                     }
-                    else
-                    {
-                        tvb.Add(0);
-                    }
-                    tvb.Add(Bits.SwapBytes(lastModifiedTicks));
-                    table.Insert(tvb);
+                }
+                return putResult;
+            }
+        }
+
+        private unsafe bool PutInternal(DocumentsOperationContext context, string id, BlittableJsonReaderObject document, DocumentFlags flags,
+            NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
+        {
+            var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
+
+            if (revisionExists)
+            {
+                MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
+                return false;
+            }
+
+            // We want the revision's attachments to have a lower etag than the revision itself
+            if (flags.Contain(DocumentFlags.HasAttachments) &&
+                flags.Contain(DocumentFlags.Revision) == false)
+            {
+                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, document, lowerId, changeVectorSlice);
+            }
+            
+            document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
+
+            document = PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
+
+            if (table.VerifyKeyExists(changeVectorSlice)) // we might create
+                return true;
+
+            flags |= DocumentFlags.Revision;
+            var etag = _database.DocumentsStorage.GenerateNextEtag();
+            var newEtagSwapBytes = Bits.SwapBytes(etag);
+
+            using (table.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                tvb.Add(lowerId);
+                tvb.Add(SpecialChars.RecordSeparator);
+                tvb.Add(newEtagSwapBytes);
+                tvb.Add(idSlice);
+                tvb.Add(document.BasePointer, document.Size);
+                tvb.Add((int)flags);
+                tvb.Add(NotDeletedRevisionMarker);
+                tvb.Add(lastModifiedTicks);
+                tvb.Add(context.GetTransactionMarker());
+                if (flags.Contain(DocumentFlags.Resolved))
+                {
+                    tvb.Add((int)DocumentFlags.Resolved);
+                }
+                else
+                {
+                    tvb.Add(0);
                 }
 
-                DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
+                tvb.Add(Bits.SwapBytes(lastModifiedTicks));
+                table.Insert(tvb);
             }
 
             return true;

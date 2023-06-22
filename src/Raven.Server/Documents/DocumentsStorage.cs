@@ -261,8 +261,8 @@ namespace Raven.Server.Documents
                     DataArchivalStorage = new DataArchivalStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
-                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, TombstonesSchema);
-                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TombstonesSchema);
+                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, CounterTombstonesSchema);
+                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TimeSeriesDeleteRangesSchema);
 
                     DocumentPut = CreateDocumentPutAction();
 
