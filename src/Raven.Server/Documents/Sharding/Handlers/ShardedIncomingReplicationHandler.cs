@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
@@ -133,7 +131,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             long lastAcceptedEtag;
             var handlersChangeVector = new List<string>();
-
             if (ShardHelper.IsShardName(ConnectionInfo.SourceDatabaseName))
             {
                 lastAcceptedEtag = 0;
@@ -222,8 +219,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         if (batches[shardNumber].Items.Count == 0)
                             continue;
 
-                        var node = handler.Node as ExternalReplication;
-                        var taskId = node!.TaskId;
                         var command = new UpdateExternalReplicationStateCommand(ShardHelper.ToShardName(_parent.DatabaseName, shardNumber), RaftIdGenerator.NewId())
                         {
                             ExternalReplicationState = new ExternalReplicationState
@@ -236,8 +231,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             }
                         };
 
-                        _parent._server.SendToLeaderAsync(command)
-                            .IgnoreUnobservedExceptions();
+                        await _parent._server.SendToLeaderAsync(command);
                     }
                 }
             }
