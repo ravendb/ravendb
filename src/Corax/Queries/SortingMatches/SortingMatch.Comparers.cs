@@ -41,11 +41,6 @@ namespace Corax.Queries.SortingMatches;
             this.cmp = cmp;
         }
 
-        public Descending()
-        {
-            cmp = new();
-        }
-
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
         {
             return cmp.GetSortFieldName(ref match);

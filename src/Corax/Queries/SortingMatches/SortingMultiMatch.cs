@@ -51,18 +51,25 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var nextComparers = new IEntryComparer[orderMetadata.Length - NextComparerOffset];
             for (int metadataId = NextComparerOffset; metadataId < orderMetadata.Length; ++metadataId)
             {
-                nextComparers[metadataId - NextComparerOffset] = orderMetadata[metadataId].FieldType switch
+                nextComparers[metadataId - NextComparerOffset] = (orderMetadata[metadataId].Ascending, orderMetadata[metadataId].FieldType) switch
                 {
-                    MatchCompareFieldType.Alphanumeric => new EntryComparerByTermAlphaNumeric(),
-                    MatchCompareFieldType.Floating => new EntryComparerByDouble(),
-                    MatchCompareFieldType.Integer => new EntryComparerByLong(),
-                    MatchCompareFieldType.Sequence => new EntryComparerByTerm(),
-                    MatchCompareFieldType.Spatial => new EntryComparerBySpatial(),
-                    _ => throw new NotSupportedException()
-                };
+                    
+                    (true, MatchCompareFieldType.Alphanumeric) => new EntryComparerByTermAlphaNumeric(),
+                    (false, MatchCompareFieldType.Alphanumeric) => new Descending<EntryComparerByTermAlphaNumeric>(),
 
-                if (orderMetadata[metadataId].Ascending == false)
-                    nextComparers[metadataId - NextComparerOffset] = new Descending(nextComparers[metadataId - NextComparerOffset]);
+                    (true, MatchCompareFieldType.Floating) => new EntryComparerByDouble(),
+                    (false, MatchCompareFieldType.Floating) => new Descending<EntryComparerByDouble>(),
+                    
+                    (true, MatchCompareFieldType.Integer) => new EntryComparerByLong(),
+                    (false, MatchCompareFieldType.Integer) => new Descending<EntryComparerByLong>(),
+                    
+                    (true, MatchCompareFieldType.Sequence) => new EntryComparerByTerm(),
+                    (false, MatchCompareFieldType.Sequence) => new Descending<EntryComparerByTerm>(),
+                    
+                    (true, MatchCompareFieldType.Spatial) => new EntryComparerBySpatial(),
+                    (false, MatchCompareFieldType.Spatial) => new Descending<EntryComparerBySpatial>(),
+                    _ => throw new NotSupportedException($"Ascending: {orderMetadata[metadataId].Ascending} | FieldType: {orderMetadata[metadataId].FieldType}.")
+                };
             }
 
             return nextComparers;

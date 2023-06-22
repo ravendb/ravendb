@@ -30,43 +30,18 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer;
     }
-
-    private struct Descending : IEntryComparer
-    {
-        private IEntryComparer _innerCmp;
-
-        public Descending(IEntryComparer inner)
-        {
-            _innerCmp = inner;
-        }
-        
-        public int Compare(int x, int y)
-        {
-            return _innerCmp.Compare(y, x);
-        }
-
-        public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
-        {
-            return _innerCmp.GetSortFieldName(ref match);
-        }
-
-        public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
-        {
-            _innerCmp.Init(ref match, batchResults, comparerId);
-        }
-
-        public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, UnmanagedSpan<long> batchResults, Span<long> batchTermIds,
-            UnmanagedSpan* batchTerms, OrderMetadata[] orderMetadata, TComparer2 comparer2, TComparer3 comparer3) where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
-        {
-            throw new NotImplementedException();
-        }
-    }
+    
     
     private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
         where TInnerCmp : struct, IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
         private TInnerCmp cmp;
 
+        public Descending()
+        {
+            cmp = new();
+        }
+        
         public Descending(TInnerCmp cmp)
         {
             this.cmp = cmp;
@@ -391,10 +366,14 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             Span<long> buffer = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
             var swap = buffer[0] > buffer[1];
             if (swap)
-                (buffer[0], buffer[1]) = (buffer[1], buffer[0]);
+                buffer[..2].Reverse();
             
             _lookup.GetFor(buffer[..2], buffer[2..], long.MinValue);
-            return buffer[swap ? 3 : 2].CompareTo(buffer[swap ? 2 : 3]);
+            if (swap) // In the case when we swapped the keys (since the lookup requires a sorted list as input), we have to swap the values before comparison to maintain the original order.
+
+                buffer[2..].Reverse();
+            
+            return buffer[2].CompareTo(buffer[3]);
         }
     }
 
@@ -480,13 +459,20 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
                 return 0;
 
-            Span<long> buffer = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
+            var bufferPtr = stackalloc long[4] {_batchResults[x], _batchResults[y], -1, -1};
+            var buffer = new Span<long>(bufferPtr, 4);
             var swap = buffer[0] > buffer[1];
             if (swap)
-                (buffer[0], buffer[1]) = (buffer[1], buffer[0]);
+                buffer.Slice(0, 2).Reverse();
             
             _lookup.GetFor(buffer[..2], buffer[2..], BitConverter.DoubleToInt64Bits(double.MinValue));
-            return buffer[swap ? 3 : 2].CompareTo(buffer[swap ? 2 : 3]);
+            
+            // In the case when we swapped the keys (since the lookup requires a sorted list as input), we have to swap the values before comparison to maintain the original order.
+            if (swap)
+                buffer.Slice(2,2).Reverse();
+            
+            var bufferPtrAsDouble = (double*)bufferPtr;
+            return bufferPtrAsDouble[2].CompareTo(bufferPtrAsDouble[3]);
         }
     }
 
