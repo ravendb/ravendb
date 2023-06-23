@@ -2171,6 +2171,8 @@ namespace Raven.Server.ServerWide
                 {
                     DeleteCertificate(context, thumbprint);
                 }
+
+                command.AfterDelete(_parent.ServerStore, context);
             }
             finally
             {
@@ -2252,6 +2254,8 @@ namespace Raven.Server.ServerWide
                         items.DeleteByKey(keyNameLowered);
                     }
                 }
+
+                delCmd.AfterDelete(_parent.ServerStore, context);
             }
             catch (Exception e)
             {
