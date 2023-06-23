@@ -1,8 +1,7 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from "reactstrap";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
-import { todo } from "common/developmentHelper";
 
 export interface SelectOption<T extends string | number> {
     value: T;
@@ -16,26 +15,25 @@ export interface SelectProps<T extends string | number> {
     setSelectedValue: (x: T) => void;
     options: SelectOption<T>[];
     disabled?: boolean;
+    placeholder?: string | ReactNode | ReactNode[];
+    outline?: boolean;
 }
 
 export default function Select<T extends string | number>(props: SelectProps<T>) {
-    const { selectedValue, setSelectedValue, options, disabled } = props;
+    const { selectedValue, setSelectedValue, options, disabled, outline, placeholder } = props;
 
     const selectedOption = options.find((x) => x.value === selectedValue);
 
-    todo("Styling", "Kwiato", "styles for disabled status");
-    todo("Styling", "Kwiato", "replace '-- Select --' text when nothing is selected");
-
     return (
-        <UncontrolledDropdown disabled={disabled}>
-            <DropdownToggle caret>
+        <UncontrolledDropdown>
+            <DropdownToggle caret disabled={disabled} outline={outline}>
                 {selectedOption ? (
                     <>
                         {selectedOption.icon && <Icon icon={selectedOption.icon} />}
                         {selectedOption.label}
                     </>
                 ) : (
-                    "-- Select --"
+                    <>{placeholder ? placeholder : "Select"}</>
                 )}
             </DropdownToggle>
             <DropdownMenu>

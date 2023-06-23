@@ -3,8 +3,8 @@ import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
 import ReactAce, { IAceEditorProps, IAceOptions, ICommand } from "react-ace";
-import { todo } from "common/developmentHelper";
 import "./AceEditor.scss";
+import classNames from "classnames";
 
 export interface AceEditorProps extends IAceEditorProps {
     mode: AceEditorMode;
@@ -22,6 +22,7 @@ export default function AceEditor(props: AceEditorProps) {
         enableLiveAutocompletion: true,
         showLineNumbers: true,
         tabSize: 4,
+        fontSize: "14px",
         ...setOptions,
     };
 
@@ -73,10 +74,6 @@ export default function AceEditor(props: AceEditorProps) {
 
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
-    todo("Styling", "Kwiato", "increase code line height (.ace_line class)");
-    todo("Styling", "Kwiato", "remove inline styles, and add scss classes for handling validation error");
-    todo("Styling", "Kwiato", "scrollbar styles");
-
     const commands = execute
         ? [
               ...defaultCommands,
@@ -92,14 +89,14 @@ export default function AceEditor(props: AceEditorProps) {
         : defaultCommands;
 
     return (
-        <div className="ace-editor">
+        <div className={classNames("ace-editor", { "has-error": errorMessage })}>
             <div className="react-ace-wrapper">
                 <ReactAce
                     mode="csharp"
                     theme="raven"
-                    style={{ border: "1px solid #424554", borderColor: errorMessage ? "#f06582" : "#424554" }}
                     editorProps={{ $blockScrolling: Infinity }}
                     fontSize={14}
+                    style={{ lineHeight: "26px" }}
                     showPrintMargin={true}
                     showGutter={true}
                     highlightActiveLine={true}

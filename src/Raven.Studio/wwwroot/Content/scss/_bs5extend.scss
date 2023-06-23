@@ -208,6 +208,24 @@ select {
     }
 }
 
+.form-dropdown-select {
+    display: flex;
+    flex-grow: 1;
+    .dropdown-toggle {
+        flex-grow: 1;
+    }
+
+    width: 200px;
+    .dropdown {
+        max-width: 100%;
+        .dropdown-toggle {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+    }
+}
+
 // box-shadow for modals
 @each $key, $value in $theme-colors {
     .modal-border.bulge-#{$key} {
