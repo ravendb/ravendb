@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Org.BouncyCastle.Utilities.IO.Pem;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -17,6 +18,7 @@ using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
 
@@ -279,9 +281,26 @@ public class QueueSinkProcess : BackgroundWorkBase
             // we are disabling auto commit option and we are manually commit only messages that are processed successfully
             EnableAutoCommit = false,
             // we are using Earliest option because we want to be able to see messages which are present before consumer is connected
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            // todo djordje: add authentication (try to use the same approach like in ETL)
+            AutoOffsetReset = AutoOffsetReset.Earliest
         };
+        
+        var settings = Configuration.Connection.KafkaConnectionSettings;
+        var certificateHolder = Database.ServerStore.Server.Certificate;
+        
+        if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
+        {
+            consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
+            consumerConfig.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
+            consumerConfig.SecurityProtocol = SecurityProtocol.Ssl;
+        }
+
+        if (settings.ConnectionOptions != null)
+        {
+            foreach (KeyValuePair<string, string> option in settings.ConnectionOptions)
+            {
+                consumerConfig.Set(option.Key, option.Value);
+            }
+        }
 
         var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
         consumer.Subscribe(Script.Queues);
@@ -298,6 +317,18 @@ public class QueueSinkProcess : BackgroundWorkBase
         }
 
         base.Stop();
+    }
+    
+    private static string ExportAsPem(object @object)
+    {
+        using (var sw = new StringWriter())
+        {
+            var pemWriter = new PemWriter(sw);
+            
+            pemWriter.WriteObject(@object);
+
+            return sw.ToString();
+        }
     }
 
     private void HandleScriptParseException(Exception e)

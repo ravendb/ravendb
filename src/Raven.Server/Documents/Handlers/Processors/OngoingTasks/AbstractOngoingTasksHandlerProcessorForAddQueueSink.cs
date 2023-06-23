@@ -39,21 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _,
             BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            RequestHandler.LogTaskToAudit(Web.RequestHandler.AddEtlDebugTag, _taskId, configuration);
-
-            // Reset scripts if needed
-            var scriptsToReset = RequestHandler.GetStringValuesQueryString("reset", required: false);
-            configuration.TryGet(nameof(RavenEtlConfiguration.Name), out string etlConfigurationName);
-
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                foreach (var script in scriptsToReset)
-                {
-                    await RequestHandler.ServerStore.RemoveEtlProcessState(ctx, RequestHandler.DatabaseName,
-                        etlConfigurationName, script, $"{raftRequestId}/{script}");
-                }
-            }
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.AddQueueSinkDebugTag, _taskId, configuration);
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context,

@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.QueueSink
             {
                 var notifications = storedNotifications
                     .Select(n => n.Json)
-                    .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("Etl_"))
+                    .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("QueueSink_"))
                     .Where(n => n.TryGet("Details", out BlittableJsonReaderObject _))
                     .Select(n =>
                     {
