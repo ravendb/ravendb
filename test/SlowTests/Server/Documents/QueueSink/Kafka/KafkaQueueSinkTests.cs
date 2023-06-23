@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -125,12 +126,15 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             }
             
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { "users" });
+            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { "users" });
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
             AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
             using var session = store.OpenSession();
+
+            var users = session.Query<User>().ToList();
+            Assert.Equal(numberOfUsers, users.Count);
 
             for (int i = 0; i < numberOfUsers; i++)
             {
@@ -211,7 +215,7 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
                     Name = "test",
                     ConnectionStringName = "test",
                     BrokerType = QueueBrokerType.Kafka,
-                    Scripts = { new QueueSinkScript { Name = "test", Script = @"" } }
+                    Scripts = { new QueueSinkScript { Name = "test", Script = DefaultScript } }
                 };
 
                 AddQueueSink(store, config,
@@ -223,14 +227,14 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
                             new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
                     }); //wrong bootstrap servers
 
-                /*var alert = await AssertWaitForNotNullAsync(() =>
+                var alert = await AssertWaitForNotNullAsync(() =>
                 {
                     TryGetLoadError(store.Database, config, out var error);
 
                     return Task.FromResult(error);
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
-                Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);*/
+                Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);
             }
         }
 

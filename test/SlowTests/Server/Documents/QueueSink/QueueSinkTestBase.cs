@@ -8,6 +8,8 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Xunit;
@@ -59,6 +61,39 @@ namespace SlowTests.Server.Documents.QueueSink
                     }).ToArray();
                 return notifications;
             }
+        }
+        
+        public bool TryGetLoadError(string databaseName, QueueSinkConfiguration config, out QueueSinkErrorInfo error)
+        {
+            var database = GetDatabase(databaseName).Result;
+
+            string tag = "Kafka";
+
+            var loadAlertError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_Error);
+            var loadAlertConsumeError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ConsumeError);
+            var loadAlertScriptError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ScriptError);
+
+            if (loadAlertError.Errors.Count != 0)
+            {
+                error = loadAlertError.Errors.First();
+
+                return true;
+            }
+            if (loadAlertConsumeError.Errors.Count != 0)
+            {
+                error = loadAlertConsumeError.Errors.First();
+
+                return true;
+            }
+            if (loadAlertScriptError.Errors.Count != 0)
+            {
+                error = loadAlertScriptError.Errors.First();
+
+                return true;
+            }
+
+            error = null;
+            return false;
         }
         
         public override void Dispose()
