@@ -1,21 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
-using Raven.Server.Documents.ETL.Providers.Queue;
-using Raven.Server.Documents.ETL.Providers.Queue.Test;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.QueueSink;
-using Raven.Server.Documents.QueueSink.Test;
-using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +24,10 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
         {
         }
 
-        [Fact]
+        private const string DefaultScript = "put(this.Id, this)";
+        private readonly List<string> _defaultQueue = new() { "users" };
+
+        [RequiresKafkaRetryFact]
         public void SimpleScript()
         {
             var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
@@ -66,7 +65,7 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             Assert.Equal("Smith", fetchedUser2.LastName);
         }
 
-        [Fact]
+        [RequiresKafkaRetryFact]
         public void ComplexScript()
         {
             var script =
@@ -109,6 +108,39 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             Assert.Equal("Smith", fetchedUser2.LastName);
             Assert.Equal("Jane Smith", fetchedUser2.FullName);
         }
+        
+        [RequiresKafkaRetryFact]
+        public void SimpleScriptMultipleInserts()
+        {
+            var numberOfUsers = 10;
+
+            using IProducer<string, byte[]> producer = CreateKafkaProducer();
+            
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var user = new User { Id = $"users/{i}", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
+                byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
+                var kafkaMessage = new Message<string, byte[]> { Value = userBytes };
+                producer.Produce("users", kafkaMessage);
+            }
+            
+            using var store = GetDocumentStore();
+            SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { "users" });
+
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+
+            using var session = store.OpenSession();
+
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var fetchedUser = session.Load<User>($"users/{i}");
+                Assert.NotNull(fetchedUser);
+                Assert.Equal($"users/{i}", fetchedUser.Id);
+                Assert.Equal($"firstname{i}", fetchedUser.FirstName);
+                Assert.Equal($"lastname{i}", fetchedUser.LastName);    
+            }
+        }
 
         [Fact]
         public void Error_if_script_is_empty()
@@ -137,6 +169,69 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             Assert.Equal(1, errors.Count);
 
             Assert.Equal("Script 'test' must not be empty", errors[0]);
+        }
+
+        [Fact]
+        public async Task ShouldImportTask()
+        {
+            using (var srcStore = GetDocumentStore())
+            using (var dstStore = GetDocumentStore())
+            {
+                SetupKafkaQueueSink(dstStore, DefaultScript, _defaultQueue, bootstrapServers: "http://localhost:1234");
+
+                var exportFile = GetTempFileName();
+
+                var exportOperation =
+                    await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var destinationRecord =
+                    await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+                Assert.Equal(1, destinationRecord.QueueConnectionStrings.Count);
+                Assert.Equal(1, destinationRecord.QueueSinks.Count);
+                Assert.Equal(1, destinationRecord.QueueSinks[0].Scripts.Count);
+
+                Assert.Equal(QueueBrokerType.Kafka, destinationRecord.QueueSinks[0].BrokerType);
+                Assert.Equal(DefaultScript, destinationRecord.QueueSinks[0].Scripts[0].Script);
+                Assert.Equal(_defaultQueue, destinationRecord.QueueSinks[0].Scripts[0].Queues);
+                
+            }
+        }
+        
+        [Fact]
+        public async Task Simple_script_error_expected()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = new QueueSinkConfiguration
+                {
+                    Name = "test",
+                    ConnectionStringName = "test",
+                    BrokerType = QueueBrokerType.Kafka,
+                    Scripts = { new QueueSinkScript { Name = "test", Script = @"" } }
+                };
+
+                AddQueueSink(store, config,
+                    new QueueConnectionString
+                    {
+                        Name = "test",
+                        BrokerType = QueueBrokerType.Kafka,
+                        KafkaConnectionSettings =
+                            new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
+                    }); //wrong bootstrap servers
+
+                /*var alert = await AssertWaitForNotNullAsync(() =>
+                {
+                    TryGetLoadError(store.Database, config, out var error);
+
+                    return Task.FromResult(error);
+                }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+                
+                Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);*/
+            }
         }
 
         /*[Fact]

@@ -855,6 +855,7 @@ namespace Raven.Server.Web
         public const string UpdatePeriodicBackupDebugTag = "update-periodic-backup";
         public const string PutConnectionStringDebugTag = "put-connection-string";
         public const string AddEtlDebugTag = "etl-add";
+        public const string AddQueueSinkDebugTag = "queue-sink-add";
         public const string UpdateExternalReplicationDebugTag = "update_external_replication";
 
         private DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
