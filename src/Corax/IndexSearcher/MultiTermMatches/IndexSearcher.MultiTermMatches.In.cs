@@ -123,34 +123,34 @@ public partial class IndexSearcher
             ? (termCount % 16)
             : termCount;
         
-        var BinaryMatchOfTermMatches = new BinaryMatch[termCountToProceed / 2];
+        var binaryMatchOfTermMatches = new BinaryMatch[termCountToProceed / 2];
         for (int i = 0; i < termCountToProceed / 2; i++)
         {
             var term1 = TermQuery(field, list[i * 2].Item, terms);
             var term2 = TermQuery(field, list[i * 2 + 1].Item, terms);
-            BinaryMatchOfTermMatches[i] = And(term1, term2);
+            binaryMatchOfTermMatches[i] = And(term1, term2);
         }
 
         if (termCountToProceed % 2 == 1)
         {
             // We need even values to make the last work. 
             var term = TermQuery(field, list[^1].Item, terms);
-            BinaryMatchOfTermMatches[^1] = And(BinaryMatchOfTermMatches[^1], term);
+            binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term);
         }
 
         
         
-        int currentTerms = BinaryMatchOfTermMatches.Length;
+        int currentTerms = binaryMatchOfTermMatches.Length;
         while (currentTerms > 1)
         {
             int termsToProcess = currentTerms / 2;
             int excessTerms = currentTerms % 2;
 
             for (int i = 0; i < termsToProcess; i++)
-                BinaryMatchOfTermMatches[i] = And(BinaryMatchOfTermMatches[i * 2], BinaryMatchOfTermMatches[i * 2 + 1]);
+                binaryMatchOfTermMatches[i] = And(binaryMatchOfTermMatches[i * 2], binaryMatchOfTermMatches[i * 2 + 1]);
 
             if (excessTerms != 0)
-                BinaryMatchOfTermMatches[termsToProcess - 1] = And(BinaryMatchOfTermMatches[termsToProcess - 1], BinaryMatchOfTermMatches[currentTerms - 1]);
+                binaryMatchOfTermMatches[termsToProcess - 1] = And(binaryMatchOfTermMatches[termsToProcess - 1], binaryMatchOfTermMatches[currentTerms - 1]);
 
             currentTerms = termsToProcess;
         }
@@ -158,7 +158,7 @@ public partial class IndexSearcher
 
         //Just perform normal And.
         if (allInTerms.Count is > 1 and <= 16 || canUseUnaryMatch == false)
-            return MultiTermMatch.Create(BinaryMatchOfTermMatches[0]);
+            return MultiTermMatch.Create(binaryMatchOfTermMatches[0]);
 
 
         //We don't have to check previous items. We have to check if those entries contain the rest of them.
@@ -166,7 +166,7 @@ public partial class IndexSearcher
 
         // BinarySearch requires sorted array.
         Array.Sort(list, ((item, inItem) => item.Item.Compare(inItem.Item)));
-        return UnaryQuery(BinaryMatchOfTermMatches[0], field, list, UnaryMatchOperation.AllIn, -1);
+        return UnaryQuery(binaryMatchOfTermMatches[0], field, list, UnaryMatchOperation.AllIn, -1);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
