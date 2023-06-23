@@ -30,10 +30,10 @@ namespace Raven.Client.ServerWide.Operations
             if (builder == null) 
                 throw new ArgumentNullException(nameof(builder));
 
-            var instance = new DatabaseRecordBuilder();
+            var instance = DatabaseRecordBuilder.Create();
             builder(instance);
 
-            var databaseRecord = instance.DatabaseRecord;
+            var databaseRecord = instance.ToDatabaseRecord();
 
             ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
             _databaseRecord = databaseRecord;
