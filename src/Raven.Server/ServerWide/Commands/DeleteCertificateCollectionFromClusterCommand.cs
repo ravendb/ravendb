@@ -29,5 +29,13 @@ namespace Raven.Server.ServerWide.Commands
 
             AssertClusterAdmin(isClusterAdmin);
         }
+
+        public override void AfterDelete(ServerStore store, ClusterOperationContext context)
+        {
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
+            {
+                store.Server.Statistics.RemoveLastAuthorizedCertificateRequestTime(Names);
+            };
+        }
     }
 }

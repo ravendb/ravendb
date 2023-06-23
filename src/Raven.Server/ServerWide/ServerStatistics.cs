@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using Raven.Client.Util;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -32,7 +34,43 @@ namespace Raven.Server.ServerWide
 
         public DateTime? LastAuthorizedNonClusterAdminRequestTime;
 
-        public void WriteTo(AsyncBlittableJsonTextWriter writer)
+        public Dictionary<string, DateTime> LastCertificateRequestTime = new();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void UpdateLastCertificateRequestTime(string certificateThumbprint, DateTime requestTime)
+        {
+            if (certificateThumbprint == null)
+                return;
+
+            var lastCertificateRequestTime = LastCertificateRequestTime;
+            if (lastCertificateRequestTime.TryGetValue(certificateThumbprint, out var oldRequestTime))
+            {
+                if (requestTime - oldRequestTime >= RequestRouter.LastRequestTimeUpdateFrequency)
+                    lastCertificateRequestTime[certificateThumbprint] = requestTime;
+
+                return;
+            }
+
+            LastCertificateRequestTime = new Dictionary<string, DateTime>(lastCertificateRequestTime)
+            {
+                [certificateThumbprint] = requestTime
+            };
+        }
+
+        internal void RemoveLastAuthorizedCertificateRequestTime(List<string> certificateThumbprints)
+        {
+            if (certificateThumbprints == null || certificateThumbprints.Count == 0)
+                return;
+
+            var lastCertificateRequestTime = LastCertificateRequestTime;
+            var newLastCertificateRequestTime = new Dictionary<string, DateTime>(lastCertificateRequestTime);
+            foreach (var certificateThumbprint in certificateThumbprints)
+                newLastCertificateRequestTime.Remove(certificateThumbprint);
+
+            LastCertificateRequestTime = newLastCertificateRequestTime;
+        }
+
+        public void WriteTo(AbstractBlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
 
@@ -56,39 +94,28 @@ namespace Raven.Server.ServerWide
                 writer.WriteDateTime(LastAuthorizedNonClusterAdminRequestTime.Value, isUtc: true);
             else
                 writer.WriteNull();
+            writer.WriteComma();
 
-            writer.WriteEndObject();
-        }
-
-        internal void WriteTo(BlittableJsonTextWriter writer)
-        {
+            var lastCertificateRequestTime = LastCertificateRequestTime;
+            writer.WritePropertyName(nameof(LastCertificateRequestTime));
             writer.WriteStartObject();
+            var first = true;
+            foreach (var kvp in lastCertificateRequestTime)
+            {
+                if (first == false)
+                    writer.WriteComma();
 
-            writer.WritePropertyName(nameof(UpTime));
-            writer.WriteString(UpTime.ToString("c"));
-            writer.WriteComma();
+                first = false;
 
-            writer.WritePropertyName(nameof(StartUpTime));
-            writer.WriteDateTime(StartUpTime, isUtc: true);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(LastRequestTime));
-            if (LastRequestTime.HasValue)
-                writer.WriteDateTime(LastRequestTime.Value, isUtc: true);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(LastAuthorizedNonClusterAdminRequestTime));
-            if (LastAuthorizedNonClusterAdminRequestTime.HasValue)
-                writer.WriteDateTime(LastAuthorizedNonClusterAdminRequestTime.Value, isUtc: true);
-            else
-                writer.WriteNull();
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteDateTime(kvp.Value, isUtc: true);
+            }
+            writer.WriteEndObject();
 
             writer.WriteEndObject();
         }
 
-        internal unsafe void Load(TransactionContextPool contextPool, Logger logger)
+        internal void Load(TransactionContextPool contextPool, Logger logger)
         {
             try
             {

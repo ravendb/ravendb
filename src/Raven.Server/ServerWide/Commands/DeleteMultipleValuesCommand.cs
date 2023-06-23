@@ -31,5 +31,9 @@ namespace Raven.Server.ServerWide.Commands
         public DeleteMultipleValuesCommand(string uniqueRequestId) : base(uniqueRequestId)
         {
         }
+
+        public virtual void AfterDelete(ServerStore store, ClusterOperationContext context)
+        {
+        }
     }
 }

@@ -36,7 +36,7 @@ namespace Raven.Server.Routing
         private static readonly string BrowserCertificateMessage = Environment.NewLine + "Your certificate store may be cached by the browser. " +
             "Create a new private browsing tab, which will not cache any certificates. (Ctrl+Shift+N in Chrome, Ctrl+Shift+P in Firefox)";
 
-        private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
+        public static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
         private readonly Trie<RouteInformation> _trie;
@@ -94,7 +94,7 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, string databaseName)
+        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status, string CertificateThumbprint)> TryAuthorizeAsync(RouteInformation route, HttpContext context, string databaseName)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
@@ -142,10 +142,10 @@ namespace Raven.Server.Routing
             if (CanAccessRoute(route, context, databaseName, feature, out var authenticationStatus) == false)
             {
                 await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
-                return (false, authenticationStatus);
+                return (false, authenticationStatus, feature.Certificate?.Thumbprint);
             }
 
-            return (true, authenticationStatus);
+            return (true, authenticationStatus, feature.Certificate?.Thumbprint);
         }
 
         internal bool CanAccessRoute(RouteInformation route, HttpContext context, string databaseName, RavenServer.AuthenticateConnection feature, out RavenServer.AuthenticationStatus authenticationStatus)
@@ -287,12 +287,14 @@ namespace Raven.Server.Routing
                 }
 
                 var status = RavenServer.AuthenticationStatus.ClusterAdmin;
+                string certificateThumbprint = null;
                 try
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.Database?.Name);
+                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.Database?.Name);
                         status = authorizationStatus;
+                        certificateThumbprint = thumbprint;
 
                         if (authorized == false)
                             return;
@@ -309,6 +311,8 @@ namespace Raven.Server.Routing
                             _ravenServer.Statistics.LastRequestTime = now;
                             _lastRequestTimeUpdated = now;
                         }
+
+                        _ravenServer.Statistics.UpdateLastCertificateRequestTime(certificateThumbprint, now);
 
                         if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency &&
                             skipAuthorization == false)
