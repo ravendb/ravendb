@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide
 
         public DateTime? LastAuthorizedNonClusterAdminRequestTime;
 
-        public Dictionary<string, DateTime> LastCertificateRequestTime = new();
+        public Dictionary<string, DateTime> LastRequestTimePerCertificate = new();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void UpdateLastCertificateRequestTime(string certificateThumbprint, DateTime requestTime)
@@ -42,16 +42,16 @@ namespace Raven.Server.ServerWide
             if (certificateThumbprint == null)
                 return;
 
-            var lastCertificateRequestTime = LastCertificateRequestTime;
-            if (lastCertificateRequestTime.TryGetValue(certificateThumbprint, out var oldRequestTime))
+            var lastRequestTimePerCertificate = LastRequestTimePerCertificate;
+            if (lastRequestTimePerCertificate.TryGetValue(certificateThumbprint, out var oldRequestTime))
             {
                 if (requestTime - oldRequestTime >= RequestRouter.LastRequestTimeUpdateFrequency)
-                    lastCertificateRequestTime[certificateThumbprint] = requestTime;
+                    lastRequestTimePerCertificate[certificateThumbprint] = requestTime;
 
                 return;
             }
 
-            LastCertificateRequestTime = new Dictionary<string, DateTime>(lastCertificateRequestTime)
+            LastRequestTimePerCertificate = new Dictionary<string, DateTime>(lastRequestTimePerCertificate)
             {
                 [certificateThumbprint] = requestTime
             };
@@ -62,12 +62,12 @@ namespace Raven.Server.ServerWide
             if (certificateThumbprints == null || certificateThumbprints.Count == 0)
                 return;
 
-            var lastCertificateRequestTime = LastCertificateRequestTime;
-            var newLastCertificateRequestTime = new Dictionary<string, DateTime>(lastCertificateRequestTime);
+            var lastRequestTimePerCertificate = LastRequestTimePerCertificate;
+            var newLastRequestTimePerCertificate = new Dictionary<string, DateTime>(lastRequestTimePerCertificate);
             foreach (var certificateThumbprint in certificateThumbprints)
-                newLastCertificateRequestTime.Remove(certificateThumbprint);
+                newLastRequestTimePerCertificate.Remove(certificateThumbprint);
 
-            LastCertificateRequestTime = newLastCertificateRequestTime;
+            LastRequestTimePerCertificate = newLastRequestTimePerCertificate;
         }
 
         public void WriteTo(AbstractBlittableJsonTextWriter writer)
@@ -96,8 +96,8 @@ namespace Raven.Server.ServerWide
                 writer.WriteNull();
             writer.WriteComma();
 
-            var lastCertificateRequestTime = LastCertificateRequestTime;
-            writer.WritePropertyName(nameof(LastCertificateRequestTime));
+            var lastCertificateRequestTime = LastRequestTimePerCertificate;
+            writer.WritePropertyName(nameof(LastRequestTimePerCertificate));
             writer.WriteStartObject();
             var first = true;
             foreach (var kvp in lastCertificateRequestTime)
