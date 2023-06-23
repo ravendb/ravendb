@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.7</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.8</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -151,9 +151,9 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.107.6" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.83" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.105" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.107.9" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.85" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.106.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.6.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.6.0" />    
