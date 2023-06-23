@@ -459,10 +459,12 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerStorageDiskReadThroughput(server.ServerStore));
             store.Add(new ServerStorageDiskWriteThroughput(server.ServerStore));
             store.Add(new ServerStorageDiskQueueLength(server.ServerStore));
-            
+
             store.Add(new ServerCertificateExpiration(server.ServerStore));
             store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
             store.Add(new WellKnownAdminCertificates(server.ServerStore));
+            store.Add(new CertificateExpiringCount(server.ServerStore));
+            store.Add(new CertificateExpiredCount(server.ServerStore));
 
             store.Add(new MachineProcessorCount());
             store.Add(new MachineAssignedProcessorCount());

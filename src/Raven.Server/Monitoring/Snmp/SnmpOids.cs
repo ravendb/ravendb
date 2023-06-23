@@ -254,6 +254,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("List of well known admin certificate issuers")]
             public const string WellKnownAdminIssuers = "1.11.4";
 
+            [Description("Number of expiring certificates")]
+            public const string CertificateExpiringCount = "1.11.5";
+
+            [Description("Number of expired certificates")]
+            public const string CertificateExpiredCount = "1.11.6";
+
             [Description("Number of processor on the machine")]
             public const string MachineProcessorCount = "1.12.1";
 

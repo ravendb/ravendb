@@ -184,6 +184,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Validation.KeyUsages", ConfigurationEntryScope.ServerWideOnly)]
         public bool CertificateValidationKeyUsages { get; set; }
 
+        [Description("The number of days before certificate expiration when it will be considered expiring. Default: 14")]
+        [DefaultValue(14)]
+        [TimeUnit(TimeUnit.Days)]
+        [ConfigurationEntry("Security.Certificate.ExpiringThresholdInDays", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CertificateExpiringThreshold { get; set; }
+
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
         internal string UnsecureAccessWarningMessage { get; private set; }
