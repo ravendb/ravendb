@@ -120,7 +120,7 @@ export default function AdminJSConsole() {
 
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <Card>
-                            <CardHeader className="hstack gap-4">
+                            <CardHeader className="hstack gap-4 flex-wrap">
                                 <h3 className="m-0">Script target</h3>
                                 <FormSelect control={control} name="target" options={allTargets} />
                                 <div className="text-info">
