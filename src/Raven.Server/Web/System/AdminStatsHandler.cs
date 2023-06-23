@@ -1,20 +1,16 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Raven.Server.Utils;
-using Sparrow.Json;
+using Raven.Server.Web.System.Processors.Stats;
 
 namespace Raven.Server.Web.System
 {
     public class AdminStatsHandler : RequestHandler
     {
         [RavenAction("/admin/stats", "GET", AuthorizationStatus.Operator, SkipLastRequestTimeUpdate = true, IsDebugInformationEndpoint = true)]
-        public async Task GetRootStats()
+        public async Task GetServerStatistics()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                Server.Statistics.WriteTo(writer);
-            }
+            using (var processor = new AdminStatsHandlerProcessorForGetServerStatistics(this))
+                await processor.ExecuteAsync();
         }
     }
 }
