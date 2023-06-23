@@ -7,7 +7,7 @@ on:
     - cron: '30 6 * * *'
 
 env:
-  DOTNET_VERSION: 6.0.410
+  DOTNET_VERSION: 6.0.411
 
 jobs:
   release:
