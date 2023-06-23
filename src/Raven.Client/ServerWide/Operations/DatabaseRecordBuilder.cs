@@ -22,7 +22,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations;
 
-internal class DatabaseRecordBuilder :
+public class DatabaseRecordBuilder :
     IDatabaseRecordBuilderInitializer,
     IDatabaseRecordBuilder,
     IEtlConfigurationBuilder,
@@ -36,16 +36,23 @@ internal class DatabaseRecordBuilder :
     IOrchestratorTopologyConfigurationBuilder,
     IShardTopologyConfigurationBuilder
 {
+    public static IDatabaseRecordBuilderInitializer Create() => new DatabaseRecordBuilder();
+
+    private DatabaseRecordBuilder()
+    {
+        _databaseRecord = new DatabaseRecord();
+    }
+
     private DatabaseTopology _shardTopology;
-    public DatabaseRecord DatabaseRecord { get; } = new();
+    private readonly DatabaseRecord _databaseRecord;
 
     IBackupConfigurationBuilder IBackupConfigurationBuilder.AddPeriodicBackup(PeriodicBackupConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.PeriodicBackups ??= new List<PeriodicBackupConfiguration>();
-        DatabaseRecord.PeriodicBackups.Add(configuration);
+        _databaseRecord.PeriodicBackups ??= new List<PeriodicBackupConfiguration>();
+        _databaseRecord.PeriodicBackups.Add(configuration);
 
         return this;
     }
@@ -55,8 +62,8 @@ internal class DatabaseRecordBuilder :
         if (connectionString == null)
             throw new ArgumentNullException(nameof(connectionString));
 
-        DatabaseRecord.RavenConnectionStrings ??= new Dictionary<string, RavenConnectionString>();
-        DatabaseRecord.RavenConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.RavenConnectionStrings ??= new Dictionary<string, RavenConnectionString>();
+        _databaseRecord.RavenConnectionStrings.Add(connectionString.Name, connectionString);
 
         return this;
     }
@@ -66,8 +73,8 @@ internal class DatabaseRecordBuilder :
         if (connectionString == null)
             throw new ArgumentNullException(nameof(connectionString));
 
-        DatabaseRecord.SqlConnectionStrings ??= new Dictionary<string, SqlConnectionString>();
-        DatabaseRecord.SqlConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.SqlConnectionStrings ??= new Dictionary<string, SqlConnectionString>();
+        _databaseRecord.SqlConnectionStrings.Add(connectionString.Name, connectionString);
 
         return this;
     }
@@ -77,8 +84,8 @@ internal class DatabaseRecordBuilder :
         if (connectionString == null)
             throw new ArgumentNullException(nameof(connectionString));
 
-        DatabaseRecord.OlapConnectionStrings ??= new Dictionary<string, OlapConnectionString>();
-        DatabaseRecord.OlapConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.OlapConnectionStrings ??= new Dictionary<string, OlapConnectionString>();
+        _databaseRecord.OlapConnectionStrings.Add(connectionString.Name, connectionString);
 
         return this;
     }
@@ -88,8 +95,8 @@ internal class DatabaseRecordBuilder :
         if (connectionString == null)
             throw new ArgumentNullException(nameof(connectionString));
 
-        DatabaseRecord.ElasticSearchConnectionStrings ??= new Dictionary<string, ElasticSearchConnectionString>();
-        DatabaseRecord.ElasticSearchConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.ElasticSearchConnectionStrings ??= new Dictionary<string, ElasticSearchConnectionString>();
+        _databaseRecord.ElasticSearchConnectionStrings.Add(connectionString.Name, connectionString);
 
         return this;
     }
@@ -99,8 +106,8 @@ internal class DatabaseRecordBuilder :
         if (connectionString == null)
             throw new ArgumentNullException(nameof(connectionString));
 
-        DatabaseRecord.QueueConnectionStrings ??= new Dictionary<string, QueueConnectionString>();
-        DatabaseRecord.QueueConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.QueueConnectionStrings ??= new Dictionary<string, QueueConnectionString>();
+        _databaseRecord.QueueConnectionStrings.Add(connectionString.Name, connectionString);
 
         return this;
     }
@@ -118,10 +125,10 @@ internal class DatabaseRecordBuilder :
 
         WithName(databaseName);
 
-        DatabaseRecord.Sharding = new ShardingConfiguration();
+        _databaseRecord.Sharding = new ShardingConfiguration();
         builder(this);
 
-        if (DatabaseRecord.Sharding.Shards == null || DatabaseRecord.Sharding.Shards.Count == 0)
+        if (_databaseRecord.Sharding.Shards == null || _databaseRecord.Sharding.Shards.Count == 0)
             throw new InvalidOperationException($"At least one shard is required. Use '{nameof(IShardedTopologyConfigurationBuilder.AddShard)}' to add a shard to the topology.");
 
         return this;
@@ -132,8 +139,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.RavenEtls ??= new List<RavenEtlConfiguration>();
-        DatabaseRecord.RavenEtls.Add(configuration);
+        _databaseRecord.RavenEtls ??= new List<RavenEtlConfiguration>();
+        _databaseRecord.RavenEtls.Add(configuration);
 
         return this;
     }
@@ -143,8 +150,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.SqlEtls ??= new List<SqlEtlConfiguration>();
-        DatabaseRecord.SqlEtls.Add(configuration);
+        _databaseRecord.SqlEtls ??= new List<SqlEtlConfiguration>();
+        _databaseRecord.SqlEtls.Add(configuration);
 
         return this;
     }
@@ -154,8 +161,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.ElasticSearchEtls ??= new List<ElasticSearchEtlConfiguration>();
-        DatabaseRecord.ElasticSearchEtls.Add(configuration);
+        _databaseRecord.ElasticSearchEtls ??= new List<ElasticSearchEtlConfiguration>();
+        _databaseRecord.ElasticSearchEtls.Add(configuration);
 
         return this;
     }
@@ -165,8 +172,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.OlapEtls ??= new List<OlapEtlConfiguration>();
-        DatabaseRecord.OlapEtls.Add(configuration);
+        _databaseRecord.OlapEtls ??= new List<OlapEtlConfiguration>();
+        _databaseRecord.OlapEtls.Add(configuration);
 
         return this;
     }
@@ -176,8 +183,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.QueueEtls ??= new List<QueueEtlConfiguration>();
-        DatabaseRecord.QueueEtls.Add(configuration);
+        _databaseRecord.QueueEtls ??= new List<QueueEtlConfiguration>();
+        _databaseRecord.QueueEtls.Add(configuration);
 
         return this;
     }
@@ -187,8 +194,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.Integrations ??= new IntegrationConfigurations();
-        DatabaseRecord.Integrations.PostgreSql = configuration;
+        _databaseRecord.Integrations ??= new IntegrationConfigurations();
+        _databaseRecord.Integrations.PostgreSql = configuration;
 
         return this;
     }
@@ -198,9 +205,9 @@ internal class DatabaseRecordBuilder :
         if (string.IsNullOrEmpty(nodeTag))
             throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
 
-        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-        DatabaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-        DatabaseRecord.Sharding.Orchestrator.Topology.Members.Add(nodeTag);
+        _databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        _databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
+        _databaseRecord.Sharding.Orchestrator.Topology.Members.Add(nodeTag);
 
         return this;
     }
@@ -213,17 +220,17 @@ internal class DatabaseRecordBuilder :
 
     ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<IOrchestratorTopologyConfigurationBuilder>.EnableDynamicNodesDistribution()
     {
-        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-        DatabaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-        DatabaseRecord.Sharding.Orchestrator.Topology.DynamicNodesDistribution = true;
+        _databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        _databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
+        _databaseRecord.Sharding.Orchestrator.Topology.DynamicNodesDistribution = true;
 
         return this;
     }
 
     ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<ITopologyConfigurationBuilder>.EnableDynamicNodesDistribution()
     {
-        DatabaseRecord.Topology ??= new DatabaseTopology();
-        DatabaseRecord.Topology.DynamicNodesDistribution = true;
+        _databaseRecord.Topology ??= new DatabaseTopology();
+        _databaseRecord.Topology.DynamicNodesDistribution = true;
 
         return this;
     }
@@ -233,8 +240,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.ExternalReplications ??= new List<ExternalReplication>();
-        DatabaseRecord.ExternalReplications.Add(configuration);
+        _databaseRecord.ExternalReplications ??= new List<ExternalReplication>();
+        _databaseRecord.ExternalReplications.Add(configuration);
 
         return this;
     }
@@ -244,8 +251,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.SinkPullReplications ??= new List<PullReplicationAsSink>();
-        DatabaseRecord.SinkPullReplications.Add(configuration);
+        _databaseRecord.SinkPullReplications ??= new List<PullReplicationAsSink>();
+        _databaseRecord.SinkPullReplications.Add(configuration);
 
         return this;
     }
@@ -255,8 +262,8 @@ internal class DatabaseRecordBuilder :
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        DatabaseRecord.HubPullReplications ??= new List<PullReplicationDefinition>();
-        DatabaseRecord.HubPullReplications.Add(configuration);
+        _databaseRecord.HubPullReplications ??= new List<PullReplicationDefinition>();
+        _databaseRecord.HubPullReplications.Add(configuration);
 
         return this;
     }
@@ -375,6 +382,16 @@ internal class DatabaseRecordBuilder :
         return this;
     }
 
+    DatabaseRecord IDatabaseRecordBuilderInitializer.ToDatabaseRecord()
+    {
+        return _databaseRecord;
+    }
+
+    DatabaseRecord IDatabaseRecordBuilderBase.ToDatabaseRecord()
+    {
+        return _databaseRecord;
+    }
+
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.Disabled()
     {
         HandleDisabled();
@@ -386,8 +403,8 @@ internal class DatabaseRecordBuilder :
         if (topology == null)
             throw new ArgumentNullException(nameof(topology));
 
-        DatabaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-        DatabaseRecord.Sharding.Orchestrator.Topology = topology;
+        _databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+        _databaseRecord.Sharding.Orchestrator.Topology = topology;
         return this;
     }
 
@@ -405,8 +422,8 @@ internal class DatabaseRecordBuilder :
         if (topology == null)
             throw new ArgumentNullException(nameof(topology));
 
-        DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
-        DatabaseRecord.Sharding.Shards.Add(shardNumber, topology);
+        _databaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
+        _databaseRecord.Sharding.Shards.Add(shardNumber, topology);
         return this;
     }
 
@@ -420,8 +437,8 @@ internal class DatabaseRecordBuilder :
         {
             builder(this);
 
-            DatabaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
-            DatabaseRecord.Sharding.Shards.Add(shardNumber, _shardTopology);
+            _databaseRecord.Sharding.Shards ??= new Dictionary<int, DatabaseTopology>();
+            _databaseRecord.Sharding.Shards.Add(shardNumber, _shardTopology);
         }
         finally
         {
@@ -442,15 +459,15 @@ internal class DatabaseRecordBuilder :
 
     ITopologyConfigurationBuilder ITopologyConfigurationBuilderBase<ITopologyConfigurationBuilder>.AddNode(string nodeTag)
     {
-        DatabaseRecord.Topology ??= new DatabaseTopology();
-        DatabaseRecord.Topology.Members.Add(nodeTag);
+        _databaseRecord.Topology ??= new DatabaseTopology();
+        _databaseRecord.Topology.Members.Add(nodeTag);
 
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilder.WithTopology(DatabaseTopology topology)
     {
-        DatabaseRecord.Topology = topology ?? throw new ArgumentNullException(nameof(topology));
+        _databaseRecord.Topology = topology ?? throw new ArgumentNullException(nameof(topology));
         return this;
     }
 
@@ -465,30 +482,30 @@ internal class DatabaseRecordBuilder :
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilder.WithReplicationFactor(int replicationFactor)
     {
-        DatabaseRecord.Topology ??= new DatabaseTopology();
-        DatabaseRecord.Topology.ReplicationFactor = replicationFactor;
+        _databaseRecord.Topology ??= new DatabaseTopology();
+        _databaseRecord.Topology.ReplicationFactor = replicationFactor;
 
         return this;
     }
 
     private void HandleDisabled()
     {
-        DatabaseRecord.Disabled = true;
+        _databaseRecord.Disabled = true;
     }
 
     private void HandleEncryption()
     {
-        DatabaseRecord.Encrypted = true;
+        _databaseRecord.Encrypted = true;
     }
 
     private void HandleLockMode(DatabaseLockMode lockMode)
     {
-        DatabaseRecord.LockMode = lockMode;
+        _databaseRecord.LockMode = lockMode;
     }
 
     private void HandleDocumentsCompression(DocumentsCompressionConfiguration configuration)
     {
-        DatabaseRecord.DocumentsCompression = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.DocumentsCompression = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleSorters(SorterDefinition[] sorterDefinitions)
@@ -496,10 +513,10 @@ internal class DatabaseRecordBuilder :
         if (sorterDefinitions == null || sorterDefinitions.Length == 0)
             return;
 
-        DatabaseRecord.Sorters ??= new Dictionary<string, SorterDefinition>();
+        _databaseRecord.Sorters ??= new Dictionary<string, SorterDefinition>();
 
         foreach (SorterDefinition sorterDefinition in sorterDefinitions)
-            DatabaseRecord.Sorters.Add(sorterDefinition.Name, sorterDefinition);
+            _databaseRecord.Sorters.Add(sorterDefinition.Name, sorterDefinition);
     }
 
     private void HandleAnalyzers(AnalyzerDefinition[] analyzerDefinitions)
@@ -507,10 +524,10 @@ internal class DatabaseRecordBuilder :
         if (analyzerDefinitions == null || analyzerDefinitions.Length == 0)
             return;
 
-        DatabaseRecord.Analyzers ??= new Dictionary<string, AnalyzerDefinition>();
+        _databaseRecord.Analyzers ??= new Dictionary<string, AnalyzerDefinition>();
 
         foreach (AnalyzerDefinition analyzerDefinition in analyzerDefinitions)
-            DatabaseRecord.Analyzers.Add(analyzerDefinition.Name, analyzerDefinition);
+            _databaseRecord.Analyzers.Add(analyzerDefinition.Name, analyzerDefinition);
     }
 
     private void HandleIndexes(IndexDefinition[] indexDefinitions)
@@ -518,15 +535,15 @@ internal class DatabaseRecordBuilder :
         if (indexDefinitions == null || indexDefinitions.Length == 0)
             return;
 
-        DatabaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
+        _databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
 
         foreach (IndexDefinition indexDefinition in indexDefinitions)
-            DatabaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
+            _databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
     }
 
     private void HandleSettings(Dictionary<string, string> settings)
     {
-        DatabaseRecord.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _databaseRecord.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
     private void HandleSettings(Action<Dictionary<string, string>> builder)
@@ -534,13 +551,13 @@ internal class DatabaseRecordBuilder :
         if (builder == null)
             throw new ArgumentNullException(nameof(builder));
 
-        DatabaseRecord.Settings = new Dictionary<string, string>();
-        builder(DatabaseRecord.Settings);
+        _databaseRecord.Settings = new Dictionary<string, string>();
+        builder(_databaseRecord.Settings);
     }
 
     private void HandleRevisions(RevisionsConfiguration configuration)
     {
-        DatabaseRecord.Revisions = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.Revisions = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleEtls(Action<IEtlConfigurationBuilder> builder)
@@ -577,27 +594,27 @@ internal class DatabaseRecordBuilder :
 
     private void HandleClient(ClientConfiguration configuration)
     {
-        DatabaseRecord.Client = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.Client = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleStudio(StudioConfiguration configuration)
     {
-        DatabaseRecord.Studio = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.Studio = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleRefresh(RefreshConfiguration configuration)
     {
-        DatabaseRecord.Refresh = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.Refresh = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleExpiration(ExpirationConfiguration configuration)
     {
-        DatabaseRecord.Expiration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.Expiration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleTimeSeries(TimeSeriesConfiguration configuration)
     {
-        DatabaseRecord.TimeSeries = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _databaseRecord.TimeSeries = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     private void HandleIntegrations(Action<IIntegrationConfigurationBuilder> builder)
@@ -611,7 +628,7 @@ internal class DatabaseRecordBuilder :
     private void WithName(string databaseName)
     {
         ResourceNameValidator.AssertValidDatabaseName(databaseName);
-        DatabaseRecord.DatabaseName = databaseName;
+        _databaseRecord.DatabaseName = databaseName;
     }
 }
 
@@ -620,6 +637,8 @@ public interface IDatabaseRecordBuilderInitializer
     public IDatabaseRecordBuilder Regular(string databaseName);
 
     public IShardedDatabaseRecordBuilder Sharded(string databaseName, Action<IShardedTopologyConfigurationBuilder> builder);
+
+    public DatabaseRecord ToDatabaseRecord();
 }
 
 public interface IDatabaseRecordBuilder : IDatabaseRecordBuilderBase
@@ -637,6 +656,8 @@ public interface IShardedDatabaseRecordBuilder : IDatabaseRecordBuilderBase
 
 public interface IDatabaseRecordBuilderBase
 {
+    DatabaseRecord ToDatabaseRecord();
+
     IDatabaseRecordBuilderBase Disabled();
 
     IDatabaseRecordBuilderBase Encrypted();

@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
+using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -61,6 +67,95 @@ public class RavenDB_19938 : RavenTestBase
 
         Assert.Empty(record.Topology.Members);
         Assert.Equal(3, record.Topology.ReplicationFactor);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .Disabled()
+        );
+
+        Assert.True(record.Disabled);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureClient(new ClientConfiguration { IdentityPartsSeparator = 'z' })
+        );
+
+        Assert.Equal('z', record.Client.IdentityPartsSeparator);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureDocumentsCompression(new DocumentsCompressionConfiguration { Collections = new[] { "Orders" } })
+        );
+
+        Assert.Equal(new[] { "Orders" }, record.DocumentsCompression.Collections);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureExpiration(new ExpirationConfiguration { DeleteFrequencyInSec = 777 })
+        );
+
+        Assert.Equal(777, record.Expiration.DeleteFrequencyInSec);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureRefresh(new RefreshConfiguration { RefreshFrequencyInSec = 333 })
+        );
+
+        Assert.Equal(333, record.Refresh.RefreshFrequencyInSec);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureRevisions(new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = true } })
+        );
+
+        Assert.True(record.Revisions.Default.Disabled);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureStudio(new StudioConfiguration { Environment = StudioConfiguration.StudioEnvironment.Production })
+        );
+
+        Assert.Equal(StudioConfiguration.StudioEnvironment.Production, record.Studio.Environment);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .ConfigureTimeSeries(new TimeSeriesConfiguration { PolicyCheckFrequency = TimeSpan.FromSeconds(555) })
+        );
+
+        Assert.Equal(TimeSpan.FromSeconds(555), record.TimeSeries.PolicyCheckFrequency);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .WithAnalyzers(new AnalyzerDefinition { Name = "A1" })
+            .WithAnalyzers(new AnalyzerDefinition { Name = "A2" })
+        );
+
+        Assert.Equal(2, record.Analyzers.Count);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .WithSorters(new SorterDefinition { Name = "S1" })
+            .WithSorters(new SorterDefinition { Name = "A2" })
+        );
+
+        Assert.Equal(2, record.Sorters.Count);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .Encrypted()
+        );
+
+        Assert.True(record.Encrypted);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
+            .WithBackups(b => b.AddPeriodicBackup(new PeriodicBackupConfiguration
+            {
+                Disabled = true
+            }))
+        );
+
+        Assert.Equal(1, record.PeriodicBackups.Count);
     }
 
     [Fact]
@@ -144,9 +239,9 @@ public class RavenDB_19938 : RavenTestBase
         if (builder == null)
             throw new ArgumentNullException(nameof(builder));
 
-        var instance = new DatabaseRecordBuilder();
+        var instance = DatabaseRecordBuilder.Create();
         builder(instance);
 
-        return instance.DatabaseRecord;
+        return instance.ToDatabaseRecord();
     }
 }
