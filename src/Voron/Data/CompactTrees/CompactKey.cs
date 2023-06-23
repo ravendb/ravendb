@@ -444,7 +444,7 @@ public unsafe class CompactKey : IDisposable
     public int Compare(CompactKey value)
     {
         // If both are using the same dictionary, we just get the current encoded value.
-        if (this.Dictionary != Invalid && this.Dictionary == value.Dictionary)
+        if (Dictionary != Invalid && Dictionary == value.Dictionary)
         {
             byte* valuePtr = value.EncodedWithPtr(value.Dictionary, out var valueLength);
             return CompareEncodedWithCurrent(valuePtr, valueLength);
@@ -452,7 +452,7 @@ public unsafe class CompactKey : IDisposable
 
         // This is the fallback, let's hope that both have the decoded value already there to avoid
         // the decoding step. 
-        var thisDecoded = this.Decoded();
+        var thisDecoded = Decoded();
         var valueDecoded = value.Decoded();
         return thisDecoded.SequenceCompareTo(valueDecoded);
     }

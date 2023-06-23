@@ -28,7 +28,7 @@ namespace Voron.Data.CompactTrees;
 /// </summary>
 public sealed partial class CompactTree : IPrepareForCommit
 {
-    private Lookup<CompactKeyLookup> _inner;
+    private readonly Lookup<CompactKeyLookup> _inner;
 
     public CompactTree(Lookup<CompactKeyLookup> inner)
     {
@@ -86,8 +86,8 @@ public sealed partial class CompactTree : IPrepareForCommit
             {
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
+            
             Key = new CompactKey(llt);
-
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
@@ -333,18 +333,19 @@ public sealed partial class CompactTree : IPrepareForCommit
     public bool TryGetValue(ReadOnlySpan<byte> key, out long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-
-        return TryGetValue(scope.Key, out value);
+        return _inner.TryGetValue(new CompactKeyLookup(scope.Key), out value);
     }
+
     public bool TryGetValue(CompactKey key, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         return _inner.TryGetValue(new CompactKeyLookup(key), out value);
     }
+
     public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
-        CompactKeyLookup compactKeyLookup = new CompactKeyLookup(key);
+        CompactKeyLookup compactKeyLookup = new(key);
         var result = _inner.TryGetValue(ref compactKeyLookup, out value);
         termContainerId = compactKeyLookup.ContainerId;
         return result;
@@ -379,10 +380,8 @@ public sealed partial class CompactTree : IPrepareForCommit
     public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyCacheScope cacheScope)
     {
         cacheScope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-        var encodedKey = cacheScope.Key;
-        encodedKey.ChangeDictionary(_inner.State.DictionaryId);
 
-        var lookup = new CompactKeyLookup(encodedKey);
+        var lookup = new CompactKeyLookup(cacheScope.Key);
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;
