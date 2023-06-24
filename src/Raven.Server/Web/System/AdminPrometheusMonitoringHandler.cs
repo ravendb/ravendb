@@ -16,7 +16,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Web.System
 {
-    public sealed class MetricsHandler : RequestHandler
+    public sealed class AdminPrometheusMonitoringHandler : RequestHandler
     {
         public const string PrometheusContentType = "text/plain; version=0.0.4; charset=utf-8";
         public const string MetricsPrefix = "ravendb_";
@@ -44,7 +44,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/metrics", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/monitoring/v1/prometheus", "GET", AuthorizationStatus.Operator)]
         public async Task Metrics()
         {
             ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
@@ -59,35 +59,37 @@ namespace Raven.Server.Web.System
             var provider = new MetricsProvider(Server);
 
             var databases = GetDatabases();
+
+            var responseStream = ResponseBodyStream();
             
             if (skipServer == false)
             {
-                WriteServerMetrics(provider);
+                await WriteServerMetrics(provider, responseStream);
             }
 
             if (skipDatabases == false)
             {
-                WriteDatabaseMetrics(provider, databases);
+                await WriteDatabaseMetrics(provider, databases, responseStream);
             }
 
             if (skipIndexes == false)
             {
-                WriteIndexMetrics(provider, databases);
+                await WriteIndexMetrics(provider, databases, responseStream);
             }
 
             if (skipCollections == false)
             {
-                WriteCollectionMetrics(databases);
+                await WriteCollectionMetrics(databases, responseStream);
             }
         }
 
-        private void WriteServerMetrics(MetricsProvider provider)
+        private async Task WriteServerMetrics(MetricsProvider provider, Stream responseStream)
         {
             var serverMetrics = provider.CollectServerMetrics();
 
             using (var ms = new MemoryStream())
             {
-                using (var writer = PrometheusWriter(ms))
+                await using (var writer = PrometheusWriter(ms))
                 {
                     // global
 
@@ -176,7 +178,8 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Server license max CPU cores", "license_max_cores", serverMetrics.License.MaxCores);
                 }
 
-                ms.WriteTo(ResponseBodyStream());
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
             }
         }
 
@@ -190,7 +193,7 @@ namespace Raven.Server.Web.System
             return new Size(input.Value, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
         }
 
-        private void WriteDatabaseMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
+        private async Task WriteDatabaseMetrics(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = databases.Select(provider.CollectDatabaseMetrics).ToList();
 
@@ -198,7 +201,7 @@ namespace Raven.Server.Web.System
 
             using (var ms = new MemoryStream())
             {
-                using (var writer = PrometheusWriter(ms))
+                await using (var writer = PrometheusWriter(ms))
                 {
                     // global
                     
@@ -270,11 +273,12 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Disk Queue length", "database_storage_queue_length", metrics, x => x.Storage.QueueLength, cachedTags);
                 }
 
-                ms.WriteTo(ResponseBodyStream());
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
             }
         }
 
-        private void WriteIndexMetrics(MetricsProvider provider, List<DocumentDatabase> databases)
+        private async Task WriteIndexMetrics(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = new List<IndexMetrics>();
             var cachedTags = new List<string>();
@@ -295,7 +299,7 @@ namespace Raven.Server.Web.System
 
             using (var ms = new MemoryStream())
             {
-                using (var writer = PrometheusWriter(ms))
+                await using (var writer = PrometheusWriter(ms))
                 {
                     WriteGauges(writer, "Number of index errors", "index_errors", metrics, x => x.Errors, cachedTags);
                     WriteGauges(writer, "Indicates if index is invalid", "index_is_invalid", metrics, x => x.IsInvalid ? 1 : 0, cachedTags);
@@ -310,12 +314,13 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of maps per second (one minute rate)", "index_mapped_per_second", metrics, x => x.MappedPerSec, cachedTags);
                     WriteGauges(writer, "Number of reduces per second (one minute rate)", "index_reduced_per_second", metrics, x => x.ReducedPerSec, cachedTags);
                 }
-                
-                ms.WriteTo(ResponseBodyStream());
+
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
             }
         }
         
-        private void WriteCollectionMetrics(List<DocumentDatabase> databases)
+        private async Task WriteCollectionMetrics(List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = new List<CollectionMetrics>();
             var cachedTags = new List<string>();
@@ -342,7 +347,7 @@ namespace Raven.Server.Web.System
 
             using (var ms = new MemoryStream())
             {
-                using (var writer = PrometheusWriter(ms))
+                await using (var writer = PrometheusWriter(ms))
                 {
                     WriteGauges(writer, "Number of documents in collection", "collection_documents_count", metrics, x => x.DocumentsCount, cachedTags);
                     WriteGauges(writer, "Size of documents", "collection_documents_size_bytes", metrics, x => x.DocumentsSizeInBytes, cachedTags);
@@ -350,8 +355,9 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Size of tombstones", "collection_tombstones_size_bytes", metrics, x => x.TombstonesSizeInBytes, cachedTags);
                     WriteGauges(writer, "Total size of collection", "collection_total_size_bytes", metrics, x => x.TotalSizeInBytes, cachedTags);
                 }
-                
-                ms.WriteTo(ResponseBodyStream());
+
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
             }
         }
 
@@ -393,7 +399,6 @@ namespace Raven.Server.Web.System
 
         private string SerializeTags(Dictionary<string, string> input)
         {
-            //TODO: escape!
             return string.Join(", ", input.Select(kvp => $"{kvp.Key}=\"{EscapeValue(kvp.Value)}\""));
         }
 
@@ -407,12 +412,12 @@ namespace Raven.Server.Web.System
             var databases = new List<DocumentDatabase>();
             var landlord = ServerStore.DatabasesLandlord;
 
-            foreach (Task<DocumentDatabase> value in landlord.DatabasesCache.Values)
+            foreach (var kvp in landlord.DatabasesCache)
             {
-                if (value.IsCompletedSuccessfully == false)
+                if (kvp.Value.IsCompletedSuccessfully == false)
                     continue;
 
-                databases.Add(value.Result);
+                databases.Add(kvp.Value.Result);
             }
 
             return databases;
