@@ -68,12 +68,12 @@ namespace Raven.Server.Web.System
 
             if (names.Count == 0)
             {
-                foreach (Task<DocumentDatabase> value in landlord.DatabasesCache.Values)
+                foreach (var kvp in landlord.DatabasesCache)
                 {
-                    if (value.IsCompletedSuccessfully == false)
+                    if (kvp.Value.IsCompletedSuccessfully == false)
                         continue;
 
-                    databases.Add(value.Result);
+                    databases.Add(kvp.Value.Result);
                 }
             }
             else
