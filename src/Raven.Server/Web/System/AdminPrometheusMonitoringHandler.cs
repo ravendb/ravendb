@@ -460,7 +460,7 @@ namespace Raven.Server.Web.System
             }
 
             writer.Write(" ");
-            writer.WriteLine(value ?? double.NaN);
+            writer.WriteLine(value.HasValue ? value.Value.ToString("0.####") : double.NaN);
         }
 
         private void WriteCounter(StreamWriter writer, string name, long value, string serializedTags = null)
