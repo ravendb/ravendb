@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow.Server.Utils.VxSort;
@@ -75,6 +76,8 @@ namespace Sparrow.Server.Utils
         public static unsafe int SortAndRemoveDuplicates<T>(T* bufferBasePtr, int count)
             where T : unmanaged, IBinaryNumber<T>
         {
+            Debug.Assert(count > 0);
+            
             Sort.Run(bufferBasePtr, count);
 
             // We need to fill in the gaps left by removing deduplication process.
