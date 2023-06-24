@@ -133,7 +133,56 @@ public unsafe class DynamicFieldsTests : StorageTest
             Assert.Equal(0, entries.Fill(ids));
         }
     }
-    
+
+
+    [Fact]
+    public void MixingStaticAndDynamicFieldsCorax()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice);
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Rank", "U"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Index(preparedItem.ToSpan());
+            writer.Commit();
+        }
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Name", "Oren"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
+            writer.Commit();
+        }
+
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Eini"u8);
+            entry.WriteDynamic("Name", "Eini"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
+            writer.Commit();
+        }
+    }
+
     [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(48.666708, -4.333999, "gbsuv7s04")]
     [InlineData(53.015261, 18.611487, "u3mjxe0kr")]

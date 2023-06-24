@@ -573,7 +573,7 @@ namespace Corax
         }
         
        /// <returns>Encoded entryId</returns>
-        public unsafe long Update(string field, Span<byte> key, Span<byte> data)
+        public unsafe long Update(string field, ReadOnlySpan<byte> key, Span<byte> data)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
@@ -1453,7 +1453,7 @@ namespace Corax
         /// </summary>
         /// <param name="idInTree">Has frequency and container type inside idInTree.</param>
         /// <returns></returns>
-        private bool TryGetEntryTermId(string key, Span<byte> term, out long idInTree)
+        private bool TryGetEntryTermId(string key, ReadOnlySpan<byte> term, out long idInTree)
         {
             var fieldsTree = Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
             if (fieldsTree == null)
@@ -1498,6 +1498,11 @@ namespace Corax
                 InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
                 InsertSpatialField(entriesToSpatialTree, indexedField);
+
+                // RavenDB-20730 If we have a dynamic field that has the same name as a static field
+                // we already processed everything here, and updating it again would lead to strange state
+                // since we are mutating the entries for the index as part of the work.
+                _dynamicFieldsTerms?.Remove(indexedField.Name);
             }
 
             if (_dynamicFieldsTerms != null)
