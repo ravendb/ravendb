@@ -449,6 +449,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
+
+    public long GetLookupRootPage(string name)
+    {
+        using var _ = Slice.From(_transaction.Allocator, name, out var slice);
+        return GetLookupRootPage(slice);
+    }
     
     public long GetLookupRootPage(Slice name)
     {

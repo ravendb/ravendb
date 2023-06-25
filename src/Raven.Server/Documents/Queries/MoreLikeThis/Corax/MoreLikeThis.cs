@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Mappings;
@@ -141,134 +142,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             }
         }
     }
-
-    /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
-    protected void AddTermFrequencies(ref IndexEntryReader entryReader, IDictionary<string, Int> termFreqMap, string fieldName)
-    {
-        var field = _builderParameters.IndexSearcher.GetWriterFieldMetadata(fieldName);
-        var fieldReader = entryReader.GetFieldReaderFor(field);
-        var fieldType = fieldReader.Type;
-        switch (fieldType)
-        {
-            case IndexEntryFieldType.Empty:
-            case IndexEntryFieldType.Null:
-                var termValue = fieldType == IndexEntryFieldType.Null 
-                    ? CoraxProj.Constants.NullValueSlice 
-                    : CoraxProj.Constants.EmptyStringSlice;
-                
-                InsertTerm(termValue.AsReadOnlySpan(), exactInsert: true);
-                break;
-
-            case IndexEntryFieldType.TupleListWithNulls:
-            case IndexEntryFieldType.TupleList:
-                if (fieldReader.TryReadMany(out var iterator) == false)
-                    break;
-
-                while (iterator.ReadNext())
-                {
-                    if (iterator.IsNull)
-                    {
-                        InsertTerm(CoraxProj.Constants.NullValueSlice, exactInsert: true);
-                    }
-                    else if (iterator.IsEmptyString)
-                    {
-                        throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
-                    }
-                    else
-                    {
-                        InsertTerm(iterator.Sequence, exactInsert: true);
-                    }
-                }
-
-                break;
-
-            case IndexEntryFieldType.Tuple:
-                if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
-                    break;
-
-                InsertTerm(valueInEntry);
-                break;
-
-            case IndexEntryFieldType.SpatialPointList:
-                if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
-                    break;
-
-                while (spatialIterator.ReadNext())
-                {
-                    for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                        InsertTerm(spatialIterator.Geohash.Slice(0, i), exactInsert: true);
-                }
-
-                break;
-
-            case IndexEntryFieldType.SpatialPoint:
-                if (fieldReader.Read(out valueInEntry) == false)
-                    break;
-
-                for (int i = 1; i <= valueInEntry.Length; ++i)
-                    InsertTerm(valueInEntry.Slice(0, i), exactInsert: true);
-
-                break;
-
-            case IndexEntryFieldType.ListWithNulls:
-            case IndexEntryFieldType.List:
-                if (fieldReader.TryReadMany(out iterator) == false)
-                    break;
-
-                while (iterator.ReadNext())
-                {
-                    Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
-
-                    if (iterator.IsEmptyCollection || iterator.IsNull)
-                    {
-                        var fieldValue = iterator.IsNull 
-                            ? CoraxProj.Constants.NullValueSlice 
-                            : CoraxProj.Constants.EmptyStringSlice;
-                        InsertTerm(fieldValue.AsReadOnlySpan(), exactInsert: true);
-                    }
-                    else
-                    {
-                        InsertTerm(iterator.Sequence);
-                    }
-                }
-
-                break;
-            case IndexEntryFieldType.Raw:
-            case IndexEntryFieldType.RawList:
-            case IndexEntryFieldType.Invalid:
-                break;
-            default:
-                if (fieldReader.Read(out var value) == false)
-                    break;
-
-                InsertTerm(value);
-                break;
-        }
-
-        
-        void InsertTerm(ReadOnlySpan<byte> termToAdd, bool exactInsert = false)
-        {
-            using var _ = _analyzersScope.Execute(field, termToAdd, out var bufferSpan, out var tokensSpan, exactInsert);
-            for (int index = 0; index < tokensSpan.Length; index++)
-            {
-                Token token = tokensSpan[index];
-                var term = bufferSpan.Slice(token.Offset, (int)token.Length);
-                if (index > _maxNumTokensParsed)
-                    break;
-
-                var termAsString = Encoding.UTF8.GetString(term);
-                if (IsNoiseWord(termAsString)) // TODO optimize
-                    continue;
-
-                var counter = termFreqMap[termAsString];
-                if (counter is null)
-                    termFreqMap[termAsString] = new();
-                else
-                    counter.X++;
-            }
-        }
-    }
-
+    
     public IQueryMatch Like(long documentId)
     {
         if (_fieldNames == null) throw new InvalidDataException($"FieldNames are empty!");
@@ -334,15 +208,35 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
     {
         var indexSearcher = _builderParameters.IndexSearcher;
         IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
-        var indexEntry = indexSearcher.GetEntryReaderFor(documentId);
+        Page p = default;
+        var indexEntry = indexSearcher.GetEntryTermsReader(documentId, ref p);
 
-        for (var i = 0; i < _fieldNames.Length; i++)
+        var fields = _fieldNames.Select(x => indexSearcher.GetLookupRootPage(x)).ToHashSet();
+        
+        while (indexEntry.MoveNext())
         {
-            var fieldName = _fieldNames[i];
-            AddTermFrequencies(ref indexEntry, termFreqMap, fieldName);
-        }
+            if(fields.Contains(indexEntry.TermMetadata) == false)
+                continue;
+            
+            InsertTerm(indexEntry.Current.Decoded());
 
+        }
+        
         return CreateQueue(termFreqMap);
+        
+        
+        void InsertTerm(ReadOnlySpan<byte> term)
+        {
+            var termAsString = Encoding.UTF8.GetString(term);
+            if (IsNoiseWord(termAsString)) // TODO optimize
+                return;
+
+            var counter = termFreqMap[termAsString];
+            if (counter is null)
+                termFreqMap[termAsString] = new();
+            else
+                counter.X++;
+        }
     }
 
     public void Dispose()

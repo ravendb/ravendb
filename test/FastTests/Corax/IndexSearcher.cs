@@ -11,7 +11,6 @@ using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
