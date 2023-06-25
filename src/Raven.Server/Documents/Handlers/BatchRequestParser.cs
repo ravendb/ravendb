@@ -1164,6 +1164,10 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 7166459905131377482 &&
                         state.StringBuffer[8] == (byte)'h')
                         return CommandType.JsonPatch;
+
+                    if (*(long*)state.StringBuffer == 7018088662229411144 &&
+                        state.StringBuffer[8] == (byte)'t')
+                        return CommandType.HeartBeat;
                     break;
                 case 10:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&

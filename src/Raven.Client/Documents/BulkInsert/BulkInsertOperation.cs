@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -182,10 +183,14 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
         
+        private readonly Timer _timer;
+        private DateTime _lastWriteToStream;
+        private readonly AsyncReaderWriterLock _streamLock;
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
             {
+                var strLock = await _streamLock.ReaderLockAsync().ConfigureAwait(false);
                 try
                 {
                     if (_streamExposerContent.IsDone)
@@ -238,9 +243,10 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     _streamExposerContent?.Dispose();
                     _resetContext.Dispose();
+                    _timer?.Dispose();
+                    strLock.Dispose();
                 }
             });
-
             CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
             _options = options ?? new BulkInsertOptions();
             _database = database;
@@ -263,6 +269,51 @@ namespace Raven.Client.Documents.BulkInsert
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+
+            _streamLock = new AsyncReaderWriterLock();
+            _lastWriteToStream = DateTime.Now;
+            _timer = new Timer( async o => await SendHeartBeat(o).ConfigureAwait(false),
+                null,
+                (int)(StreamWithTimeout.DefaultWriteTimeout.TotalMilliseconds / 3),
+                Timeout.InfiniteTimeSpan.Milliseconds);
+        }
+
+        internal async Task SendHeartBeat(object _)
+        {
+            if (DateTime.Now.Subtract(_lastWriteToStream).TotalSeconds > (StreamWithTimeout.DefaultWriteTimeout.TotalSeconds * 3 ))
+            {
+                _timer.Dispose();
+                return;
+            }
+
+            if (DateTime.Now.Subtract(_lastWriteToStream).TotalSeconds > (StreamWithTimeout.DefaultWriteTimeout.TotalSeconds / 3))
+            {
+                var strLock = _streamLock.WriterLock();
+                try
+                {
+                    await ExecuteBeforeStore().ConfigureAwait(false);
+                    EndPreviousCommandIfNeeded();
+                    if (_first == false)
+                    {
+                        WriteComma();
+                    }
+                    ForTestingPurposes?.startStore.Invoke();
+                    _first = false;
+                    _inProgressCommand = CommandType.None;
+                    _currentWriter.Write("{\"Type\":\"HeartBeat\"}");
+
+                    await FlushIfNeeded().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    await HandleErrors("HeartBeat", e).ConfigureAwait(false);
+                }
+                finally
+                {
+                    strLock.Dispose();
+                }
+            }
+            _timer.Change(TimeSpan.FromMilliseconds((StreamWithTimeout.DefaultWriteTimeout.TotalSeconds /3)), Timeout.InfiniteTimeSpan);
         }
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default) : this(database, store, null, token)
@@ -348,63 +399,78 @@ namespace Raven.Client.Documents.BulkInsert
         {
             using (ConcurrencyCheck())
             {
-                VerifyValidId(id);
-
-                await ExecuteBeforeStore().ConfigureAwait(false);
-                
-                if (metadata == null)
-                    metadata = new MetadataAsDictionary();
-
-                if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
-                {
-                    var collection = _requestExecutor.Conventions.GetCollectionName(entity);
-                    if (collection != null)
-                        metadata.Add(Constants.Documents.Metadata.Collection, collection);
-                }
-
-                if (metadata.ContainsKey(Constants.Documents.Metadata.RavenClrType) == false)
-                {
-                    var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
-                    if (clrType != null)
-                        metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
-                }
-
-                EndPreviousCommandIfNeeded();
-
+                var strLock = await _streamLock.ReaderLockAsync().ConfigureAwait(false);
                 try
                 {
-                    if (_first == false)
+                    _lastWriteToStream = DateTime.Now;
+                    VerifyValidId(id);
+
+                    await ExecuteBeforeStore().ConfigureAwait(false);
+
+                    if (metadata == null)
+                        metadata = new MetadataAsDictionary();
+
+                    if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
                     {
-                        WriteComma();
+                        var collection = _requestExecutor.Conventions.GetCollectionName(entity);
+                        if (collection != null)
+                            metadata.Add(Constants.Documents.Metadata.Collection, collection);
                     }
 
-                    _first = false;
-                    _inProgressCommand = CommandType.None;
-
-                    _currentWriter.Write("{\"Id\":\"");
-                    WriteString(id);
-                    _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
-
-                    _currentWriter.Flush();
-
-                    if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
+                    if (metadata.ContainsKey(Constants.Documents.Metadata.RavenClrType) == false)
                     {
-                        using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
-                            await json.WriteJsonToAsync(_currentWriter.BaseStream, _token).ConfigureAwait(false);
+                        var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
+                        if (clrType != null)
+                            metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
                     }
 
-                    _currentWriter.Write('}');
+                    EndPreviousCommandIfNeeded();
 
-                    await FlushIfNeeded().ConfigureAwait(false);
-
+                    await WriteToStream(entity, id, metadata, CommandType.PUT).ConfigureAwait(false);
                 }
-                catch (Exception e)
+                finally
                 {
-                    await HandleErrors(id, e).ConfigureAwait(false);
+                    strLock.Dispose();
                 }
             }
         }
-        
+
+        private async Task WriteToStream(object entity, string id, IMetadataDictionary metadata, CommandType type)
+        {
+            try
+            {
+                if (_first == false)
+                {
+                    WriteComma();
+                }
+
+                _first = false;
+                _inProgressCommand = CommandType.None;
+
+                _currentWriter.Write("{\"Id\":\"");
+                WriteString(id);
+                _currentWriter.Write("\",\"Type\":\"");
+                _currentWriter.Write(type);
+                _currentWriter.Write("\",\"Document\":");
+
+                _currentWriter.Flush();
+
+                if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
+                {
+                    using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
+                        await json.WriteJsonToAsync(_currentWriter.BaseStream, _token).ConfigureAwait(false);
+                }
+
+                _currentWriter.Write('}');
+
+                await FlushIfNeeded().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await HandleErrors(id, e).ConfigureAwait(false);
+            }
+        }
+
         private async Task HandleErrors(string documentId, Exception e)
         {
             BulkInsertAbortedException errorFromServer = null;
@@ -740,61 +806,70 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 using (_operation.ConcurrencyCheck())
                 {
-                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
-
-                    if (_operation._inProgressCommand == CommandType.TimeSeries)
-                        TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
-
+                    var strLock = await _operation._streamLock.ReaderLockAsync().ConfigureAwait(false);
                     try
                     {
-                        var isFirst = _id == null;
-                        if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
+                        await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+                        if (_operation._inProgressCommand == CommandType.TimeSeries)
+                            TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
+
+                        try
                         {
-                            if (isFirst == false)
+                            _operation._lastWriteToStream = DateTime.Now;
+                            var isFirst = _id == null;
+                            if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
                             {
-                                //we need to end the command for the previous document id
-                                _operation._currentWriter.Write("]}},");
+                                if (isFirst == false)
+                                {
+                                    //we need to end the command for the previous document id
+                                    _operation._currentWriter.Write("]}},");
+                                }
+                                else if (_operation._first == false)
+                                {
+                                    _operation.WriteComma();
+                                }
+
+                                _operation._first = false;
+
+                                _id = id;
+                                _operation._inProgressCommand = CommandType.Counters;
+
+                                WritePrefixForNewCommand();
                             }
-                            else if (_operation._first == false)
+
+                            if (_countersInBatch >= _maxCountersInBatch)
+                            {
+                                _operation._currentWriter.Write("]}},");
+
+                                WritePrefixForNewCommand();
+                            }
+
+                            _countersInBatch++;
+
+                            if (_first == false)
                             {
                                 _operation.WriteComma();
                             }
 
-                            _operation._first = false;
+                            _first = false;
 
-                            _id = id;
-                            _operation._inProgressCommand = CommandType.Counters;
+                            _operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
+                            _operation.WriteString(name);
+                            _operation._currentWriter.Write("\",\"Delta\":");
+                            _operation._currentWriter.Write(delta);
+                            _operation._currentWriter.Write('}');
 
-                            WritePrefixForNewCommand();
+                            await _operation.FlushIfNeeded().ConfigureAwait(false);
                         }
-
-                        if (_countersInBatch >= _maxCountersInBatch)
+                        catch (Exception e)
                         {
-                            _operation._currentWriter.Write("]}},");
-
-                            WritePrefixForNewCommand();
+                            await _operation.HandleErrors(_id, e).ConfigureAwait(false);
                         }
-
-                        _countersInBatch++;
-
-                        if (_first == false)
-                        {
-                            _operation.WriteComma();
-                        }
-
-                        _first = false;
-
-                        _operation._currentWriter.Write("{\"Type\":\"Increment\",\"CounterName\":\"");
-                        _operation.WriteString(name);
-                        _operation._currentWriter.Write("\",\"Delta\":");
-                        _operation._currentWriter.Write(delta);
-                        _operation._currentWriter.Write('}');
-
-                        await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
-                    catch (Exception e)
+                    finally
                     {
-                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                        strLock.Dispose();
                     }
                 }
             }
@@ -844,65 +919,75 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 using (_operation.ConcurrencyCheck())
                 {
-                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
-
+                    var strLock = await _operation._streamLock.ReaderLockAsync().ConfigureAwait(false);
                     try
                     {
-                        if (_first)
+                        _operation._lastWriteToStream = DateTime.Now;
+                        await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+                        try
                         {
-                            if (_operation._first == false)
+                            if (_first)
+                            {
+                                if (_operation._first == false)
+                                    _operation.WriteComma();
+
+                                WritePrefixForNewCommand();
+                            }
+                            else if (_timeSeriesInBatch >= _operation._timeSeriesBatchSize)
+                            {
+                                _operation._currentWriter.Write("]}},");
+                                WritePrefixForNewCommand();
+                            }
+
+                            _timeSeriesInBatch++;
+
+                            if (_first == false)
+                            {
                                 _operation.WriteComma();
+                            }
 
-                            WritePrefixForNewCommand();
-                        }
-                        else if (_timeSeriesInBatch >= _operation._timeSeriesBatchSize)
-                        {
-                            _operation._currentWriter.Write("]}},");
-                            WritePrefixForNewCommand();
-                        }
+                            _first = false;
 
-                        _timeSeriesInBatch++;
+                            _operation._currentWriter.Write('[');
 
-                        if (_first == false)
-                        {
+                            timestamp = timestamp.EnsureUtc();
+                            _operation._currentWriter.Write(timestamp.Ticks);
                             _operation.WriteComma();
+
+                            _operation._currentWriter.Write(values.Count);
+                            _operation.WriteComma();
+
+                            var firstValue = true;
+                            foreach (var value in values)
+                            {
+                                if (firstValue == false)
+                                    _operation.WriteComma();
+
+                                firstValue = false;
+                                _operation._currentWriter.Write(value.ToString("R", CultureInfo.InvariantCulture));
+                            }
+
+                            if (tag != null)
+                            {
+                                _operation._currentWriter.Write(",\"");
+                                _operation.WriteString(tag);
+                                _operation._currentWriter.Write('\"');
+                            }
+
+                            _operation._currentWriter.Write(']');
+
+                            await _operation.FlushIfNeeded().ConfigureAwait(false);
                         }
-
-                        _first = false;
-
-                        _operation._currentWriter.Write('[');
-
-                        timestamp = timestamp.EnsureUtc();
-                        _operation._currentWriter.Write(timestamp.Ticks);
-                        _operation.WriteComma();
-
-                        _operation._currentWriter.Write(values.Count);
-                        _operation.WriteComma();
-
-                        var firstValue = true;
-                        foreach (var value in values)
+                        catch (Exception e)
                         {
-                            if (firstValue == false)
-                                _operation.WriteComma();
-
-                            firstValue = false;
-                            _operation._currentWriter.Write(value.ToString("R", CultureInfo.InvariantCulture));
+                            await _operation.HandleErrors(_id, e).ConfigureAwait(false);
                         }
 
-                        if (tag != null)
-                        {
-                            _operation._currentWriter.Write(",\"");
-                            _operation.WriteString(tag);
-                            _operation._currentWriter.Write('\"');
-                        }
-
-                        _operation._currentWriter.Write(']');
-
-                        await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
-                    catch (Exception e)
+                    finally
                     {
-                        await _operation.HandleErrors(_id, e).ConfigureAwait(false);
+                        strLock.Dispose();
                     }
                 }
             }
@@ -1038,12 +1123,15 @@ namespace Raven.Client.Documents.BulkInsert
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (_operation.ConcurrencyCheck())
                 {
-                    _operation.EndPreviousCommandIfNeeded();
-
-                    await _operation.ExecuteBeforeStore().ConfigureAwait(false);
-
+                    var strLock = await _operation._streamLock.ReaderLockAsync().ConfigureAwait(false);
                     try
                     {
+                        _operation._lastWriteToStream = DateTime.Now;
+                        _operation.EndPreviousCommandIfNeeded();
+
+                        await _operation.ExecuteBeforeStore().ConfigureAwait(false);
+
+
                         if (_operation._first == false)
                             _operation.WriteComma();
 
@@ -1073,8 +1161,28 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         await _operation.HandleErrors(id, e).ConfigureAwait(false);
                     }
+                    finally
+                    {
+                        strLock.Dispose();                           
+                    }
                 }
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action startStore;
+
         }
     }
 }

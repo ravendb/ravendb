@@ -89,7 +89,6 @@ namespace Raven.Server.Documents.Handlers
                                                 SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                             });
                                         }
-
                                         ClearStreamsTempFiles();
 
                                         progress.BatchCount++;
@@ -97,7 +96,6 @@ namespace Raven.Server.Documents.Handlers
                                         progress.LastProcessedId = array[numberOfCommands - 1].Id;
 
                                         onProgress(progress);
-
                                         previousCtxReset?.Dispose();
                                         previousCtxReset = currentCtxReset;
                                         currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
@@ -110,6 +108,9 @@ namespace Raven.Server.Documents.Handlers
                                     var commandData = await task;
                                     if (commandData.Type == CommandType.None)
                                         break;
+
+                                    if (commandData.Type == CommandType.HeartBeat)
+                                        continue;
 
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {
