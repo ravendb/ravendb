@@ -53,7 +53,7 @@ public unsafe struct NativeList<T> : IDisposable
         _releaseItems.Dispose();
     }
 
-    public void Sort()
+    public readonly void Sort()
     {
         new Span<T>(RawItems, Count).Sort();
     }

@@ -195,13 +195,11 @@ namespace FastTests.Corax
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
-                var entity = indexSearcher.GetEntryReaderFor(ids[0]);
-                Assert.True(entity.GetFieldReaderFor(IndexId).Read(out var idInIndex));
-                Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
+                var termsReader = indexSearcher.TermsReaderFor("Id");
+                Assert.True(termsReader.TryGetTermFor(ids[0], out var term));
+                Assert.Equal("list/0", term);
 
             }
-
-
         }
 
         private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)

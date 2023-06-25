@@ -676,7 +676,7 @@ namespace Corax
         private FastPForEncoder _pForEncoder;
         private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId;
 
-        private struct RecordedTerm : IComparable<RecordedTerm>
+        public struct RecordedTerm : IComparable<RecordedTerm>
         {
             public long TermContainerId;
             public long Long;
@@ -1022,29 +1022,16 @@ namespace Corax
         private unsafe void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
             long entryToDelete)
         {
-            var cur = entryTerms.Address;
-            var end = entryTerms.Address + entryTerms.Length;
-
-            long prevTerm = 0;
-            long prevLong = 0;
-            while (cur < end)
+            var reader = new EntryTermsReader(llt, entryTerms.Address, entryTerms.Length, dicId);
+            while (reader.MoveNext())
             {
-                var termContainerId = VariableSizeEncoding.Read<long>(cur, out var offset) + prevTerm;
-                prevTerm = termContainerId;
-                cur += offset;
-                var termId = termContainerId ^ 3; // clear the marker bits
-                var termItem = Container.Get(llt, termId);
-                long fieldRootPage = termItem.PageLevelMetadata;
-                if (fieldsByRootPage.TryGetValue(fieldRootPage, out var field) == false)
+                if (fieldsByRootPage.TryGetValue(reader.TermMetadata, out var field) == false)
                 {
-                    Debug.Assert(false);
+                    throw new InvalidOperationException($"Unable to find matching field for {reader.TermMetadata} with root page:  {reader.TermMetadata}. Term: '{reader.Current}'");
                 }
-
-                TermsReader.Set(compactKey, termItem, dicId);
-
-                var ptr = compactKey.DecodedPtr(out var len);
-                var scope = Slice.From(llt.Allocator, ptr, len, out Slice termSlice);
                 
+                var ptr = reader.Current.DecodedPtr(out var len);
+                var scope = Slice.From(llt.Allocator, ptr, len, out Slice termSlice);
                 if(field.HasSuggestions)
                     RemoveSuggestions(field, new ReadOnlySpan<byte>(ptr, len));
                 
@@ -1054,37 +1041,21 @@ namespace Corax
                     term = new EntriesModifications(llt.Allocator, len);
                     scope = default; // We dont want to reclaim the term name
                 }
-
                 term.Removal(entryToDelete);
                 scope.Dispose();
-
-                if ((termContainerId & 1) == 0)
+                
+                if(reader.HasNumeric == false)
                     continue;
-
-                var l = ZigZagEncoding.Decode<long>(cur, out offset) + prevLong;
-                prevLong = l;
-                cur += offset;
-
-                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, l, out exists);
+                
+                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
                 if (exists == false)
                 {
                     term = new EntriesModifications(llt.Allocator, sizeof(long));
                 }
 
                 term.Removal(entryToDelete);
-
-                double d;
-                if ((termContainerId & 2) == 2)
-                {
-                     d = *(double*)cur;
-                    cur += sizeof(double);
-                }
-                else
-                {
-                    d = l;
-                }
-
-                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, d, out exists);
+                
+                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
                 {
                     term = new EntriesModifications(llt.Allocator, sizeof(long));
@@ -1294,43 +1265,17 @@ namespace Corax
             }
         }
 
-        private unsafe void WriteIndexEntries()
+        private void WriteIndexEntries()
         {
-            var scope = Transaction.Allocator.Allocate(1024, out var bs);
-            const int maxItemSize = 32; // actually, 10 * 3, but aligning to make it easier
+            var writer = new EntryTermsWriter(Transaction.Allocator);
             foreach (var (entry, terms) in _termsPerEntryId)
             {
-                terms.Sort();
-                int offset = 0;
-                long prevTermId = 0;
-                long prevLong = 0;
-                for (int i = 0; i < terms.Count; i++)
-                {
-                    if (offset + maxItemSize > bs.Length)
-                    {
-                        Transaction.Allocator.GrowAllocation(ref bs, ref scope, 1024);
-                    }
-                    ref var cur = ref terms.RawItems[i];
-                    // no need for zig/zag, since we are working on sorted values
-                    offset += VariableSizeEncoding.Write(bs.Ptr + offset, cur.TermContainerId - prevTermId);
-                    prevTermId = cur.TermContainerId;
-                    if (cur.HasLong)
-                    {
-                        offset += ZigZagEncoding.Encode(bs.Ptr, cur.Long - prevLong,  offset);
-                        prevLong = cur.Long;
-                        
-                        if (cur.HasDouble)
-                        {
-                            *(double*)(bs.Ptr + offset) = cur.Double;
-                            offset += sizeof(double);
-                        }
-                    }
-                }
-
-                long entryTermsId = Container.Allocate(Transaction.LowLevelTransaction, _entriesTermsContainerId, offset, out var space);
-                bs.ToSpan()[..offset].CopyTo(space);
+                int size = writer.Encode(terms);
+                long entryTermsId = Container.Allocate(Transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
+                writer.Write(space);
                 _entryIdToLocation.Add(entry, entryTermsId);
             }
+            writer.Dispose();
         }
 
         private unsafe void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
