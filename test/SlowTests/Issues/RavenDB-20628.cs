@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Graph;
 using Jint;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Server;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +27,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task ClusterWideTransactionShouldThrowTimeoutException()
+        public async Task RequestExecutor_With_CanellationToken_Should_Throw_In_Timeout_When_ClusterWideTransaction_Is_Slow()
         {
             using var store = GetDocumentStore();
 
@@ -40,26 +45,25 @@ namespace SlowTests.Issues
             }
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            db.ForTestingPurposesOnly().WaitForDatabaseResultsTimeoutInClusterTransaction = (command) =>
+            db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
             {
-                if (command.ParsedCommands.Any(cmd => cmd.Type == CommandType.PUT))
-                    return TimeSpan.Zero;
-                else
-                    return null;
+                return Task.Delay(15_000);
             };
 
-            var e = await Assert.ThrowsAsync<RavenException>( async () =>
+            var e = await Assert.ThrowsAsync<TaskCanceledException>( async () =>
             {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user2 = await session.LoadAsync<User>(user1.Id);
                     user2.Name = "Bob";
-                    await session.SaveChangesAsync();
+                    await session.SaveChangesAsync(cts.Token);
                 }
             });
 
             Assert.NotNull(e);
-            Assert.True(e.InnerException is TimeoutException);
+            Assert.Contains("RequestExecutor", e.StackTrace);
+            Assert.Contains("HttpClient", e.StackTrace);
         }
     }
 }

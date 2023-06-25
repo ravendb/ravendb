@@ -20,7 +20,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -253,18 +252,16 @@ namespace Raven.Server.Documents.Handlers
             // wait for the command to be applied on this node
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
 
+            var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
+            if (forTestingTask != null)
+            {
+                await forTestingTask;
+            }
+
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                var timeout = Database.ForTestingPurposes?.WaitForDatabaseResultsTimeoutInClusterTransaction?.Invoke(command) ??
-                              ServerStore.Engine.OperationTimeout;
-                var waitTask = Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
-                if (await waitTask.WaitWithTimeout(timeout) == false)
-                {
-                    throw new System.TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-                }
-
-                var reply = (ClusterTransactionCompletionResult)await waitTask;
+                var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
                 if (reply.IndexTask != null)
                 {
                     await reply.IndexTask;
