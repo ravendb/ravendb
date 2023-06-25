@@ -1121,7 +1121,7 @@ namespace SlowTests.Client.Attachments
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.ConflictSolverConfig = new ConflictSolver
                 {
                     ResolveToLatest = false,
@@ -1211,7 +1211,7 @@ namespace SlowTests.Client.Attachments
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.ConflictSolverConfig = new ConflictSolver
                 {
                     ResolveToLatest = false,
@@ -1963,7 +1963,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -1986,7 +1986,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2096,7 +2096,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2119,7 +2119,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2241,7 +2241,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2264,7 +2264,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2425,7 +2425,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2449,7 +2449,7 @@ namespace SlowTests.Client.Attachments
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -2571,7 +2571,7 @@ namespace SlowTests.Client.Attachments
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
             };
             using (var store1 = GetDocumentStore(options))
@@ -2726,7 +2726,7 @@ namespace SlowTests.Client.Attachments
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
             };
 
@@ -3202,7 +3202,7 @@ namespace SlowTests.Client.Attachments
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
             };
             using (var store1 = GetDocumentStore(options))

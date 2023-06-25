@@ -76,7 +76,7 @@ public class RavenDB_18357 : RavenTestBase
         {
             ModifyDatabaseRecord = record =>
             {
-                options.ModifyDatabaseRecord(record);
+                options.ModifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
             }
         };

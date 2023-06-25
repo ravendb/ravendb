@@ -54,7 +54,7 @@ public class RavenDB_20444 : RavenTestBase
         {
             ModifyDatabaseRecord = record =>
             {
-                options.ModifyDatabaseRecord(record);
+                options.ModifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.QueryClauseCacheDisabled)] = queryClauseCacheDisabled;
             }
         });
