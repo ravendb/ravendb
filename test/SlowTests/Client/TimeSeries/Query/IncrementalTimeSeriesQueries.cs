@@ -149,9 +149,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     session.SaveChanges();
                 }
-
-                WaitForUserToContinueTheTest(store);
-
+                
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"

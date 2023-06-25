@@ -154,7 +154,7 @@ namespace SlowTests.Client.TimeSeries
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             options.ModifyDatabaseRecord = record =>
             {
-                modifyDatabaseRecord(record);
+                modifyDatabaseRecord?.Invoke(record);
                 record.ConflictSolverConfig = new ConflictSolver
                 {
                     ResolveToLatest = false,
@@ -253,7 +253,7 @@ namespace SlowTests.Client.TimeSeries
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -310,7 +310,7 @@ namespace SlowTests.Client.TimeSeries
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,

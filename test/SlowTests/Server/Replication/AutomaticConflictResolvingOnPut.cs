@@ -31,7 +31,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                 }
             }))
             using (var slave = GetDocumentStore(options: new Options(options)
@@ -43,7 +43,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                 }
             }))
             {

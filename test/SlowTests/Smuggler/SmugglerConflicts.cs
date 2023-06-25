@@ -34,7 +34,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -43,7 +43,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -78,7 +78,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -87,7 +87,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -128,7 +128,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -137,7 +137,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -185,7 +185,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -194,7 +194,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -249,7 +249,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -258,7 +258,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -301,7 +301,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store1",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))
@@ -310,7 +310,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2",
                     ModifyDatabaseRecord = record =>
                     {
-                        modifyDatabaseRecord(record);
+                        modifyDatabaseRecord?.Invoke(record);
                         record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
                     }
                 }))

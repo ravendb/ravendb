@@ -88,7 +88,7 @@ namespace SlowTests.Server.Replication
 
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             var record = new DatabaseRecord(database);
-            modifyDatabaseRecord(record);
+            modifyDatabaseRecord?.Invoke(record);
             await CreateDatabaseInCluster(record, 3, cluster.Leader.WebUrl);
 
             using (var store1 = new DocumentStore

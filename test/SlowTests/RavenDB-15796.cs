@@ -30,7 +30,7 @@ namespace SlowTests
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver();
                 }
             }))
@@ -38,7 +38,7 @@ namespace SlowTests
             {
                 ModifyDatabaseRecord = record =>
                 {
-                    modifyDatabaseRecord(record);
+                    modifyDatabaseRecord?.Invoke(record);
                     record.ConflictSolverConfig = new ConflictSolver();
                 }
             }))
