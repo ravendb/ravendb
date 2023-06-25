@@ -27,6 +27,9 @@ namespace Corax.Queries
             var currentMatches = matches;
             int totalResults = 0;
 
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             while (currentMatches.Length > maxUnusedMatchesSlots)
             {
@@ -37,13 +40,18 @@ namespace Corax.Queries
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(currentMatches[i]);
-                    var read = reader.GetFieldReaderFor(match._field).Read(out var resultX);
-                    if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
+                    var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
+                    while (reader.MoveNext())
                     {
-                        // We found a match.
-                        currentMatches[storeIdx] = currentMatches[i];
-                        storeIdx++;
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        var resultX = reader.Current.Decoded();
+                        if (leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
+                        {
+                            // We found a match.
+                            currentMatches[storeIdx] = currentMatches[i];
+                            storeIdx++;
+                        }
                     }
                 }
 
@@ -70,7 +78,11 @@ namespace Corax.Queries
 
             var searcher = match._searcher;
             var currentMatches = matches;
-            int totalResults = 0;
+            int totalResults = 0;  
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
+
 
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             while (currentMatches.Length > maxUnusedMatchesSlots)
@@ -82,27 +94,32 @@ namespace Corax.Queries
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(currentMatches[i]);
-
-                    bool isMatch = false;
-                    if (typeof(TValueType) == typeof(long))
+                    var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
+                    while (reader.MoveNext())
                     {
-                        var read = reader.GetFieldReaderFor(match._field).Read<long>(out var rx);
-                        if (read)
-                            isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
-                    }
-                    else if (typeof(TValueType) == typeof(double))
-                    {
-                        var read = reader.GetFieldReaderFor(match._field).Read<double>(out var rx);
-                        if (read)
-                            isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
-                    }
-
-                    if (isMatch)
-                    {
-                        // We found a match.
-                        matches[storeIdx] = currentMatches[i];
-                        storeIdx++;
+                        if(reader.TermMetadata != fieldRoot || 
+                           reader.HasNumeric == false)
+                            continue;
+                        bool isMatch;
+                        if (typeof(TValueType) == typeof(long))
+                        {
+                            isMatch  = leftSideComparer!.Compare((long)(object)currentType1, reader.CurrentLong) && rightSideComparer!.Compare((long)(object)currentType2, reader.CurrentLong);
+                        }
+                        else if (typeof(TValueType) == typeof(double))
+                        {
+                            isMatch  = leftSideComparer!.Compare((double)(object)currentType1, reader.CurrentDouble) && rightSideComparer!.Compare((double)(object)currentType2, reader.CurrentDouble);
+                        }
+                        else
+                        {
+                            throw new NotSupportedException(typeof(TValueType).FullName);
+                        }
+                        if (isMatch)
+                        {
+                            // We found a match.
+                            matches[storeIdx] = currentMatches[i];
+                            storeIdx++;
+                            break;
+                        }
                     }
                 }
 
@@ -182,6 +199,9 @@ namespace Corax.Queries
 
             var currentType1 = ((Slice)(object)match._value).AsReadOnlySpan();
             var currentType2 = ((Slice)(object)match._valueAux).AsReadOnlySpan();
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             var searcher = match._searcher;
             var currentMatches = matches;
@@ -197,15 +217,24 @@ namespace Corax.Queries
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(currentMatches[i]);
-                    var read = reader.GetFieldReaderFor(match._field).Read(out var resultX);
-                    if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
+                    var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
+                    var isMatch = true;
+                    while (reader.MoveNext())
                     {
-                        // We found a match so we have to skip it.
-                       continue;
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+
+                        var resultX = reader.Current.Decoded();
+                        if (leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
+                        {
+                            isMatch = false;
+                            break;
+                        }
                     }
-                    currentMatches[storeIdx] = currentMatches[i];
-                    storeIdx++;
+                    if(isMatch ==false)
+                        continue;
+                    
+                    currentMatches[storeIdx++] = currentMatches[i];
                 }
 
                 totalResults += storeIdx;
@@ -232,6 +261,9 @@ namespace Corax.Queries
             var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             while (currentMatches.Length > maxUnusedMatchesSlots)
@@ -243,27 +275,38 @@ namespace Corax.Queries
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(currentMatches[i]);
+                    var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
+                    var isMatch = true;
+                    while (reader.MoveNext())
+                    {
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        bool curMatch;
+                        if (typeof(TValueType) == typeof(long))
+                        {
+                            curMatch = leftSideComparer!.Compare((long)(object)currentType1, reader.CurrentLong) &&
+                                       rightSideComparer!.Compare((long)(object)currentType2, reader.CurrentLong);
+                        }
+                        else if (typeof(TValueType) == typeof(double))
+                        {
+                            curMatch = leftSideComparer!.Compare((double)(object)currentType1, reader.CurrentDouble) &&
+                                       rightSideComparer!.Compare((double)(object)currentType2, reader.CurrentDouble);
+                        }
+                        else
+                        {
+                            throw new NotSupportedException(typeof(TValueType).FullName);
+                        }
 
-                    bool isMatch = false;
-                    if (typeof(TValueType) == typeof(long))
-                    {
-                        var read = reader.GetFieldReaderFor(match._field).Read<long>(out var rx);
-                        if (read)
-                            isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
+                        if (curMatch)
+                        {
+                            isMatch = false;
+                            break;
+                        }
                     }
-                    else if (typeof(TValueType) == typeof(double))
+                    
+                    if (isMatch)
                     {
-                        var read = reader.GetFieldReaderFor(match._field).Read<double>(out var rx);
-                        if (read)
-                            isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
-                    }
-
-                    if (isMatch == false)
-                    {
-                        // We found a match.
-                        matches[storeIdx] = currentMatches[i];
-                        storeIdx++;
+                        matches[storeIdx++] = currentMatches[i];
                     }
                 }
 

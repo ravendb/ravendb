@@ -360,10 +360,11 @@ namespace FastTests.Corax
                 var read = sortedMatch.Fill(ids);
 
                 List<long> sortedByCorax = new();
+                var termsReader = searcher.TermsReaderFor("Content1");
+
                 for (int i = 0; i < read; ++i)
                 {
-                    searcher.GetEntryReaderFor(ids[i]).GetFieldReaderFor(Content1).Read(out long value);
-                    sortedByCorax.Add(value);
+                    sortedByCorax.Add(long.Parse(termsReader.GetTermFor(ids[i])));
                 }
 
                 for (int i = 0; i < longList.Count; ++i)

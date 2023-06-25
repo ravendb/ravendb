@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Corax.Mappings;
+using Corax.Utils;
 using Voron;
 
 namespace Corax.Queries;
@@ -387,141 +389,46 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         var read = _inner.Fill(matches);
         if (read == 0)
             return 0;
+        var comparerFieldsRootPages = new long[_comparers.Length];
+        for (int i = 0; i < _comparers.Length; i++)
+        {
+            long fieldRoot = _searcher.GetLookupRootPage(_comparers[i].Binding.FieldName);
+            comparerFieldsRootPages[i] = fieldRoot;
+        }
+
+        Page lastPage = default;
 
         int currentIdx = 0;
         for (int i = 0; i < read; ++i)
         {
-            var reader = _searcher.GetEntryReaderFor(matches[i]);
             int comparerId = 0;
             for (; comparerId < _comparers.Length; ++comparerId)
             {
-                var comparer = _comparers[comparerId];
-                var binding = comparer.Binding;
-                var fieldReader = reader.GetFieldReaderFor(binding);
-                var fieldType = fieldReader.Type;
-                bool isAccepted;
-                switch (fieldType)
+                long fieldsRootPage = comparerFieldsRootPages[comparerId];
+                var reader = _searcher.GetEntryTermsReader(matches[i], ref lastPage);
+                while (reader.MoveNext())
                 {
-                    case IndexEntryFieldType.Empty:
-                    case IndexEntryFieldType.Null:
-                        var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                        if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(fieldName.AsReadOnlySpan()) == false)
-                            goto NotMatch;
-
-                        break;
-
-                    case IndexEntryFieldType.TupleList:
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto NotMatch;
-
-                        while (iterator.ReadNext())
-                        {
-                            isAccepted = IsAcceptedForIterator(comparer, in iterator);
-                            if (comparer.Mode == MultiUnaryItem.UnaryMode.Any && isAccepted)
-                                break;
-                            if (comparer.Mode == MultiUnaryItem.UnaryMode.All && isAccepted == false)
-                                goto NotMatch;
-                        }
-
-                        break;
-
-                    case IndexEntryFieldType.Tuple:
-                        if (fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
-                            goto NotMatch;
-                        using (_searcher.ApplyAnalyzer(binding, valueInEntry, out var analyzedTerm))
-                            isAccepted = IsAcceptedItem(comparer, analyzedTerm, in lVal, in dVal);
-                        
-                        if (isAccepted == false)
-                            goto NotMatch;
-
-                        break;
-                    case IndexEntryFieldType.SpatialPoint:
-                    case IndexEntryFieldType.SpatialPointList:
-                        throw new ArgumentException($"Spatial is not supported inside {nameof(MultiTermMatch)}");
-
-                    case IndexEntryFieldType.TupleListWithNulls:
-                    case IndexEntryFieldType.ListWithNulls:
-                    case IndexEntryFieldType.List:
-                        if (fieldReader.TryReadMany(out iterator) == false)
-                            goto NotMatch;
-
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull || iterator.IsEmptyString)
-                            {
-                                var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                                if (comparer.Mode == MultiUnaryItem.UnaryMode.All)
-                                {
-                                    if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(fieldValue.AsReadOnlySpan()) == false)
-                                        goto NotMatch;
-                                }
-                                else if (comparer.Type == MultiUnaryItem.DataType.Slice && comparer.CompareLiteral(fieldValue.AsReadOnlySpan()))
-                                    break;
-                            }
-                            else
-                            {
-                                if (comparer.Mode == MultiUnaryItem.UnaryMode.Any)
-                                {
-                                    //Lets stop on first match
-                                    using (_searcher.ApplyAnalyzer(binding, iterator.Sequence, out var analyzedTerm))
-                                    {
-                                        if (comparer.Type == MultiUnaryItem.DataType.Slice && comparer.CompareLiteral(analyzedTerm))
-                                            break;
-                                    }
-                                }
-                                else
-                                {
-                                    //If something is not accepted we should escape loop immediately
-                                    using (_searcher.ApplyAnalyzer(binding, iterator.Sequence, out var analyzedTerm))
-                                    {
-                                        if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(analyzedTerm) == false)
-                                            goto NotMatch;
-                                    }
-                                }
-                            }
-                        }
-
-                        break;
-                    case IndexEntryFieldType.Raw:
-                    case IndexEntryFieldType.RawList:
-                    case IndexEntryFieldType.Invalid:
-                        break;
-                    default:
-                        if (fieldReader.Read(out var value) == false)
-                            goto NotMatch;
-
-                        using (_searcher.ApplyAnalyzer(binding, value, out var analyzedTerm))
-                        {
-                            if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(analyzedTerm) == false)
-                                goto NotMatch;
-                        }
-
-                        break;
+                    if(reader.TermMetadata != fieldsRootPage)
+                        continue;
+                    var comparer = _comparers[comparerId];
+                    if (IsAcceptedForIterator(comparer, in reader) == false)
+                    {
+                        goto NotMatch;
+                    }
                 }
             }
-
-            NotMatch:
-            if (comparerId == _comparers.Length)
-            {
-                matches[currentIdx++] = matches[i];
-                // Its a match
-            }
+            Match:
+            matches[currentIdx++] = matches[i];
+            NotMatch: ; // the ; so we have a label for the goto
         }
 
         return currentIdx;
-
-        bool IsAcceptedItem(MultiUnaryItem comparer, ReadOnlySpan<byte> sequence, in long longValue, in double doubleValue) => comparer.Type switch
+        
+        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => comparer.Type switch
         {
-            MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(sequence),
-            MultiUnaryItem.DataType.Long => comparer.CompareNumerical(longValue),
-            _ => comparer.CompareNumerical(doubleValue)
-        };
-
-        bool IsAcceptedForIterator(MultiUnaryItem comparer, in IndexEntryFieldIterator iterator) => comparer.Type switch
-        {
-            MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator.Sequence),
-            MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator.Long),
-            _ => comparer.CompareNumerical(iterator.Double)
+            MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator.Current.Decoded()),
+            MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator.CurrentLong),
+            _ => comparer.CompareNumerical(iterator.CurrentDouble)
         };
     }
 

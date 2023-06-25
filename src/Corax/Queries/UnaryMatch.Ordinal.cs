@@ -56,6 +56,9 @@ namespace Corax.Queries
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
 
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
             int results;
             do
             {
@@ -67,72 +70,19 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
 
-                    // If we get a null, we just skip it. It will not match.
-                    if (type == IndexEntryFieldType.Null)
+                    while (reader.MoveNext())
                     {
-                        if (match._operation != UnaryMatchOperation.NotEquals)
-                        {
-                            // Found a null, item is not elegible.
+                        if(reader.TermMetadata != fieldRoot)
                             continue;
-                        }
+                        if (comparer.Compare(currentType, reader.Current.Decoded()) == false) 
+                            continue;
+                        
+                        currentMatches[storeIdx++] = freeMemory[i];
+                        totalResults++;
+                        break;
                     }
-                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                    {
-                        var iterator = reader.ReadMany();
-
-                        var isMatch = false;
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull)
-                            {
-                                if (match._operation != UnaryMatchOperation.NotEquals)
-                                {
-                                    // Found a null, item is not elegible.
-                                    continue;
-                                }
-                            }
-
-                            using (match._searcher.ApplyAnalyzer(match._field, iterator.Sequence, out var analyzedTerm))
-                            {
-                                // If there is any match, then it is a match
-                                if (comparer.Compare(currentType, analyzedTerm))
-                                {
-                                    isMatch = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!isMatch)
-                            continue; // No match, item is not elegible.
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                    {
-                        var read = reader.Read(out var readType, out var resultX);
-                        if (read && readType != IndexEntryFieldType.Null)
-                        {
-                            using var _ = match._searcher.ApplyAnalyzer(match._field, resultX, out var analyzedTerm);
-                            if (comparer.Compare(currentType, analyzedTerm) == false)
-                                continue; // Cant read or no match, item is not elegible.
-                        }
-                        else
-                        {
-                            if (match._operation != UnaryMatchOperation.NotEquals)
-                            {
-                                // Found a null, item is not elegible.
-                                continue;
-                            }
-                        }
-                    }
-
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
-                    totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
 
@@ -203,7 +153,10 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
 
+            Page lastPage = default;
+            
             int results;
             do
             {
@@ -213,46 +166,16 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
+             
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
 
-                    bitsetBufferAsSpan.Clear();
-                    if (type == IndexEntryFieldType.Null)
+                    while (reader.MoveNext())
                     {
-                        if (match._operation != UnaryMatchOperation.NotEquals)
-                        {
-                            if (value.Length != 1)
-                                continue;
-                            CheckAndSet(ReadOnlySpan<byte>.Empty, true);
-                        }
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                    {
-                        var iterator = reader.ReadMany();
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull)
-                                CheckAndSet(ReadOnlySpan<byte>.Empty, iterator.IsNull);
-                            else
-                                CheckAndSet(iterator.Sequence);
-                        }
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                    {
-                        if (value.Length != 1)
+                        if (reader.TermMetadata != fieldRoot)
                             continue;
-
-                        if (reader.Read( out var readType, out var resultX) == false)
-                            continue;
-                        
-                        if (readType == IndexEntryFieldType.Null)
-                            CheckAndSet(ReadOnlySpan<byte>.Empty, true);
-                        else
-                            CheckAndSet(resultX);
+                        CheckAndSet(reader.Current.Decoded());
                     }
 
                     int b = 0;
@@ -263,8 +186,7 @@ namespace Corax.Queries
                     if (b != requiredSizeOfBitset)
                         continue;
                         
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
 
                 }
@@ -312,6 +234,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             int results;
             do
@@ -324,68 +249,21 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
-
-                    // If we get a null, we just skip it. It will not match.
-
-                    if (type == IndexEntryFieldType.Null)
+                    bool isNotMatch = false;
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    while (reader.MoveNext())
                     {
-                        if (match._operation != UnaryMatchOperation.NotEquals)
-                        {
-                            // Found a null, item is not elegible.
+                        if(reader.TermMetadata != fieldRoot)
                             continue;
+                        
+                        if (comparer.Compare(currentType, reader.Current.Decoded()) == false)
+                        {
+                            isNotMatch = true;
+                            break;
                         }
                     }
-                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                    {
-                        var iterator = reader.ReadMany();
-
-                        bool isNotMatch = false;
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull && match._operation != UnaryMatchOperation.NotEquals)
-                            {
-                                isNotMatch = true;
-                                break;
-                            }
-
-                            using (match._searcher.ApplyAnalyzer(match._field, iterator.Sequence, out var analyzedTerm))
-                            {
-                                if (comparer.Compare(currentType, analyzedTerm) == false)
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (isNotMatch)
-                            continue; // Has nulls or not a match, item is not elegible.
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                    {
-                        var read = reader.Read(out var readType, out var resultX);
-                        if (readType == IndexEntryFieldType.Null)
-                        {
-                            if (match._operation != UnaryMatchOperation.NotEquals)
-                                continue; // item is not elegible.
-                        }
-                        else
-                        {
-                            using (match._searcher.ApplyAnalyzer(match._field, resultX, out var analyzedTerm))
-                            {
-                                if (read == false || !comparer.Compare(currentType, analyzedTerm))
-                                    continue; // Cant read or no match, item is not elegible.
-                            }
-                        }
-                    }
-                    else continue;
-
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    if(isNotMatch) continue;
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -406,7 +284,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
 
+            Page lastPage = default;
             int results;
             do
             {
@@ -418,49 +298,23 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]);
-                    var fieldReader = reader.GetFieldReaderFor(match._field);
-                    var type = fieldReader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
-
-                    if (type == IndexEntryFieldType.Null)
-                        continue; // It is null, item is not elegible.
-
-                    if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    
+                    var isNotMatch = false;
+                    while (reader.MoveNext())
                     {
-                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        if (reader.TermId == -1) // TODO: this is wrong, need to figure out what this looks like 
                         {
-                            var iterator = fieldReader.ReadMany();
-
-                            var isNotMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                // If there is any null, then it is NOT a match
-                                if (@iterator.IsNull)
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (isNotMatch)
-                                continue;
+                            isNotMatch = true;
+                            break;
                         }
                     }
-                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                    {
-                        if (type == IndexEntryFieldType.Null)
-                            continue;
-                    }
-                    else
-                    {
-                        // It is null
+                    if(isNotMatch)
                         continue;
-                    }
-
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -480,7 +334,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
 
+            Page lastPage = default;
             int results;
             do
             {
@@ -492,45 +348,23 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    bool isMatch = false;
+                    while (reader.MoveNext())
+                    {
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        if (reader.TermId != -1) // TODO: this is wrong, need to fix it
+                        {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+
+                    if (isMatch == false)
                         continue;
 
-                    if (type == IndexEntryFieldType.Null)
-                        continue; // It is null, item is not elegible.
-
-                    if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                    {
-                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
-                        {
-                            var iterator = reader.ReadMany();
-
-                            bool isMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                // If there is any non null, then it is a match
-                                if (!@iterator.IsNull)
-                                {
-                                    isMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (!isMatch)
-                                continue; // It is not a match, item is not elegible.
-                        }
-                        else
-                            continue; // It has not nulls, item is not elegible.
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                    {
-                        if (type == IndexEntryFieldType.Null)
-                            continue; // It is null, item is not elegible.
-                    }
-
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -551,6 +385,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             int results;
             do
@@ -563,49 +400,24 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
-
-                    // If it is not a null, then we need to check lots of things.
-                    if (type != IndexEntryFieldType.Null)
+                    
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    bool isMatch = true;
+                    while (reader.MoveNext())
                     {
-                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
-                            {
-                                var iterator = reader.ReadMany();
-                                var isNotMatch = false;
-                                while (iterator.ReadNext())
-                                {
-                                    if (!@iterator.IsNull)
-                                    {
-                                        isNotMatch = true;
-                                        break;
-                                    }
-                                }
-
-                                if (isNotMatch)
-                                    continue; // It has some non nulls. item is not elegible.
-                            }
-                            else
-                            {
-                                // Does not have nulls or it is an empty list... item is not elegible.
-                                continue;
-                            }
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            if (type != IndexEntryFieldType.Null)
-                                continue; // item is not elegible.
-                        }
-                        else
+                        if(reader.TermMetadata != fieldRoot)
                             continue;
+                        if (reader.TermId != -1) // TODO: this is wrong, need to fix it
+                        {
+                            isMatch = false;
+                            break;
+                        }
                     }
 
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    if (isMatch == false)
+                        continue;
+
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -625,6 +437,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             int results;
             do
@@ -637,47 +452,24 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
-                        continue;
-
-                    // If it is not a null, then we need to check lots of things.
-                    if (type != IndexEntryFieldType.Null)
+                      
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    bool isMatch = false;
+                    while (reader.MoveNext())
                     {
-                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
-                            {
-                                var iterator = reader.ReadMany();
-
-                                bool isMatch = false;
-                                while (iterator.ReadNext())
-                                {
-                                    if (iterator.IsNull)
-                                    {
-                                        isMatch = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!isMatch)
-                                    continue; // It is not a match, item is not elegible.
-                            }
-                            else
-                                continue; // It has not nulls, item is not elegible.
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            if (type != IndexEntryFieldType.Null)
-                                continue; // It has not nulls, item is not elegible.
-                        }
-                        else
+                        if(reader.TermMetadata != fieldRoot)
                             continue;
+                        if (reader.TermId == -1) // TODO: this is wrong, need to fix it
+                        {
+                            isMatch = true;
+                            break;
+                        }
                     }
 
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    if (isMatch == false)
+                        continue;
+
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -695,6 +487,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             int storeIdx = 0;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+
+            Page lastPage = default;
 
             int results;
             do
@@ -706,106 +501,42 @@ namespace Corax.Queries
 
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    bool isMatch = false;
+                    while (reader.MoveNext())
+                    {
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        if(reader.HasNumeric == false)
+                            continue;
+                        if (TypesHelper.IsInteger<TValueType>())
+                        {
+                            long currentType = CoherseValueTypeToLong(match._value);
+                            if (comparer.Compare(currentType, reader.CurrentLong))
+                            {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        else if (TypesHelper.IsFloatingPoint<TValueType>())
+                        {
+                            double currentType = CoherseValueTypeToDouble(match._value);
+                            if (comparer.Compare(currentType, reader.CurrentDouble))
+                            {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only double and float are supported.");
+                        }
+                    }
+                    if(isMatch ==false)
                         continue;
-
-                    if (TypesHelper.IsInteger<TValueType>())
-                    {
-                        long currentType = CoherseValueTypeToLong(match._value);
-                        if (type == IndexEntryFieldType.Null)
-                        {
-                            if (match._operation != UnaryMatchOperation.NotEquals)
-                            {
-                                // Found a null, item is not elegible.
-                                continue;
-                            }
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            var iterator = reader.ReadMany();
-
-                            bool isMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                if (iterator.IsNull && match._operation != UnaryMatchOperation.NotEquals)
-                                    continue; // Item is null, we will try the next.
-
-                                if (comparer.Compare(currentType, iterator.Long))
-                                {
-                                    isMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (!isMatch)
-                                continue; // Not a match, item is not elegible.
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            var read = reader.Read<long>(out var readType, out var resultX);
-                            if (!read)
-                                continue; // Not a match, item is not elegible.
-
-                            if (readType == IndexEntryFieldType.Null && match._operation != UnaryMatchOperation.NotEquals)
-                                continue; // Not a match, item is not elegible
-
-                            if (!comparer.Compare(currentType, resultX))
-                                continue;
-                        }
-                    }
-                    else if (TypesHelper.IsFloatingPoint<TValueType>())
-                    {
-                        double currentType = CoherseValueTypeToDouble(match._value);
-
-                        if (type == IndexEntryFieldType.Null)
-                        {
-                            if (match._operation != UnaryMatchOperation.NotEquals)
-                            {
-                                // Found a null, item is not elegible.
-                                continue;
-                            }
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            var iterator = reader.ReadMany();
-
-                            bool isMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                if (iterator.IsNull && match._operation != UnaryMatchOperation.NotEquals)
-                                    continue; // Item is null, we will try the next.
-
-                                if (comparer.Compare(currentType, iterator.Double))
-                                {
-                                    isMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (!isMatch)
-                                continue; // Not a match, item is not elegible.
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            var read = reader.Read<double>(out var readType, out var resultX);
-                            if (!read)
-                                continue; // Not a match, item is not elegible.
-
-                            if (readType == IndexEntryFieldType.Null && match._operation != UnaryMatchOperation.NotEquals)
-                                continue; // Not a match, item is not elegible.
-
-                            if (!comparer.Compare(currentType, resultX))
-                                continue;
-                        }
-                    }
-                    else
-                        throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only double and float are supported.");
-
+                    
                     // We found a match.
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
@@ -823,7 +554,9 @@ namespace Corax.Queries
             int totalResults = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             int storeIdx = 0;
+            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
 
+            Page lastPage = default;
             int results;
             do
             {
@@ -831,104 +564,45 @@ namespace Corax.Queries
                 results = match._inner.Fill(freeMemory);
                 if (results == 0)
                     return totalResults;
-
+                
                 for (int i = 0; i < results; i++)
                 {
-                    var reader = searcher.GetEntryReaderFor(freeMemory[i]).GetFieldReaderFor(match._field);
-                    var type = reader.Type;
-                    if (type == IndexEntryFieldType.Invalid)
+                    var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
+                    bool isMatch = true;
+                    while (reader.MoveNext())
+                    {
+                        if(reader.TermMetadata != fieldRoot)
+                            continue;
+                        if(reader.HasNumeric == false)
+                            continue;
+                        if (TypesHelper.IsInteger<TValueType>())
+                        {
+                            long currentType = CoherseValueTypeToLong(match._value);
+                            if (comparer.Compare(currentType, reader.CurrentLong) == false)
+                            {
+                                isMatch = false;
+                                break;
+                            }
+                        }
+                        else if (TypesHelper.IsFloatingPoint<TValueType>())
+                        {
+                            double currentType = CoherseValueTypeToDouble(match._value);
+                            if (comparer.Compare(currentType, reader.CurrentDouble) == false)
+                            {
+                                isMatch = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only double and float are supported.");
+                        }
+                    }
+                    if(isMatch ==false)
                         continue;
-
-                    if (type == IndexEntryFieldType.Null)
-                    {
-                        if (match._operation != UnaryMatchOperation.NotEquals)
-                        {
-                            // Found a null, item is not elegible.
-                            continue;
-                        }
-                    }
-                    else if (TypesHelper.IsInteger<TValueType>())
-                    {
-                        long currentType = CoherseValueTypeToLong(match._value);
-                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            var iterator = reader.ReadMany();
-
-                            bool isNotMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                if (iterator.IsNull)
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-
-                                if (!comparer.Compare(currentType, iterator.Long))
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (isNotMatch)
-                                continue; // It is not a match, item is not elegible.
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            var read = reader.Read<long>(out var readType, out var resultX);
-                            if (!read || readType == IndexEntryFieldType.Null)
-                                continue; // It is null, item is not elegible.
-                            // 
-                            if (!comparer.Compare(currentType, resultX))
-                                continue; // It is null or not a match, item is not elegible.   
-                        }
-                        else
-                            continue;
-                    }
-                    else if (TypesHelper.IsFloatingPoint<TValueType>())
-                    {
-                        double currentType = CoherseValueTypeToDouble(match._value);
-                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                        {
-                            var iterator = reader.ReadMany();
-
-                            bool isNotMatch = false;
-                            while (iterator.ReadNext())
-                            {
-                                if (iterator.IsNull)
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-
-                                if (!comparer.Compare(currentType, iterator.Double))
-                                {
-                                    isNotMatch = true;
-                                    break;
-                                }
-                            }
-
-                            if (isNotMatch)
-                                continue; // It is not a match, item is not elegible.
-                        }
-                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
-                        {
-                            var read = reader.Read<double>(out var readType, out var resultX);
-                            if (!read || readType == IndexEntryFieldType.Null)
-                                continue; // It is null, item is not elegible.
-                            // 
-                            if (!comparer.Compare(currentType, resultX))
-                                continue; // It is null or not a match, item is not elegible.   
-                        }
-                        else
-                            continue;
-                    }
-                    else
-                        throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only double and float are supported.");
-
+                    
                     // We found a match.
-                    currentMatches[storeIdx] = freeMemory[i];
-                    storeIdx++;
+                    currentMatches[storeIdx++] = freeMemory[i];
                     totalResults++;
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);

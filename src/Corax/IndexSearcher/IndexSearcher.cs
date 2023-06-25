@@ -14,9 +14,12 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using InvalidOperationException = System.InvalidOperationException;
@@ -54,14 +57,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly bool _ownsTransaction;
     private readonly bool _ownsIndexMapping;
 
-    private readonly Tree _metadataTree;
-    private readonly Tree _fieldsTree;
-    private readonly Tree _entriesToTermsTree;
+    private Tree _metadataTree;
+    private Tree _fieldsTree;
+    private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
-    private readonly Lookup<Int64LookupKey> _entryIdToOffset;
+    private Lookup<Int64LookupKey> _entryIdToOffset;
+    private long _dictionarId;
+    private Lookup<Int64LookupKey> _entryIdToLocation;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
+    
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -69,20 +75,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
-        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        Init();
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
+        Init();
+    }
+
+    private void Init()
+    {
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
         _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        //TODO: Temporary workaround until we are done with single dic
+        _dictionarId = PersistentDictionary.GetDictionaryId(_transaction.LowLevelTransaction);
     }
 
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
@@ -106,6 +117,15 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
         return data.ToUnmanagedSpan();
     }
+    
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+    {
+        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, item.Address, item.Length, _dictionarId);
+    }
+
 
     public IndexEntryReader GetEntryReaderFor(long id)
     {
@@ -429,4 +449,15 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
+    
+    public long GetLookupRootPage(Slice name)
+    {
+        var result = _fieldsTree?.Read(name);
+        if (result == null)
+            return -1;
+        var header = (LookupState*)result.Reader.Base;
+        if (header->RootObjectType != RootObjectType.Lookup)
+            return -1;
+        return header->RootPage;
+    }
 }

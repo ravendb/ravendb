@@ -52,6 +52,21 @@ namespace Voron.Data.CompactTrees
         
         private readonly HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>> _encoder;
 
+        public static long GetDictionaryId(LowLevelTransaction llt)
+        {
+            using var _ = Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
+
+            long pageNumber = -1;
+
+            var result = llt.RootObjects.DirectRead(defaultKey);
+            if (result != null)
+            {
+                pageNumber = ((PersistentDictionaryRootHeader*)result)->PageNumber;
+            }
+
+            return pageNumber; 
+        }
+
         public static long CreateDefault(LowLevelTransaction llt)
         {
             using var _ = Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
