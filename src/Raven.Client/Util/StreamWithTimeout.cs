@@ -7,8 +7,8 @@ namespace Raven.Client.Util
 {
     internal class StreamWithTimeout : Stream, IAsyncDisposable
     {
-        private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
-        private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
+        internal static TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
+        internal static  TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
 
         private readonly Stream _stream;
         private int _writeTimeout;
