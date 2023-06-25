@@ -19,7 +19,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
     {
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled RavenDB-20761 ")]
     public void CanUpdateAndNotDelete()
     {
         using var fields = CreateKnownFields(Allocator);

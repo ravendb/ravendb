@@ -530,7 +530,7 @@ namespace Corax
                 {
                     var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
 
-                    var indexedField = GetDynamicIndexedField(context, ref it);
+                    var indexedField = GetDynamicIndexedField(context, it.CurrentFieldName);
 
                     if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
                         continue;
@@ -590,16 +590,16 @@ namespace Corax
             if (TryGetEntryTermId(field, key, out var idInTree))
             {
                 RecordDeletion(idInTree);
-                return IndexEntry(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree),data);
+                //return IndexEntry(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree),data);
             }
 
             return Index(data);
         }
         
-        private IndexedField GetDynamicIndexedField(ByteStringContext context, ref IndexEntryReader.DynamicFieldEnumerator it)
+        private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName)
         {
-            _dynamicFieldsTerms ??= new(SliceComparer.Instance);
-            using var _ = Slice.From(context, it.CurrentFieldName, out var slice);
+           _dynamicFieldsTerms ??= new(SliceComparer.Instance);
+           using var _ = Slice.From(context, currentFieldName, out var slice);
 
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
@@ -1019,7 +1019,7 @@ namespace Corax
             }
         }
 
-        private static unsafe void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
+        private unsafe void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
             long entryToDelete)
         {
             var cur = entryTerms.Address;
@@ -1044,6 +1044,10 @@ namespace Corax
 
                 var ptr = compactKey.DecodedPtr(out var len);
                 var scope = Slice.From(llt.Allocator, ptr, len, out Slice termSlice);
+                
+                if(field.HasSuggestions)
+                    RemoveSuggestions(field, new ReadOnlySpan<byte>(ptr, len));
+                
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
@@ -1102,9 +1106,17 @@ namespace Corax
                     if (state->RootObjectType == RootObjectType.Lookup)
                     {
                         var found = _fieldsMapping.TryGetByFieldName(it.CurrentKey, out var field);
-                        // can happen because of -D, -L postfix, for example
-                        if(found == false) continue;
-                        pageToField.Add(state->RootPage, _knownFieldsTerms[field.FieldId]);
+                        if (found == false)
+                        {
+                            if(it.CurrentKey.EndsWith("-D"u8) || it.CurrentKey.EndsWith("-L"u8))
+                                continue; // numeric postfix values
+                            var dynamicIndexedField = GetDynamicIndexedField(Transaction.Allocator, it.CurrentKey.AsSpan());
+                            pageToField.Add(state->RootPage, dynamicIndexedField);
+                        }
+                        else
+                        {
+                            pageToField.Add(state->RootPage, _knownFieldsTerms[field.FieldId]);
+                        }
                     }
                 } while (it.MoveNext());
             }
