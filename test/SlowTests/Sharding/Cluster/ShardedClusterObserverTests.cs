@@ -289,7 +289,8 @@ namespace SlowTests.Sharding.Cluster
                 {
                     { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0" },
                 }));
-                
+
+                var exception = "";
                 //check history logs for thrown error
                 var errored = await WaitForValueAsync(() =>
                 {
@@ -301,16 +302,17 @@ namespace SlowTests.Sharding.Cluster
                             var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
                             if (type == "SetIndexStateCommand")
                             {
-                                return (entry[nameof(RachisLogHistory.LogHistoryColumn.ExceptionMessage)]?.ToString())?.Contains(
-                                        "Could not execute update command of type 'SetIndexStateCommand'") == true;
+                                exception = (entry[nameof(RachisLogHistory.LogHistoryColumn.ExceptionMessage)]?.ToString());
+                                return exception?.Contains("Could not execute update command of type 'SetIndexStateCommand'") == true;
                             }
                         }
                     }
-                    
+
+                    exception = "SetIndexStateCommand wasn't found in logs";
                     return true;
                 }, false);
-
-                Assert.False(errored);
+                
+                Assert.False(errored, exception);
             }
         }
 
