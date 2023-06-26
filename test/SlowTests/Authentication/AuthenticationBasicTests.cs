@@ -75,8 +75,9 @@ namespace SlowTests.Authentication
             return clientCertificate;
         }
 
-        [Fact]
-        public void CanGetDocWithValidPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetDocWithValidPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -86,12 +87,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 StoreSampleDoc(store, "test/1");
 
@@ -103,8 +103,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CanGetAttachmentWithValidPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanGetAttachmentWithValidPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -114,12 +115,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Read
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 store.Operations.Send(new GetAttachmentOperation("test/1", "file.jpg", AttachmentType.Revision, "123"));
                 store.Operations.Send(new GetAttachmentsOperation(new List<AttachmentRequest> { new("test/1", "file.jpg") }, AttachmentType.Document));
@@ -160,28 +160,29 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CanReachOperatorEndpointWithOperatorPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanReachOperatorEndpointWithOperatorPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
             }
         }
 
-        [Fact]
-        public void CannotReachOperatorEndpointWithoutOperatorPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotReachOperatorEndpointWithoutOperatorPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -191,12 +192,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 Assert.Throws<AuthorizationException>(() =>
@@ -206,8 +206,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -217,12 +218,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Admin
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
@@ -239,8 +239,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -250,12 +251,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
@@ -325,8 +325,9 @@ namespace SlowTests.Authentication
             });
         }
 
-        [Fact]
-        public void CannotGetDocWithInvalidPermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotGetDocWithInvalidPermission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -337,12 +338,11 @@ namespace SlowTests.Authentication
                 [otherDbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 Assert.Throws<AuthorizationException>(() =>
                 {
@@ -379,8 +379,9 @@ namespace SlowTests.Authentication
             Assert.IsType<ArgumentException>(e.InnerException);
         }
 
-        [Fact]
-        public void CannotGetDocWithExpiredCertificate()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotGetDocWithExpiredCertificate(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -390,12 +391,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 Assert.Throws<AuthorizationException>(() =>
                 {
@@ -593,8 +593,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CanGetDocWith_Read_Permission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetDocWith_Read_Permission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -604,24 +605,24 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Read
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                DeleteDatabaseOnDispose = false
-            }))
+            var clone = options.Clone();
+            clone.AdminCertificate = adminCert;
+            clone.ClientCertificate = adminCert;
+            clone.ModifyDatabaseName = _ => dbName;
+            clone.DeleteDatabaseOnDispose = false;
+
+            using (var store = GetDocumentStore(clone))
             {
                 StoreSampleDoc(store, "test/1");
             }
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName,
-                CreateDatabase = false
-            }))
+            clone = options.Clone();
+            clone.AdminCertificate = adminCert;
+            clone.ClientCertificate = userCert;
+            clone.ModifyDatabaseName = _ => dbName;
+            clone.CreateDatabase = false;
+
+            using (var store = GetDocumentStore(clone))
             {
                 using (var session = store.OpenSession())
                 {
@@ -639,8 +640,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CannotPutDocWith_Read_Permission_MultiGet()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotPutDocWith_Read_Permission_MultiGet(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -650,12 +652,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Read
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var commands = store.Commands())
                 {
@@ -684,8 +685,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void CannotPutDocWith_Read_Permission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotPutDocWith_Read_Permission(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -695,13 +697,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Read
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName,
-                DeleteDatabaseOnDispose = false
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 Assert.Throws<AuthorizationException>(() => StoreSampleDoc(store, "test/1"));
             }
