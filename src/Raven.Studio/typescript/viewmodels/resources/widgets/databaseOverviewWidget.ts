@@ -9,10 +9,19 @@ import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 import databaseOverviewItem = require("models/resources/widgets/databaseOverviewItem");
 import DatabaseUtils from "components/utils/DatabaseUtils";
 
+interface StatusSummary {
+    total: number;
+    online: number;
+    offline: number;
+    disabled: number;
+}
+
 class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseOverviewPayload,
     perNodeStatItems<databaseOverviewItem>, databaseOverviewItem> {
 
     view = require("views/resources/widgets/databaseOverviewWidget.html");
+
+    statusSummary = ko.observable<StatusSummary>();
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseOverview";
@@ -25,6 +34,38 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
             const stats = new perNodeStatItems<databaseOverviewItem>(node.tag());
             this.nodeStats.push(stats);
         }
+    }
+
+    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseOverviewPayload) {
+        super.onData(nodeTag, data);
+        this.setStatusSummary(data.Items);
+    }
+
+    private setStatusSummary(items: Raven.Server.Dashboard.DatabaseInfoItem[]) {
+        const summary: StatusSummary = {
+            total: 0,
+            online: 0,
+            offline: 0,
+            disabled: 0,
+        };
+
+        for (const item of items) {
+            summary.total++;
+            
+            if (item.Disabled) {
+                summary.disabled++;
+                continue;
+            }
+            
+            if (item.Online) {
+                summary.online++;
+                continue;
+            }
+            
+            summary.offline++;
+        }
+
+        this.statusSummary(summary);
     }
 
     protected createNoDataItem(nodeTag: string, databaseName: string): databaseOverviewItem {
