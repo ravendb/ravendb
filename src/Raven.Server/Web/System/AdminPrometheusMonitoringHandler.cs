@@ -60,30 +60,30 @@ namespace Raven.Server.Web.System
 
             var databases = GetDatabases();
 
-            var responseStream = ResponseBodyStream();
+            await using var responseStream = ResponseBodyStream();
             
             if (skipServer == false)
             {
-                await WriteServerMetrics(provider, responseStream);
+                await WriteServerMetricsAsync(provider, responseStream);
             }
 
             if (skipDatabases == false)
             {
-                await WriteDatabaseMetrics(provider, databases, responseStream);
+                await WriteDatabaseMetricsAsync(provider, databases, responseStream);
             }
 
             if (skipIndexes == false)
             {
-                await WriteIndexMetrics(provider, databases, responseStream);
+                await WriteIndexMetricsAsync(provider, databases, responseStream);
             }
 
             if (skipCollections == false)
             {
-                await WriteCollectionMetrics(databases, responseStream);
+                await WriteCollectionMetricsAsync(databases, responseStream);
             }
         }
 
-        private async Task WriteServerMetrics(MetricsProvider provider, Stream responseStream)
+        private async Task WriteServerMetricsAsync(MetricsProvider provider, Stream responseStream)
         {
             var serverMetrics = provider.CollectServerMetrics();
 
@@ -193,7 +193,7 @@ namespace Raven.Server.Web.System
             return new Size(input.Value, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
         }
 
-        private async Task WriteDatabaseMetrics(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        private async Task WriteDatabaseMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = databases.Select(provider.CollectDatabaseMetrics).ToList();
 
@@ -278,7 +278,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WriteIndexMetrics(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        private async Task WriteIndexMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = new List<IndexMetrics>();
             var cachedTags = new List<string>();
@@ -320,7 +320,7 @@ namespace Raven.Server.Web.System
             }
         }
         
-        private async Task WriteCollectionMetrics(List<DocumentDatabase> databases, Stream responseStream)
+        private async Task WriteCollectionMetricsAsync(List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = new List<CollectionMetrics>();
             var cachedTags = new List<string>();
