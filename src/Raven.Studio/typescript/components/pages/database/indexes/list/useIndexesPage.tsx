@@ -50,9 +50,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi } = useChanges();
 
-    const [resetIndexConfirm, setResetIndexConfirm] = useState<{
-        index: IndexSharedInfo;
-    }>();
+    const [resetIndexName, setResetIndexName] = useState<string>(null);
 
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
 
@@ -454,32 +452,24 @@ export function useIndexesPage(database: database, stale: boolean) {
             });
     };
 
-    const resetIndex = async (index: IndexSharedInfo) => {
-        setResetIndexConfirm({
-            index,
-        });
-    };
-
-    const onResetIndexConfirm = async (index: IndexSharedInfo) => {
+    const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("indexes", "reset");
-
         setResettingIndex(true);
 
         try {
-            const locations = database.getLocations();
+            for (const { nodeTag, shardNumbers } of contexts) {
+                const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-            while (locations.length) {
-                const location = locations.pop();
-
-                dispatch({
-                    type: "ResetIndex",
-                    indexName: index.name,
-                    location,
-                });
-                await indexesService.resetIndex(index, database, location);
+                for (const location of locations) {
+                    dispatch({
+                        type: "ResetIndex",
+                        indexName: resetIndexName,
+                        location,
+                    });
+                    await indexesService.resetIndex(resetIndexName, database, location);
+                }
             }
-
-            messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
+            messagePublisher.reportSuccess("Index " + resetIndexName + " restarted successfully.");
         } finally {
             // wait a bit and trigger refresh
             await delay(1_000);
@@ -563,10 +553,6 @@ export function useIndexesPage(database: database, stale: boolean) {
         loading,
         bulkOperationConfirm,
         setBulkOperationConfirm,
-        resetIndexConfirm,
-        setResetIndexConfirm,
-        resetIndex,
-        onResetIndexConfirm,
         stats,
         selectedIndexes,
         toggleSelectAll,
@@ -586,6 +572,11 @@ export function useIndexesPage(database: database, stale: boolean) {
         pauseIndexes,
         setIndexLockMode,
         toggleSelection,
+        resetIndexData: {
+            indexName: resetIndexName,
+            setIndexName: setResetIndexName,
+            onConfirm: onResetIndexConfirm,
+        },
         swapSideBySideData: {
             indexName: swapSideBySideConfirmIndexName,
             setIndexName: setSwapSideBySideConfirmIndexName,
