@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
@@ -294,19 +295,15 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </summary>
         /// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
         /// </param>
-        protected override PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
+        protected override PriorityQueue<object[]> CreateQueue(Dictionary<string, int> words)
         {
             // have collected all words in doc and their freqs
             var numDocs = _ir.NumDocs();
             var res = new FreqQ(words.Count); // will order words by score
 
-            var it = words.Keys.GetEnumerator();
-            while (it.MoveNext())
+            foreach(var (word, tf) in words)
             {
                 // for every word
-                var word = it.Current;
-
-                var tf = words[word].X; // term freq in the source doc
                 if (_minTermFreq > 0 && tf < _minTermFreq)
                 {
                     continue; // filter out words that don't occur enough times in the source
@@ -353,7 +350,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </param>
         protected virtual PriorityQueue<object[]> RetrieveTerms(int docNum)
         {
-            IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
+            Dictionary<string, int> termFreqMap = new();
             for (var i = 0; i < _fieldNames.Length; i++)
             {
                 var fieldName = _fieldNames[i];
@@ -386,7 +383,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </param>
         /// <param name="vector">List of terms and their frequencies for a doc/field
         /// </param>
-        protected void AddTermFrequencies(IDictionary<string, Int> termFreqMap, ITermFreqVector vector)
+        protected void AddTermFrequencies(Dictionary<string, int> termFreqMap, ITermFreqVector vector)
         {
             var terms = vector.GetTerms();
             var freqs = vector.GetTermFrequencies();
@@ -399,17 +396,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                     continue;
                 }
                 // increment frequency
-                var cnt = termFreqMap[term];
-                if (cnt == null)
-                {
-                    cnt = new Int();
-                    termFreqMap[term] = cnt;
-                    cnt.X = freqs[j];
-                }
-                else
-                {
-                    cnt.X += freqs[j];
-                }
+                ref var cnt = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, term, out _);
+                cnt += freqs[j];
             }
         }
         
@@ -420,7 +408,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </param>
         /// <param name="fieldName">Used by analyzer for any special per-field analysis
         /// </param>
-        protected override void AddTermFrequencies(TextReader r, IDictionary<string, Int> termFreqMap, string fieldName)
+        protected override void AddTermFrequencies(TextReader r, Dictionary<string, int> termFreqMap, string fieldName)
         {
             var ts = _analyzer.TokenStream(fieldName, r);
             var tokenCount = 0;
@@ -440,16 +428,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                     continue;
                 }
 
-                // increment frequency
-                var cnt = termFreqMap[word];
-                if (cnt == null)
-                {
-                    termFreqMap[word] = new Int();
-                }
-                else
-                {
-                    cnt.X++;
-                }
+                ref var cnt = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, word, out _);
+                cnt++;
             }
         }
         
@@ -479,7 +459,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         public PriorityQueue<object[]> RetrieveTerms(TextReader r)
         {
-            IDictionary<string, Int> words = new HashMap<string, Int>();
+            Dictionary<string, int> words = new();
             for (var i = 0; i < _fieldNames.Length; i++)
             {
                 var fieldName = _fieldNames[i];

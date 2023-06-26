@@ -169,18 +169,9 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         public const int DEFAULT_MAX_WORD_LENGTH = 0;
 
-        /// <summary> Default set of stopwords.
-        /// If null means to allow stop words.
-        /// 
-        /// </summary>
-        /// <seealso cref="SetStopWords">
-        /// </seealso>
-        /// <seealso cref="GetStopWords">
-        /// </seealso>
-        public static readonly ISet<string> DEFAULT_STOP_WORDS = null;
 
         /// <summary> Current set of stop words.</summary>
-        protected ISet<string> _stopWords = DEFAULT_STOP_WORDS;
+        protected HashSet<string> _stopWords = null;
 
         /// <summary> Return a Query with no more than this many terms.
         /// 
@@ -335,7 +326,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         /// <seealso cref="GetStopWords">
         /// </seealso>
-        public void SetStopWords(ISet<string> stopWords)
+        public void SetStopWords(HashSet<string> stopWords)
         {
             _stopWords = stopWords;
         }
@@ -422,7 +413,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </summary>
         /// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
         /// </param>
-        protected abstract PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words);
+        protected abstract PriorityQueue<object[]> CreateQueue(Dictionary<string, int> words);
 
         protected static bool HasFlagWithBitPacking(BlittableJsonToken token)
         {
@@ -437,13 +428,13 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
         internal PriorityQueue<object[]> RetrieveTerms(BlittableJsonReaderObject json)
         {
-            IDictionary<string, Int> words = new HashMap<string, Int>();
+            Dictionary<string, int> words = new();
             RetrieveTerms(json, words);
 
             return CreateQueue(words);
         }
 
-        protected void RetrieveTerms(BlittableJsonReaderObject json, IDictionary<string, Int> words)
+        protected void RetrieveTerms(BlittableJsonReaderObject json, Dictionary<string, int> words)
         {
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -457,10 +448,10 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
         public abstract void SetMaxDocFreqPct(int maxPercentage);
 
-        protected abstract void AddTermFrequencies(TextReader r, IDictionary<string, Int> termFreqMap, string fieldName);
+        protected abstract void AddTermFrequencies(TextReader r, Dictionary<string, int> termFreqMap, string fieldName);
 
 
-        protected void ProcessTerms(BlittableJsonToken token, LazyStringValue name, object value, IDictionary<string, Int> words)
+        protected void ProcessTerms(BlittableJsonToken token, LazyStringValue name, object value, Dictionary<string, int> words)
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
             {
@@ -515,17 +506,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                 var fa = (float)aa[2];
                 var fb = (float)bb[2];
                 return (float)fa > (float)fb;
-            }
-        }
-
-        /// <summary> Use for frequencies and to avoid renewing Integers.</summary>
-        protected class Int
-        {
-            internal int X;
-
-            internal Int()
-            {
-                X = 1;
             }
         }
     }

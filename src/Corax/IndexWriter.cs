@@ -1331,7 +1331,7 @@ namespace Corax
                     continue;
 
                 newAdditions.InitCopyFrom(entries.Additions);
-                
+
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
                     SetRange(_additionsForTerm, entries.Additions);
@@ -1397,8 +1397,19 @@ namespace Corax
                         entryTerms = new NativeList<RecordedTerm>(Transaction.Allocator);
                     }
 
-                    var recordedTerm = new RecordedTerm { TermContainerId = termContainerId };
-                    Debug.Assert((termContainerId & 1) != 1);
+                    
+                    Debug.Assert((termContainerId & 7) == 0); // ensure that the three bottom bits are cleared
+                    var recordedTerm = new RecordedTerm
+                    {
+                        TermContainerId = entries.AdditionsFrequency[i] switch
+                        {
+                            > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
+                                   EntryIdEncodings.FrequencyQuantization(entries.AdditionsFrequency[i]) << 3 |
+                                   4, // marker indicating that we have a term frequency here
+                            _ => termContainerId
+                        }
+                    };
+
                     if (entries.Long != null)
                     {
                         recordedTerm.TermContainerId |= 1; // marker!
@@ -1426,7 +1437,6 @@ namespace Corax
             newAdditions.Dispose();
             
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
-
         }
 
         private void SetRange(List<long> list, ReadOnlySpan<long> span)

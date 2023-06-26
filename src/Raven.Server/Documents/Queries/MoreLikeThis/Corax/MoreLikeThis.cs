@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using Corax.Mappings;
@@ -52,16 +53,14 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         _analyzersScope = new(builderParameters.IndexSearcher, builderParameters.IndexFieldsMapping, builderParameters.HasDynamics);
     }
 
-    protected override PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
+    protected override PriorityQueue<object[]> CreateQueue(Dictionary<string, int> words)
     {
         var indexSearcher = _builderParameters.IndexSearcher;
         var amountOfDocs = indexSearcher.NumberOfEntries;
         var res = new FreqQ(words.Count);
 
-        foreach (var (word, value) in words.GetEnumerator())
+        foreach (var (word, tf) in words.GetEnumerator())
         {
-            var tf = value.X;
-
             if (_minTermFreq > 0 && tf < _minTermFreq)
             {
                 continue;
@@ -106,7 +105,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
     //https://en.wikipedia.org/wiki/Tf%E2%80%93idf#Inverse_document_frequency_2
     private float Idf(long docFreq, long totalAmountOfDocs) => (float)totalAmountOfDocs / docFreq;
 
-    protected override void AddTermFrequencies(TextReader r, IDictionary<string, Int> termFreqMap, string fieldName)
+    protected override void AddTermFrequencies(TextReader r, Dictionary<string, int> termFreqMap, string fieldName)
     {
         //We dont have any streaming option for analyzing in Corax so we've to read all
         var termOriginal = Encoding.UTF8.GetBytes(r.ReadToEnd());
@@ -131,15 +130,8 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             }
 
             // increment frequency
-            var cnt = termFreqMap[word];
-            if (cnt == null)
-            {
-                termFreqMap[word] = new Int();
-            }
-            else
-            {
-                cnt.X++;
-            }
+            ref var tf = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, word, out var _);
+            tf++;
         }
     }
     
@@ -207,7 +199,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
     protected PriorityQueue<object[]> RetrieveTerms(long documentId)
     {
         var indexSearcher = _builderParameters.IndexSearcher;
-        IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
+        Dictionary<string, int> termFreqMap = new();
         Page p = default;
         var indexEntry = indexSearcher.GetEntryTermsReader(documentId, ref p);
 
@@ -218,24 +210,21 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             if(fields.Contains(indexEntry.TermMetadata) == false)
                 continue;
             
-            InsertTerm(indexEntry.Current.Decoded());
+            InsertTerm(indexEntry.Current.Decoded(), indexEntry.Frequency);
 
         }
         
         return CreateQueue(termFreqMap);
         
         
-        void InsertTerm(ReadOnlySpan<byte> term)
+        void InsertTerm(ReadOnlySpan<byte> term, int freq)
         {
             var termAsString = Encoding.UTF8.GetString(term);
             if (IsNoiseWord(termAsString)) // TODO optimize
                 return;
 
-            var counter = termFreqMap[termAsString];
-            if (counter is null)
-                termFreqMap[termAsString] = new();
-            else
-                counter.X++;
+            ref var counter = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, termAsString, out _);
+            counter += freq;
         }
     }
 

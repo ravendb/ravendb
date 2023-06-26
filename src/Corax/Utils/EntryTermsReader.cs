@@ -23,6 +23,7 @@ public unsafe struct EntryTermsReader
     public double CurrentDouble;
     public long TermMetadata;
     public long TermId;
+    public int Frequency;
 
     public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
     {
@@ -44,11 +45,24 @@ public unsafe struct EntryTermsReader
         var termContainerId = VariableSizeEncoding.Read<long>(cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         cur += offset;
-        TermId = termContainerId ^ 3; // clear the marker bits
+       
+        var hasFreq = (termContainerId & 4) != 0;
+        if (hasFreq == false)
+        {
+            Frequency = 1;
+            TermId = termContainerId ^ 7; // clear the marker bits
+        }
+        else
+        {
+            Frequency = (byte)(termContainerId >> 3);
+            TermId = (termContainerId >> 8) ^ 7;
+        }
+        
         var termItem = Container.Get(_llt, TermId);
         TermMetadata = termItem.PageLevelMetadata;
         TermsReader.Set(Current, termItem, _dicId);
 
+        
         HasNumeric = (termContainerId & 1) != 0;
         if (HasNumeric)
         {
