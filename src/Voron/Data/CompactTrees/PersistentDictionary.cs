@@ -16,7 +16,7 @@ using static Sparrow.Hashing;
 namespace Voron.Data.CompactTrees
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct PersistentDictionaryRootHeader
+    public struct PersistentDictionaryRootHeader
     {
         [FieldOffset(0)]
         public RootObjectType RootObjectType;
@@ -26,7 +26,7 @@ namespace Voron.Data.CompactTrees
     }
     
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct PersistentDictionaryHeader
+    public struct PersistentDictionaryHeader
     {
         public const int SizeOf = 32;
 
@@ -47,6 +47,8 @@ namespace Voron.Data.CompactTrees
 
     public unsafe partial class PersistentDictionary
     {
+        public const int MaxDictionaryEntriesForTraining = 8000;
+
         public const string DictionaryKey = $"{nameof(PersistentDictionary)}.Current";
         public readonly long DictionaryId;
         
@@ -130,9 +132,9 @@ namespace Voron.Data.CompactTrees
             where TKeys1 : struct, IReadOnlySpanEnumerator
             where TKeys2 : struct, IReadOnlySpanEnumerator
         {
-            var encoderState = new AdaptiveMemoryEncoderState(DefaultDictionaryTableSize);
+            var encoderState = new AdaptiveMemoryEncoderState();
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
-            encoder.Train(trainEnumerator, MaxDictionaryEntries);                
+            encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);                
             
             // Test the new dictionary to ensure that we have statistically better compression.
             using var encodeBufferScope = llt.Allocator.Allocate(Constants.Storage.PageSize, out var encodeBuffer);

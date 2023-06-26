@@ -3,13 +3,13 @@ using System.Buffers;
 
 namespace Sparrow.Server.Compression
 {
-    public unsafe struct AdaptiveMemoryEncoderState : IEncoderState
+    public class AdaptiveMemoryEncoderState : IEncoderState
     {
         private byte[] _encodingBuffer;
         private byte[] _decodingBuffer;
         private int _size;
 
-        public AdaptiveMemoryEncoderState(int size)
+        public AdaptiveMemoryEncoderState(int size = 16)
         {
             _encodingBuffer = ArrayPool<byte>.Shared.Rent(size);
             _decodingBuffer = ArrayPool<byte>.Shared.Rent(size);
