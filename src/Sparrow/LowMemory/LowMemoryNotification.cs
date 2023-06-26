@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -46,8 +47,12 @@ namespace Sparrow.LowMemory
         private DateTime _lastLoggedLowMemory = DateTime.MinValue;
         private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(5);
 
+        private readonly TimeSpan _lohCompactionInterval = TimeSpan.FromMinutes(15);
+        private DateTime _lastLohCompactionRequest = DateTime.MinValue;
+
         private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity = LowMemorySeverity.ExtremelyLow)
         {
+
             try
             {
                 try
@@ -59,6 +64,11 @@ namespace Sparrow.LowMemory
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
+
+#if NET6_0_OR_GREATER
+                    if (SupportsCompactionOfLargeObjectHeap)
+                        RequestLohCompactionIfNeeded(memoryInfo, now);
+#endif
                 }
                 catch
                 {
@@ -111,6 +121,44 @@ namespace Sparrow.LowMemory
             }
         }
 
+#if NET6_0_OR_GREATER
+        internal bool SupportsCompactionOfLargeObjectHeap { get; set; }
+        
+        private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)
+        {
+            if (now - _lastLohCompactionRequest <= _lohCompactionInterval ||
+                GCSettings.LargeObjectHeapCompactionMode == GCLargeObjectHeapCompactionMode.CompactOnce)
+                return;
+            
+            var threshold = LargeObjectHeapCompactionThresholdPercentage;
+
+            var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
+
+            if (string.IsNullOrEmpty(envVariableThreshold) == false && float.TryParse(envVariableThreshold, out var parsedValue))
+                threshold = parsedValue;
+
+            if (threshold <= 0)
+                return;
+            
+            var info = GC.GetGCMemoryInfo(GCKind.Any);
+
+            if (info.Index == 0) // no GC was run
+                return;
+
+            var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
+
+            if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
+            {
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+
+                _lastLohCompactionRequest = now;
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
+            }
+        }
+#endif
+
         private void ClearInactiveHandlers()
         {
             var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
@@ -145,11 +193,14 @@ namespace Sparrow.LowMemory
 
         public float TemporaryDirtyMemoryAllowedPercentage { get; private set; }
 
+        public float LargeObjectHeapCompactionThresholdPercentage { get; private set; }
+
         public void Initialize(
-            Size lowMemoryThreshold, 
+            Size lowMemoryThreshold,
             bool useTotalDirtyMemInsteadOfMemUsage,
             bool enableHighTemporaryDirtyMemoryUse,
             float temporaryDirtyMemoryAllowedPercentage,
+            float largeObjectHeapCompactionThresholdPercentage,
             AbstractLowMemoryMonitor monitor,
             CancellationToken shutdownNotification)
         {
@@ -166,6 +217,7 @@ namespace Sparrow.LowMemory
                 ExtremelyLowMemoryThreshold = lowMemoryThreshold * 0.2;
                 UseTotalDirtyMemInsteadOfMemUsage = useTotalDirtyMemInsteadOfMemUsage;
                 TemporaryDirtyMemoryAllowedPercentage = temporaryDirtyMemoryAllowedPercentage;
+                LargeObjectHeapCompactionThresholdPercentage = largeObjectHeapCompactionThresholdPercentage;
                 _enableHighTemporaryDirtyMemoryUse = enableHighTemporaryDirtyMemoryUse;
 
                 _lowMemoryMonitor = monitor;
