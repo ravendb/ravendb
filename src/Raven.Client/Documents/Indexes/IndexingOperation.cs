@@ -41,6 +41,7 @@ namespace Raven.Client.Documents.Indexes
         {
             public const string Delete = "Corax/Delete";
             public const string Convert = "Corax/Convert";
+            public const string Prepare = "Corax/Prepare";
             public const string AddDocument = "Corax/AddDocument";
             public const string Commit = "Corax/Commit";
         }

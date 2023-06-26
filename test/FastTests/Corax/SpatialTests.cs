@@ -65,8 +65,8 @@ public class SpatialTests : StorageTest
             var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
             entry.WriteSpatial(CoordinatesIndex, spatialEntry);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
-            writer.Commit();
+            writer.Index(IdString,preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         for (int i = 0; i < geohash.Length; ++i)
@@ -91,8 +91,8 @@ public class SpatialTests : StorageTest
 
         using (var writer = new IndexWriter(Env, _fieldsMapping))
         {
-            writer.TryDeleteEntry("Id", IdString);
-            writer.Commit();
+            writer.TryDeleteEntry(IdString);
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, _fieldsMapping))

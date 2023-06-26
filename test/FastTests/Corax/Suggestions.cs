@@ -103,8 +103,8 @@ namespace FastTests.Corax
 
             {
                 using var indexWriter = new IndexWriter(Env, mapping);
-                indexWriter.TryDeleteEntry("Id", entry1.Id);
-                indexWriter.Commit();
+                indexWriter.TryDeleteEntry(entry1.Id);
+                indexWriter.PrepareAndCommit();
             }
 
             {
@@ -192,10 +192,10 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(data.ToSpan());
+                indexWriter.Index(entry.Id,data.ToSpan());
             }
 
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
 
         private class IndexEntryValues

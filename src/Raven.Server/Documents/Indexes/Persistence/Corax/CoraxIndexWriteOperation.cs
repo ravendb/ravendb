@@ -72,6 +72,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             if (_indexWriter != null)
             {
+                using (stats.For(IndexingOperation.Corax.Prepare))
+                {
+                    _indexWriter.Prepare();
+                }
                 using (stats.For(IndexingOperation.Corax.Commit))
                 {
                     _indexWriter.Commit();
@@ -79,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void UpdateDocument(string keyFieldName, 
+        public override void UpdateDocument( 
             LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
@@ -104,15 +108,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 if (data.Length == 0 || shouldSkip)
                 {
-                    DeleteByField(keyFieldName, key, stats);
+                    Delete(key, stats);
                     return;
                 }
 
                 if (documentBoost.HasValue)
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan(), documentBoost.Value);
+                    _indexWriter.Update(key.AsReadOnlySpan(), data.ToSpan(), documentBoost.Value);
                 else
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan());
-                
+                    _indexWriter.Update(key.AsReadOnlySpan(), data.ToSpan());
                 stats.RecordIndexingOutput();
             }
         }
@@ -139,9 +142,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 using (Stats.AddStats.Start())
                 {
                     if (documentBoost.HasValue)
-                        _indexWriter.Index(data.ToSpan(), documentBoost.Value);
+                        _indexWriter.Index(key.AsSpan(), data.ToSpan(), documentBoost.Value);
                     else
-                        _indexWriter.Index(data.ToSpan());
+                        _indexWriter.Index(key.AsSpan(), data.ToSpan());
                 }
 
                 stats.RecordIndexingOutput();
@@ -189,7 +192,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            DeleteByField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key, stats);
+            EnsureValidStats(stats);
+            
+            using (Stats.DeleteStats.Start())
+                _indexWriter.TryDeleteEntry(key.ToString(CultureInfo.InvariantCulture));
         }
         
         /// <summary>
@@ -200,15 +206,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             
             using (Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture));
+                _indexWriter.TryDeleteEntryByField(fieldName, key.ToString(CultureInfo.InvariantCulture));
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-            
+
             using (var _ = Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, sourceDocumentId.ToString(CultureInfo.InvariantCulture));
+            {
+                _indexWriter.TryDeleteEntryByField(
+                    Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+                    sourceDocumentId.ToString(CultureInfo.InvariantCulture));
+            }
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)

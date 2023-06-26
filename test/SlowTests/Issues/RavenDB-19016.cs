@@ -114,9 +114,10 @@ public class RavenDB_19016 : RavenTestBase
                     // users/4 -> users/5
                     await session.StoreAsync(new User {Name = userName4, RelatedUser = userId5}, userId4);
 
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     await session.SaveChangesAsync();
                 }
+
+                Indexes.WaitForIndexing(store);
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var index = database.IndexStore.GetIndex(deployedIndex.IndexName);

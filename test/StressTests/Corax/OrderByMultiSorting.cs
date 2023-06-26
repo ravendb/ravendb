@@ -206,7 +206,7 @@ namespace StressTests.Corax
                         indexWriter.Index(data.ToSpan());
                     }
                 }
-                indexWriter.Commit();
+                indexWriter.PrepareAndCommit();
             }
         }
 

@@ -56,8 +56,8 @@ public class DeleteTest : StorageTest
 
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            indexWriter.TryDeleteEntry("Id", "list/9");
-            indexWriter.Commit();
+            indexWriter.TryDeleteEntry("list/9");
+            indexWriter.PrepareAndCommit();
         }
 
         {
@@ -159,10 +159,10 @@ public class DeleteTest : StorageTest
         foreach (var entry in _longList)
         {
             using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(data.ToSpan());
+            indexWriter.Index(entry.Id,data.ToSpan());
         }
 
-        indexWriter.Commit();
+        indexWriter.PrepareAndCommit();
         knownFields.Dispose();
     }
 

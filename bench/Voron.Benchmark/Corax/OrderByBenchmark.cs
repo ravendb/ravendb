@@ -159,7 +159,7 @@ namespace Voron.Benchmark.Corax
                     }
                 }
 
-                writer.Commit();
+                writer.PrepareAndCommit();
             }
         }
 

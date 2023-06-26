@@ -2031,9 +2031,9 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                entry.IndexEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(indexWriter.Index(data.ToSpan()));
+                entry.IndexEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(indexWriter.Index(entry.Id,data.ToSpan()));
             }
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
             mapping.Dispose();
         }
 
@@ -2045,10 +2045,10 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(data.ToSpan());
+                indexWriter.Index(entry.Id, data.ToSpan());
             }
 
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
 
         private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
@@ -2063,10 +2063,10 @@ namespace FastTests.Corax
                 foreach (var entry in list)
                 {
                     var data = CreateIndexEntryDouble(ref entryWriter, entry, out var buffer);
-                    indexWriter.Index(buffer.ToSpan());
+                    indexWriter.Index(entry.Id, buffer.ToSpan());
                 }
 
-                indexWriter.Commit();
+                indexWriter.PrepareAndCommit();
             }
         }
 

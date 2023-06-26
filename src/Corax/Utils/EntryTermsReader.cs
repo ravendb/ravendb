@@ -62,7 +62,6 @@ public unsafe struct EntryTermsReader
         TermMetadata = termItem.PageLevelMetadata;
         TermsReader.Set(Current, termItem, _dicId);
 
-        
         HasNumeric = (termContainerId & 1) != 0;
         if (HasNumeric)
         {

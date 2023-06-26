@@ -55,7 +55,7 @@ public class IndexSearcherTest : StorageTest
             indexWriter.Index(data.ToSpan());
         }
 
-        indexWriter.Commit();
+        indexWriter.PrepareAndCommit();
         mapping.Dispose();
     }
 

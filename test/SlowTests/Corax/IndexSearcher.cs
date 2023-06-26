@@ -133,10 +133,10 @@ public class IndexSearcherTest : StorageTest
         foreach (var entry in list)
         {
             using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(data.ToSpan());
+            indexWriter.Index(entry.Id,data.ToSpan());
         }
 
-        indexWriter.Commit();
+        indexWriter.PrepareAndCommit();
         mapping.Dispose();
     }
 }

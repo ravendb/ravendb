@@ -39,9 +39,9 @@ public class FacetIndexingRepro : StorageTest
         string entryKey = "users/00000001";
         entryWriter.Write(0, Encoding.UTF8.GetBytes(entryKey));
         entryWriter.Finish(out var s);
-        var entryIdEncoded = iw.Index(s.ToSpan());
+        var entryIdEncoded = iw.Index(entryKey,s.ToSpan());
         var entryId = EntryIdEncodings.Decode(entryIdEncoded).EntryId;
-        iw.Commit();
+        iw.PrepareAndCommit();
         
         {
             var searcher = new IndexSearcher(wtx, fields);
@@ -132,7 +132,7 @@ public class FacetIndexingRepro : StorageTest
                 }
                 catch (EndOfStreamException)
                 {
-                    iw.Commit();
+                    iw.PrepareAndCommit();
                     iw.Dispose();
                     wtx.Commit();
                     wtx.Dispose();
@@ -147,7 +147,7 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(buffer);
+                iw.Index(id,buffer);
                 items++;
             }
 
@@ -157,7 +157,7 @@ public class FacetIndexingRepro : StorageTest
             
             void FlushIndexAndRenewWriteTransaction()
             {
-                iw.Commit();
+                iw.PrepareAndCommit();
                 iw.Dispose();
                 wtx.Commit();
                 wtx.Dispose();
@@ -229,14 +229,14 @@ public class FacetIndexingRepro : StorageTest
                 catch (EndOfStreamException)
                 {
 
-                    iw.Commit();
+                    iw.PrepareAndCommit();
                     iw.Dispose();
                     break;
                 }
 
                 if (id == "!Commit!")
                 {
-                    iw.Commit();
+                    iw.PrepareAndCommit();
                     iw.Dispose();
                     iw = new IndexWriter(wtx, indexFieldsMapping);
                     continue;
@@ -244,7 +244,7 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(buffer);
+                iw.Index(id, buffer);
 
             }
         }

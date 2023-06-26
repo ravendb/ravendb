@@ -42,12 +42,12 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
             _outputScope.Delete(key, stats);
     }
     
-    public override void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+    public override void UpdateDocument( LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
     {
         if (_outputScope.IsActive)
-            base.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+            base.UpdateDocument(key, sourceDocumentId, document, stats, indexContext);
         else
-            _outputScope.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+            _outputScope.UpdateDocument(key, sourceDocumentId, document, stats, indexContext);
     }
 
     public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)

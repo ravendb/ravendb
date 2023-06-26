@@ -93,10 +93,10 @@ namespace FastTests.Corax
                 {
                     using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
                     {
-                        indexWriter.Index(data.ToSpan());
+                        indexWriter.Index(entry.Id,data.ToSpan());
                     }
                 }
-                indexWriter.Commit();
+                indexWriter.PrepareAndCommit();
             }
         }
 

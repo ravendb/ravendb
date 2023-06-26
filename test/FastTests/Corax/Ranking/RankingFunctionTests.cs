@@ -186,10 +186,10 @@ public class RankingFunctionTests : StorageTest
             entry.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
             entry.Write(ContentIndex, dto.ContentAsSpan);
             using var _ = entry.Finish(out var data);
-            var entryId = indexWriter.Index(data.ToSpan());
+            var entryId = indexWriter.Index(dto.Id.ToString(), data.ToSpan());
         }
 
-        indexWriter.Commit();
+        indexWriter.PrepareAndCommit();
     }
 
     public override void Dispose()

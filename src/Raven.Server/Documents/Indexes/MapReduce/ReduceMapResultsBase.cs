@@ -273,8 +273,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (it.MoveNext() == false)
             {
                 // a single entry..., try to update
-                writer.Value.UpdateDocument(Raven.Client.Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
-                    reduceKeyHash, null, first, stats, indexContext);
+                writer.Value.UpdateDocument(reduceKeyHash, null, first, stats, indexContext);
                 return;
             }
 

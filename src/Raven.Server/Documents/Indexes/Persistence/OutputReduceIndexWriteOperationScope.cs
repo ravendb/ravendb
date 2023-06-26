@@ -96,11 +96,11 @@ internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : Ind
         }
     }
 
-    public void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+    public void UpdateDocument( LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
     {
         using (new IsActiveScope(this))
         {
-            _writer.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+            _writer.UpdateDocument(key, sourceDocumentId, document, stats, indexContext);
             _outputReduceToCollectionCommandBatcher.DeleteReduce(key);
             _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
         }

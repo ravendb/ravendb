@@ -53,10 +53,10 @@ public class RawCoraxFlag : StorageTest
                 }
 
                 using var _ = entry.Finish(out var output);                
-                writer.Index(output.ToSpan());
+                writer.Index(id,output.ToSpan());
             }
 
-            writer.Commit();
+            writer.PrepareAndCommit();
         }
 
         using var __ = Slice.From(bsc, "Dynamic", out var fieldName);
@@ -81,8 +81,8 @@ public class RawCoraxFlag : StorageTest
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            Assert.True(indexWriter.TryDeleteEntry("Id", "1"));
-            indexWriter.Commit();
+            Assert.True(indexWriter.TryDeleteEntry("1"));
+            indexWriter.PrepareAndCommit();
         }
 
         {
@@ -118,10 +118,10 @@ public class RawCoraxFlag : StorageTest
                 }
 
                 using var _ = entry.Finish(out var output);                
-                writer.Index(output.ToSpan());
+                writer.Index(id, output.ToSpan());
             }
 
-            writer.Commit();
+            writer.PrepareAndCommit();
         }
 
         Span<long> mem = stackalloc long[1024];
@@ -149,8 +149,8 @@ public class RawCoraxFlag : StorageTest
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            Assert.True(indexWriter.TryDeleteEntry("Id", "1"));
-            indexWriter.Commit();
+            Assert.True(indexWriter.TryDeleteEntry("1"));
+            indexWriter.PrepareAndCommit();
         }
 
         {

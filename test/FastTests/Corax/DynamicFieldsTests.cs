@@ -94,8 +94,8 @@ public unsafe class DynamicFieldsTests : StorageTest
         
         using (var indexer = new IndexWriter(Env, knownFields))
         {
-            indexer.Index(element.ToSpan());
-            indexer.Commit();
+            indexer.Index("elements/1",element.ToSpan());
+            indexer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, knownFields))
@@ -212,8 +212,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
             entry.WriteSpatialDynamic("Coordinates_Home", spatialEntry);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
-            writer.Commit();
+            writer.Index(IdString,preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         for (int i = 0; i < geohash.Length; ++i)
@@ -235,8 +235,8 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            writer.TryDeleteEntry("Id", IdString);
-            writer.Commit();
+            writer.TryDeleteEntry(IdString);
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))

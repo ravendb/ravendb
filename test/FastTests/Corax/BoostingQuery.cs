@@ -319,8 +319,8 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
             using (var indexWriter = new IndexWriter(Env, knownFields))
             {
-                Assert.True(indexWriter.TryDeleteEntry("Id", "list/1"));
-                indexWriter.Commit();
+                Assert.True(indexWriter.TryDeleteEntry("list/1"));
+                indexWriter.PrepareAndCommit();
             }
             
             using(var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)))
@@ -392,12 +392,12 @@ namespace FastTests.Corax
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 if (entry.Boost.HasValue == false)
-                    indexWriter.Index(data.ToSpan());
+                    indexWriter.Index(entry.Id,data.ToSpan());
                 else
-                    indexWriter.Index(data.ToSpan(), entry.Boost.Value);
+                    indexWriter.Index(entry.Id,data.ToSpan(), entry.Boost.Value);
             }
 
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
 
         private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(

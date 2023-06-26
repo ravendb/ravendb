@@ -7,6 +7,7 @@ using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,20 +24,18 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
     public void CanUpdateAndNotDelete()
     {
         using var fields = CreateKnownFields(Allocator);
-        byte[] buffer = new byte[1024];
         long oldId; 
         using (var indexWriter = new IndexWriter(Env, fields))
         {
             var entry = new IndexEntryWriter(Allocator, fields);
-            entry.Write(0, Encoding.UTF8.GetBytes("cars/1"));
-            entry.Write(1, Encoding.UTF8.GetBytes("Lightning"));
-            entry.Write(2, Encoding.UTF8.GetBytes("12"));
+            entry.Write(0, "cars/1"u8);
+            entry.Write(1, "Lightning"u8);
+            entry.Write(2, "12"u8);
             entry.Finish(out var entrySpan);
 
-            using var _ = Allocator.From("cars/1", ByteStringType.Immutable, out var str);
-            oldId = indexWriter.Update("id()", str.ToSpan(), entrySpan.ToSpan());
+            oldId = indexWriter.Update("cars/1"u8, entrySpan.ToSpan());
             
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
 
         using (var indexSearcher = new IndexSearcher(Env, fields))
@@ -57,10 +56,9 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             entry.Write(2, Encoding.UTF8.GetBytes("13"));
             entry.Finish(out var entrySpan);
 
-            using var _ = Allocator.From("cars/1", ByteStringType.Immutable, out var str);
-            newId = indexWriter.Update("id()", str.ToSpan(), entrySpan.ToSpan());
+            newId = indexWriter.Update("cars/1"u8, entrySpan.ToSpan());
             
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
         Assert.Equal(oldId, newId);
         

@@ -278,10 +278,10 @@ namespace FastTests.Corax
             foreach (var entry in _entries)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(data.ToSpan());
+                indexWriter.Index(entry.Id,data.ToSpan());
             }
 
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
         }
 
         private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(

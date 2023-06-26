@@ -43,8 +43,8 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
-                indexWriter.Commit();
+                indexWriter.TryDeleteEntry("list/0");
+                indexWriter.PrepareAndCommit();
             }
 
             {
@@ -82,8 +82,8 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
-                indexWriter.Commit();
+                indexWriter.TryDeleteEntry("list/0");
+                indexWriter.PrepareAndCommit();
             }
 
             {
@@ -117,8 +117,8 @@ namespace FastTests.Corax
             
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
-                indexWriter.Commit();
+                indexWriter.TryDeleteEntry("list/0");
+                indexWriter.PrepareAndCommit();
             }
             
             {
@@ -145,8 +145,8 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                Assert.True(indexWriter.TryDeleteEntry("Id", "list/9"));
-                indexWriter.Commit();
+                Assert.True(indexWriter.TryDeleteEntry("list/9"));
+                indexWriter.PrepareAndCommit();
             }
 
             {
@@ -181,8 +181,8 @@ namespace FastTests.Corax
             }
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
-                indexWriter.Commit();
+                indexWriter.TryDeleteEntry("list/0");
+                indexWriter.PrepareAndCommit();
             }
 
             {
@@ -234,10 +234,10 @@ namespace FastTests.Corax
             foreach (var entry in _longList)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(data.ToSpan());
+                indexWriter.Index(entry.Id,data.ToSpan());
             }
 
-            indexWriter.Commit();
+            indexWriter.PrepareAndCommit();
             entryWriter.Dispose();
         }
 
