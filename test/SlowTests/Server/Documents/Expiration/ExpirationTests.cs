@@ -308,7 +308,7 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Sharding)]
         public async Task ShouldDeleteExpiredDocumentsForSharding()
         {
             var utcFormats = new Dictionary<string, DateTimeKind>
