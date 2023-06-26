@@ -51,7 +51,7 @@ interface IndexPanelProps {
     disableIndexing: () => Promise<void>;
     pauseIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
-    resetIndex: () => Promise<void>;
+    resetIndex: () => void;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;

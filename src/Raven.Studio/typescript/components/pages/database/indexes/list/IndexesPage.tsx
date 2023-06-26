@@ -7,7 +7,7 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Button, Card, Col, Row, Spinner } from "reactstrap";
+import { Button, Card, Col, Row } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -39,8 +39,7 @@ export function IndexesPage(props: IndexesPageProps) {
         loading,
         bulkOperationConfirm,
         setBulkOperationConfirm,
-        resetIndexConfirm,
-        setResetIndexConfirm,
+        resetIndexData,
         swapSideBySideData,
         stats,
         selectedIndexes,
@@ -58,9 +57,7 @@ export function IndexesPage(props: IndexesPageProps) {
         disableIndexes,
         pauseIndexes,
         setIndexLockMode,
-        resetIndex,
         toggleSelection,
-        onResetIndexConfirm,
         openFaulty,
         getSelectedIndexes,
         confirmDeleteIndexes,
@@ -77,6 +74,8 @@ export function IndexesPage(props: IndexesPageProps) {
     const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
 
     const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
+
+    const allActionContexts = ActionContextUtils.getContexts(database.getLocations());
 
     if (loading) {
         return <LoadingView />;
@@ -141,7 +140,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 setPriority={(p) => setIndexPriority(index, p)}
                                                 setLockMode={(l) => setIndexLockMode(index, l)}
                                                 globalIndexingStatus={globalIndexingStatus}
-                                                resetIndex={() => resetIndex(index)}
+                                                resetIndex={() => resetIndexData.setIndexName(index.name)}
                                                 openFaulty={(location: databaseLocationSpecifier) =>
                                                     openFaulty(index, location)
                                                 }
@@ -181,7 +180,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     setPriority={(p) => setIndexPriority(replacement, p)}
                                                     setLockMode={(l) => setIndexLockMode(replacement, l)}
                                                     globalIndexingStatus={globalIndexingStatus}
-                                                    resetIndex={() => resetIndex(replacement)}
+                                                    resetIndex={() => resetIndexData.setIndexName(replacement.name)}
                                                     openFaulty={(location: databaseLocationSpecifier) =>
                                                         openFaulty(replacement, location)
                                                     }
@@ -209,11 +208,12 @@ export function IndexesPage(props: IndexesPageProps) {
             {bulkOperationConfirm && (
                 <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
             )}
-            {resetIndexConfirm && (
+            {resetIndexData.indexName && (
                 <ConfirmResetIndex
-                    {...resetIndexConfirm}
-                    toggle={() => setResetIndexConfirm(null)}
-                    onConfirm={() => onResetIndexConfirm(resetIndexConfirm.index)}
+                    indexName={resetIndexData.indexName}
+                    toggle={() => resetIndexData.setIndexName(null)}
+                    onConfirm={(x) => resetIndexData.onConfirm(x)}
+                    allActionContexts={allActionContexts}
                 />
             )}
             {swapSideBySideData.indexName && (
@@ -221,7 +221,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     indexName={swapSideBySideData.indexName}
                     toggle={() => swapSideBySideData.setIndexName(null)}
                     onConfirm={(x) => swapSideBySideData.onConfirm(x)}
-                    allActionContexts={ActionContextUtils.getContexts(database.getLocations())}
+                    allActionContexts={allActionContexts}
                 />
             )}
         </>

@@ -35,8 +35,8 @@ export default class IndexesService {
         return new getIndexesStatsCommand(db, location).execute();
     }
 
-    async resetIndex(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new resetIndexCommand(index.name, db, location).execute();
+    async resetIndex(indexName: string, db: database, location: databaseLocationSpecifier) {
+        await new resetIndexCommand(indexName, db, location).execute();
     }
 
     async pauseAllIndexes(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {

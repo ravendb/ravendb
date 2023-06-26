@@ -1,19 +1,26 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { Alert, Button, Modal, ModalBody, ModalFooter } from "reactstrap";
-import { IndexSharedInfo } from "components/models/indexes";
 import { Icon } from "components/common/Icon";
+import {
+    DatabaseActionContexts,
+    MultipleDatabaseLocationSelector,
+} from "components/common/MultipleDatabaseLocationSelector";
+import ActionContextUtils from "components/utils/actionContextUtils";
 
 interface ConfirmResetIndexProps {
+    indexName: string;
     toggle: () => void;
-    onConfirm: () => void;
-    index: IndexSharedInfo;
+    allActionContexts: DatabaseActionContexts[];
+    onConfirm: (contexts: DatabaseActionContexts[]) => void;
 }
 
 export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
-    const { toggle, index, onConfirm } = props;
+    const { toggle, indexName, allActionContexts, onConfirm } = props;
+
+    const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
     const onSubmit = () => {
-        onConfirm();
+        onConfirm(selectedActionContexts);
         toggle();
     };
 
@@ -31,7 +38,7 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 </div>
                 <span className="text-center bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
                     <Icon icon="index" />
-                    {index.name}
+                    {indexName}
                 </span>
                 <Alert color="warning">
                     <small>
@@ -40,6 +47,16 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                     <br />
                     <small>All items matched by the index definition will be re-indexed.</small>
                 </Alert>
+                {ActionContextUtils.showContextSelector(allActionContexts) && (
+                    <div>
+                        <h4>Select context</h4>
+                        <MultipleDatabaseLocationSelector
+                            allActionContexts={allActionContexts}
+                            selectedActionContexts={selectedActionContexts}
+                            setSelectedActionContexts={setSelectedActionContexts}
+                        />
+                    </div>
+                )}
             </ModalBody>
             <ModalFooter>
                 <Button color="link" onClick={toggle} className="text-muted">
