@@ -270,115 +270,161 @@ public class DatabaseRecordBuilder :
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.Encrypted()
     {
-        HandleEncryption();
+        _databaseRecord.Encrypted = true;
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithLockMode(DatabaseLockMode lockMode)
     {
-        HandleLockMode(lockMode);
+        _databaseRecord.LockMode = lockMode;
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureDocumentsCompression(DocumentsCompressionConfiguration configuration)
     {
-        HandleDocumentsCompression(configuration);
+        _databaseRecord.DocumentsCompression = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSorters(params SorterDefinition[] sorterDefinitions)
     {
-        HandleSorters(sorterDefinitions);
+        if (sorterDefinitions == null || sorterDefinitions.Length == 0)
+            return this;
+
+        _databaseRecord.Sorters ??= new Dictionary<string, SorterDefinition>();
+
+        foreach (SorterDefinition sorterDefinition in sorterDefinitions)
+            _databaseRecord.Sorters.Add(sorterDefinition.Name, sorterDefinition);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithAnalyzers(params AnalyzerDefinition[] analyzerDefinitions)
     {
-        HandleAnalyzers(analyzerDefinitions);
+        if (analyzerDefinitions == null || analyzerDefinitions.Length == 0)
+            return this;
+
+        _databaseRecord.Analyzers ??= new Dictionary<string, AnalyzerDefinition>();
+
+        foreach (AnalyzerDefinition analyzerDefinition in analyzerDefinitions)
+            _databaseRecord.Analyzers.Add(analyzerDefinition.Name, analyzerDefinition);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithIndexes(params IndexDefinition[] indexDefinitions)
     {
-        HandleIndexes(indexDefinitions);
+        if (indexDefinitions == null || indexDefinitions.Length == 0)
+            return this;
+
+        _databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
+
+        foreach (IndexDefinition indexDefinition in indexDefinitions)
+            _databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSettings(Dictionary<string, string> settings)
     {
-        HandleSettings(settings);
+        _databaseRecord.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithSettings(Action<Dictionary<string, string>> builder)
     {
-        HandleSettings(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        _databaseRecord.Settings = new Dictionary<string, string>();
+        builder(_databaseRecord.Settings);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureRevisions(RevisionsConfiguration configuration)
     {
-        HandleRevisions(configuration);
+        _databaseRecord.Revisions = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithEtls(Action<IEtlConfigurationBuilder> builder)
     {
-        HandleEtls(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithBackups(Action<IBackupConfigurationBuilder> builder)
     {
-        HandleBackups(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithReplication(Action<IReplicationConfigurationBuilder> builder)
     {
-        HandleReplication(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder)
     {
-        HandleConnectionStrings(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureClient(ClientConfiguration configuration)
     {
-        HandleClient(configuration);
+        _databaseRecord.Client = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureStudio(StudioConfiguration configuration)
     {
-        HandleStudio(configuration);
+        _databaseRecord.Studio = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureRefresh(RefreshConfiguration configuration)
     {
-        HandleRefresh(configuration);
+        _databaseRecord.Refresh = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureExpiration(ExpirationConfiguration configuration)
     {
-        HandleExpiration(configuration);
+        _databaseRecord.Expiration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureTimeSeries(TimeSeriesConfiguration configuration)
     {
-        HandleTimeSeries(configuration);
+        _databaseRecord.TimeSeries = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithIntegrations(Action<IIntegrationConfigurationBuilder> builder)
     {
-        HandleIntegrations(builder);
+        if (builder == null)
+            throw new ArgumentNullException(nameof(builder));
+
+        builder(this);
+
         return this;
     }
 
@@ -394,7 +440,7 @@ public class DatabaseRecordBuilder :
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.Disabled()
     {
-        HandleDisabled();
+        _databaseRecord.Disabled = true;
         return this;
     }
 
@@ -486,143 +532,6 @@ public class DatabaseRecordBuilder :
         _databaseRecord.Topology.ReplicationFactor = replicationFactor;
 
         return this;
-    }
-
-    private void HandleDisabled()
-    {
-        _databaseRecord.Disabled = true;
-    }
-
-    private void HandleEncryption()
-    {
-        _databaseRecord.Encrypted = true;
-    }
-
-    private void HandleLockMode(DatabaseLockMode lockMode)
-    {
-        _databaseRecord.LockMode = lockMode;
-    }
-
-    private void HandleDocumentsCompression(DocumentsCompressionConfiguration configuration)
-    {
-        _databaseRecord.DocumentsCompression = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleSorters(SorterDefinition[] sorterDefinitions)
-    {
-        if (sorterDefinitions == null || sorterDefinitions.Length == 0)
-            return;
-
-        _databaseRecord.Sorters ??= new Dictionary<string, SorterDefinition>();
-
-        foreach (SorterDefinition sorterDefinition in sorterDefinitions)
-            _databaseRecord.Sorters.Add(sorterDefinition.Name, sorterDefinition);
-    }
-
-    private void HandleAnalyzers(AnalyzerDefinition[] analyzerDefinitions)
-    {
-        if (analyzerDefinitions == null || analyzerDefinitions.Length == 0)
-            return;
-
-        _databaseRecord.Analyzers ??= new Dictionary<string, AnalyzerDefinition>();
-
-        foreach (AnalyzerDefinition analyzerDefinition in analyzerDefinitions)
-            _databaseRecord.Analyzers.Add(analyzerDefinition.Name, analyzerDefinition);
-    }
-
-    private void HandleIndexes(IndexDefinition[] indexDefinitions)
-    {
-        if (indexDefinitions == null || indexDefinitions.Length == 0)
-            return;
-
-        _databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
-
-        foreach (IndexDefinition indexDefinition in indexDefinitions)
-            _databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
-    }
-
-    private void HandleSettings(Dictionary<string, string> settings)
-    {
-        _databaseRecord.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-    }
-
-    private void HandleSettings(Action<Dictionary<string, string>> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        _databaseRecord.Settings = new Dictionary<string, string>();
-        builder(_databaseRecord.Settings);
-    }
-
-    private void HandleRevisions(RevisionsConfiguration configuration)
-    {
-        _databaseRecord.Revisions = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleEtls(Action<IEtlConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-    }
-
-    private void HandleBackups(Action<IBackupConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-    }
-
-    private void HandleReplication(Action<IReplicationConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-    }
-
-    private void HandleConnectionStrings(Action<IConnectionStringConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
-    }
-
-    private void HandleClient(ClientConfiguration configuration)
-    {
-        _databaseRecord.Client = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleStudio(StudioConfiguration configuration)
-    {
-        _databaseRecord.Studio = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleRefresh(RefreshConfiguration configuration)
-    {
-        _databaseRecord.Refresh = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleExpiration(ExpirationConfiguration configuration)
-    {
-        _databaseRecord.Expiration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleTimeSeries(TimeSeriesConfiguration configuration)
-    {
-        _databaseRecord.TimeSeries = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
-
-    private void HandleIntegrations(Action<IIntegrationConfigurationBuilder> builder)
-    {
-        if (builder == null)
-            throw new ArgumentNullException(nameof(builder));
-
-        builder(this);
     }
 
     private void WithName(string databaseName)
