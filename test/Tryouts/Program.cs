@@ -31,9 +31,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new ClusterDatabaseMaintenance(testOutputHelper))
+                    using (var test = new BulkInserts(testOutputHelper))
                     {
-                        await test.ReshuffleAfterPromotion();
+                        await test.Simple_Bulk_Insert(false);
                     }
                 }
                 catch (Exception e)

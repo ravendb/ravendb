@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -49,17 +50,32 @@ namespace FastTests.Client
                 ModifyDatabaseName = s => dbName
             }))
             {
-                using (var bulkInsert = store.BulkInsert())
+                ThreadPool.GetAvailableThreads(out int workersThreads, out int completionPortThreads);
+                Console.WriteLine($"before - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                try
                 {
-                    for (int i = 0; i < 1000; i++)
+                    using (var bulkInsert = store.BulkInsert())
                     {
-                        await bulkInsert.StoreAsync(new FooBar()
+                        for (int i = 0; i < 1000; i++)
                         {
-                            Name = "foobar/" + i
-                        }, "FooBars/" + i);
+                            await bulkInsert.StoreAsync(new FooBar()
+                            {
+                                Name = "foobar/" + i
+                            }, "FooBars/" + i);
+                        }
                     }
                 }
-
+                catch (Exception e)
+                {
+                    ThreadPool.GetAvailableThreads(out  workersThreads, out  completionPortThreads);
+                    Console.WriteLine($"after - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    ThreadPool.GetMaxThreads(out workersThreads, out completionPortThreads);
+                    Console.WriteLine($"max values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    ThreadPool.GetMinThreads(out workersThreads, out completionPortThreads);
+                    Console.WriteLine($"min values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    Console.WriteLine($"ThreadCount: {ThreadPool.ThreadCount}, CompletedWorkItemCount: {ThreadPool.CompletedWorkItemCount}, PendingWorkItemCount: {ThreadPool.PendingWorkItemCount}");
+                    throw;
+                }
                 using (var session = store.OpenSession())
                 {
                     var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000, null);

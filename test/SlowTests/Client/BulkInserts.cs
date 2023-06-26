@@ -1,4 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using Raven.Debug.StackTrace;
+using Raven.Server.Documents.Handlers.Debugging;
 using Tests.Infrastructure;
 using xRetry;
 using Xunit.Abstractions;
@@ -16,7 +21,18 @@ namespace SlowTests.Client
         {
             using (var x = new FastTests.Client.BulkInserts(Output))
             {
-                await x.Simple_Bulk_Insert(useSsl: true);
+                var task = x.Simple_Bulk_Insert(useSsl: true);
+
+                if (task.Wait(TimeSpan.FromSeconds(90)) == false)
+                {
+                    Console.WriteLine("Timeout on test, will generate dump (hopefully)");
+                    StringWriter outputWriter = new ();
+                    ThreadsHandler.OutputResultToStream(outputWriter);
+                    Console.WriteLine("Stack Traces for Simple_Bulk_Insert_With_Ssl");
+                    Console.WriteLine(outputWriter.ToString());
+                }
+                
+                await task;
             }
         }
     }
