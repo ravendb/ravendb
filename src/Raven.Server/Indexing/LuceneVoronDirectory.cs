@@ -56,7 +56,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            return filesTree.Read(name) != null;
+            return filesTree.Exists(name);
         }
 
         public override string[] ListAll(IState s)
@@ -122,8 +122,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            var readResult = filesTree.Read(name);
-            if (readResult == null)
+            if (filesTree.Exists(name) == false)
                 throw new FileNotFoundException("Could not find file", name);
 
             using (Slice.From(state.Transaction.Allocator, name, out Slice str))
@@ -168,8 +167,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            var readResult = filesTree.ReadStream(name);
-            if (readResult == null)
+            if (filesTree.Exists(name) == false)
                 throw new FileNotFoundException("Could not find file", name);
 
             filesTree.DeleteStream(name);

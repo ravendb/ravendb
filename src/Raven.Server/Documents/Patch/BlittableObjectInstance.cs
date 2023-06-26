@@ -541,6 +541,12 @@ namespace Raven.Server.Documents.Patch
             _doc = doc;
         }
 
+        public bool TryGetOriginalDocumentIfUnchanged(out Document doc)
+        {
+            doc = _doc;
+            return _doc != null && Changed == false;
+        }
+
         public override bool Delete(JsValue property)
         {
             if (property.IsString() == false)
