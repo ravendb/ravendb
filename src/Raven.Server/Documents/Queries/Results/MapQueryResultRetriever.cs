@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     var doc = DirectGet(ref retrieverInput, id, DocumentFields);
 
-                    FinishDocumentSetup(doc, retrieverInput.Score);
+                    FinishDocumentSetup(doc, ref retrieverInput);
                     return (doc, null);
                 }
             }

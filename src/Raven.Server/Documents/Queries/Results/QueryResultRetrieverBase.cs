@@ -105,16 +105,16 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldsToFetch == null)
                 throw new ArgumentNullException(nameof(fieldsToFetch));
         }
-
-        protected void FinishDocumentSetup(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc)
+        
+        protected void FinishDocumentSetup(Document doc, ref RetrieverInput retrieverInput)
         {
-            if (doc == null || scoreDoc == null)
+            if (doc == null || ((retrieverInput.IsLuceneDocument() && retrieverInput.Score == null) && retrieverInput.CoraxScore == null))
                 return;
 
-            doc.IndexScore = scoreDoc.Score;
-            if (_query?.Distances != null)
+            doc.IndexScore = retrieverInput.Score?.Score ?? retrieverInput.CoraxScore ;
+            if (_query?.Distances != null && retrieverInput.IsLuceneDocument())
             {
-                doc.Distance = _query.Distances.Get(scoreDoc.Doc);
+                doc.Distance = _query.Distances.Get(retrieverInput.Score.Doc);
             }
         }
 
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Queries.Results
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                         doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
-                    FinishDocumentSetup(doc, retrieverInput.Score);
+                    FinishDocumentSetup(doc, ref retrieverInput);
                     
                     if (doc == null)
                     {
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     doc = d;
                                 else
                                     ThrowInvalidQueryBodyResponse(fieldVal);
-                                FinishDocumentSetup(doc, retrieverInput.Score);
+                                FinishDocumentSetup(doc, ref retrieverInput);
                                 return (doc, null);
                             }
 
@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Queries.Results
                     };
                 }
 
-                return (ReturnProjection(result, doc, _context, retrieverInput.Score), null);
+                return (ReturnProjection(result, doc, _context, ref retrieverInput), null);
             }
         }
 
@@ -344,16 +344,16 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                 }
 
-                var immediateResult = AddProjectionToResult(doc, retrieverInput.Score, fieldsToFetch, result, key, fieldVal);
+                var immediateResult = AddProjectionToResult(doc, ref retrieverInput, fieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult.Document != null || immediateResult.List != null)
                     return immediateResult;
             }
 
-            return (ReturnProjection(result, doc, context, retrieverInput.Score), null);
+            return (ReturnProjection(result, doc, context, ref retrieverInput), null);
         }
 
-        protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream &&
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
@@ -369,12 +369,12 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
                 var r = CreateNewDocument(doc, key, fieldVal);
-                FinishDocumentSetup(r.Document, scoreDoc);
+                FinishDocumentSetup(r.Document, ref retrieverInput);
                 if (r.List == null)
                     return r;
                 foreach (Document item in r.List)
                 {
-                    FinishDocumentSetup(item, scoreDoc);
+                    FinishDocumentSetup(item, ref retrieverInput);
                 }
                 return r;
 
@@ -483,7 +483,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
-        protected Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context, Lucene.Net.Search.ScoreDoc scoreDoc = null)
+        protected Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context, ref RetrieverInput retrieverInput)
         {
             var metadata = Json.BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
             metadata[Constants.Documents.Metadata.Projection] = true;
@@ -511,8 +511,7 @@ namespace Raven.Server.Documents.Queries.Results
                 doc.Data = newData;
             }
 
-            if (scoreDoc != null)
-                FinishDocumentSetup(doc, scoreDoc);
+            FinishDocumentSetup(doc, ref retrieverInput);
 
             return doc;
         }

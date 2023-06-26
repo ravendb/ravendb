@@ -124,6 +124,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
+                if (match._scoringTable.Length > 0)
+                {
+                    match._scoringTable[i] = (float)batchTerms[indexes[i]].Double;
+                }
             }
         }
 

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -62,12 +63,13 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task streaming_and_projections_with_property_rename_Async(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
+         public async Task streaming_and_projections_with_property_rename_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -75,17 +77,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
 
-                    var query = session.Query<Customer>(index.IndexName)
-                        .Select(r => new
-                        {
-                            Name = r.Name,
-                            OtherThanName = r.Address,
-                        });
+                    var query = options.SearchEngineMode is RavenSearchEngineMode.Lucene
+                        ? session.Query<Customer>(index.IndexName).Select(r => new {Name = r.Name, OtherThanName = r.Address,})
+                        : session.Query<Customer>(index.IndexName).OrderByScore().Select(r => new {Name = r.Name, OtherThanName = r.Address,});
+                        
 
                     await using var enumerator = await session.Advanced.StreamAsync(query);
 

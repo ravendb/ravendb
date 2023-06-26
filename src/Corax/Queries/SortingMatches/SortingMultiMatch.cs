@@ -22,6 +22,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly IEntryComparer[] _nextComparers;
+    private float[] _scoringTable;
 
     private readonly int _take;
     private readonly CancellationToken _token;
@@ -41,7 +42,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         _take = take;
         _token = token;
         _results = new NativeIntegersList(searcher.Allocator);
-
+        _scoringTable = Array.Empty<float>();
         TotalResults = NotStarted;
         AssertNoScoreInnerComparer(orderMetadata);
         _fillFunc = SortBy(orderMetadata);
@@ -79,6 +80,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             return nextComparers;
         }
     }
+
+    public void SetScoreBuffer(float[] scoringTable) => _scoringTable = scoringTable;
 
     private void AssertNoScoreInnerComparer(in OrderMetadata[] orderMetadata)
     {

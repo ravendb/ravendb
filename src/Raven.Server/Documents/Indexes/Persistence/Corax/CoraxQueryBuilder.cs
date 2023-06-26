@@ -80,7 +80,8 @@ internal static class CoraxQueryBuilder
             DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
-            HasBoost = index.HasBoostedFields | query.Metadata.HasBoost;
+            HasBoost = index.HasBoostedFields || query.Metadata.HasBoost ||
+                       (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved && query.Metadata.OrderBy is [{OrderingType: OrderByFieldType.Score} _, ..]); // in case when we've implicit boosting we've build primitives with scoring enabled
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
         }

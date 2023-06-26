@@ -95,7 +95,7 @@ namespace Corax.Queries.SortingMatches;
                 // We get the boosting tree and go to check every document. 
                 BoostDocuments(match, batchResults, readScores);
             }
-                
+            
             // Note! readScores & indexes are aliased and same as batchTermIds
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchTermIds.Length; i++)
@@ -109,6 +109,10 @@ namespace Corax.Queries.SortingMatches;
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
+                if (match._scoringTable.Length > 0)
+                {
+                    match._scoringTable[i] = (float)batchTerms[indexes[i]].Double;
+                }
             }
         }
 
