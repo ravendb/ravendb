@@ -191,7 +191,7 @@ namespace Raven.Server.Web.System
             var raftRequestId = GetRaftRequestIdFromQuery();
 
             await ServerStore.EnsureNotPassiveAsync();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var index = GetLongFromHeaders("ETag");
@@ -381,7 +381,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
+        private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, ClusterOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
             var dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
             if (index.HasValue && dbRecordExist == false)
@@ -1211,7 +1211,7 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(databaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 context.OpenReadTransaction();
                 await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null, RaftIdGenerator.NewId());

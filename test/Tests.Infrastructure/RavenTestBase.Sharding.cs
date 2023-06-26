@@ -193,7 +193,7 @@ public partial class RavenTestBase
 
         public async Task<ShardedDocumentDatabase> GetShardedDocumentDatabaseForBucketAsync(string database, int bucket)
         {
-            using (_parent.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_parent.Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var config = _parent.Server.ServerStore.Cluster.ReadShardingConfiguration(context, database);
