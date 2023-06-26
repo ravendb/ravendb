@@ -4,7 +4,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import AdminJsConsole from "./AdminJsConsole";
 
 export default {
-    title: "Pages/ManageServer",
+    title: "Pages/AdminJsConsole",
     component: AdminJsConsole,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof AdminJsConsole>;

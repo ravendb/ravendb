@@ -929,8 +929,8 @@ $dropdown-link-active-bg: $component-active-bg !default;
 
 $dropdown-link-disabled-color: $btn-link-disabled-color !default;
 
-$dropdown-item-padding-y: $spacer * 0.25 !default;
-$dropdown-item-padding-x: $spacer !default;
+$dropdown-item-padding-y: $gutter-xxs !default;
+$dropdown-item-padding-x: $gutter-sm !default;
 
 $dropdown-header-color: $text-muted !default;
 $dropdown-header-padding: $dropdown-padding-y $dropdown-item-padding-x !default;

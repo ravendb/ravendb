@@ -110,8 +110,8 @@ export default function AceEditor(props: AceEditorProps) {
                 <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
             </div>
             {errorMessage && (
-                <div className="text-danger small" style={{ backgroundColor: "#5e3746", padding: "4px" }}>
-                    {errorMessage}
+                <div className="bg-faded-danger py-1 px-2">
+                    <small>{errorMessage}</small>
                 </div>
             )}
         </div>
