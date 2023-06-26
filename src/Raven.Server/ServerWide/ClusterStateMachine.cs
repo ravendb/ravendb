@@ -3501,8 +3501,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
-            where TTransaction : RavenTransaction
+        public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration(ClusterOperationContext context, string name)
         {
             using (var raw = ReadRawDatabaseRecord(context, name))
             {

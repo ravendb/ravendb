@@ -219,7 +219,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task UpdatePrefixedShardingIfNeeded(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology)
+        public async Task UpdatePrefixedShardingIfNeeded(ClusterOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology)
         {
             var existingConfiguration = _serverStore.Cluster.ReadShardingConfiguration(context, databaseRecord.DatabaseName);
             if (databaseRecord.Sharding.Prefixed.SequenceEqual(existingConfiguration.Prefixed))

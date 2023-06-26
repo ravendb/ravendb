@@ -24,9 +24,8 @@ namespace Raven.Server.Documents.Sharding.Background
         {
             try
             {
-                _token.ThrowIfCancellationRequested();
-
-                if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                var configuration = _database.ShardingConfiguration;
+                if (configuration.HasActiveMigrations())
                     return;
 
                 int bucket = -1;
@@ -35,10 +34,10 @@ namespace Raven.Server.Documents.Sharding.Background
                 using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var configuration = _database.ShardingConfiguration;
-
                     for (var index = 0; index < configuration.BucketRanges.Count; index++)
                     {
+                        _token.ThrowIfCancellationRequested();
+
                         var range = configuration.BucketRanges[index];
                         if (range.ShardNumber == _database.ShardNumber)
                             continue;
@@ -52,10 +51,17 @@ namespace Raven.Server.Documents.Sharding.Background
 
                         foreach (var bucketStats in bucketStatistics)
                         {
+                            _token.ThrowIfCancellationRequested();
+
                             if (bucketStats.NumberOfDocuments == 0)
                                 continue;
-
+                            
                             bucket = bucketStats.Bucket;
+                            
+                            // this bucket already been migrated
+                            if(configuration.BucketMigrations.ContainsKey(bucket))
+                                continue;
+
                             moveToShard = range.ShardNumber;
                             found = true;
                             break;
