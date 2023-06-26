@@ -805,6 +805,9 @@ namespace Corax
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             using var _ = Slice.From(context, it.CurrentFieldName, out var slice);
 
+            if (_fieldsMapping.TryGetByFieldName(slice, out var indexFieldBinding))
+                return _knownFieldsTerms[indexFieldBinding.FieldId];
+
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
 
@@ -1498,11 +1501,6 @@ namespace Corax
                 InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
                 InsertSpatialField(entriesToSpatialTree, indexedField);
-
-                // RavenDB-20730 If we have a dynamic field that has the same name as a static field
-                // we already processed everything here, and updating it again would lead to strange state
-                // since we are mutating the entries for the index as part of the work.
-                _dynamicFieldsTerms?.Remove(indexedField.Name);
             }
 
             if (_dynamicFieldsTerms != null)
@@ -1829,8 +1827,6 @@ namespace Corax
                                                         $"{Environment.NewLine}Current term frequency: {existingFrequency}" +
                                                         $"{Environment.NewLine}Items we wanted to delete (entryId|Frequency): " +
                                                         $"{string.Join(", ", entries.Removals.ToArray().Zip(entries.RemovalsFrequency.ToArray()).Select(i => $"({i.First}|{i.Second})"))}");
-                
-                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.RemovalsFrequency[0]) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
                 
                 termId = -1;
                 return AddEntriesToTermResult.RemoveTermId;

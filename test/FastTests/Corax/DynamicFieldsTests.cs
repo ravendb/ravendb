@@ -181,6 +181,20 @@ public unsafe class DynamicFieldsTests : StorageTest
             writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
             writer.Commit();
         }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Oren").Fill(ids);
+            Assert.Equal(0, read);
+        }
+        
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Eini").Fill(ids);
+            Assert.Equal(1, read);
+        }
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
@@ -288,5 +302,125 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
         
         Assert.Empty(entriesInIndex);
+    }
+    
+     
+    [Fact]
+    public void MixingStaticAndDynamicFieldsCorax3()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice);
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Rank", "U"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Index(preparedItem.ToSpan());
+            writer.Commit();
+        }
+        
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Name", "Maciej"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
+            writer.Commit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Maciej").Fill(ids);
+            Assert.Equal(1, read);
+        }
+        
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            writer.TryDeleteEntry("Id", "users/1");
+            writer.Commit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Maciej").Fill(ids);
+            Assert.Equal(0, read);
+        }
+    }
+    
+    [Fact]
+    public void MixingStaticAndDynamicFieldsCorax2()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice);
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Rank", "U"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Index(preparedItem.ToSpan());
+            writer.Commit();
+        }
+        
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Name", "Maciej"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
+            writer.Commit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Maciej").Fill(ids);
+            Assert.Equal(1, read);
+        }
+     
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Eini"u8);
+            entry.WriteDynamic("Name", "Eini"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
+            writer.Commit();
+        }
+        
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Maciej").Fill(ids);
+            Assert.Equal(0, read);
+            read = searcher.TermQuery("Name", "Eini").Fill(ids);
+            Assert.Equal(1, read);
+        }
     }
 }
