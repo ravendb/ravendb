@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Subscriptions;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -81,22 +82,32 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
             var index = migration.MigrationIndex;
             var database = ShardHelper.ToShardName(DatabaseName, migration.SourceShard);
-            foreach (var (key, state) in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(DatabaseName)))
+
+            var updatedSubscriptionStates = new List<(SubscriptionState State, Slice Key)>(); 
+
+            foreach (var (key, blittableState) in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(DatabaseName)))
             {
-                var subscriptionState = JsonDeserializationClient.SubscriptionState(state);
-                if (subscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(database, out var changeVector) == false)
+                var state = JsonDeserializationClient.SubscriptionState(blittableState);
+                if (state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(database, out var changeVector) == false)
                 {
                     changeVector = string.Empty;
                 }
 
-                if (subscriptionState.ShardingState.ProcessedChangeVectorPerBucket.ContainsKey(migration.Bucket) == false)
+                if (state.ShardingState.ProcessedChangeVectorPerBucket.ContainsKey(migration.Bucket) == false)
                 {
-                    subscriptionState.ShardingState.ProcessedChangeVectorPerBucket[migration.Bucket] = changeVector;
+                    state.ShardingState.ProcessedChangeVectorPerBucket[migration.Bucket] = changeVector;
                 }
 
-                using (state)
-                using (Slice.From(context.Allocator, subscriptionState.SubscriptionName, out Slice valueName))
-                using (var updated = context.ReadObject(subscriptionState.ToJson(), "migration"))
+                updatedSubscriptionStates.Add((state, key.Clone(context.Allocator)));
+            }
+
+            foreach (var states in updatedSubscriptionStates)
+            {
+                var state = states.State;
+                var key = states.Key;
+
+                using (Slice.From(context.Allocator, state.SubscriptionName, out Slice valueName))
+                using (var updated = context.ReadObject(state.ToJson(), "migration"))
                 {
                     ClusterStateMachine.UpdateValueForItemsTable(context, index, key, valueName, updated);
                 }
