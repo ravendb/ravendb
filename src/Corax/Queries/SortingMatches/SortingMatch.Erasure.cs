@@ -39,6 +39,9 @@ namespace Corax.Queries.SortingMatches
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetScoreBuffer(float[] scoreBuffer) => _functionTable.SetScoreBufferFunc(ref this, scoreBuffer);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             _inner.Score(matches, scores, boostFactor);
@@ -48,13 +51,16 @@ namespace Corax.Queries.SortingMatches
         {
             public readonly delegate*<ref SortingMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref SortingMatch, long> TotalResultsFunc;
+            public readonly delegate*<ref SortingMatch, float[], void> SetScoreBufferFunc;
 
             public FunctionTable(
                 delegate*<ref SortingMatch, Span<long>, int> fillFunc,
-                delegate*<ref SortingMatch, long> totalResultsFunc)
+                delegate*<ref SortingMatch, long> totalResultsFunc,
+                delegate*<ref SortingMatch, float[], void> setScoreBufferFunc)
             {
                 FillFunc = fillFunc;
                 TotalResultsFunc = totalResultsFunc;
+                SetScoreBufferFunc = setScoreBufferFunc;
             }
         }
 
@@ -80,7 +86,16 @@ namespace Corax.Queries.SortingMatches
                     return 0;
                 }
 
-                FunctionTable = new FunctionTable(&FillFunc, &CountFunc);
+                static void SetScoreBufferFunc(ref SortingMatch match, float[] scoreTable)
+                {
+                    if (match._inner is SortingMatch<TInner> inner)
+                    {
+                        inner.SetScoreBuffer(scoreTable);
+                        match._inner = inner;
+                    }
+                }
+
+                FunctionTable = new FunctionTable(&FillFunc, &CountFunc, &SetScoreBufferFunc);
             }
         }
 

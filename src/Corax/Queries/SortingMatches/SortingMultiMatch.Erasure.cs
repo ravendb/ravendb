@@ -48,13 +48,16 @@ namespace Corax.Queries.SortingMatches
         {
             public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref SortingMultiMatch, long> TotalResultsFunc;
+            public readonly delegate*<ref SortingMultiMatch, float[], void> SetScoreBufferFunc;
 
             public FunctionTable(
                 delegate*<ref SortingMultiMatch, Span<long>, int> fillFunc,
-                delegate*<ref SortingMultiMatch, long> totalResultsFunc)
+                delegate*<ref SortingMultiMatch, long> totalResultsFunc,
+                delegate*<ref SortingMultiMatch, float[], void> setScoreBufferFunc)
             {
                 FillFunc = fillFunc;
                 TotalResultsFunc = totalResultsFunc;
+                SetScoreBufferFunc = setScoreBufferFunc;
             }
         }
 
@@ -80,10 +83,22 @@ namespace Corax.Queries.SortingMatches
                     return 0;
                 }
 
-                FunctionTable = new FunctionTable(&FillFunc, &CountFunc);
+                static void SetScoreBufferFunc(ref SortingMultiMatch match, float[] scoringTable)
+                {
+                    if (match._inner is SortingMultiMatch<TInner> inner)
+                    {
+                        inner.SetScoreBuffer(scoringTable);
+                        match._inner = inner;
+                    }
+                }
+
+                FunctionTable = new FunctionTable(&FillFunc, &CountFunc, &SetScoreBufferFunc);
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetScoreBuffer(float[] scoreBuffer) => _functionTable.SetScoreBufferFunc(ref this, scoreBuffer);
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SortingMultiMatch Create<TInner>(in SortingMultiMatch<TInner> query)
             where TInner : IQueryMatch

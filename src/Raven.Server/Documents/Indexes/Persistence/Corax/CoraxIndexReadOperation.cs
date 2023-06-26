@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         // hack irrelevant, the complexity it introduces is much greater than what it make sense to be done at the moment. Therefore, 
         // we are building a quick fix that allow us to avoid the locking convoys and we will defer the real fix to RavenDB-19665. 
         [ThreadStatic] private static ArrayPool<long> _queryPool;
+        [ThreadStatic] private static ArrayPool<float> _queryScorePool;
 
         public static ArrayPool<long> QueryPool
         {
@@ -53,8 +54,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
         
+        public static ArrayPool<float> ScorePool
+        {
+            get
+            {
+                _queryScorePool ??= ArrayPool<float>.Create();
+                return _queryScorePool;
+            }
+        }
+        
         protected readonly IndexSearcher IndexSearcher;
-
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly ByteStringContext _allocator;
         private readonly int _maxNumberOfOutputsPerDocument;
@@ -523,6 +532,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
+            CoraxQueryBuilder.Parameters builderParameters = null;
             highlightings.Initialize(query, queryTimings);
 
             long docsToLoad = pageSize;
@@ -537,7 +547,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     IDisposable releaseServerContext = null;
                     IDisposable closeServerTransaction = null;
                     TransactionOperationContext serverContext = null;
-
                     try
                     {
                         if (query.Metadata.HasCmpXchg)
@@ -546,7 +555,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             closeServerTransaction = serverContext.OpenReadTransaction();
                         }
 
-                        var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
+                        builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
                             query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, indexReadOperation: this, token: token);
 
                         using (closeServerTransaction)
@@ -565,12 +574,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 int bufferSize = CoraxBufferSize(IndexSearcher, take, query);
                 var ids = QueryPool.Rent(bufferSize);
-
+                var scores = Array.Empty<float>();
 
                 using var queryFilter = GetQueryFilter();
 
                 bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
                 totalResults.Value = 0;
+
+                if (builderParameters?.HasBoost ?? false)
+                {
+                    scores = ScorePool.Rent(bufferSize);
+                    switch (queryMatch)
+                    {
+                        case SortingMatch sm:
+                            sm.SetScoreBuffer(scores);
+                            queryMatch = sm;
+                            break;
+                        case SortingMultiMatch smm:
+                            smm.SetScoreBuffer(scores);
+                            queryMatch = smm;
+                            break;
+                    }
+                }
+                
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
@@ -611,7 +637,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Include:
                         IndexEntryReader indexEntryReader = IndexSearcher.GetEntryReaderFor(ids[i]);
                         var key = _documentIdReader.GetTermFor(ids[i]);
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence);
+                        float? documentScore = scores.Length > 0 ? scores[i] : null;
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence, documentScore);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -665,7 +692,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 QueryPool.Return(ids);
-
+                if (scores.Length > 0)
+                    ScorePool.Return(scores);
+                
                 if (queryMatch is not SortingMatch && queryMatch is not SortingMultiMatch)
                     break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
 

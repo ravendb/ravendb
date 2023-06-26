@@ -27,10 +27,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
-
+    private float[] _scoringTable;
     private readonly int _take;
     private const int NotStarted = -1;
-        
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
     private NativeIntegersList _results;
@@ -45,7 +44,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         _cancellationToken = cancellationToken;
         _take = take;
         _results = new NativeIntegersList(searcher.Allocator);
-
+        _scoringTable =  Array.Empty<float>();
         TotalResults = NotStarted;
 
         if (_orderMetadata.HasBoost)
@@ -515,6 +514,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         bufScope.Dispose();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetScoreBuffer(float[] scores)
+    {
+        _scoringTable = scores;
+    }
 
     public long Count => _inner.Count;
 

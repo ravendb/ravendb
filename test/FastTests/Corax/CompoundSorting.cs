@@ -122,7 +122,7 @@ public class CompoundSorting : RavenTestBase
             var firstDoc = new Dto()
             {
                 Id = "1",
-                Name = "aaaa",
+                Name = "Maciej",
                 Alphanumeric = "aaa1",
                 Floating = 10.5,
                 Integer = 1111,
@@ -133,7 +133,7 @@ public class CompoundSorting : RavenTestBase
             var secondDoc = new Dto()
             {
                 Id = "2",
-                Name = "aaaa",
+                Name = "Maciej",
                 Alphanumeric = "aaa2",
                 Floating = 11.5,
                 Integer = 1112,
@@ -144,7 +144,7 @@ public class CompoundSorting : RavenTestBase
             var thirdDoc = new Dto()
             {
                 Id = "3",
-                Name = "bbbb",
+                Name = "XYZ",
                 Alphanumeric = "aaa2",
                 Floating = 12.5,
                 Integer = 2222,
@@ -159,6 +159,74 @@ public class CompoundSorting : RavenTestBase
         Indexes.WaitForIndexing(store);
         return store;
     }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public void GetIndexScoreAsMetadataCompound()
+    {
+        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var session = store.OpenSession();
+        var queryResults = session.Advanced
+            .DocumentQuery<Dto, SortingIndex>()
+            .Search(i => i.Name, "maciej xyz")
+            .OrderByScore()
+            .OrderByDescending(i => i.Integer)
+            .ToList();
+
+        foreach (var metadata in queryResults.Select(doc => session.Advanced.GetMetadataFor(doc)))
+        {
+            Assert.NotNull(metadata[Raven.Client.Constants.Documents.Metadata.IndexScore]);
+            Assert.NotEqual(0, (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore], 10);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public void GetIndexScoreAsMetadataSingle()
+    {
+        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var session = store.OpenSession();
+        var queryResults = session.Advanced
+            .DocumentQuery<Dto, SortingIndex>()
+            .Search(i => i.Name, "maciej xyz")
+            .OrderByScore()
+            .ToList();
+
+        foreach (var metadata in queryResults.Select(doc => session.Advanced.GetMetadataFor(doc)))
+        {
+            Assert.NotNull(metadata[Raven.Client.Constants.Documents.Metadata.IndexScore]);
+            Assert.NotEqual(0, (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore], 10);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CompoundAndNonCompoundShouldReturnExactlyTheSameScore()
+    {
+        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var session = store.OpenSession();
+        var singleCmp = session.Advanced
+            .DocumentQuery<Dto, SortingIndex>()
+            .Search(i => i.Name, "maciej xyz")
+            .OrderByScore()
+            .ToList();
+
+        var compoundCmp = session.Advanced
+            .DocumentQuery<Dto, SortingIndex>()
+            .Search(i => i.Name, "maciej xyz")
+            .OrderByScore()
+            .OrderByDescending(i => i.Integer)
+            .ToList();
+
+        foreach (var united in singleCmp.Union(compoundCmp).GroupBy(i => i.Id))
+        {
+            double? score = null;
+            foreach (var dto in united)
+            {
+                var metadata = session.Advanced.GetMetadataFor(dto);
+                score ??= (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore];
+                Assert.NotNull(score);
+                Assert.Equal(score.Value, (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore], 10);
+            }
+        }
+}
 
     private IDocumentQuery<Dto> GetBaseQuery(IDocumentSession session, string indexName, bool boxedComparer)
     {
@@ -192,6 +260,8 @@ public class CompoundSorting : RavenTestBase
                 {
                     doc.Name, doc.Floating, doc.Integer, Spatial = CreateSpatialField(doc.Lat, doc.Lon), doc.Alphanumeric
                 };
+
+            Index(i => i.Name, FieldIndexing.Search);
         }
     }
 

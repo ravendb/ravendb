@@ -40,6 +40,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         public ScoreDoc Score;
 
+        public float? CoraxScore;
+
         public IndexFieldsPersistence IndexFieldsPersistence;
 
         public Corax.IndexSearcher CoraxIndexSearcher;
@@ -56,14 +58,15 @@ namespace Raven.Server.Documents.Queries.Results
             IndexFieldsPersistence = null;
         }
 
-        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id, IndexFieldsPersistence indexFieldsPersistence)
+        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id, IndexFieldsPersistence indexFieldsPersistence, float? score = null)
         {
             CoraxEntry = coraxEntry;
             KnownFields = knownFields;
             DocumentId = id;
             IndexFieldsPersistence = indexFieldsPersistence;
             CoraxIndexSearcher = searcher;
-
+            CoraxScore = score;
+            
             State = null;
             Score = null;
             LuceneDocument = null;
