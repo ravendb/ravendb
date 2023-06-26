@@ -42,6 +42,7 @@ class clusterGraph {
         this.height = container.innerHeight();
 
         this.initGraph(initialNodesCount);
+        this.addResizeListener();
     }
 
     private initialScale(initialNodesCount: number) {
@@ -70,7 +71,9 @@ class clusterGraph {
         this.svg = container.append("svg")
             .style({
                 width: this.width + "px",
-                height: this.height + "px"
+                height: this.height + "px",
+                display: "block",
+                position: "absolute"
             })
             .attr("viewBox", "0 0 " + this.width + " " + this.height)
             .call(this.zoom);
@@ -284,6 +287,25 @@ class clusterGraph {
         const radius = Math.max(clusterGraph.minDrawRadius, this.estimatedRadius(nodes.length));
         graphHelper.circleLayout(layoutableNodes, radius);
 
+    }
+
+    private updateSize() {
+        this.width = this.$container.innerWidth();
+        this.height = this.$container.innerHeight();
+    
+        this.svg.style("width", this.width + "px")
+          .style("height", this.height + "px")
+          .attr("viewBox", "0 0 " + this.width + " " + this.height);
+          
+        this.svg.select("rect")
+            .attr("width", this.width)
+            .attr("height", this.height);
+      }
+
+    private addResizeListener() {
+        window.addEventListener("resize", () => {
+          this.updateSize();
+        });
     }
 }
 
