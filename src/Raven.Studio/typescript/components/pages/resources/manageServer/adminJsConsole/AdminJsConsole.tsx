@@ -36,7 +36,12 @@ export default function AdminJSConsole() {
     );
 
     const allTargets: SelectOption<string>[] = [
-        { value: serverTargetValue, label: "Server", icon: "server", horizontalSeparatorLine: true },
+        {
+            value: serverTargetValue,
+            label: "Server",
+            icon: "server",
+            horizontalSeparatorLine: allDatabaseNames.length > 0,
+        },
         ...allDatabaseNames.map((x) => ({ value: x, label: x, icon: "database" } satisfies SelectOption<string>)),
     ];
 
