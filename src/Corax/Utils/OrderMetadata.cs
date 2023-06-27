@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries.SortingMatches;
+using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
 

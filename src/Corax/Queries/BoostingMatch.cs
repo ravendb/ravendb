@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries.SortingMatches;
+using Corax.Queries.SortingMatches.Meta;
 
 namespace Corax.Queries
 {

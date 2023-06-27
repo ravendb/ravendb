@@ -6,6 +6,7 @@ using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.SortingMatches;
+using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
