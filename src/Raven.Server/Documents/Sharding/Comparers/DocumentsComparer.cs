@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Comparers;
 
-public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
+public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly OrderByField[] _orderByFields;
     private readonly bool _extractFromData;
@@ -25,8 +25,8 @@ public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
     {
         for (var i = 0; i < _orderByFields.Length; i++)
         {
-            var orderByField = _orderByFields[i];
-            var cmp = CompareField(orderByField, i, x, y);
+            ref var orderByField = ref _orderByFields[i];
+            var cmp = CompareField(in orderByField, i, x, y);
             if (cmp != 0)
                 return orderByField.Ascending ? cmp : -cmp;
         }
@@ -34,7 +34,7 @@ public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         return 0;
     }
 
-    private int CompareField(OrderByField order, int index, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
+    private int CompareField(in OrderByField order, int index, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
         switch (order.OrderingType)
         {
