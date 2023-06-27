@@ -1232,53 +1232,75 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase2()
         {
-            var src = Sharding.GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseName = s => "Src_" + s
-            });
-            var dst = Sharding.GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseName = s => "Dst_" + s
-            });
+            var clusterSize = 2;
+            var replicationFactor = 2;
 
-            var watcher = new ExternalReplication(dst.Database, "connection");
-            await AddWatcherToReplicationTopology(src, watcher, dst.Urls);
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
 
-            var dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer> { Server });
-            while (Sharding.AllShardHaveDocs(dstServers) == false)
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 2);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 2);
+
+            using (var srcStore = new DocumentStore()
             {
-                using (var session = src.OpenAsyncSession())
+                Urls = new[] { srcLeader.WebUrl },
+                Database = srcDB
+            }.Initialize())
+            using (var dstStore = new DocumentStore()
+            {
+                Urls = new[] { dstLeader.WebUrl },
+                Database = dstDB
+            }.Initialize())
+            {
+                var replicationDst = await GetReplicationManagerAsync(dstStore, dstDB, RavenDatabaseMode.Sharded, breakReplication: true, dstTopology.Servers);
+
+                await SetupReplicationAsync(srcStore, dstStore);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(dstStore);
+                var id0 = Sharding.GetRandomIdForShard(sharding, 0);
+                var id1 = Sharding.GetRandomIdForShard(sharding, 1);
+
+                using (var session = srcStore.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "Oren"
-                    });
+                    await session.StoreAsync(new User(), id0);
+                    await session.StoreAsync(new User(), id1);
                     await session.SaveChangesAsync();
                 }
-            }
 
-            var shardedDb = await GetDocumentDatabaseInstanceFor(dst, dst.Database + "$0");
-            var environmentOptions = (StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)shardedDb.DocumentsStorage.Environment.Options;
-            using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(shardedDb.Name, "Want to test removal of data from disk"))
-            {
-                IOExtensions.DeleteDirectory(environmentOptions.BasePath.ToFullPath());
-            }
+                await Sharding.Replication.EnsureReplicatingAsyncForShardedDestination(srcStore, dstStore);
 
-            var databaseTask = shardedDb.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedDb.Name).DatabaseTask;
-            await databaseTask;
+                var record = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstDB));
+                var shardTopology = record.Sharding.Shards[0];
+                var nodeContainingShard = shardTopology.Members.First();
 
-            dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>() { Server });
-            using (var session = src.OpenSession())
-            {
-                var sourceDocs = session.Query<User>()
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .Count();
+                var res = dstStore.Maintenance.Server.Send(new DeleteDatabasesOperation(dstDB, shardNumber: 0, hardDelete: true, fromNode: nodeContainingShard));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
-                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
-                Assert.Equal(sourceDocs, dstDocs);
+                replicationDst.Mend();
+
+                await WaitForValueAsync(async () =>
+                {
+                    using (var session = dstStore.OpenAsyncSession())
+                    {
+                        var u1 = await session.LoadAsync<User>(id0);
+                        return u1 != null;
+                    }
+                }, true, 30_000, 333);
+
+                using (var session = dstStore.OpenSession())
+                {
+                    var u1 = session.Load<User>(id0);
+                    Assert.NotNull(u1);
+
+                    var u2 = session.Load<User>(id1);
+                    Assert.NotNull(u2);
+                }
             }
         }
 
@@ -1655,7 +1677,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 await Sharding.Replication.EnsureReplicatingAsyncForShardedDestination(store1, store2);
-              
+
                 await CheckData(store2, location);
 
                 await Task.Delay(3000);

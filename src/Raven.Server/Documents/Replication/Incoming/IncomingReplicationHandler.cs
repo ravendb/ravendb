@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             Failed?.Invoke(this, exception);
         }
 
-        protected override void InvokeOnDocumentsReceived() => DocumentsReceived?.Invoke(this);
+        protected override void OnDocumentsReceived() => DocumentsReceived?.Invoke(this);
 
         internal class MergedDocumentReplicationCommand : DocumentMergedTransactionCommand
         {

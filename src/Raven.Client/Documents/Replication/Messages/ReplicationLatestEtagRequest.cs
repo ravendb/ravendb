@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public long MigrationIndex { get; set; }
 
+        public string ShardedDatabaseId { get; set; }
+
         public enum ReplicationType
         {
             // External here as the default value to handle older servers, which aren't sending this field.
