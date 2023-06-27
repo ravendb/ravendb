@@ -120,6 +120,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
 
+        private const int IndexingCompressionMaxTestDocuments = 10000;
+
         protected Logger _logger;
 
         internal IndexPersistenceBase IndexPersistence;
@@ -915,13 +917,15 @@ namespace Raven.Server.Documents.Indexes
             private readonly Index _index;
             private readonly IndexType _indexType;
             private readonly HashSet<string> _collections;
+            private readonly int _take;
             private IEnumerator<LazyStringValue> _itemsEnumerable;
 
-            public DocumentTrainSpanEnumerator(TransactionOperationContext indexContext, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections)
+            public DocumentTrainSpanEnumerator(TransactionOperationContext indexContext, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, int take = int.MaxValue)
             {
                 _indexContext = indexContext;
                 _index = index;
                 _indexType = indexType;
+                _take = take;
 
                 _documentStorage = storage;
                 _queryContext = queryContext;
@@ -933,7 +937,7 @@ namespace Raven.Server.Documents.Indexes
                 var scope = new IndexingStatsScope(new IndexingRunStats());
                 foreach (var collection in _collections)
                 {
-                    using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection), collection, _indexContext, scope, _indexType);
+                    using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection, _take), collection, _indexContext, scope, _indexType);
                     while (true)
                     {
                         if (itemEnumerator.MoveNext(_queryContext.Documents, out var _, out var _) == false)
@@ -1007,13 +1011,14 @@ namespace Raven.Server.Documents.Indexes
 
                 var tx = indexContext.OpenWriteTransaction();
 
-                var enumerator = new DocumentTrainSpanEnumerator(indexContext, this, Type, documentStorage, queryContext, Collections);
+                var enumerator = new DocumentTrainSpanEnumerator(indexContext, this, Type, documentStorage, queryContext, Collections, Configuration.CoraxIndexingMaxDocumentsForDictionary);
+                var testEnumerator = new DocumentTrainSpanEnumerator(indexContext, this, Type, documentStorage, queryContext, Collections, IndexingCompressionMaxTestDocuments);
 
                 var llt = tx.InnerTransaction.LowLevelTransaction;
                 var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
                 var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
-                PersistentDictionary.ReplaceIfBetter(llt, enumerator, enumerator, defaultDictionary);
+                PersistentDictionary.ReplaceIfBetter(llt, enumerator, testEnumerator, defaultDictionary);
 
                 tx.Commit();
             }

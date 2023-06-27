@@ -81,6 +81,7 @@ namespace FastTests.Issues
                 "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
                 "Query.RegexTimeoutInMs",
                 "Indexing.Lucene.ReaderTermsIndexDivisor",
+                "Indexing.Corax.DocumentsLimitForCompressionDictionaryCreation",
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
