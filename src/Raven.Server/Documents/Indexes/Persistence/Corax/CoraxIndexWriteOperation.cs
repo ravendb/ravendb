@@ -112,6 +112,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan(), documentBoost.Value);
                 else
                     _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan());
+                
+                stats.RecordIndexingOutput();
             }
         }
 
