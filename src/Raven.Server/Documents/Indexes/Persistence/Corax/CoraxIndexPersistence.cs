@@ -7,15 +7,18 @@ using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class CoraxIndexPersistence : IndexPersistenceBase
+public partial class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
@@ -111,8 +114,45 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         // lucene method
     }
 
+    private const int IndexingCompressionMaxTestDocuments = 10000;
+
+
     public override void Initialize(StorageEnvironment environment)
     {
+        var contextPool = _index._contextPool;
+
+        using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (var tx = context.OpenReadTransaction())
+        {
+            // It is already initialized, we can return.
+            if (CompactTree.HasDictionary(tx.InnerTransaction.LowLevelTransaction))
+                return;
+        }
+
+        var documentStorage = _index.DocumentDatabase.DocumentsStorage;
+
+        using (CultureHelper.EnsureInvariantCulture())
+        using (contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+        using (var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index))
+        using (CurrentIndexingScope.Current = new CurrentIndexingScope(_index, documentStorage, queryContext, _index.Definition, indexContext, _index.GetOrAddSpatialField, _index._unmanagedBuffersPool))
+        {
+            indexContext.PersistentContext.LongLivedTransactions = true;
+            queryContext.SetLongLivedTransactions(true);
+            queryContext.OpenReadTransaction();
+
+            var tx = indexContext.OpenWriteTransaction();
+
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
+            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);
+
+            var llt = tx.InnerTransaction.LowLevelTransaction;
+            var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
+            var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
+
+            PersistentDictionary.ReplaceIfBetter(llt, enumerator, testEnumerator, defaultDictionary);
+
+            tx.Commit();
+        }
     }
 
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)

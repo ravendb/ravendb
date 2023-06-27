@@ -128,11 +128,6 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         public override IndexRunningStatus Status => IndexRunningStatus.Disabled;
 
-        protected override void OnCoraxInitialization()
-        {
-            // no-op
-        }
-
         public override void Start()
         {
             // no-op

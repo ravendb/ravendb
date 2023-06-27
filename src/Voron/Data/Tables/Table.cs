@@ -1700,22 +1700,6 @@ namespace Voron.Data.Tables
             }
         }
 
-
-        public IEnumerable<TableValueHolder> SeekByRandomOrder(FixedSizeKeyIndexDef index)
-        {
-            var fst = GetFixedSizeTree(index);
-
-            using (var it = fst.Iterate())
-            {
-                var result = new TableValueHolder();
-                while (it.MoveNext())
-                {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } 
-            }
-        }
-
         public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
