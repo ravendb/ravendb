@@ -18,7 +18,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public partial class CoraxIndexPersistence : IndexPersistenceBase
+public class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
@@ -131,16 +131,17 @@ public partial class CoraxIndexPersistence : IndexPersistenceBase
 
         var documentStorage = _index.DocumentDatabase.DocumentsStorage;
 
-        using (CultureHelper.EnsureInvariantCulture())
-        using (contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-        using (var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index))
-        using (CurrentIndexingScope.Current = new CurrentIndexingScope(_index, documentStorage, queryContext, _index.Definition, indexContext, _index.GetOrAddSpatialField, _index._unmanagedBuffersPool))
+        using var _ = CultureHelper.EnsureInvariantCulture();
+        using var __ = contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
+        using var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index);
+        
+        using (CurrentIndexingScope.Current = _index.CreateIndexingScope(indexContext, queryContext))
         {
             indexContext.PersistentContext.LongLivedTransactions = true;
             queryContext.SetLongLivedTransactions(true);
             queryContext.OpenReadTransaction();
 
-            var tx = indexContext.OpenWriteTransaction();
+            using var tx = indexContext.OpenWriteTransaction();
 
             var enumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
             var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);

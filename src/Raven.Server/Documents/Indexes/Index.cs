@@ -675,6 +675,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public CurrentIndexingScope CreateIndexingScope(TransactionOperationContext indexContext, QueryOperationContext queryContext)
+        {
+            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool);
+        }
+
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
             var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
@@ -862,8 +867,6 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence?.Dispose();
 
             SearchEngineType = IndexStorage.ReadSearchEngineType(Name, environment);
-            IndexFieldsPersistence = new IndexFieldsPersistence(this);
-            IndexFieldsPersistence.Initialize();
 
             switch (SearchEngineType)
             {
@@ -882,6 +885,8 @@ namespace Raven.Server.Documents.Indexes
             }
 
             IndexPersistence.Initialize(environment);
+            IndexFieldsPersistence = new IndexFieldsPersistence(this);
+            IndexFieldsPersistence.Initialize();
         }
 
         protected virtual void OnInitialization()
@@ -2333,8 +2338,7 @@ namespace Raven.Server.Documents.Indexes
                 context.SetLongLivedTransactions(true);
 
                 using (var tx = indexContext.OpenWriteTransaction())
-                using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (CurrentIndexingScope.Current = CreateIndexingScope(indexContext, context))
                 {
                     var writeOperation = new Lazy<IndexWriteOperationBase>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
 
@@ -4860,7 +4864,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (CurrentIndexingScope.Current = CreateIndexingScope(indexContext, context))
                 using (var txw = indexContext.OpenWriteTransaction())
                 using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                 {
@@ -5043,7 +5047,7 @@ namespace Raven.Server.Documents.Indexes
             return _regexCache.Get(arg);
         }
 
-        internal SpatialField GetOrAddSpatialField(string name)
+        private SpatialField GetOrAddSpatialField(string name)
         {
             return _spatialFields.GetOrAdd(name, n =>
             {
