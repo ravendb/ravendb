@@ -401,10 +401,15 @@ namespace SlowTests.Server.Documents.Expiration
                         foreach (var database in kvp.Value)
                         {
                             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                            if (database.ExpiredDocumentsCleaner == null)
-                                continue;
 
-                            await database.ExpiredDocumentsCleaner.CleanupExpiredDocs();
+                            ExpiredDocumentsCleaner cleaner = null;
+                            Assert.True(WaitForValue(() =>
+                            {
+                                cleaner = database.ExpiredDocumentsCleaner;
+                                return cleaner != null;
+                            }, expectedVal: true));
+
+                            await cleaner.CleanupExpiredDocs();
                         }
                     }
 
