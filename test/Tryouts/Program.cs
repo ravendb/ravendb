@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using FastTests.Voron.Sets;
@@ -11,6 +12,7 @@ using SlowTests.Cluster;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using SlowTests.Sharding.Cluster;
+using Xunit;
 
 namespace Tryouts;
 
@@ -28,13 +30,15 @@ public static class Program
         for (int i = 0; i < 1000; i++)
         {
             Console.WriteLine($"Starting to run {i}");
+
             try
             {
+                TryRemoveDatabasesFolder();
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_17760(testOutputHelper))
+                using (var test = new SubscriptionsWithReshardingTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.CanGetTombstonesByBucket();
+                    await test.GetDocumentsWithFilteringAndModifications3();
                 }
             }
             catch (Exception e)
@@ -42,7 +46,24 @@ public static class Program
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(e);
                 Console.ForegroundColor = ConsoleColor.White;
-                return;
+            }
+        }
+    }
+
+    private static void TryRemoveDatabasesFolder()
+    {
+        var p = System.AppDomain.CurrentDomain.BaseDirectory;
+        var dbPath = Path.Combine(p, "Databases");
+        if (Directory.Exists(dbPath))
+        {
+            try
+            {
+                Directory.Delete(dbPath, true);
+                Assert.False(Directory.Exists(dbPath), "Directory.Exists(dbPath)");
+            }
+            catch
+            {
+                Console.WriteLine($"Could not remove Databases folder on path '{dbPath}'");
             }
         }
     }

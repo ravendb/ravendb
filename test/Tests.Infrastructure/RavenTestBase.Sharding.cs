@@ -209,12 +209,31 @@ public partial class RavenTestBase
             }
         }
 
-        public ShardedDatabaseContext GetOrchestrator(string database)
+        public ShardedDatabaseContext GetOrchestrator(string database, RavenServer server = null)
         {
-            if (_parent.Server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(database, out var task) == false)
+            if ((server ?? _parent.Server).ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(database, out var task) == false)
                 throw new InvalidOperationException($"The orchestrator for '{database}' wasn't found on this node");
 
             return task.Result;
+        }
+
+        public ShardedDatabaseContext GetOrchestratorInCluster(string database, List<RavenServer> servers)
+        {
+            ShardedDatabaseContext orchestrator = null;
+            foreach (var server in servers)
+            {
+                try
+                {
+                    orchestrator = GetOrchestrator(database, server);
+                }
+                catch (InvalidOperationException)
+                {
+                    // expected
+                }
+            }
+
+            Assert.NotNull(orchestrator);
+            return orchestrator;
         }
 
         public async Task WaitForOrchestratorsToUpdate(string database, long index)

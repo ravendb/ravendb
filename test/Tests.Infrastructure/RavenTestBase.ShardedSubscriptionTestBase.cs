@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Server;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -20,12 +23,15 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public async Task AssertNoItemsInTheResendQueueAsync(IDocumentStore store, string subscriptionId)
+        public async Task AssertNoItemsInTheResendQueueAsync(IDocumentStore store, string subscriptionId, List<RavenServer> servers = null, List<ShardedDocumentDatabase> shards = null)
         {
             var id = long.Parse(subscriptionId);
-            var shards = _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            await foreach (var shard in shards)
+            shards ??= await _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store, servers).ToListAsync();
+            foreach (var shard in shards)
             {
+                if (shard.DatabaseShutdown.IsCancellationRequested)
+                    continue;
+
                 var result = await WaitForValueAsync(() =>
                 {
                     using (shard.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))

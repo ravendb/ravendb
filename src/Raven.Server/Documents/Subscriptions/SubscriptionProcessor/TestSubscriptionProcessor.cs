@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             throw new NotSupportedException();
         }
 
-        public override Task AcknowledgeBatch(long batchId)
+        public override Task AcknowledgeBatch(long batchId, string changeVector)
         {
             throw new NotSupportedException();
         }
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             throw new NotSupportedException();
         }
 
-        public override Task AcknowledgeBatch(long batchId)
+        public override Task AcknowledgeBatch(long batchId, string changeVector)
         {
             throw new NotSupportedException();
         }

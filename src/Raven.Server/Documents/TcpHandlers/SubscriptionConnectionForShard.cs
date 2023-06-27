@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -51,8 +52,16 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
 
     protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
     {
-        if (sentDocument.Etag == 0) // got this document from resend
+        if (Processor.IsActiveMigration) // this document is active migration
             return currentLast;
+
+        if (sentDocument.Etag == 0) // got this document from resend
+        {
+            if (sentDocument.Data == null)
+                return currentLast;
+
+            // shard might read only from resend 
+        }
 
         var vector = context.GetChangeVector(sentDocument.ChangeVector);
 
@@ -82,12 +91,25 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnectionForShard)}', but got: '{connection.GetType().Name}'.");
     }
 
-    protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
+    protected override async Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
     {
         var vector = context.GetChangeVector(lastChangeVectorSentInThisBatch);
         vector.TryRemoveIds(_dbIdToRemove, context, out vector);
+        var cvBeforeRecordBatch = LastSentChangeVectorInThisConnection;
 
-        await base.UpdateStateAfterBatchSentAsync(context, vector.Order);
+        try
+        {
+            await base.TryUpdateStateAfterBatchSentAsync(context, vector.Order);
+        }
+        catch (DocumentUnderActiveMigrationException e)
+        {
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Got '{nameof(DocumentUnderActiveMigrationException)}' on shard '{ShardName}' will roll back the change vector from '{LastSentChangeVectorInThisConnection}' to '{cvBeforeRecordBatch}', and wait for migration to complete.", e);
+            }
+            LastSentChangeVectorInThisConnection = cvBeforeRecordBatch;
+            return false;
+        }
 
         var p = (ShardedDocumentsDatabaseSubscriptionProcessor)Processor;
         if (p.Skipped != null)
@@ -102,6 +124,8 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
                 }
             }
         }
+
+        return true;
     }
 
     protected override bool FoundAboutMoreDocs()
@@ -127,5 +151,30 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
     {
         includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
+    }
+
+    protected override async Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
+    {
+        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for documents migration"));
+        var migrationWaitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(5));
+        do
+        {
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            var resultingTask = await Task
+                .WhenAny(migrationWaitTask, pendingReply, TimeoutManager.WaitFor(HeartbeatTimeout)).ConfigureAwait(false);
+
+            if (CancellationTokenSource.IsCancellationRequested)
+                return false;
+            if (resultingTask == pendingReply)
+                return false;
+            if (migrationWaitTask == resultingTask)
+                return true;
+
+            await SendHeartBeatAsync("Waiting for documents migration");
+            await SendNoopAckAsync();
+        } while (CancellationTokenSource.IsCancellationRequested == false);
+
+        return false;
     }
 }

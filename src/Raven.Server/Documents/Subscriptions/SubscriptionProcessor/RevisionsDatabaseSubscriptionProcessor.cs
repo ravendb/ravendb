@@ -76,8 +76,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
             (await SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch)).Index;
 
-        public override Task AcknowledgeBatch(long batchId) => 
-            SubscriptionConnectionsState.AcknowledgeBatch(_connection, batchId, null);
+        public override Task AcknowledgeBatch(long batchId, string changeVector) => 
+            SubscriptionConnectionsState.AcknowledgeBatch(_connection.LastSentChangeVectorInThisConnection, batchId, null);
 
         public override long GetLastItemEtag(DocumentsOperationContext context, string collection)
         {
@@ -102,9 +102,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                    remoteAsString: item.Current.ChangeVector,
-                    localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+                var conflictStatus = GetConflictStatus(item.Current.ChangeVector);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {

@@ -5,6 +5,7 @@
 // ----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
@@ -15,6 +16,7 @@ using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -26,6 +28,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly ShardedDatabaseContext _databaseContext;
         private OrchestratedSubscriptionProcessor _processor;
         private readonly IDisposable _tokenRegisterDisposable;
+        private readonly HashSet<string> _dbIdToRemove;
 
         public OrchestratedSubscriptionConnection(ServerStore serverStore, ShardedDatabaseContext.ShardedSubscriptionsStorage subscriptions,
             TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
@@ -35,6 +38,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             _databaseContext = tcpConnection.DatabaseContext;
             _tokenRegisterDisposable = CancellationTokenSource.Token.Register(() => _processor?.CurrentBatch?.SetCancel());
+            _dbIdToRemove = new HashSet<string>() { _databaseContext.DatabaseRecord.Sharding.DatabaseId };
         }
 
         public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
@@ -63,8 +67,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
-            await NotifyShardAboutBatchCompletion();
+            var orchestratorCv = ChangeVectorUtils.MergeVectors(_state.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
+            await NotifyShardAboutBatchCompletion(orchestratorCv);
 
+            _state.LastChangeVectorSent = orchestratorCv;
+            
             await SendConfirmAsync(_databaseContext.Time.GetUtcNow());
         }
 
@@ -76,12 +83,17 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
         {
             // nothing was sent to the client, but we need to let the shard know he can continue
-            await NotifyShardAboutBatchCompletion();
+            await NotifyShardAboutBatchCompletion(null);
 
             return await base.WaitForChangedDocsAsync(state, pendingReply);
         }
 
-        private async Task NotifyShardAboutBatchCompletion()
+        protected override Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
+        {
+            return Task.FromResult(true);
+        }
+
+        private async Task NotifyShardAboutBatchCompletion(string orchestratorCv)
         {
             var batch = _processor.CurrentBatch;
 
@@ -89,6 +101,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             {
                 // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
                 batch.SendBatchToClientTcs.TrySetResult();
+                batch.LastSentChangeVectorInBatch = orchestratorCv; //pass the orchestrator merged change vector to shard, so it will ack it
 
                 // wait for sharded subscription worker to send ack to the shard subscription connection
                 // and receive the confirm from the shard subscription connection
@@ -131,7 +144,15 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return sentDocument.ChangeVector;
         }
 
-        protected override Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch) => Task.CompletedTask;
+        protected override Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
+        {
+            var vector = context.GetChangeVector(lastChangeVectorSentInThisBatch);
+            vector.TryRemoveIds(_dbIdToRemove, context, out vector);
+
+            LastSentChangeVectorInThisConnection = vector.Order;
+
+            return Task.FromResult(true);
+        }
 
         protected override void AssertSupportedFeatures()
         {
