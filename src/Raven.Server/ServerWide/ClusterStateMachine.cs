@@ -492,6 +492,7 @@ namespace Raven.Server.ServerWide
                     case nameof(RecordBatchSubscriptionDocumentsCommand):
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
+                    case nameof(ShardedUpdateExternalReplicationStateCommand):
                     case nameof(PutSubscriptionCommand):
                     case nameof(PutShardedSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):

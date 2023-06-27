@@ -15,18 +15,9 @@ namespace Raven.Server.Documents.Replication
 
         public string DestinationChangeVector { get; set; }
 
-        public string SourceDatabaseName { get; set; }
-
-        public string SourceDatabaseId { get; set; }
-
         public static string GenerateItemName(string databaseName, long taskId)
         {
             return $"values/{databaseName}/external-replication/{taskId}";
-        }
-
-        public static string GenerateItemName(string databaseName, string sourceDatabaseName, string sourceDatabaseId)
-        {
-            return $"values/{databaseName}/sharded-incoming-external-replication/{sourceDatabaseName}/{sourceDatabaseId}";
         }
 
         public DynamicJsonValue ToJson()
@@ -37,9 +28,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastSentEtag)] = LastSentEtag,
                 [nameof(SourceChangeVector)] = SourceChangeVector,
-                [nameof(DestinationChangeVector)] = DestinationChangeVector,
-                [nameof(SourceDatabaseName)] = SourceDatabaseName,
-                [nameof(SourceDatabaseId)] = SourceDatabaseId
+                [nameof(DestinationChangeVector)] = DestinationChangeVector
             };
         }
     }

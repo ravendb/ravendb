@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Sharding
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                     {
-                        var (databaseChangeVector, lastEtag) = await shardedIncomingHandler.GetInitialHandshakeResponseFromShards();
+                        var (databaseChangeVector, lastEtag) = await shardedIncomingHandler.GetInitialHandshakeResponseFromShardsAsync();
 
                         var request = base.GetInitialRequestMessage(getLatestEtagMessage);
                         request[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;

@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             InvokeOnAttachmentStreamsReceived(attachmentStreamCount);
 
-            InvokeOnDocumentsReceived();
+            OnDocumentsReceived();
         }
 
         protected void ReadItemsFromSource(int replicatedDocs, TOperationContext context, ByteStringContext allocator, DataForReplicationCommand data, Reader reader,
@@ -573,7 +573,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract void EnsureNotDeleted();
 
-        protected abstract void InvokeOnDocumentsReceived();
+        protected abstract void OnDocumentsReceived();
 
         protected abstract void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount);
 

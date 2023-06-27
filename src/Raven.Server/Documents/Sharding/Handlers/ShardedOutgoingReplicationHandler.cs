@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private string _lastAcceptedChangeVectorFromShard;
         private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        public readonly string DatabaseName;
         public string MissingAttachmentMessage { get; set; }
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
@@ -41,6 +42,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
             };
             _sourceDatabaseId = sourceDatabaseId;
+
+            DatabaseName = node.Database;
         }
 
         protected override void Replicate()

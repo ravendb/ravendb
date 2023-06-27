@@ -171,14 +171,14 @@ public class ShardReplicationLoader : ReplicationLoader
         }
     }
 
-    public static ExternalReplicationState GetShardedExternalReplicationState(ServerStore server, string database, string source, string sourceDbId)
+    public static ShardedExternalReplicationState GetShardedExternalReplicationStates(ServerStore server, string database, string source, string sourceDbId)
     {
         using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, source, sourceDbId));
+            var stateBlittable = server.Cluster.Read(context, ShardedExternalReplicationState.GenerateShardedItemName(database, source, sourceDbId));
 
-            return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : null;
+            return stateBlittable != null ? JsonDeserializationCluster.ShardedExternalReplicationState(stateBlittable) : null;
         }
     }
 }

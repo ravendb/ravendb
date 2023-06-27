@@ -1,11 +1,13 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Commands;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
@@ -19,6 +21,15 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             _taskId = node.TaskId;
             DocumentsSend += (_) => UpdateExternalReplicationInfo();
+        }
+
+        protected override DynamicJsonValue GetInitialHandshakeRequest()
+        {
+            var json = base.GetInitialHandshakeRequest();
+            if (_parent.Database is ShardedDocumentDatabase shardedDatabase)
+                json[nameof(ReplicationLatestEtagRequest.ShardedDatabaseId)] = shardedDatabase.ShardedDatabaseId;
+
+            return json;
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
