@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
 using Voron;
 using Voron.Data.Lookups;
+using static Voron.Data.CompactTrees.CompactTree;
 using Range = Corax.Queries.Range;
 
 namespace Corax;
@@ -11,9 +13,11 @@ namespace Corax;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false) {
+    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false, bool forward = true) {
         if (typeof(TValue) == typeof(long))
         {
+            Debug.Assert(forward == true, "With longs only forward iteration is valid.");
+
             return (leftSide, rightSide) switch
             {
                 // (x, y)
@@ -33,6 +37,8 @@ public partial class IndexSearcher
 
         if (typeof(TValue) == typeof(double))
         {
+            Debug.Assert(forward == true, "With doubles only forward iteration is valid.");
+
             return (leftSide, rightSide) switch
             {
                 // (x, y)
@@ -60,19 +66,19 @@ public partial class IndexSearcher
             {
                 // (x, y)
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, isNegated),
+                    leftValue, rightValue, isNegated, forward),
 
                 //<x, y)
                 (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, isNegated),
+                    leftValue, rightValue, isNegated, forward),
 
                 //<x, y>
                 (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(
-                    field, leftValue, rightValue, isNegated),
+                    field, leftValue, rightValue, isNegated, forward),
 
                 //(x, y>
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field,
-                    leftValue, rightValue, isNegated),
+                    leftValue, rightValue, isNegated, forward),
 
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
@@ -146,7 +152,7 @@ public partial class IndexSearcher
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
     
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high, bool isNegated)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high, bool isNegated, bool forward = true)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -154,7 +160,20 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return MultiTermMatch.Create(new MultiTermMatch<TermRangeProvider<TLow, THigh>>(field, _transaction.Allocator, new TermRangeProvider<TLow, THigh>(this, terms, field, low, high)));
+        if (forward == true)
+        {
+            return MultiTermMatch.Create(
+                new MultiTermMatch<TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>>(
+                    field, _transaction.Allocator, 
+                    new TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>(this, terms, field, low, high)));
+        }
+        else
+        {
+            return MultiTermMatch.Create(
+                new MultiTermMatch<TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>>(
+                    field, _transaction.Allocator, 
+                    new TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high)));
+        }
     }
 
     private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool isNegated)
@@ -181,7 +200,7 @@ public partial class IndexSearcher
 
         field = field.GetNumericFieldMetadata<double>(Allocator);
         var set = _fieldsTree?.LookupFor<DoubleLookupKey>(field.FieldName);
-            
+
         return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, DoubleLookupKey>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, DoubleLookupKey>(this, set, field, low, high)));
     }
 }

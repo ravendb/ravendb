@@ -5,18 +5,20 @@ using System.Text.Unicode;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries;
 
-public struct RegexTermProvider : ITermProvider
+public struct RegexTermProvider<TLookupIterator> : ITermProvider
+    where TLookupIterator : struct, ILookupIterator
 {
     private readonly CompactTree _tree;
     private readonly IndexSearcher _searcher;
     private readonly FieldMetadata _field;
     private readonly Regex _regex;
 
-    private CompactTreeForwardIterator _iterator;
+    private CompactTree.Iterator<TLookupIterator> _iterator;
 
     public bool IsOrdered => true;
 
@@ -25,7 +27,7 @@ public struct RegexTermProvider : ITermProvider
         _searcher = searcher;
         _regex = regex;
         _tree = tree;
-        _iterator = tree.Iterate();
+        _iterator = tree.Iterate<TLookupIterator>();
         _iterator.Reset();
         _field = field;
     }
@@ -33,7 +35,7 @@ public struct RegexTermProvider : ITermProvider
 
     public void Reset()
     {
-        _iterator = _tree.Iterate();
+        _iterator = _tree.Iterate<TLookupIterator>();
         _iterator.Reset();
     }
 
@@ -55,7 +57,7 @@ public struct RegexTermProvider : ITermProvider
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(RegexTermProvider)}",
+        return new QueryInspectionNode($"{nameof(RegexTermProvider<TLookupIterator>)}",
             parameters: new Dictionary<string, string>()
             {
                 { "Field", _field.ToString() },

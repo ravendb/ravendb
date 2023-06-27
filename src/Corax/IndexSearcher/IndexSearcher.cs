@@ -20,6 +20,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using InvalidOperationException = System.InvalidOperationException;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Corax;
 
@@ -260,7 +261,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return terms?.NumberOfEntries ?? 0;
     }
 
-    public bool TryGetTermsOfField(FieldMetadata field, out ExistsTermProvider existsTermProvider)
+    public bool TryGetTermsOfField(FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
+    {
+        return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
+    }
+
+    public bool TryGetTermsOfField<TLookupIterator>(FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
+        where TLookupIterator : struct, ILookupIterator
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
@@ -270,7 +277,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return false;
         }
 
-        existsTermProvider = new ExistsTermProvider(this, terms, field);
+        existsTermProvider = new ExistsTermProvider<TLookupIterator>(this, terms, field);
         return true;
     }
 

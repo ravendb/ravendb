@@ -5,17 +5,19 @@ using Corax.Mappings;
 using Sparrow;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
-    public unsafe struct ExistsTermProvider : ITermProvider
+    public struct ExistsTermProvider<TLookupIterator> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
 
-        private CompactTreeForwardIterator _iterator;
+        private CompactTree.Iterator<TLookupIterator> _iterator;
 
         public bool IsOrdered => true;
 
@@ -24,13 +26,13 @@ namespace Corax.Queries
             _tree = tree;
             _field = field;
             _searcher = searcher;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
         }
 
         public void Reset()
         {            
-            _iterator = _tree.Iterate();
+            _iterator = _tree.Iterate<TLookupIterator>();
             _iterator.Reset();
         }
 
@@ -68,7 +70,7 @@ namespace Corax.Queries
         
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(ExistsTermProvider)}",
+            return new QueryInspectionNode($"{nameof(ExistsTermProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() }

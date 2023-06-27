@@ -8,19 +8,21 @@ using System.Threading.Tasks;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct StartsWithTermProvider : ITermProvider
+    public struct StartsWithTermProvider<TLookupIterator> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private  CompactTreeForwardIterator _iterator;
+        private CompactTree.Iterator<TLookupIterator> _iterator;
 
         public bool IsOrdered => true;
 
@@ -28,7 +30,7 @@ namespace Corax.Queries
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _startWith = startWith;
             _tree = tree;
 
@@ -59,7 +61,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(StartsWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(StartsWithTermProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },

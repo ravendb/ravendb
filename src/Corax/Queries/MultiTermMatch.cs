@@ -12,7 +12,7 @@ using Sparrow.Server.Utils;
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch
+    public struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
 

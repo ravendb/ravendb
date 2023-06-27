@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using Corax.Mappings;
 using Voron.Data.CompactTrees;
-
+using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
-    public struct EndsWithTermProvider : ITermProvider
+    public struct EndsWithTermProvider<TLookupIterator> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
@@ -15,8 +16,8 @@ namespace Corax.Queries
 
         private readonly CompactKey _endsWith;
 
-        private CompactTreeForwardIterator _iterator;
-        
+        private CompactTree.Iterator<TLookupIterator> _iterator;
+
         public bool IsOrdered => true;
 
         public EndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
@@ -24,14 +25,14 @@ namespace Corax.Queries
             _tree = tree;
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
             _endsWith = endsWith;
         }
 
         public void Reset()
         {            
-            _iterator = _tree.Iterate();
+            _iterator = _tree.Iterate<TLookupIterator>();
             _iterator.Reset();
         }
 
@@ -56,7 +57,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(EndsWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(EndsWithTermProvider<TLookupIterator>)}",
                 parameters: new Dictionary<string, string>()
                 {
                     { "Field", _field.ToString() },

@@ -19,7 +19,8 @@ namespace Corax.Queries
     }
 
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct TermRangeProvider<TLow, THigh> : ITermProvider
+    public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
     {
@@ -28,7 +29,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
 
-        private CompactTreeForwardIterator _iterator;
+        private CompactTree.Iterator<TLookupIterator> _iterator;
 
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;
@@ -39,7 +40,7 @@ namespace Corax.Queries
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _low = low;
             _high = high;
             _tree = tree;
@@ -117,7 +118,7 @@ namespace Corax.Queries
     }
     
      [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct TermNumericRangeProvider<TLow, THigh, TVal> : ITermProvider
+    public struct TermNumericRangeProvider<TLow, THigh, TVal> : ITermProvider
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
         where TVal : struct, ILookupKey
@@ -128,8 +129,6 @@ namespace Corax.Queries
         private Lookup<TVal>.ForwardIterator _iterator;
         private bool _first;
 
-        private const int TermBufferSize = 32;
-        private fixed byte _termsBuffer[TermBufferSize];
         public bool IsOrdered => true;
 
         public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
@@ -140,7 +139,6 @@ namespace Corax.Queries
             _low = low;
             _high = high;
             _first = true;
-
         }
 
         public void Reset()
@@ -151,7 +149,6 @@ namespace Corax.Queries
         public bool Next(out TermMatch term)
         {
             bool wasFirst = false;
-            bool hasNext;
             if (_first)
             {
                 _iterator.Seek(_low);
@@ -159,8 +156,7 @@ namespace Corax.Queries
                 wasFirst = true;
             }
 
-            hasNext = _iterator.MoveNext(out TVal key, out var termId);
-
+            bool hasNext = _iterator.MoveNext(out TVal key, out var termId);
             if (hasNext == false)
                 goto Empty;
             
