@@ -837,6 +837,42 @@ namespace Raven.Server.Documents
             public ManualResetEventSlim DelayDocumentLoad;
         }
 
+        public IEnumerable<Document> GetUniformlyDistributedDocumentsFrom(DocumentsOperationContext context, string collection, long take, DocumentFields fields = DocumentFields.All)
+        {
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            if (table == null)
+                yield break;
+
+            long skip = table.NumberOfEntries < take ? 1 : table.NumberOfEntries / take;
+
+            foreach (var result in table.IterateUniformly(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToDocument(context, ref result.Reader, fields);
+            }
+        }
+
+        public IEnumerable<Document> GetUniformlyDistributedDocumentsFrom(DocumentsOperationContext context, long take, DocumentFields fields = DocumentFields.All)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            long skip = table.NumberOfEntries < take ? 1 : table.NumberOfEntries / take;
+
+            foreach (var result in table.IterateUniformly(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToDocument(context, ref result.Reader, fields);
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);

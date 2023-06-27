@@ -18,12 +18,12 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Voron.Impl;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    internal class FaultyInMemoryIndex : Index
+    internal sealed class FaultyInMemoryIndex : Index
     {
         private readonly Exception _e;
 
@@ -127,6 +127,11 @@ namespace Raven.Server.Documents.Indexes.Errors
         }
 
         public override IndexRunningStatus Status => IndexRunningStatus.Disabled;
+
+        protected override void OnCoraxInitialization()
+        {
+            // no-op
+        }
 
         public override void Start()
         {

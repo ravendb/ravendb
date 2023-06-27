@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1675,7 +1676,47 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip)
+        public IEnumerable<TableValueHolder> IterateUniformly(FixedSizeKeyIndexDef index, long skip = 1)
+        {
+            if (skip < 1)
+                throw new ArgumentOutOfRangeException(nameof(skip), "The skip must be positive and non zero.");
+
+            var fst = GetFixedSizeTree(index);
+
+            long count = -1;
+            using var it = fst.Iterate();
+            if (it.Seek(0) == false)
+                yield break;
+
+            var result = new TableValueHolder();
+            while (it.MoveNext())
+            {
+                count++;
+                if (count % skip == 0)
+                {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                }
+            }
+        }
+
+
+        public IEnumerable<TableValueHolder> SeekByRandomOrder(FixedSizeKeyIndexDef index)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                var result = new TableValueHolder();
+                while (it.MoveNext())
+                {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                } 
+            }
+        }
+
+        public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
 

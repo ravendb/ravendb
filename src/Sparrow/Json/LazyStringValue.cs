@@ -134,7 +134,7 @@ namespace Sparrow.Json
                     StringComparison.OrdinalIgnoreCase);
             }
         }
-        
+
         public Span<byte> AsSpan()
         {
             return new Span<byte>(_buffer, _size);

@@ -69,6 +69,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
 using Voron.Debugging;
@@ -857,27 +858,158 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Initialize(documentDatabase, environment);
 
             IndexPersistence?.Dispose();
+
             SearchEngineType = IndexStorage.ReadSearchEngineType(Name, environment);
+            IndexFieldsPersistence = new IndexFieldsPersistence(this);
+            IndexFieldsPersistence.Initialize();
 
             switch (SearchEngineType)
             {
                 case SearchEngineType.None:
                 case SearchEngineType.Lucene:
-                    IndexPersistence = new LuceneIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Lucene;
+                    IndexPersistence = new LuceneIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
+
                     break;
                 case SearchEngineType.Corax:
-                    IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Corax;
+                    IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     break;
                 default:
                     throw new InvalidDataException($"Cannot read search engine type for {Name}. Please reset the index.");
             }
 
             IndexPersistence.Initialize(environment);
+            EnsureIsInitialized();
+        }
 
-            IndexFieldsPersistence = new IndexFieldsPersistence(this);
-            IndexFieldsPersistence.Initialize();
+        private void EnsureIsInitialized()
+        {
+            if (SearchEngineType == SearchEngineType.Lucene)
+                return;
+
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                // It is already initialized, we can return.
+                if (CompactTree.HasDictionary(tx.InnerTransaction.LowLevelTransaction))
+                    return;
+            }
+
+            // We know that Corax is not initialized yet, therefore we will call 
+            OnCoraxInitialization();
+        }
+
+        private struct DocumentTrainSpanEnumerator : IReadOnlySpanEnumerator
+        {
+            private readonly DocumentsStorage _documentStorage;
+            private readonly QueryOperationContext _queryContext;
+            private readonly TransactionOperationContext _indexContext;
+            private readonly Index _index;
+            private readonly IndexType _indexType;
+            private readonly HashSet<string> _collections;
+            private IEnumerator<LazyStringValue> _itemsEnumerable;
+
+            public DocumentTrainSpanEnumerator(TransactionOperationContext indexContext, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections)
+            {
+                _indexContext = indexContext;
+                _index = index;
+                _indexType = indexType;
+
+                _documentStorage = storage;
+                _queryContext = queryContext;
+                _collections = collections;
+            }
+
+            private IEnumerable<LazyStringValue> GetItems()
+            {
+                var scope = new IndexingStatsScope(new IndexingRunStats());
+                foreach (var collection in _collections)
+                {
+                    using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection), collection, _indexContext, scope, _indexType);
+                    while (true)
+                    {
+                        if (itemEnumerator.MoveNext(_queryContext.Documents, out var _, out var _) == false)
+                            break;
+
+                        Document doc = itemEnumerator.Current.Item as Document;
+                        if (doc == null)
+                            continue;
+
+                        var reader = doc.Data;
+                        int properties = reader.Count;
+                        BlittableJsonReaderObject.PropertyDetails details = default;
+                        for (int i = 0; i < properties; i++)
+                        {
+                            reader.GetPropertyByIndex(i, ref details);
+                            switch (details.Token)
+                            {
+                                case BlittableJsonToken.String:
+                                    yield return (LazyStringValue)details.Value;
+                                    break;
+                                case BlittableJsonToken.CompressedString:
+                                    yield return ((LazyCompressedStringValue)details.Value).ToLazyStringValue();
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            private IEnumerable<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
+            {
+                if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+                    return _documentStorage.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, take);
+                return _documentStorage.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, collection, take);
+            }
+
+            private IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
+            {
+                foreach (var document in GetDocumentsEnumerator(queryContext, collection, take))
+                {
+                    yield return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
+                }
+            }
+
+            public void Reset()
+            {
+                _itemsEnumerable = GetItems().GetEnumerator();
+            }
+
+            public bool MoveNext(out ReadOnlySpan<byte> output)
+            {
+                _itemsEnumerable ??= GetItems().GetEnumerator();
+                var result = _itemsEnumerable.MoveNext();
+                output = result == true? _itemsEnumerable.Current.AsSpan() : ReadOnlySpan<byte>.Empty;
+                return result;
+            }
+        }
+
+        protected virtual void OnCoraxInitialization()
+        {
+            var documentStorage = DocumentDatabase.DocumentsStorage;
+
+            using (CultureHelper.EnsureInvariantCulture())
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, this))
+            using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, documentStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+            {
+                indexContext.PersistentContext.LongLivedTransactions = true;
+                queryContext.SetLongLivedTransactions(true);
+                queryContext.OpenReadTransaction();
+
+                var tx = indexContext.OpenWriteTransaction();
+
+                var enumerator = new DocumentTrainSpanEnumerator(indexContext, this, Type, documentStorage, queryContext, Collections);
+
+                var llt = tx.InnerTransaction.LowLevelTransaction;
+                var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
+                var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
+
+                PersistentDictionary.ReplaceIfBetter(llt, enumerator, enumerator, defaultDictionary);
+
+                tx.Commit();
+            }
         }
 
         protected virtual void OnInitialization()
@@ -5039,7 +5171,7 @@ namespace Raven.Server.Documents.Indexes
             return _regexCache.Get(arg);
         }
 
-        private SpatialField GetOrAddSpatialField(string name)
+        protected SpatialField GetOrAddSpatialField(string name)
         {
             return _spatialFields.GetOrAdd(name, n =>
             {
