@@ -408,8 +408,8 @@ namespace Raven.Server.Config.Categories
         [Description("Corax index compression max documents used for dictionary creation.")]
         [DefaultValue(100000)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry(Constants.Configuration.Indexes.IndexingCompressionMaxDocuments, ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int CoraxIndexingMaxDocumentsForDictionary { get; protected set; }
+        [ConfigurationEntry("Indexing.Corax.DocumentsLimitForCompressionDictionaryCreation", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int DocumentsLimitForCompressionDictionaryCreation { get; protected set; }
         
         public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }
 
