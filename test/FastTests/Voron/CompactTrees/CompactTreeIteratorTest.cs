@@ -33,9 +33,11 @@ namespace FastTests.Voron.CompactTrees
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1, 1337)]
         [InlineData(380, 1158997728)]
+        [InlineData(98231, 865390483)]
         [MemberData("Configuration")]
         public void IterateAndCompare(int itemsToInsert, int randomSeed = 1337)
         {
+            var hasSeen = new HashSet<long>();
             var currentKeys = new List<string>();
             var rnd = new Random(randomSeed);
 
@@ -49,9 +51,13 @@ namespace FastTests.Voron.CompactTrees
                 for (int j = 0; j < itemsToInsert; j++)
                 {
                     long item = Math.Abs((long)rnd.Next() + rnd.Next());
-                    var itemAsString = item.ToString().PadLeft(maxAmountOfDigits, '0');
-                    currentKeys.Add(itemAsString);
-                    tree.Add(itemAsString, item);
+                    if (hasSeen.Contains(item) == false)
+                    {
+                        var itemAsString = item.ToString().PadLeft(maxAmountOfDigits, '0');
+                        currentKeys.Add(itemAsString);
+                        tree.Add(itemAsString, item);
+                        hasSeen.Add(item);
+                    }
                 }
 
                 wtx.Commit();
