@@ -370,27 +370,26 @@ namespace Raven.Server.Documents.Indexes
             Logger.Dispose();
         }
 
-        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType)
+        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType, SwitchLogger switchLogger)
         {
 
             StorageEnvironment environment = null;
             searchEngineType = SearchEngineType.None;
 
             var name = new DirectoryInfo(path).Name;
-            var indexLogger = documentDatabase.IndexesLogger.GetSubSwitchLogger(name);
-
+            
             var indexPath = path;
 
             var indexTempPath =
                 documentDatabase.Configuration.Indexing.TempPath?.Combine(name);
 
             var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, null,
-                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, indexLogger);
+                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, switchLogger);
             try
             {
                 InitializeOptions(options, documentDatabase, name);
 
-                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, indexLogger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, switchLogger);
 
                 environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
 
@@ -680,7 +679,7 @@ namespace Raven.Server.Documents.Indexes
 
             var indexTempPath = configuration.TempPath?.Combine(name);
 
-            var indexLogger = documentDatabase.IndexesLogger.GetSubSwitchLogger(name);
+            var indexLogger = documentDatabase.IndexesLogger.GetSubSwitchLogger(Name);
             var options = configuration.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath ?? Path.Combine(indexPath.FullPath, "Temp"),
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, indexLogger)

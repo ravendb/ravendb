@@ -477,7 +477,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     Index index = null;
                     try
                     {
-                        index = Index.Open(indexPath, database, generateNewDatabaseId: true, out _);
+                        index = Index.Open(indexPath, database, generateNewDatabaseId: true, searchEngineType: out _, database.IndexesLogger);
                     }
                     catch (Exception e)
                     {

@@ -316,7 +316,7 @@ namespace Raven.Server.Web.System
                         if (documentDatabase.DatabaseShutdown.IsCancellationRequested)
                             return;
 
-                        index = Index.Open(indexPath, documentDatabase, generateNewDatabaseId: false, out var _);
+                        index = Index.Open(indexPath, documentDatabase, generateNewDatabaseId: false, searchEngineType: out var _, documentDatabase.IndexesLogger);
                         if (index == null)
                             continue;
 

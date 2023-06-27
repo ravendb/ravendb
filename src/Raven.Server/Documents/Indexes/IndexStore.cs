@@ -1847,7 +1847,7 @@ namespace Raven.Server.Documents.Indexes
             SearchEngineType searchEngineType = SearchEngineType.None;
             try
             {
-                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType);
+                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType, _documentDatabase.IndexesLogger.GetSubSwitchLogger(name));
 
                 var differences = IndexDefinitionCompareDifferences.None;
 

@@ -13,7 +13,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Admin;
 using SlowTests.Issues;
 using Sparrow.Logging;
@@ -75,6 +77,27 @@ namespace SlowTests.SparrowTests
             Assert.Contains(new KeyValuePair<string, LogMode>("Server.Databases", LogMode.None), configuration.Loggers);
         }
 
+        private class TestIndex : AbstractIndexCreationTask<TestIndex.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+                public string Prop { get; set; }
+            }
+
+            public TestIndex()
+            {
+                Map = items => from ent in items
+                    select new Result {Id = ent.Id, Prop = ent.Prop};
+            }
+        }
+        
+        private class Test_BySomethingIndex : TestIndex
+        {
+            
+        }
+
+        
         [Fact]
         public async Task LoggerToggling_WhenAddAndRemoveDatabaseAndIndex_ShouldContainsEquivalentSwitches()
         {
@@ -88,9 +111,11 @@ namespace SlowTests.SparrowTests
             using (var store = GetDocumentStore(new Options {Server = server}))
             {
                 databaseName = store.Database;
-                var index = new SampleIndex();
+                var index = new TestIndex();
                 await index.ExecuteAsync(store);
-
+                
+                WaitForUserToContinueTheTest(store);
+                
                 Assert.True(databasesSwitchLogger.Loggers.TryGet(store.Database, out var databaseSwitchLogger));
                 Assert.False(databaseSwitchLogger.IsModeOverrode);
 
@@ -105,6 +130,28 @@ namespace SlowTests.SparrowTests
             }
 
             Assert.False(databasesSwitchLogger.Loggers.TryGet(databaseName, out _));
+        }
+        
+        [Fact]
+        public async Task LoggerToggling_WhenIndexNameHasSlash_ShouldNotCreateMoreThanOneLoggerSwitchForTheIndex()
+        {
+            using var server = GetNewServer();
+
+            Assert.True(server.Logger.Loggers.TryGet("Databases", out var databasesSwitchLogger));
+
+            using var store = GetDocumentStore(new Options {Server = server, RunInMemory = false});
+            var index = new Test_BySomethingIndex();
+            await index.ExecuteAsync(store);
+            
+            store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, disable: true));
+            store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, disable: false));
+            
+            Assert.True(databasesSwitchLogger.Loggers.TryGet(store.Database, out var databaseSwitchLogger));
+
+            Assert.True(databaseSwitchLogger.Loggers.TryGet("Indexes", out var indexesSwitchLogger));
+
+            Assert.True(indexesSwitchLogger.Loggers.TryGet(index.IndexName, out var indexSwitchLogger));
+            Assert.Equal(1, indexesSwitchLogger.Loggers.Count());
         }
 
         [Fact]
