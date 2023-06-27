@@ -6,6 +6,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -42,18 +43,20 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
 
     public abstract IEnumerable<(Document Doc, Exception Exception)> GetBatch();
 
+    public bool IsActiveMigration;
+
     public abstract Task<long> RecordBatch(string lastChangeVectorSentInThisBatch);
 
-    public abstract Task AcknowledgeBatch(long batchId);
+    public abstract Task AcknowledgeBatch(long batchId, string changeVector);
 
     protected ClusterOperationContext ClusterContext;
     protected TIncludesCommand IncludesCmd;
 
     public virtual IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out TIncludesCommand includesCommands)
     {
+        ClusterContext = clusterContext;
         InitializeProcessor();
 
-        ClusterContext = clusterContext;
         var commands = CreateIncludeCommands();
         IncludesCmd = commands;
         includesCommands = commands;
@@ -62,6 +65,8 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
     }
 
     protected abstract TIncludesCommand CreateIncludeCommands();
+
+    protected abstract ConflictStatus GetConflictStatus(string changeVector);
 
     public virtual void Dispose()
     {

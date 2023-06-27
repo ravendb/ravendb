@@ -11,6 +11,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
@@ -39,6 +40,13 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 release.Dispose();
                 throw;
             }
+        }
+        protected override ConflictStatus GetConflictStatus(string changeVector)
+        {
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                remoteAsString: changeVector,
+                localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+            return conflictStatus;
         }
 
         protected (Document Doc, Exception Exception) GetBatchItem(T item)

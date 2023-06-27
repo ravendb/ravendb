@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
     public class DocumentsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<Document>
     {
-        private readonly SubscriptionConnection _connection;
+        protected readonly SubscriptionConnection _connection;
 
         public DocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) =>
             (await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
 
-        public override async Task AcknowledgeBatch(long batchId)
+        public override async Task AcknowledgeBatch(long batchId, string changeVector)
         {
             ItemsToRemoveFromResend.Clear();
 
@@ -86,7 +86,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 }
             }
 
-            await SubscriptionConnectionsState.AcknowledgeBatch(_connection, batchId, BatchItems);
+            await SubscriptionConnectionsState.AcknowledgeBatch(_connection.LastSentChangeVectorInThisConnection 
+                                                                ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), batchId, BatchItems);
 
             if (BatchItems?.Count > 0)
             {
@@ -119,7 +120,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
-                var conflictStatus = GetConflictStatus(item);
+                var conflictStatus = GetConflictStatus(item.ChangeVector);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
@@ -180,14 +181,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
         }
 
-        protected virtual ConflictStatus GetConflictStatus(Document item)
-        {
-            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                remoteAsString: item.ChangeVector,
-                localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
-            return conflictStatus;
-        }
-
         protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
         {
             reason = null;
@@ -221,15 +214,26 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     return fetch;
 
                 case ConflictStatus.AlreadyMerged:
+                    if (CheckIfNewerInResendList(context, item.Document.Id, item.Document.ChangeVector, currentChangeVector))
+                    {
+                        reason = $"document '{id}' is older in storage (cv: '{item.Document.ChangeVector}') then in resend list (cv: '{currentChangeVector}'), probably there is a active migration. sub progress: {SubscriptionConnectionsState.LastChangeVectorSent}";
+                        return false;
+                    }
+
                     return true;
 
                 case ConflictStatus.Conflict:
-                    reason = $"document '{id}' is in conflict with";
+                    reason = $"document '{id}' is in conflict, CV in storage '{item.Document.ChangeVector}' CV in resend list '{currentChangeVector}' (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
                     return false;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(ConflictStatus), status.ToString());
             }
+        }
+
+        protected virtual bool CheckIfNewerInResendList(DocumentsOperationContext context, string id, string cvInStorage, string cvInResendList)
+        {
+            return false;
         }
 
         private bool ShouldAddToResendTable(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)

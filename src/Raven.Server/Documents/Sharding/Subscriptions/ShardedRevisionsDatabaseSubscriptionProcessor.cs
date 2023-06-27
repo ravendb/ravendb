@@ -7,6 +7,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
@@ -32,7 +33,8 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
     {
         exception = null;
         result = item.Current;
-
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-18881/Sharding-Subscription-Revisions");
+        
         var shard = ShardHelper.GetShardNumberFor(_sharding, _allocator, result.Id);
         if (shard != _database.ShardNumber)
         {

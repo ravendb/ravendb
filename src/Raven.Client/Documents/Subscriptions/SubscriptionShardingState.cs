@@ -9,6 +9,7 @@ public class SubscriptionShardingState : IDynamicJson
     public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
     public Dictionary<string, string> NodeTagPerShard { get; set; }
     public Dictionary<int, string> ProcessedChangeVectorPerBucket { get; set; }
+    public string ChangeVectorForNextBatchStartingPointForOrchestrator { get; set; }
 
     public DynamicJsonValue ToJson()
     {
@@ -17,6 +18,7 @@ public class SubscriptionShardingState : IDynamicJson
             [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
             [nameof(ProcessedChangeVectorPerBucket)] = ProcessedChangeVectorPerBucket?.ToJsonWithPrimitiveKey(),
             [nameof(NodeTagPerShard)] = NodeTagPerShard?.ToJson(),
+            [nameof(ChangeVectorForNextBatchStartingPointForOrchestrator)] = ChangeVectorForNextBatchStartingPointForOrchestrator
         };
     }
 }

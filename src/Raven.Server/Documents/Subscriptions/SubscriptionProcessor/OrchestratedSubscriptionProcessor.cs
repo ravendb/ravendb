@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 
@@ -24,13 +27,14 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
     {
         base.InitializeProcessor();
         _state = _databaseContext.SubscriptionsStorage.Subscriptions[Connection.SubscriptionId];
+        Connection.SubscriptionState = _databaseContext.SubscriptionsStorage.GetSubscriptionById(ClusterContext, Connection.SubscriptionId);
     }
 
     // should never hit this
     public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
 
     // should never hit this
-    public override Task AcknowledgeBatch(long batchId) => throw new NotImplementedException();
+    public override Task AcknowledgeBatch(long batchId, string changeVector) => throw new NotImplementedException();
 
     private OrchestratorIncludesCommandImpl _includes;
 
@@ -45,6 +49,16 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         return _includes;
     }
 
+    protected override ConflictStatus GetConflictStatus(string changeVector)
+    {
+        var vector = ClusterContext.GetChangeVector(changeVector);
+
+        var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+            remoteAsString: vector.Order,
+            localAsString: _state.LastChangeVectorSent);
+        return conflictStatus;
+    }
+
     public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
     {
         if (_state.Batches.TryTake(out CurrentBatch, TimeSpan.Zero) == false)
@@ -52,9 +66,12 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
 
         using (CurrentBatch.ReturnContext)
         {
-            foreach (var batchItem in CurrentBatch.Items)
+            foreach (SubscriptionBatchBase<BlittableJsonReaderObject>.Item batchItem in CurrentBatch.Items)
             {
-                Connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                if (GetConflictStatus(batchItem.ChangeVector) == ConflictStatus.AlreadyMerged)
+                {
+                    continue;
+                }
 
                 if (batchItem.ExceptionMessage != null)
                     yield return (null, new Exception(batchItem.ExceptionMessage));

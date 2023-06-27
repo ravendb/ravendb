@@ -50,8 +50,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public long CurrentBatchId;
 
-        public string LastSentChangeVectorInThisConnection;
-
         public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database)
             : base(tcpConnection.DocumentDatabase.SubscriptionStorage, tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
         {
@@ -366,7 +364,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
-            await Processor.AcknowledgeBatch(CurrentBatchId);
+            await Processor.AcknowledgeBatch(CurrentBatchId, clientReplyChangeVector);
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
@@ -405,7 +403,7 @@ namespace Raven.Server.Documents.TcpHandlers
             //merge with this node's local etag
         }
 
-        protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
+        protected override async Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
         {
             //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
             LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
@@ -414,6 +412,8 @@ namespace Raven.Server.Documents.TcpHandlers
             State.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
                 State.LastChangeVectorSent,
                 lastChangeVectorSentInThisBatch);
+
+            return true;
         }
 
         protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
@@ -451,6 +451,11 @@ namespace Raven.Server.Documents.TcpHandlers
         protected override void GatherIncludesForDocument(DatabaseIncludesCommandImpl includeDocuments, Document document)
         {
             includeDocuments?.GatherIncludesForDocument(document);
+        }
+
+        protected override Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
+        {
+            return Task.FromResult(true);
         }
 
         protected override StatusMessageDetails GetStatusMessageDetails()

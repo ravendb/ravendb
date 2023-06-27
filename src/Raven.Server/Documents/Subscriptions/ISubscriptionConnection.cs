@@ -17,7 +17,7 @@ public interface ISubscriptionConnection : IDisposable
 
     TcpConnectionOptions TcpConnection { get; }
 
-    SubscriptionState SubscriptionState { get; }
+    SubscriptionState SubscriptionState { get; set; }
 
     SubscriptionConnection.ParsedSubscription Subscription { get; }
 

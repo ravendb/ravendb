@@ -243,7 +243,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     }
 
     public abstract Task UpdateClientConnectionTime();
-
+    protected abstract void SetLastChangeVectorSent(TSubscriptionConnection connection);
     public abstract Task WaitForIndexNotificationAsync(long index);
 
     public abstract void DropSubscription(SubscriptionException e);

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -12,7 +11,6 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.Utils;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
@@ -105,6 +103,17 @@ public class SubscriptionConnectionsStateOrchestrator : AbstractSubscriptionConn
         var (etag, _) = await _server.SendToLeaderAsync(command);
         await _server.Cluster.WaitForIndexNotification(etag);
         // await WaitForIndexNotificationAsync(etag);
+    }
+
+    protected override void SetLastChangeVectorSent(OrchestratedSubscriptionConnection connection)
+    {
+        LastChangeVectorSent = connection.SubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator;
+    }
+
+    public override void Initialize(OrchestratedSubscriptionConnection connection, bool afterSubscribe = false)
+    {
+        base.Initialize(connection, afterSubscribe);
+        SetLastChangeVectorSent(connection);
     }
 
     protected override UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()

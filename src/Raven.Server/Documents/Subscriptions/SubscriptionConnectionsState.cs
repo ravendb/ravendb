@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual void SetLastChangeVectorSent(SubscriptionConnection connection) => InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+        protected override void SetLastChangeVectorSent(SubscriptionConnection connection) => InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
 
         internal void InitializeLastChangeVectorSent(string changeVectorForNextBatchStartingPoint)
         {
@@ -110,12 +110,20 @@ namespace Raven.Server.Documents.Subscriptions
             return set;
         }
 
-        public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
+        public async Task AcknowledgeShardingBatch(string changeVector, string cvForOrchestrator, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
-            return AcknowledgeBatchProcessed(
-                connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                batchId,
-                addDocumentsToResend);
+            AcknowledgeSubscriptionBatchCommand command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
+            command.LastKnownSubscriptionChangeVector = cvForOrchestrator;
+            var (etag, _) = await _server.SendToLeaderAsync(command);
+            await WaitForIndexNotificationAsync(etag);
+        }
+
+        public async Task AcknowledgeBatch(string changeVector, long batchId, List<DocumentRecord> addDocumentsToResend)
+        {
+            var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
+
+            var (etag, _) = await _server.SendToLeaderAsync(command);
+            await WaitForIndexNotificationAsync(etag);
         }
         
         public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
@@ -183,14 +191,6 @@ namespace Raven.Server.Documents.Subscriptions
                 BatchId = batchId,
                 DocumentsToResend = docsToResend,
             };
-        }
-
-        public async Task AcknowledgeBatchProcessed(string changeVector, long batchId, List<DocumentRecord> docsToResend)
-        {
-            var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
-                
-            var (etag, _) = await _server.SendToLeaderAsync(command);
-            await WaitForIndexNotificationAsync(etag);
         }
 
         private async Task NoopAcknowledgeSubscription()
