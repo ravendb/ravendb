@@ -1258,7 +1258,7 @@ namespace Raven.Server.ServerWide
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
 
                     // we are not waiting here on purpose
-                    var t = LicenseManager.PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
+                    _ = LicenseManager.PutMyNodeInfoAsync(timeout: (int)Engine.OperationTimeout.TotalMilliseconds).IgnoreUnobservedExceptions();
                     break;
 
                 case nameof(PutLicenseLimitsCommand):

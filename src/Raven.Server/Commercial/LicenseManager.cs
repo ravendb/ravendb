@@ -140,7 +140,7 @@ namespace Raven.Server.Commercial
                 _serverStore.Engine.CommandsVersionManager.OnClusterVersionChange += PutMyNodeInfoClusterVersionChange;
 
                 if (_serverStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion > 0)
-                    Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
+                    Task.Run(() => PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {
@@ -161,15 +161,15 @@ namespace Raven.Server.Commercial
             if (args.PreviousClusterVersion != 0)
                 return;
 
-            Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
+            Task.Run(() => PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
         }
 
-        public async Task PutMyNodeInfoAsync()
+        public async Task PutMyNodeInfoAsync(int timeout = 0)
         {
             if (_serverStore.IsPassive())
                 return;
 
-            if (await _licenseLimitsSemaphore.WaitAsync(0) == false)
+            if (await _licenseLimitsSemaphore.WaitAsync(timeout) == false)
                 return;
 
             try
