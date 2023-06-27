@@ -27,7 +27,7 @@ namespace Voron.Data.Fixed
 
         public class NullIterator : IFixedSizeIterator
         {
-            public readonly static NullIterator Instance = new NullIterator();
+            public static readonly NullIterator Instance = new ();
             public bool SeekToLast()
             {
                 return false;

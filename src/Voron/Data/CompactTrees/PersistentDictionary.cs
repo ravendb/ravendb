@@ -45,9 +45,9 @@ namespace Voron.Data.CompactTrees
         }
     }
 
-    public unsafe partial class PersistentDictionary 
+    public unsafe partial class PersistentDictionary
     {
-
+        public const string DictionaryKey = $"{nameof(PersistentDictionary)}.Current";
         public readonly long DictionaryId;
         
         private readonly HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>> _encoder;
@@ -69,7 +69,7 @@ namespace Voron.Data.CompactTrees
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
-            using var _ = Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
+            using var _ = Slice.From(llt.Allocator, DictionaryKey, out var defaultKey);
 
             long pageNumber;
 
@@ -126,7 +126,7 @@ namespace Voron.Data.CompactTrees
             return pageNumber;
         }
 
-        public static PersistentDictionary CreateIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
+        public static PersistentDictionary ReplaceIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
             where TKeys1 : struct, IReadOnlySpanEnumerator
             where TKeys2 : struct, IReadOnlySpanEnumerator
         {
@@ -165,13 +165,20 @@ namespace Voron.Data.CompactTrees
             encoderState.EncodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr, requiredSize / 2));
             encoderState.DecodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr + requiredSize / 2, requiredSize / 2));
 
-            var nativeState = new NativeMemoryEncoderState(encodingTablesPtr, requiredSize);
             header->TableSize = requiredSize;
             header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(ulong), (ulong) (header->TableSize + PersistentDictionaryHeader.SizeOf - sizeof(ulong)));
 
 #if DEBUG
             VerifyTable(p);
 #endif
+
+            using var _ = Slice.From(llt.Allocator, DictionaryKey, out var defaultKey);
+            using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+            *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
+            {
+                RootObjectType = RootObjectType.PersistentDictionary,
+                PageNumber = p.PageNumber
+            };
 
             return new PersistentDictionary(p);
         }

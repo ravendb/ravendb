@@ -273,7 +273,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     }
 
 
-    public static CompactTree InternalCreate(Tree parent, Slice name)
+    public static unsafe CompactTree InternalCreate(Tree parent, Slice name)
     {
         Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
@@ -282,9 +282,28 @@ public sealed partial class CompactTree : IPrepareForCommit
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
-            
+
+            long dictionaryId;
+
             // This will be created a single time and stored in the root page.
-            var dictionaryId = PersistentDictionary.CreateDefault(llt);
+            using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var defaultKey);
+            var existingDictionary = llt.RootObjects.DirectRead(defaultKey);
+            if (existingDictionary == null)
+            {
+                dictionaryId = PersistentDictionary.CreateDefault(llt);
+
+                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+                *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
+                {
+                    RootObjectType = RootObjectType.PersistentDictionary,
+                    PageNumber = dictionaryId
+                };
+            }
+            else
+            {
+                dictionaryId = ((PersistentDictionaryRootHeader*)existingDictionary)->PageNumber;
+            }
+
             long containerId = Container.Create(llt);
             inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
         }
@@ -295,6 +314,14 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         return new CompactTree(inner);
     }
+
+    public static bool HasDictionary(LowLevelTransaction llt)
+    {
+        using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
+        var existingDictionary = llt.RootObjects.Read(dictionarySlice);
+        return existingDictionary != null;
+    }
+
     public bool TryGetValue(string key, out long value)
     {
         using var _ = Slice.From(_inner.Llt.Allocator, key, out var slice);

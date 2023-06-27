@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections;
+using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class TimeCountingEnumerable : IEnumerable
     {
+        [NotNull]
         private readonly IEnumerable _enumerable;
+
+        [NotNull]
         private readonly IndexingStatsScope _stats;
 
-        public TimeCountingEnumerable(IEnumerable enumerable, IndexingStatsScope stats)
+        public TimeCountingEnumerable([NotNull] IEnumerable enumerable, [NotNull] IndexingStatsScope stats)
         {
             _enumerable = enumerable;
             _stats = stats;
@@ -24,12 +28,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return new Enumerator(_enumerable.GetEnumerator(), _stats);
         }
 
-        public struct Enumerator : IEnumerator
+        public readonly struct Enumerator : IEnumerator
         {
+            [NotNull]
             private readonly IEnumerator _enumerator;
+            [NotNull]
             private readonly IndexingStatsScope _stats;
 
-            public Enumerator(IEnumerator enumerator, IndexingStatsScope stats)
+            public Enumerator([NotNull] IEnumerator enumerator, [NotNull] IndexingStatsScope stats)
             {
                 _enumerator = enumerator;
                 _stats = stats;
