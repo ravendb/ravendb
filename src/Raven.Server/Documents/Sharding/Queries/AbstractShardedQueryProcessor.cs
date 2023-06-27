@@ -750,7 +750,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             return ConstantComparer.Instance;
 
         if (query.Metadata.OrderBy?.Length > 0)
-            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries);
+            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom);
 
         if (queryType == QueryType.IndexEntries)
             return ConstantComparer.Instance;

@@ -93,7 +93,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
             if (orderByFields?.Length > 0)
             {
                 // apply ordering after the re-reduce of a map-reduce index
-                result.Results.Sort(new DocumentsComparer(orderByFields, extractFromData: true));
+                result.Results.Sort(new DocumentsComparer(orderByFields, extractFromData: true, Query.Metadata.HasOrderByRandom));
             }
         }
     }
