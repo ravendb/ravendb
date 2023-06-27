@@ -18,7 +18,7 @@ public class RavenDB_19016 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Can_Index_Nested_Document_Change_Different_Collections(Options options)
     {
         using (var server = GetNewServer())
