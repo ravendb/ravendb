@@ -172,6 +172,7 @@ namespace Raven.Client
             internal class Indexes
             {
                 internal const string IndexingStaticSearchEngineType = "Indexing.Static.SearchEngineType";
+                internal const string IndexingCompressionMaxDocuments = "Indexing.Corax.Compression.MaxDocuments";
             }
             
             public const string ClientId = "Configuration/Client";
