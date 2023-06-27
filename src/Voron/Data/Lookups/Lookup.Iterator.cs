@@ -1,7 +1,6 @@
 using System;
 using System.Data;
 using System.Diagnostics;
-using Voron.Data.CompactTrees;
 
 namespace Voron.Data.Lookups
 {

@@ -1291,7 +1291,7 @@ namespace FastTests.Corax
                 Assert.Equal(2, match.Fill(ids));
                 long id = ids[0];
                 long id1 = ids[1];
-                var results = new string[] {searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id), searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1)};
+                var results = new[] {searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id), searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1)};
                 Array.Sort(results);
                 Assert.Equal("entry/1", results[0]);
                 Assert.Equal("entry/2", results[1]);
