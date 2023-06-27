@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Compression;
