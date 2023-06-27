@@ -5,25 +5,27 @@ using Corax.Mappings;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
-using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
+using Voron.Data.Lookups;
 
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct NotStartWithTermProvider : ITermProvider
+    public struct NotStartsWithTermProvider<TLookupIterator> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private CompactTreeForwardIterator _iterator;
+        private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, CompactKey startWith)
+
+        public NotStartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
             _startWith = startWith;
             _tree = tree;
@@ -55,7 +57,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(NotStartWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(NotStartsWithTermProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },

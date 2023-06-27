@@ -8,25 +8,27 @@ using Corax.Mappings;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct NotEndsWithTermProvider : ITermProvider
+    public struct NotEndsWithTermProvider<TLookupIterator> : ITermProvider
+        where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _endsWith;
 
-        private CompactTreeForwardIterator _iterator;
+        private CompactTree.Iterator<TLookupIterator> _iterator;
 
         public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
             _endsWith = endsWith;
             _tree = tree;
@@ -58,7 +60,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(NotEndsWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(NotEndsWithTermProvider<TLookupIterator>)}",
                 parameters: new Dictionary<string, string>()
                 {
                     { "Field", _field.ToString() },
