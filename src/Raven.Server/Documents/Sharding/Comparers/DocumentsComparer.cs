@@ -14,12 +14,34 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly OrderByField[] _orderByFields;
     private readonly bool _extractFromData;
+    private readonly Random[] _randoms;
 
-    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData)
+    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData, bool hasOrderByRandom)
     {
         _orderByFields = orderByFields;
         _extractFromData = extractFromData;
+        _randoms = hasOrderByRandom == false
+            ? null
+            : GetRandom(_orderByFields);
     }
+    
+    private Random[] GetRandom(OrderByField[] orderByFields)
+    {
+        var randoms = new Random[orderByFields.Length];
+        
+        for (int idX = 0, randomIdx = 0; idX < _orderByFields.Length; ++idX)
+        {
+            if (orderByFields[idX].OrderingType != OrderByFieldType.Random)
+                continue;
+
+            ref var randomField = ref orderByFields[idX];
+            randoms[randomIdx++] = randomField.Arguments is {Length: > 0} 
+                ? new Random(randomField.Arguments[0].NameOrValue.GetHashCode()) 
+                :  Random.Shared;
+        }
+        return randoms;
+    }
+
 
     public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
@@ -83,7 +105,7 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                     return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
                 }
             case OrderByFieldType.Random:
-                return Random.Shared.Next(0, int.MaxValue);
+                return _randoms[index].Next(int.MinValue, int.MaxValue);
 
             case OrderByFieldType.Custom:
                 throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
