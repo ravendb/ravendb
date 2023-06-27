@@ -215,7 +215,7 @@ namespace Raven.Server.Dashboard
                 var databaseOnline = serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(databaseName, out var database);
                 if (databaseOnline == false)
                 {
-                    SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
+                    SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, rawRecord.IsDisabled);
                     return;
                 }
 
