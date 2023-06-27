@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 
 namespace Voron.Data.BTrees
 {
@@ -214,6 +215,17 @@ namespace Voron.Data.BTrees
             }
 
             throw new NotSupportedException();
+        }
+
+        public long GetLookupRootPage(Slice name)
+        {
+            var result = Read(name);
+            if (result == null)
+                return -1;
+            var header = (LookupState*)result.Reader.Base;
+            if (header->RootObjectType != RootObjectType.Lookup)
+                return -1;
+            return header->RootPage;
         }
     }
 }

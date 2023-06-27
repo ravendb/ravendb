@@ -20,7 +20,7 @@ public unsafe struct EntryTermsWriter : IDisposable
 
     public int Encode(in NativeList<IndexWriter.RecordedTerm> terms)
     {
-        const int maxItemSize = 32; // that should be more than enough to fit everything
+        const int maxItemSize = 32; // that should be more than enough to fit everything (except stored fields)
         if (terms.Count * maxItemSize > _bs.Length)
         {
             _bsc.GrowAllocation(ref _bs, ref _scope, terms.Count * maxItemSize);
@@ -33,9 +33,21 @@ public unsafe struct EntryTermsWriter : IDisposable
         for (int i = 0; i < terms.Count; i++)
         {
             ref var cur = ref terms.RawItems[i];
+
             // no need for zig/zag, since we are working on sorted values
             offset += VariableSizeEncoding.Write(buffer + offset, cur.TermContainerId - prevTermId);
             prevTermId = cur.TermContainerId;
+
+            if ((cur.TermContainerId & 0b11) == 0b10) // non standard
+            {
+                // spatial or stored fields
+                *(double*)(buffer + offset) = cur.Lat;
+                offset += sizeof(double);
+                *(double*)(buffer + offset) = cur.Lng;
+                offset += sizeof(double);
+                continue;
+            }
+            
             if (cur.HasLong == false) 
                 continue;
             

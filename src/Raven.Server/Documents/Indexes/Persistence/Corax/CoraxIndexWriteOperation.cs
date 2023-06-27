@@ -35,9 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = writeTransaction.Allocator;
             try
             {
-                _indexWriter = index.Definition.HasDynamicFields 
-                    ? new IndexWriter(writeTransaction, knownFields, true) 
-                    : new IndexWriter(writeTransaction, knownFields);
+                _indexWriter =  new IndexWriter(writeTransaction, knownFields);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {

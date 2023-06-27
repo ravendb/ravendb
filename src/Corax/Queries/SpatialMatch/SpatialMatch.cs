@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Corax.Mappings;
+using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;
@@ -19,6 +20,8 @@ public class SpatialMatch : IQueryMatch
     private readonly SpatialContext _spatialContext;
     private readonly double _error;
     private readonly IShape _shape;
+    private Page _lastPage;
+    private Point _point;
     private readonly CompactTree _tree;
     private readonly FieldMetadata _field;
     private IEnumerator<(string Geohash, bool isTermMatch)> _termGenerator;
@@ -28,6 +31,7 @@ public class SpatialMatch : IQueryMatch
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
+    private long _fieldRootPage;
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
@@ -45,6 +49,8 @@ public class SpatialMatch : IQueryMatch
             ? SpatialUtils.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
+        _point = new Point(0, 0, spatialContext);
+        _fieldRootPage = _indexSearcher.GetLookupRootPage(field.FieldName);
     }
 
     private bool GoNextMatch()
@@ -107,39 +113,28 @@ public class SpatialMatch : IQueryMatch
 
     private bool CheckEntryManually(long id)
     {
-        var reader = _indexSearcher.GetEntryReaderFor(id);
-        var fieldReader = reader.GetFieldReaderFor(_field);
         if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
         {
             return false;
         }
-
-        if (fieldReader.TryReadManySpatialPoint(out var iterator))
+        _alreadyReturned ??= new HashSet<long>();
+        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
+        while (termsReader.MoveNextSpatial())
         {
-            _alreadyReturned ??= new HashSet<long>();
-            while (iterator.ReadNext())
+            if(termsReader.TermMetadata != _fieldRootPage)
+                continue;
+            _point.Reset(termsReader.Longitude, termsReader.Latitude);
+            if (IsTrue(_point.Relate(_shape)))
             {
-                var point = new Point(iterator.Longitude, iterator.Latitude, _spatialContext);
-                if (IsTrue(point.Relate(_shape)))
-                {
-                    _alreadyReturned.Add(id);
-                    return true;
-                }
-            }
-        }
-        else if (fieldReader.Read(out (double Lat, double Lon) coorinate))
-        {
-            var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
-            if (IsTrue(point.Relate(_shape)))
-            {
+                _alreadyReturned.Add(id);
                 return true;
             }
         }
-
+        
         return false;
     }
-    
-    public bool IsTrue(SpatialRelation answer) => answer switch
+
+    private bool IsTrue(SpatialRelation answer) => answer switch
     {
         SpatialRelation.Within or SpatialRelation.Contains => _spatialRelation is Utils.Spatial.SpatialRelation.Within
             or Utils.Spatial.SpatialRelation.Contains,
@@ -153,12 +148,13 @@ public class SpatialMatch : IQueryMatch
         var currentIdx = 0;
         for (int i = 0; i < matches; ++i)
         {
-            var reader = _indexSearcher.GetEntryReaderFor(buffer[i]);
-            var entryReader = reader.GetFieldReaderFor(_field);
-            if (entryReader.Read(out (double Lat, double Lon) coordinate))
+            var termsReader = _indexSearcher.GetEntryTermsReader(buffer[i], ref _lastPage);
+            while (termsReader.MoveNextSpatial())
             {
-                var point = new Point(coordinate.Lon, coordinate.Lat, _spatialContext);
-                if (IsTrue(point.Relate(_shape)))
+                if(termsReader.TermMetadata != _fieldRootPage)
+                    continue;
+                _point.Reset(termsReader.Longitude, termsReader.Latitude);
+                if (IsTrue(_point.Relate(_shape)))
                 {
                     buffer[currentIdx++] = buffer[i];
                 }

@@ -477,7 +477,6 @@ select filter(a)").Count();
 
             Assert.Null(projection);
         }
-
         // spatial
         using (var s = store.OpenSession())
         {

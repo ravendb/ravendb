@@ -458,12 +458,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public long GetLookupRootPage(Slice name)
     {
-        var result = _fieldsTree?.Read(name);
-        if (result == null)
-            return -1;
-        var header = (LookupState*)result.Reader.Base;
-        if (header->RootObjectType != RootObjectType.Lookup)
-            return -1;
-        return header->RootPage;
+        return _fieldsTree?.GetLookupRootPage(name) ?? -1;
     }
 }
