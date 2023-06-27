@@ -930,13 +930,12 @@ class query extends shardViewModelBase {
     }
 
     killQuery() {
-        const db = this.activeDatabase();
         this.confirmationMessage("Abort the query", "Do you want to abort currently running query?")
             .done(result => {
                 if (result.can) {
                     this.showKillQueryButton(false);
                     if (this.spinners.isLoading()) {
-                        killQueryCommand.byClientQueryId(db, query.clientQueryId)
+                        killQueryCommand.byClientQueryId(this.db, query.clientQueryId)
                             .execute();
                     }
                 }
