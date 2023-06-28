@@ -815,6 +815,8 @@ namespace Raven.Server.Documents
             _disposeOnce.Dispose();
         }
 
+        internal bool IsDisposed => _disposeOnce.DisposedRequested;
+
         private unsafe void DisposeInternal()
         {
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");

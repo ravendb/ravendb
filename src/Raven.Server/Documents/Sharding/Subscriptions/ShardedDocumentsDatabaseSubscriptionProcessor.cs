@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
 using static Raven.Server.Documents.Subscriptions.SubscriptionFetcher;
@@ -28,13 +31,6 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
-    public override void InitializeProcessor()
-    {
-        base.InitializeProcessor();
-
-        IsActiveMigration = false;
-    }
-
     protected override SubscriptionFetcher<Document> CreateFetcher()
     {
         _sharding = _database.ShardingConfiguration;
@@ -50,20 +46,68 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return conflictStatus;
     }
 
-    protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result)
+    protected override async ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    {
+        if (batchItem.Status == BatchItemStatus.ActiveMigration)
+            return false;
+
+        return await base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+    }
+
+    protected override BatchStatus SetBatchStatus(SubscriptionBatchResult result)
+    {
+        if (result.Status == BatchStatus.ActiveMigration)
+            return BatchStatus.ActiveMigration;
+
+        return base.SetBatchStatus(result);
+    }
+
+    protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+    {
+        if (batchItem.Status == BatchItemStatus.ActiveMigration)
+        {
+            item.Data?.Dispose();
+            item.Data = null;
+            result.Status = BatchStatus.ActiveMigration;
+            return;
+        }
+
+        base.HandleBatchItem(batchScope, batchItem, result, item);
+    }
+
+    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+    {
+        if (batchItem.Document.Etag == 0) // got this document from resend
+        {
+            if (batchItem.Document.Data == null)
+                return currentLast;
+
+            // shard might read only from resend 
+        }
+
+        var vector = context.GetChangeVector(batchItem.Document.ChangeVector);
+
+        var result = ChangeVectorUtils.MergeVectors(
+            currentLast,
+            ChangeVectorUtils.NewChangeVector(_database.ServerStore.NodeTag, batchItem.Document.Etag, _database.DbBase64Id),
+            vector.Order);
+
+        return result;
+    }
+
+    protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
     {
         exception = null;
         result = item;
 
-        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out bool isActiveMigration))
+        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out isActiveMigration))
         {
-            IsActiveMigration = isActiveMigration;
             item.Data = null;
             item.ChangeVector = string.Empty;
             return false;
         }
 
-        return base.ShouldSend(item, out reason, out exception, out result);
+        return base.ShouldSend(item, out reason, out exception, out result, out isActiveMigration);
     }
   
     public static bool IsUnderActiveMigration(string id, ShardingConfiguration sharding, ByteStringContext allocator, int shardNumber, FetchingOrigin fetchingFrom, out string reason, out bool isActiveMigration)
@@ -140,19 +184,19 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
     public HashSet<string> Skipped;
 
-    public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
+    public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
     {
-        var result = await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
+        var result = await SubscriptionConnectionsState.RecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
         Skipped = result.Skipped as HashSet<string>;
         return result.Index;
     }
 
-    public override async Task AcknowledgeBatch(long batchId, string changeVector)
+    public override async Task AcknowledgeBatchAsync(long batchId, string changeVector)
     {
         ItemsToRemoveFromResend.Clear();
         BatchItems.Clear();
 
-        await SubscriptionConnectionsState.AcknowledgeShardingBatch(_connection.LastSentChangeVectorInThisConnection, changeVector, batchId, BatchItems);
+        await SubscriptionConnectionsState.AcknowledgeShardingBatchAsync(Connection.LastSentChangeVectorInThisConnection, changeVector, batchId, BatchItems);
     }
 
     protected override ShardIncludesCommandImpl CreateIncludeCommands()

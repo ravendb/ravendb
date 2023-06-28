@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Subscriptions
             return set;
         }
 
-        public async Task AcknowledgeShardingBatch(string changeVector, string cvForOrchestrator, long batchId, List<DocumentRecord> addDocumentsToResend)
+        public async Task AcknowledgeShardingBatchAsync(string changeVector, string cvForOrchestrator, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
             AcknowledgeSubscriptionBatchCommand command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
             command.LastKnownSubscriptionChangeVector = cvForOrchestrator;
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
             await WaitForIndexNotificationAsync(etag);
         }
 
-        public async Task AcknowledgeBatch(string changeVector, long batchId, List<DocumentRecord> addDocumentsToResend)
+        public async Task AcknowledgeBatchAsync(string changeVector, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
 
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Subscriptions
             return await RecordBatchInternal(command);
         }
 
-        public async Task<(long Index, object Skipped)> RecordBatchDocuments(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
+        public async Task<(long Index, object Skipped)> RecordBatchDocumentsAsync(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
         {
             if (list.Count == 0 && deleted.Count == 0 && lastRecordedChangeVector == null)
             {

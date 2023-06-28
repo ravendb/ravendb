@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -15,12 +19,13 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
 {
     private readonly ShardedDatabaseContext _databaseContext;
     private SubscriptionConnectionsStateOrchestrator _state;
-
+    private CancellationToken _token;
     public ShardedSubscriptionBatch CurrentBatch;
 
     public OrchestratedSubscriptionProcessor(ServerStore server, ShardedDatabaseContext databaseContext, OrchestratedSubscriptionConnection connection) : base(server, connection, connection.DatabaseName)
     {
         _databaseContext = databaseContext;
+        _token = connection.CancellationTokenSource.Token;
     }
 
     public override void InitializeProcessor()
@@ -31,12 +36,17 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
     }
 
     // should never hit this
-    public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
+    public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
 
     // should never hit this
-    public override Task AcknowledgeBatch(long batchId, string changeVector) => throw new NotImplementedException();
+    public override Task AcknowledgeBatchAsync(long batchId, string changeVector) => throw new NotImplementedException();
 
     private OrchestratorIncludesCommandImpl _includes;
+
+    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+    {
+        return batchItem.Document.ChangeVector;
+    }
 
     protected override OrchestratorIncludesCommandImpl CreateIncludeCommands()
     {
@@ -59,34 +69,68 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         return conflictStatus;
     }
 
-    public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
+    public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
     {
+        var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
         if (_state.Batches.TryTake(out CurrentBatch, TimeSpan.Zero) == false)
-            yield break;
+        {
+            result.Status = BatchStatus.EmptyBatch;
+            return result;
+        }
 
         using (CurrentBatch.ReturnContext)
         {
-            foreach (SubscriptionBatchBase<BlittableJsonReaderObject>.Item batchItem in CurrentBatch.Items)
+            foreach (SubscriptionBatchBase<BlittableJsonReaderObject>.Item item in CurrentBatch.Items)
             {
-                if (GetConflictStatus(batchItem.ChangeVector) == ConflictStatus.AlreadyMerged)
+                BatchItem batchItem = GetBatchItem(item);
+                if (batchItem.Status == BatchItemStatus.Skip)
                 {
                     continue;
                 }
 
-                if (batchItem.ExceptionMessage != null)
-                    yield return (null, new Exception(batchItem.ExceptionMessage));
-
-                var document = new Document
-                {
-                    Data = batchItem.RawResult.Clone(ClusterContext),
-                    ChangeVector = batchItem.ChangeVector,
-                    Id = ClusterContext.GetLazyString(batchItem.Id)
-                };
-
-                yield return (document, null);
+                HandleBatchItem(batchScope: null, batchItem, result, item);
+                if (await CanContinueBatchAsync(batchItem, size: default, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                    break;
             }
 
             CurrentBatch.CloneIncludes(ClusterContext, _includes);
+
+            _token.ThrowIfCancellationRequested();
+            result.Status = SetBatchStatus(result);
+            return result;
         }
+    }
+
+    protected void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    {
+        //TODO: egor abstract this with DatabaseSubscriptionProcessor<T>.HandleBatchItem()
+        Connection.TcpConnection.LastEtagSent = batchItem.Document.Etag;
+        result.CurrentBatch.Add(batchItem);
+        result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
+
+    }
+
+    private BatchItem GetBatchItem(SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    {
+        if (GetConflictStatus(item.ChangeVector) == ConflictStatus.AlreadyMerged)
+        {
+            return new BatchItem { Status = BatchItemStatus.Skip };
+        }
+
+
+        if (item.ExceptionMessage != null)
+        {
+            return new BatchItem { Exception = new Exception(item.ExceptionMessage) };
+        }
+
+        return new BatchItem
+        {
+            Document = new Document
+            {
+                Data = item.RawResult.Clone(ClusterContext), 
+                ChangeVector = item.ChangeVector, 
+                Id = ClusterContext.GetLazyString(item.Id)
+            }
+        };
     }
 }

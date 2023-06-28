@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -16,68 +18,77 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
     public class RevisionsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<(Document Previous, Document Current)>
     {
-        private readonly SubscriptionConnection _connection;
+        private readonly CancellationToken _token;
 
         public RevisionsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            _connection = connection;
-        }
+            _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
+    }
 
         public List<RevisionRecord> BatchItems = new List<RevisionRecord>();
-
-        public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
+    
+        public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (Database.DocumentsStorage.RevisionsStorage.Configuration == null ||
                 Database.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(Collection).Disabled)
                 throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {Database.Name} does not have revisions configuration.");
 
             Size size = default;
-            var numberOfDocs = 0;
+            var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
 
-            foreach (var item in Fetcher.GetEnumerator())
+            foreach ((Document Previous, Document Current) item in Fetcher.GetEnumerator())
             {
                 Debug.Assert(item.Current != null);
                 if (item.Current == null)
                     continue; // this shouldn't happened, but in release let's keep running
 
-                size += new Size(item.Current.Data?.Size ?? 0, SizeUnit.Bytes);
-
                 using (item.Current)
                 using (item.Previous)
                 {
-                    var result = GetBatchItem(item);
-                    
-                    if (result.Doc.Data != null)
-                    {
-                        BatchItems.Add(new RevisionRecord
-                        {
-                            DocumentId = item.Current.Id,
-                            Current = item.Current.ChangeVector,
-                            Previous = item.Previous?.ChangeVector
-                        });
+                    BatchItem batchItem = GetBatchItem(item);
 
-                        yield return result;
-
-                        if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                            yield break;
-
-                        if (++numberOfDocs >= BatchSize)
-                            yield break;
-                    }
-                    else
-                        yield return result;
+                    HandleBatchItem(batchScope, batchItem, result, item);
+                    size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
+                    if (await CanContinueBatchAsync(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                        break;
                 }
             }
+
+            _token.ThrowIfCancellationRequested();
+            result.Status = SetBatchStatus(result);
+
+            return result;
         }
 
-        public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
+        {
+            if (batchItem.Document.Data != null)
+            {
+                BatchItems.Add(new RevisionRecord
+                {
+                    DocumentId = item.Current.Id,
+                    Current = item.Current.ChangeVector,
+                    Previous = item.Previous?.ChangeVector
+                });
+
+                batchScope?.RecordDocumentInfo(batchItem.Document.Data.Size);
+
+                Connection.TcpConnection.LastEtagSent = batchItem.Document.Etag;
+
+                result.CurrentBatch.Add(batchItem);
+            }
+
+            result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
+        }
+
+        public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) => 
             (await SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch)).Index;
 
-        public override Task AcknowledgeBatch(long batchId, string changeVector) => 
-            SubscriptionConnectionsState.AcknowledgeBatch(_connection.LastSentChangeVectorInThisConnection, batchId, null);
+        public override Task AcknowledgeBatchAsync(long batchId, string changeVector) => 
+            SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection, batchId, null);
 
         public override long GetLastItemEtag(DocumentsOperationContext context, string collection)
         {
@@ -94,10 +105,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new RevisionSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
         {
             exception = null;
             reason = null;
+            isActiveMigration = false;
             result = item.Current.CloneWith(DocsContext, newData: null);
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)

@@ -137,6 +137,8 @@ namespace Sparrow.Threading
             }
         }
 
+        public bool DisposedRequested => Disposed || _operationModeData.DuringDispose;
+
         public bool Disposed
         {
             get

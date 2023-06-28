@@ -1,25 +1,48 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
     public class TestDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor, IEtagSettable
     {
         private readonly SubscriptionConnection.ParsedSubscription _subscription;
+        private readonly TimeSpan _timeLimit;
+        private readonly int _pageSize;
 
-        public TestDocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint) :
+        public TestDocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint, TimeSpan timeLimit, int pageSize) :
             base(server, database, connection: null)
         {
             _subscription = subscription;
+            _timeLimit = timeLimit;
+            _pageSize = pageSize;
             SubscriptionState = state;
             Collection = subscription.Collection;
             Options = options;
             RemoteEndpoint = endpoint;
+        }
+
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+        {
+            result.CurrentBatch.Add(batchItem);
+        }
+
+        protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        {
+            if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
+                return ValueTask.FromResult(false);
+
+            if (numberOfDocs >= _pageSize)
+                return ValueTask.FromResult(false);
+
+            return ValueTask.FromResult(true);
         }
 
         protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
@@ -38,12 +61,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             Fetcher.StartEtag = etag;
         }
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
+        public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
         {
             throw new NotSupportedException();
         }
 
-        public override Task AcknowledgeBatch(long batchId, string changeVector)
+        public override Task AcknowledgeBatchAsync(long batchId, string changeVector)
         {
             throw new NotSupportedException();
         }
@@ -52,15 +75,35 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
     public class TestRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor, IEtagSettable
     {
         private readonly SubscriptionConnection.ParsedSubscription _subscription;
+        private readonly TimeSpan _timeLimit;
+        private readonly int _pageSize;
 
-        public TestRevisionsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint) :
+        public TestRevisionsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint, TimeSpan timeLimit, int pageSize) :
             base(server, database, connection: null)
         {
             _subscription = subscription;
+            _timeLimit = timeLimit;
+            _pageSize = pageSize;
             SubscriptionState = state;
             Collection = subscription.Collection;
             Options = options;
             RemoteEndpoint = endpoint;
+        }
+
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
+        {
+            result.CurrentBatch.Add(batchItem);
+        }
+
+        protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        {
+            if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
+                return ValueTask.FromResult(false);
+
+            if (numberOfDocs >= _pageSize)
+                return ValueTask.FromResult(false);
+
+            return ValueTask.FromResult(true);
         }
 
         public override void InitializeProcessor()
@@ -79,12 +122,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             Fetcher.StartEtag = etag;
         }
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
+        public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
         {
             throw new NotSupportedException();
         }
 
-        public override Task AcknowledgeBatch(long batchId, string changeVector)
+        public override Task AcknowledgeBatchAsync(long batchId, string changeVector)
         {
             throw new NotSupportedException();
         }

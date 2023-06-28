@@ -70,9 +70,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 
             DatabaseSubscriptionProcessor processor;
             if (subscription.Revisions)
-                processor = new TestRevisionsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                processor = new TestRevisionsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), timeLimit, pageSize);
             else
-                processor = new TestDocumentsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                processor = new TestDocumentsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), timeLimit, pageSize);
 
             processor.Patch = patch;
 
@@ -85,58 +85,42 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
                 writer.WriteStartArray();
-                var numberOfDocs = 0;
-                while (numberOfDocs == 0 && sp.Elapsed < timeLimit)
+
+                var first = true;
+                ((IEtagSettable)processor).SetStartEtag(startEtag);
+                var items = await processor.GetBatch(batchScope: null, sendingCurrentBatchStopwatch: sp);
+                foreach (var itemDetails in items.CurrentBatch)
                 {
-                    var first = true;
-                    var lastEtag = startEtag;
-
-                    ((IEtagSettable)processor).SetStartEtag(startEtag);
-
-                    foreach (var itemDetails in processor.GetBatch())
+                    if (itemDetails.Document.Data != null)
                     {
-                        if (itemDetails.Doc.Data != null)
+                        using (itemDetails.Document.Data)
                         {
-                            using (itemDetails.Doc.Data)
+                            includeDocuments?.GatherIncludesForDocument(itemDetails.Document);
+
+                            if (first == false)
+                                writer.WriteComma();
+
+                            if (itemDetails.Exception == null)
                             {
-                                includeDocuments?.GatherIncludesForDocument(itemDetails.Doc);
-
-                                if (first == false)
-                                    writer.WriteComma();
-
-                                if (itemDetails.Exception == null)
-                                {
-                                    writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
-                                }
-                                else
-                                {
-                                    var documentWithException = new DocumentWithException
-                                    {
-                                        Exception = itemDetails.Exception.ToString(),
-                                        ChangeVector = itemDetails.Doc.ChangeVector,
-                                        Id = itemDetails.Doc.Id,
-                                        DocumentData = itemDetails.Doc.Data
-                                    };
-                                    writer.WriteObject(context.ReadObject(documentWithException.ToJson(), "TrySubscription"));
-                                }
-
-                                first = false;
-
-                                if (++numberOfDocs >= pageSize)
-                                    break;
+                                writer.WriteDocument(context, itemDetails.Document, metadataOnly: false);
                             }
+                            else
+                            {
+                                var documentWithException = new DocumentWithException
+                                {
+                                    Exception = itemDetails.Exception.ToString(),
+                                    ChangeVector = itemDetails.Document.ChangeVector,
+                                    Id = itemDetails.Document.Id,
+                                    DocumentData = itemDetails.Document.Data
+                                };
+
+                                using (var documentWithExceptionReader = context.ReadObject(documentWithException.ToJson(), "TrySubscription"))
+                                    writer.WriteObject(documentWithExceptionReader);
+                            }
+
+                            first = false;
                         }
-
-                        if (sp.Elapsed >= timeLimit)
-                            break;
-
-                        lastEtag = itemDetails.Doc.Etag;
                     }
-
-                    if (startEtag == lastEtag)
-                        break;
-
-                    startEtag = lastEtag;
                 }
 
                 writer.WriteEndArray();
