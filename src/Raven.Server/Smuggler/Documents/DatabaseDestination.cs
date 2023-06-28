@@ -149,7 +149,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ISubscriptionActions Subscriptions()
         {
-            return new SubscriptionActions(_database);
+            return new SubscriptionActions(_database, _options.DisableSubscriptions);
         }
 
         public IReplicationHubCertificateActions ReplicationHubCertificates()
@@ -2177,11 +2177,13 @@ namespace Raven.Server.Smuggler.Documents
         private class SubscriptionActions : ISubscriptionActions
         {
             private readonly DocumentDatabase _database;
+            private readonly bool _disableSubscriptions;
             private readonly List<PutSubscriptionCommand> _subscriptionCommands = new List<PutSubscriptionCommand>();
 
-            public SubscriptionActions(DocumentDatabase database)
+            public SubscriptionActions(DocumentDatabase database, bool disableSubscriptions)
             {
                 _database = database;
+                _disableSubscriptions = disableSubscriptions;
             }
 
             public async ValueTask DisposeAsync()
@@ -2196,12 +2198,16 @@ namespace Raven.Server.Smuggler.Documents
             {
                 const int batchSize = 1024;
 
-                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+                var command = new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
-                    //After restore/export , subscription will start from the start
-                    InitialChangeVector = null
-                });
+                    InitialChangeVector = null,     //After restore/export, subscription will start from the start
+                };
+
+                if (_disableSubscriptions)
+                    command.Disabled = true;        //After restore/export, ongoing tasks should be disabled
+
+                _subscriptionCommands.Add(command);
 
                 if (_subscriptionCommands.Count < batchSize)
                     return;

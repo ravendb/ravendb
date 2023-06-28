@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Routing;
@@ -15,6 +14,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 
         public bool SkipRevisionCreation { get; set; }
+
+        public bool DisableSubscriptions { get; set; } = true;
 
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {

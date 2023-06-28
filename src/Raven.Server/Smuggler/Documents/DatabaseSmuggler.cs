@@ -1119,7 +1119,7 @@ namespace Raven.Server.Smuggler.Documents
         private async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
             result.Subscriptions.Start();
-
+            
             await using (var actions = _destination.Subscriptions())
             {
                 await foreach (var subscription in _source.GetSubscriptionsAsync())
