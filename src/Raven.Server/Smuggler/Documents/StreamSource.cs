@@ -191,6 +191,20 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.Refresh), out BlittableJsonReaderObject refresh) &&
+                    refresh != null)
+                {
+                    try
+                    {
+                        databaseRecord.Refresh = JsonDeserializationCluster.RefreshConfiguration(refresh);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the refresh configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
                 if (reader.TryGet(nameof(databaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject conflictSolverConfig) &&
                     conflictSolverConfig != null)
                 {
