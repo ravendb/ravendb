@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
                 {
-                    var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
+                    var info = await ReplicationUtils.GetServerTcpInfoAsync(url, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
                     result.TcpInfo.TcpInfoTime = sp.ElapsedMilliseconds;
 
                     using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
