@@ -428,6 +428,9 @@ public partial class RavenTestBase
 
             await foreach (var shard in GetShardsDocumentDatabaseInstancesFor(database))
             {
+                if (shard.IsDisposed)
+                    continue;
+
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

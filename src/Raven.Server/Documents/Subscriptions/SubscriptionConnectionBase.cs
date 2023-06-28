@@ -32,6 +32,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -42,8 +43,6 @@ namespace Raven.Server.Documents.Subscriptions
         private static readonly StringSegment DataSegment = new("Data");
         private static readonly StringSegment ExceptionSegment = new("Exception");
 
-        public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(3);
-
         private readonly AbstractSubscriptionStorage _subscriptions;
         protected readonly ServerStore ServerStore;
         private readonly IDisposable _tcpConnectionDisposable;
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal SubscriptionWorkerOptions _options;
         internal readonly Logger _logger;
 
-        public string LastSentChangeVectorInThisConnection;
+        public string LastSentChangeVectorInThisConnection { get; set; }
         public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new();
         public SubscriptionWorkerOptions Options => _options;
         public SubscriptionException ConnectionException;
@@ -80,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private TestingStuff _forTestingPurposes;
 
-        private Task<SubscriptionConnectionClientMessage> _lastReplyFromClientTask;
+        internal Task<SubscriptionConnectionClientMessage> _lastReplyFromClientTask;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -141,7 +140,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             using (Processor = CreateProcessor(this))
             {
-                var replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
+                _lastReplyFromClientTask = GetReplyFromClientAsync();
 
                 AfterProcessorCreation();
 
@@ -158,58 +157,12 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         try
                         {
-                            using (MarkInUse())
-                            {
-                                var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+                            using var markInUse = MarkInUse();
+                            var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
-                                (bool anyDocumentsSentInCurrentIteration, bool isActiveMigration) = 
-                                    await TrySendingBatchToClient<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
-                                if (anyDocumentsSentInCurrentIteration == false)
-                                {
-                                    if (_logger.IsInfoEnabled)
-                                    {
-                                        _logger.Info($"Did not find any documents to send for subscription {Options.SubscriptionName}");
-                                    }
+                            var status = await TrySendingBatchToClient<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
 
-                                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
-                                        "Acknowledging docs processing progress without sending any documents to client."));
-
-                                    Stats.UpdateBatchPerformanceStats(0, false);
-
-                                    if (sendingCurrentBatchStopwatch.Elapsed > HeartbeatTimeout)
-                                        await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
-
-                                    if (isActiveMigration)
-                                    {
-                                        Debug.Assert(_subscriptions is ShardSubscriptionStorage);
-                                        if (await WaitForDocsMigrationAsync(state, replyFromClientTask))
-                                        {
-                                            // we waited for Migration and try to pull the docs again
-                                            continue;
-                                        }
-
-                                        // replyFromClientTask is completed (it will be awaited in WaitForClientAck)
-                                    }
-                                    else
-                                    {
-                                        if (FoundAboutMoreDocs())
-                                            state.NotifyHasMoreDocs();
-
-                                        AssertCloseWhenNoDocsLeft();
-
-                                        if (await WaitForChangedDocsAsync(state, replyFromClientTask))
-                                            continue;
-                                    }
-                                }
-                            }
-
-                            using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
-                            {
-                                replyFromClientTask = await WaitForClientAck(replyFromClientTask);
-                            }
-
-                            var last = Stats.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
-                            RaiseNotificationForBatchEnd(_options.SubscriptionName, last);
+                            await HandleBatchStatus<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
                         }
                         catch (Exception e)
                         {
@@ -224,37 +177,106 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual void OnError(Exception e) { }
+        internal virtual async Task HandleBatchStatus<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
+            SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
+            where TConnection : SubscriptionConnectionBase<TIncludesCommand>
+        {
+            switch (status)
+            {
+                case BatchStatus.EmptyBatch:
+                    await LogBatchStatusAndUpdateStatsAsync(sendingCurrentBatchStopwatch, $"Got '{nameof(BatchStatus.EmptyBatch)}' for subscription '{Options.SubscriptionName}'.");
 
-        protected List<(Document Document, Exception Exception)> CurrentBatch = new();
+                    if (FoundAboutMoreDocs())
+                        state.NotifyHasMoreDocs();
+
+                    AssertCloseWhenNoDocsLeft();
+
+                    if (await WaitForChangedDocsAsync(state))
+                        return;
+
+                    await CancelSubscriptionAndThrowAsync();
+
+                    break;
+
+                case BatchStatus.DocumentsSent:
+                    markInUse.Dispose();
+
+                    using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
+                    {
+                        await WaitForClientAck();
+                    }
+
+                    var last = Stats.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
+                    RaiseNotificationForBatchEnd(_options.SubscriptionName, last);
+
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException($"{status}");
+            }
+        }
+
+        internal async Task CancelSubscriptionAndThrowAsync()
+        {
+            //client sent DisposedNotification or cts was canceled
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            var result = await Task.WhenAny(_lastReplyFromClientTask, TimeoutManager.WaitFor(ISubscriptionConnection.HeartbeatTimeout, CancellationTokenSource.Token));
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            if (result == _lastReplyFromClientTask)
+            {
+                var clientReply = await _lastReplyFromClientTask;
+                Debug.Assert(clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification,
+                    "clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification");
+
+                CancellationTokenSource.Cancel();
+            }
+            else
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Expected to get '{SubscriptionConnectionClientMessage.MessageType.DisposedNotification}' from client, but there was no reply.");
+                }
+            }
+
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        }
+
+        protected async Task LogBatchStatusAndUpdateStatsAsync(Stopwatch sendingCurrentBatchStopwatch, string logMessage)
+        {
+            if (_logger.IsInfoEnabled)
+                _logger.Info(logMessage);
+
+            Stats.UpdateBatchPerformanceStats(0, false);
+
+            if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
+                await SendHeartBeatAsync($"Didn't find any documents to send and more then {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
+
+        }
+
+        protected virtual void OnError(Exception e) { }
 
         /// <summary>
         /// Iterates on a batch in document collection, process it and send documents if found any match
         /// </summary>
         /// <returns>Whether succeeded finding any documents to send</returns>
-        private async Task<(bool AnyDocumentsSentInCurrentIteration, bool IsActiveMigration)> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
+        private async Task<BatchStatus> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             if (await state.WaitForSubscriptionActiveLock(300) == false)
-            {
-                return (false, false);
-            }
+                return BatchStatus.EmptyBatch;
 
             try
             {
                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start trying to send docs to client"));
-                bool anyDocumentsSentInCurrentIteration = false;
 
                 using (batchScope.For(SubscriptionOperationScope.BatchSendDocuments))
                 {
                     batchScope.RecordBatchInfo(state.SubscriptionId, state.SubscriptionName,
                         Stats.ConnectionStatsIdForConnection,
                         batchStatsAggregator.Id);
-
-                    int docsToFlush = 0;
-                    string lastChangeVectorSentInThisBatch = null;
 
                     using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, _buffer))
@@ -265,93 +287,49 @@ namespace Raven.Server.Documents.Subscriptions
 
                         using (Processor.InitializeForNewBatch(clusterOperationContext, out var includeCommand))
                         {
-                            foreach (var result in Processor.GetBatch())
+                            SubscriptionBatchResult result = await Processor.GetBatch(batchScope, sendingCurrentBatchStopwatch);
+
+                            var batchStatus = await TryRecordBatchAndUpdateStatusAsync(clusterOperationContext, result);
+                            if (batchStatus != BatchStatus.DocumentsSent)
                             {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                                lastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(clusterOperationContext, lastChangeVectorSentInThisBatch, result.Doc);
-
-                                if (sendingCurrentBatchStopwatch.Elapsed > HeartbeatTimeout)
-                                {
-                                    // in v6.0 we don't use FlushBatchIfNeededAsync any more, we will send heartbeats each 3 sec even if we are not skipping docs
-                                    await SendHeartBeatAsync($"Skipping docs for more than '{HeartbeatTimeout.TotalMilliseconds}' ms without sending any data");
-                                    sendingCurrentBatchStopwatch.Restart();
-                                }
-
-                                if (Processor.IsActiveMigration)
-                                    break;
-
-                                if (result.Doc.Data == null)
-                                    continue;
-
-                                anyDocumentsSentInCurrentIteration = true;
-
-                                CurrentBatch.Add(result);
-
-                                docsToFlush++;
-                                batchScope.RecordDocumentInfo(result.Doc.Data.Size);
-
-                                TcpConnection.LastEtagSent = result.Doc.Etag;
-                            }
-
-                            if (Processor.IsActiveMigration)
-                            {
-                                if (anyDocumentsSentInCurrentIteration == false)
-                                {
-                                    Debug.Assert(CurrentBatch.Count == 0);
-                                    // we didn't pull anything and there is migration, we don't update the cv and will wait for migration to complete
-                                    return (false, true);
-                                }
-
-                                // we already pulled some docs, we will send the docs in CurrentBatch and then will wait for migration to complete
+                                // empty batch or active migration
+                                return batchStatus;
                             }
 
                             CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                            if (await TryUpdateStateAfterBatchSentAsync(clusterOperationContext, lastChangeVectorSentInThisBatch) == false)
+
+                            foreach (var item in result.CurrentBatch)
                             {
-                                // one of the batch docs is under active migration
-                                // we canceled this batch and wait for migration to complete 
-                                return (false, true);
+                                using (item.Document)
+                                {
+                                    WriteDocument(writer, context, item, includeCommand);
+                                }
                             }
 
-                            if (anyDocumentsSentInCurrentIteration)
+                            if (includeCommand != null)
                             {
-                                if (CurrentBatch.Count == 0)
-                                    return (false, Processor.IsActiveMigration);
-
-                                foreach (var item in CurrentBatch)
-                                {
-                                    using (item.Document)
-                                    {
-                                        WriteDocument(writer, context, item, includeCommand);
-                                    }
-                                }
-
-                                if (includeCommand != null)
-                                {
-                                    await includeCommand.WriteIncludesAsync(writer, context, batchScope, CancellationTokenSource.Token);
-                                }
-
-                                WriteEndOfBatch(writer);
-
-                                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
-
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
+                                await includeCommand.WriteIncludesAsync(writer, context, batchScope, CancellationTokenSource.Token);
                             }
+
+                            WriteEndOfBatch(writer);
+
+                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
+
+                            await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, result.CurrentBatch.Count, endOfBatch: true,
+                                CancellationTokenSource.Token);
+
+                            return BatchStatus.DocumentsSent;
                         }
                     }
                 }
-
-                return (anyDocumentsSentInCurrentIteration, Processor.IsActiveMigration);
             }
             finally
             {
-                CurrentBatch.Clear();
                 state.ReleaseSubscriptionActiveLock();
             }
         }
 
-        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, (Document Doc, Exception Exception) result,
+        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, AbstractSubscriptionProcessorBase.BatchItem result,
             TIncludesCommand includeCommand)
         {
             writer.WriteStartObject();
@@ -360,18 +338,18 @@ namespace Raven.Server.Documents.Subscriptions
             writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-            result.Doc.EnsureMetadata();
+            result.Document.EnsureMetadata();
 
             if (result.Exception != null)
             {
-                if (result.Doc.Data.Modifications != null)
+                if (result.Document.Data.Modifications != null)
                 {
-                    result.Doc.Data = context.ReadObject(result.Doc.Data, "subsDocAfterModifications");
+                    result.Document.Data = context.ReadObject(result.Document.Data, "subsDocAfterModifications");
                 }
 
-                var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
+                var metadata = result.Document.Data[Client.Constants.Documents.Metadata.Key];
                 writer.WriteValue(BlittableJsonToken.StartObject,
-                    context.ReadObject(new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = metadata }, result.Doc.Id)
+                    context.ReadObject(new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = metadata }, result.Document.Id)
                 );
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ExceptionSegment));
@@ -379,8 +357,8 @@ namespace Raven.Server.Documents.Subscriptions
             }
             else
             {
-                GatherIncludesForDocument(includeCommand, result.Doc);
-                writer.WriteDocument(context, result.Doc, metadataOnly: false);
+                GatherIncludesForDocument(includeCommand, result.Document);
+                writer.WriteDocument(context, result.Document, metadataOnly: false);
             }
 
             writer.WriteEndObject();
@@ -406,7 +384,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
+        protected virtual async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state)
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for changed documents"));
             do
@@ -414,14 +392,14 @@ namespace Raven.Server.Documents.Subscriptions
                 var hasMoreDocsTask = state.WaitForMoreDocs();
 
                 var resultingTask = await Task
-                    .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(HeartbeatTimeout)).ConfigureAwait(false);
+                    .WhenAny(hasMoreDocsTask, _lastReplyFromClientTask, TimeoutManager.WaitFor(ISubscriptionConnection.HeartbeatTimeout)).ConfigureAwait(false);
 
                 TcpConnection.DocumentDatabase?.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
 
-                if (resultingTask == pendingReply)
+                if (resultingTask == _lastReplyFromClientTask)
                     return false;
 
                 if (hasMoreDocsTask == resultingTask)
@@ -438,8 +416,6 @@ namespace Raven.Server.Documents.Subscriptions
             return false;
         }
 
-        protected abstract Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply);
-      
         internal async Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
         {
             try
@@ -631,14 +607,13 @@ namespace Raven.Server.Documents.Subscriptions
         {
             if (_options.CloseWhenNoDocsLeft)
             {
+                var reason =
+                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode";
                 if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
-                }
+                    _logger.Info(reason);
 
-                throw new SubscriptionClosedException(
-                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect: false, noDocsLeft: true);
+                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, reason));
+                throw new SubscriptionClosedException(reason, canReconnect: false, noDocsLeft: true);
             }
         }
 
@@ -925,7 +900,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        internal async Task SendHeartBeatAsync(string reason)
+        public async Task SendHeartBeatAsync(string reason)
         {
             try
             {
@@ -946,25 +921,25 @@ namespace Raven.Server.Documents.Subscriptions
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
-        private async Task<Task<SubscriptionConnectionClientMessage>> WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask)
+        private async Task WaitForClientAck()
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Waiting for acknowledge from client."));
 
             SubscriptionConnectionClientMessage clientReply;
             while (true)
             {
-                var result = await Task.WhenAny(replyFromClientTask, TimeoutManager.WaitFor(HeartbeatTimeout, CancellationTokenSource.Token));
+                var result = await Task.WhenAny(_lastReplyFromClientTask, TimeoutManager.WaitFor(ISubscriptionConnection.HeartbeatTimeout, CancellationTokenSource.Token));
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                if (result == replyFromClientTask)
+                if (result == _lastReplyFromClientTask)
                 {
-                    clientReply = await replyFromClientTask;
+                    clientReply = await _lastReplyFromClientTask;
                     if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
                     {
                         CancellationTokenSource.Cancel();
                         break;
                     }
 
-                    replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
+                    _lastReplyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
 
@@ -991,8 +966,6 @@ namespace Raven.Server.Documents.Subscriptions
                     throw new ArgumentException("Unknown message type from client " +
                                                 clientReply.Type);
             }
-
-            return replyFromClientTask;
         }
 
         protected async Task SendConfirmAsync(DateTime time)
@@ -1010,12 +983,11 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract Task OnClientAckAsync(string clientReplyChangeVector);
         public abstract Task SendNoopAckAsync();
         protected abstract bool FoundAboutMoreDocs();
-        public abstract IDisposable MarkInUse();
+        public abstract DisposeOnce<SingleAttempt> MarkInUse();
 
         protected abstract void AfterProcessorCreation();
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
-        protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument);
-        protected abstract Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch);
+        protected abstract Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result);
 
         internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)
         {

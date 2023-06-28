@@ -25,6 +25,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
+using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
@@ -364,7 +366,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
-            await Processor.AcknowledgeBatch(CurrentBatchId, clientReplyChangeVector);
+            await Processor.AcknowledgeBatchAsync(CurrentBatchId, clientReplyChangeVector);
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
@@ -381,7 +383,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        public override IDisposable MarkInUse() => _database.DatabaseInUse(skipUsagesCount: false);
+        public override DisposeOnce<SingleAttempt> MarkInUse() => new DisposeOnce<SingleAttempt>(() => _database.DatabaseInUse(skipUsagesCount: false));
 
         protected override void AfterProcessorCreation()
         {
@@ -391,29 +393,21 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last) => _database.SubscriptionStorage.RaiseNotificationForBatchEnded(name, last);
 
-        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
-        {
-            if (sentDocument.Etag == 0) // got this document from resend
-                return currentLast;
 
-            return ChangeVectorUtils.MergeVectors(
-                currentLast,
-                ChangeVectorUtils.NewChangeVector(_database, sentDocument.Etag, context),
-                sentDocument.ChangeVector);
-            //merge with this node's local etag
-        }
-
-        protected override async Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
+        protected override async Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
         {
             //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
-            LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
-            CurrentBatchId = await Processor.RecordBatch(lastChangeVectorSentInThisBatch);
+            LastSentChangeVectorInThisConnection = result.LastChangeVectorSentInThisBatch;
+            CurrentBatchId = await Processor.RecordBatchAsync(result.LastChangeVectorSentInThisBatch);
 
             State.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
                 State.LastChangeVectorSent,
-                lastChangeVectorSentInThisBatch);
+                result.LastChangeVectorSentInThisBatch);
 
-            return true;
+            if (result.CurrentBatch.Count == 0)
+                return BatchStatus.EmptyBatch;
+
+            return BatchStatus.DocumentsSent;
         }
 
         protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
@@ -451,11 +445,6 @@ namespace Raven.Server.Documents.TcpHandlers
         protected override void GatherIncludesForDocument(DatabaseIncludesCommandImpl includeDocuments, Document document)
         {
             includeDocuments?.GatherIncludesForDocument(document);
-        }
-
-        protected override Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
-        {
-            return Task.FromResult(true);
         }
 
         protected override StatusMessageDetails GetStatusMessageDetails()

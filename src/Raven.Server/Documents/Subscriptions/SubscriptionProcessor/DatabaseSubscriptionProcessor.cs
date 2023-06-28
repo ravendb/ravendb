@@ -1,6 +1,7 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -8,6 +9,7 @@ using Jint.Runtime;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +21,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
     public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor
     {
         protected SubscriptionFetcher<T> Fetcher;
-
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
@@ -41,6 +42,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 throw;
             }
         }
+
         protected override ConflictStatus GetConflictStatus(string changeVector)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
@@ -49,9 +51,32 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return conflictStatus;
         }
 
-        protected (Document Doc, Exception Exception) GetBatchItem(T item)
+        protected override async ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
-            if (ShouldSend(item, out var reason, out var exception, out var result))
+            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                return false;
+            if (numberOfDocs >= BatchSize)
+                return false;
+
+            return await base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+        }
+
+        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+        {
+            if (batchItem.Document.Etag == 0) // got this document from resend
+                return currentLast;
+
+            return ChangeVectorUtils.MergeVectors(
+                currentLast,
+                ChangeVectorUtils.NewChangeVector(Database, batchItem.Document.Etag, context),
+                batchItem.Document.ChangeVector);
+            //merge with this node's local etag
+        }
+
+        protected BatchItem GetBatchItem(T item)
+        {
+            var batchItem = new BatchItem();
+            if (ShouldSend(item, out var reason, out var exception, out var result, out var isActiveMigration))
             {
                 if (IncludesCmd != null && IncludesCmd.IncludeDocumentsCommand != null && Run != null)
                     IncludesCmd.IncludeDocumentsCommand.AddRange(Run.Includes, result.Id);
@@ -59,7 +84,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (result.Data != null)
                     Fetcher.MarkDocumentSent();
 
-                return (result, null);
+                batchItem.Document = result;
+                if (isActiveMigration)
+                    batchItem.Status = BatchItemStatus.ActiveMigration;
+
+                return batchItem;
             }
 
             if (Logger.IsInfoEnabled)
@@ -69,17 +98,27 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             {
                 if (result.Data != null)
                     Fetcher.MarkDocumentSent();
-
-                return (result, exception);
+                batchItem.Document = result;
+                batchItem.Exception = exception;
+                if (isActiveMigration)
+                    batchItem.Status = BatchItemStatus.ActiveMigration;
+                return batchItem;
             }
 
             result.Data = null;
-            return (result, null);
+
+            batchItem.Document = result;
+            if (isActiveMigration)
+                batchItem.Status = BatchItemStatus.ActiveMigration;
+
+            return batchItem;
         }
 
         protected abstract SubscriptionFetcher<T> CreateFetcher();
 
-        protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result);
+        protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, T item);
+
+        protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result, out bool isActiveMigration);
     }
 
     public abstract class DatabaseSubscriptionProcessor : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl>

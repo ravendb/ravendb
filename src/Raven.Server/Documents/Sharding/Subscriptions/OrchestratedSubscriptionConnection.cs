@@ -18,7 +18,9 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Threading;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
@@ -28,7 +30,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly ShardedDatabaseContext _databaseContext;
         private OrchestratedSubscriptionProcessor _processor;
         private readonly IDisposable _tokenRegisterDisposable;
-        private readonly HashSet<string> _dbIdToRemove;
+        private readonly HashSet<string> _dbIdsToRemove;
 
         public OrchestratedSubscriptionConnection(ServerStore serverStore, ShardedDatabaseContext.ShardedSubscriptionsStorage subscriptions,
             TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             _databaseContext = tcpConnection.DatabaseContext;
             _tokenRegisterDisposable = CancellationTokenSource.Token.Register(() => _processor?.CurrentBatch?.SetCancel());
-            _dbIdToRemove = new HashSet<string>() { _databaseContext.DatabaseRecord.Sharding.DatabaseId };
+            _dbIdsToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { _databaseContext.DatabaseRecord.Sharding.DatabaseId };
         }
 
         public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
             var orchestratorCv = ChangeVectorUtils.MergeVectors(_state.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
-            await NotifyShardAboutBatchCompletion(orchestratorCv);
+            await NotifyShardAboutBatchCompletionAsync(orchestratorCv);
 
             _state.LastChangeVectorSent = orchestratorCv;
             
@@ -80,20 +82,15 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             // no op
         }
 
-        protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
+        protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state)
         {
             // nothing was sent to the client, but we need to let the shard know he can continue
-            await NotifyShardAboutBatchCompletion(null);
+            await NotifyShardAboutBatchCompletionAsync(orchestratorCv: null);
 
-            return await base.WaitForChangedDocsAsync(state, pendingReply);
+            return await base.WaitForChangedDocsAsync(state);
         }
 
-        protected override Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
-        {
-            return Task.FromResult(true);
-        }
-
-        private async Task NotifyShardAboutBatchCompletion(string orchestratorCv)
+        private async Task NotifyShardAboutBatchCompletionAsync(string orchestratorCv)
         {
             var batch = _processor.CurrentBatch;
 
@@ -122,10 +119,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return false;
         }
 
-        public override IDisposable MarkInUse()
+        public override DisposeOnce<SingleAttempt> MarkInUse()
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Do we need something like this in the database context?");
-            return null;
+        
+            return new DisposeOnce<SingleAttempt>(() => { });
         }
 
         protected override void AfterProcessorCreation()
@@ -138,20 +136,17 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Need to implement events + ws for this");
         }
 
-        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
+        protected override Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 All tests pass but wonder if that is correct?");
-            return sentDocument.ChangeVector;
-        }
-
-        protected override Task<bool> TryUpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
-        {
-            var vector = context.GetChangeVector(lastChangeVectorSentInThisBatch);
-            vector.TryRemoveIds(_dbIdToRemove, context, out vector);
+            var vector = context.GetChangeVector(result.LastChangeVectorSentInThisBatch);
+            vector.TryRemoveIds(_dbIdsToRemove, context, out vector);
 
             LastSentChangeVectorInThisConnection = vector.Order;
 
-            return Task.FromResult(true);
+            if (result.CurrentBatch.Count == 0)
+                return Task.FromResult(BatchStatus.EmptyBatch);
+
+            return Task.FromResult(BatchStatus.DocumentsSent);
         }
 
         protected override void AssertSupportedFeatures()

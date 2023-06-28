@@ -12,6 +12,9 @@ public interface ISubscriptionConnection : IDisposable
 {
     public const long NonExistentBatch = -1;
     public static readonly StringSegment TypeSegment = new StringSegment("Type");
+    public static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(3);
+
+    public string LastSentChangeVectorInThisConnection { get; set; }
 
     SubscriptionWorkerOptions Options { get; }
 
@@ -30,4 +33,6 @@ public interface ISubscriptionConnection : IDisposable
     TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; }
 
     public const int WaitForChangedDocumentsTimeoutInMs = 3000;
+
+    internal Task SendHeartBeatAsync(string reason);
 }

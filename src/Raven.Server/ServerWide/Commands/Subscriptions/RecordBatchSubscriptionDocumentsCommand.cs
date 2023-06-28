@@ -5,7 +5,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -123,10 +122,22 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 }
 
                 CheckConcurrencyForBatchCv(subscriptionState, subscriptionName);
-                var deleted = new List<string>();
-                foreach (var deletedId in Deleted)
+
+                var skipped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (subscriptionState.ShardingState == null)
                 {
-                    if (subscriptionState.ShardingState != null)
+                    WriteDeletesToResendTable(context, Deleted, subscriptionStateTable);
+                    WriteDocumentsToResendTable(context, index, Documents, subscriptionStateTable);
+                    WriteRevisionsToResendTable(context, index, subscriptionStateTable);
+
+                    subscriptionState.ChangeVectorForNextBatchStartingPoint =
+                        ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
+                    subscriptionState.NodeTag = NodeTag;
+                }
+                else
+                {
+                    var deleted = new List<string>();
+                    foreach (var deletedId in Deleted)
                     {
                         if (IsFromProperShard(context, record, deletedId) == false)
                             continue;
@@ -137,23 +148,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         {
                             throw new DocumentUnderActiveMigrationException($"Got deleted document '{deletedId}' that is under active migration on shard '{ShardName}'.");
                         }
-                    }
-                    deleted.Add(deletedId);
-                }
 
-                foreach (var deletedId in deleted)
-                {
-                    using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
-                    {
-                        using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                        subscriptionStateTable.DeleteByKey(keySlice);
+                        deleted.Add(deletedId);
                     }
-                }
 
-                var skipped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                var documents = new List<DocumentRecord>();
-                if (subscriptionState.ShardingState != null)
-                {
+                    WriteDeletesToResendTable(context, deleted, subscriptionStateTable);
+
+                    var documents = new List<DocumentRecord>();
                     foreach (var documentRecord in Documents)
                     {
                         var owner = IsFromProperShard(context, record, documentRecord.DocumentId);
@@ -193,9 +194,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                         // the doc from resharded bucket and it is mine and it is not already processed and not under active migration, might be from storage or resend list
                         var vector = context.GetChangeVector(documentRecord.ChangeVector);
-                        if (subscriptionState.ShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var current))
+                        if (subscriptionState.ShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var cur))
                         {
-                            subscriptionState.ShardingState.ProcessedChangeVectorPerBucket[bucket] = ChangeVectorUtils.MergeVectors(current, vector.Version);
+                            subscriptionState.ShardingState.ProcessedChangeVectorPerBucket[bucket] = ChangeVectorUtils.MergeVectors(cur, vector.Version);
                         }
                         else
                         {
@@ -208,49 +209,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                         documents.Add(documentRecord);
                     }
-                }
 
-                var batchId = Bits.SwapBytes(index);
-                foreach (var documentRecord in documents)
-                {
-                    using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId, out var key))
-                    using (Slice.External(context.Allocator, key, out var keySlice))
-                    using (Slice.From(context.Allocator, documentRecord.ChangeVector, out var changeVectorSlice))
-                    using (subscriptionStateTable.Allocate(out var tvb))
-                    {
-                        tvb.Add(keySlice);
-                        tvb.Add(changeVectorSlice);
-                        tvb.Add(batchId); // batch id
+                    WriteDocumentsToResendTable(context, index, documents, subscriptionStateTable);
 
-                        subscriptionStateTable.Set(tvb);
-                    }
-                }
-
-                foreach (var revisionRecord in Revisions)
-                {
-                    using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.DocumentId, revisionRecord.Current,
-                               out var key))
-                    using (subscriptionStateTable.Allocate(out var tvb))
-                    {
-                        using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                        using var __ = Slice.From(context.Allocator, revisionRecord.Previous ?? string.Empty, out var changeVectorSlice);
-
-                        tvb.Add(keySlice);
-                        tvb.Add(changeVectorSlice); //prev change vector
-                        tvb.Add(Bits.SwapBytes(index)); // batch id
-
-                        subscriptionStateTable.Set(tvb);
-                    }
-                }
-
-                if (string.IsNullOrEmpty(ShardName))
-                {
-                    subscriptionState.ChangeVectorForNextBatchStartingPoint =
-                        ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
-                    subscriptionState.NodeTag = NodeTag;
-                }
-                else
-                {
                     var changeVector = context.GetChangeVector(CurrentChangeVector);
                     subscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
                     subscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] =
@@ -264,6 +225,59 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 }
 
                 result = skipped;
+            }
+        }
+
+        private void WriteRevisionsToResendTable(ClusterOperationContext context, long index, Table subscriptionStateTable)
+        {
+            foreach (var revisionRecord in Revisions)
+            {
+                using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.DocumentId,
+                           revisionRecord.Current,
+                           out var key))
+                using (subscriptionStateTable.Allocate(out var tvb))
+                {
+                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
+                    using var __ = Slice.From(context.Allocator, revisionRecord.Previous ?? string.Empty, out var changeVectorSlice);
+
+                    tvb.Add(keySlice);
+                    tvb.Add(changeVectorSlice); //prev change vector
+                    tvb.Add(Bits.SwapBytes(index)); // batch id
+
+                    subscriptionStateTable.Set(tvb);
+                }
+            }
+        }
+
+        private void WriteDeletesToResendTable(ClusterOperationContext context, List<string> deleted, Table subscriptionStateTable)
+        {
+            foreach (var deletedId in deleted)
+            {
+                using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
+                {
+                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
+                    subscriptionStateTable.DeleteByKey(keySlice);
+                }
+            }
+        }
+
+        private void WriteDocumentsToResendTable(ClusterOperationContext context, long index, List<DocumentRecord> documents, Table subscriptionStateTable)
+        {
+            var batchId = Bits.SwapBytes(index);
+            foreach (var documentRecord in documents)
+            {
+                using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId,
+                           out var key))
+                using (Slice.External(context.Allocator, key, out var keySlice))
+                using (Slice.From(context.Allocator, documentRecord.ChangeVector, out var changeVectorSlice))
+                using (subscriptionStateTable.Allocate(out var tvb))
+                {
+                    tvb.Add(keySlice);
+                    tvb.Add(changeVectorSlice);
+                    tvb.Add(batchId); // batch id
+
+                    subscriptionStateTable.Set(tvb);
+                }
             }
         }
 

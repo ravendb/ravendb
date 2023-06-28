@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -14,60 +16,67 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
     public class DocumentsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<Document>
     {
-        protected readonly SubscriptionConnection _connection;
+        private readonly CancellationToken _token;
+
+        public List<string> ItemsToRemoveFromResend = new List<string>();
+        public List<DocumentRecord> BatchItems = new List<DocumentRecord>();
 
         public DocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            _connection = connection;
+            _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
         }
 
-        public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
+        public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             Size size = default;
-            var numberOfDocs = 0;
+            var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
             ItemsToRemoveFromResend.Clear();
 
             foreach (var item in Fetcher.GetEnumerator())
             {
-                size += new Size(item.Data?.Size ?? 0, SizeUnit.Bytes);
+                BatchItem batchItem = GetBatchItem(item);
 
-                var result = GetBatchItem(item);
+                HandleBatchItem(batchScope, batchItem, result, item);
+                size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
 
-                if (result.Doc.Data != null)
-                {
-                    BatchItems.Add(new DocumentRecord
-                    {
-                        DocumentId = result.Doc.Id,
-                        ChangeVector = result.Doc.ChangeVector,
-                    });
-
-                    yield return result;
-
-                    if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                        yield break;
-
-                    if (++numberOfDocs >= BatchSize)
-                        yield break;
-                }
-                else
-                {
-                    item.Data?.Dispose();
-                    item.Data = null;
-                    yield return result;
-                }
+                if (await CanContinueBatchAsync(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                    break;
             }
+
+            _token.ThrowIfCancellationRequested();
+            result.Status = SetBatchStatus(result);
+
+            return result;
         }
 
-        public List<string> ItemsToRemoveFromResend = new List<string>();
-        public List<DocumentRecord> BatchItems = new List<DocumentRecord>();
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+        {
+            if (batchItem.Document.Data != null)
+            {
+                BatchItems.Add(new DocumentRecord { DocumentId = batchItem.Document.Id, ChangeVector = batchItem.Document.ChangeVector });
 
-        public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) =>
-            (await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
+                batchScope?.RecordDocumentInfo(batchItem.Document.Data.Size);
 
-        public override async Task AcknowledgeBatch(long batchId, string changeVector)
+                Connection.TcpConnection.LastEtagSent = batchItem.Document.Etag;
+
+                result.CurrentBatch.Add(batchItem);
+            }
+            else
+            {
+                item.Data?.Dispose();
+                item.Data = null;
+            }
+
+            result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
+        }
+
+        public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
+            (await SubscriptionConnectionsState.RecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
+
+        public override async Task AcknowledgeBatchAsync(long batchId, string changeVector)
         {
             ItemsToRemoveFromResend.Clear();
 
@@ -86,7 +95,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 }
             }
 
-            await SubscriptionConnectionsState.AcknowledgeBatch(_connection.LastSentChangeVectorInThisConnection 
+            await SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection 
                                                                 ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), batchId, BatchItems);
 
             if (BatchItems?.Count > 0)
@@ -112,10 +121,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
         {
             exception = null;
             reason = null;
+            isActiveMigration = false;
             result = item;
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
