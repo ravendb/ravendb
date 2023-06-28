@@ -62,8 +62,7 @@ namespace Corax.Utils;
 /// We reuse those values for additional purposes:
 ///
 /// * 0b010 - indicates a spatial point. The term id in this case holds the *field root page*, not a term. This is followed by two doubles (raw) representing lat/lng.
-/// * 0b110 - indicates that this is a  *stored* field. The term id contains the *field root page*, not a term. The term is followed by a var int with size of the stored field and then the
-///           actual bytes of the term. 
+/// * 0b110 - indicates that this is a  *stored* field. The term id contains the type of term we deal with, not a term.
 /// </summary>
 public unsafe struct EntryTermsReader
 {
@@ -81,7 +80,7 @@ public unsafe struct EntryTermsReader
     public double CurrentDouble;
     public double Latitude;
     public double Longitude;
-    public UnmanagedSpan StoredField;
+    public UnmanagedSpan? StoredField;
     public int Frequency;
     public bool HasNumeric;
 
@@ -206,10 +205,28 @@ public unsafe struct EntryTermsReader
         var hasStoredField = (termContainerId & 0b100) != 0;
         if (hasStoredField)
         {
-            var termLen = VariableSizeEncoding.Read<int>(_cur, out var offset);
-            StoredField = new UnmanagedSpan(_cur + offset, termLen);
-
-            _cur += offset + termLen;
+            var type = (StoredFieldType)(termContainerId & ~0b111);
+            var val =  ZigZagEncoding.Decode<long>(_cur, out var offset) + _prevLong;
+            _cur += offset;
+            _prevLong = val;
+            switch (type)
+            {
+                case StoredFieldType.Null:
+                    StoredField = null;
+                    TermMetadata = val;
+                    break;
+                case StoredFieldType.Empty:
+                    StoredField = new(null, 0);
+                    TermMetadata = val;
+                    break;
+                case StoredFieldType.Term:
+                    var termItem = Container.Get(_llt, val);
+                    TermMetadata = termItem.PageLevelMetadata;
+                    StoredField = termItem.ToUnmanagedSpan();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(type.ToString());
+            }
         }
         else
         {
@@ -219,4 +236,12 @@ public unsafe struct EntryTermsReader
             _cur += sizeof(double) + sizeof(double);
         }
     }
+}
+
+public enum StoredFieldType : byte
+{
+    None = 0,
+    Null = 1 << 3,
+    Empty = 2 << 3,
+    Term = 4 << 3
 }

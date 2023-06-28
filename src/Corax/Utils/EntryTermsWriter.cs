@@ -38,13 +38,20 @@ public unsafe struct EntryTermsWriter : IDisposable
             offset += VariableSizeEncoding.Write(buffer + offset, cur.TermContainerId - prevTermId);
             prevTermId = cur.TermContainerId;
 
-            if ((cur.TermContainerId & 0b11) == 0b10) // non standard
+            if ((cur.TermContainerId & 0b11) == 0b10) // stored / spatial field
             {
-                // spatial or stored fields
-                *(double*)(buffer + offset) = cur.Lat;
-                offset += sizeof(double);
-                *(double*)(buffer + offset) = cur.Lng;
-                offset += sizeof(double);
+                if ((cur.TermContainerId & 0b100) != 0) // stored
+                {
+                    offset += ZigZagEncoding.Encode(buffer, cur.Long - prevLong,  offset);
+                    prevLong = cur.Long;
+                }
+                else // spatial
+                {
+                    *(double*)(buffer + offset) = cur.Lat;
+                    offset += sizeof(double);
+                    *(double*)(buffer + offset) = cur.Lng;
+                    offset += sizeof(double);
+                }
                 continue;
             }
             

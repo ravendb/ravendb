@@ -93,7 +93,7 @@ public class IndexFieldsMappingBuilder : IDisposable
             GetFieldForTotalSum(_context, clonedFieldName,  out var fieldForTotalSum);
 
             var binding = new IndexFieldBinding(fieldId, clonedFieldName, fieldNameLong, fieldNameDouble, fieldForTotalSum, _isForWriter,
-                analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+                analyzer, hasSuggestion, fieldIndexingMode, shouldStore, hasSpatial);
             _fields[clonedFieldName] = binding;
             _fieldsById[fieldId] = binding;
         }

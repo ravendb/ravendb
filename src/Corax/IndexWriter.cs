@@ -541,10 +541,16 @@ namespace Corax
 
                 foreach (var binding in _fieldsMapping)
                 {
+                    var fieldReader = entryReader.GetFieldReaderFor(binding.FieldId);
+                    if (binding.ShouldStore)
+                    {
+                        StoreField(entryId, ref fieldReader, binding);
+                    }
+                    
                     if (binding.FieldIndexingMode is FieldIndexingMode.No)
                         continue;
 
-                    var indexer = new TermIndexer(this, context, entryReader.GetFieldReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
+                    var indexer = new TermIndexer(this, context, fieldReader, _knownFieldsTerms[binding.FieldId], entryId);
                     indexer.InsertToken();
                 }
 
@@ -562,6 +568,74 @@ namespace Corax
                     var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
                     indexer.InsertToken();
                 }
+            }
+        }
+
+        private void StoreField(long entryId, ref IndexEntryReader.FieldReader fieldReader, IndexFieldBinding binding)
+        {
+            var fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+            long fieldRootPage = binding.GetFieldRootPage(fieldsTree);
+            ref var entryTerms = ref GetEntryTerms(entryId);
+
+            if (fieldReader.Type.HasFlag(IndexEntryFieldType.List))
+            {
+                if (fieldReader.TryReadMany(out var it))
+                {
+                    while (it.ReadNext())
+                    {
+                        if (it.IsNull)
+                        {
+                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
+                        }
+                        else if (it.IsEmptyString)
+                        {
+                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
+                        }
+                        else
+                        {
+                            RegisterTerm(it.Sequence, ref entryTerms);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (fieldReader.Read(out var type,out Span<byte> v))
+                {
+                    switch (type)
+                    {
+                        case IndexEntryFieldType.Null:
+                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
+                            break;
+                        case IndexEntryFieldType.Empty:
+                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
+                            break;
+                        default:
+                            RegisterTerm(v, ref entryTerms);
+                            break;
+                    }
+                }
+            }
+
+            void RegisterTerm(ReadOnlySpan<byte> term, ref NativeList<RecordedTerm> entryTerms)
+            {
+                var termId = Container.Allocate(_transaction.LowLevelTransaction, _entriesContainerId,
+                    term.Length, fieldRootPage, out Span<byte> space);
+                term.CopyTo(space);
+                entryTerms.Add(new RecordedTerm
+                {
+                    TermContainerId = (long)StoredFieldType.Term | 0b110, // marker for stored field
+                    Long = termId
+                });
+            }
+
+            void RegisterNullOrEmpty(ref NativeList<RecordedTerm> entryTerms, StoredFieldType type)
+            {
+                entryTerms.Add(new RecordedTerm
+                {
+                    TermContainerId = (long)type | 0b110, // marker stored field entry
+                    Long = fieldRootPage
+                });
             }
         }
 
@@ -703,7 +777,7 @@ namespace Corax
         private readonly IndexOperationsDumper _indexDebugDumper;
         private long _lastEntryId;
         private FastPForEncoder _pForEncoder;
-        private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId;
+        private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
         private ByteStringContext _entriesAllocator;
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
@@ -1297,7 +1371,6 @@ namespace Corax
             ProcessDeletes(fieldsTree);
 
             Slice[] keys = Array.Empty<Slice>();
-            _termsPerEntryId = new();
             _pForEncoder = new FastPForEncoder(_transaction.LowLevelTransaction.Allocator);
 
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
@@ -1327,7 +1400,6 @@ namespace Corax
 
             _pForEncoder.Dispose();
             _pForEncoder = null;
-            _termsPerEntryId = null;
             
             if(keys.Length>0)
                 ArrayPool<Slice>.Shared.Return(keys);
