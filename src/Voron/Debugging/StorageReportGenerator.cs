@@ -480,9 +480,10 @@ namespace Voron.Debugging
             {
                 pageDensities = GetLookupPageDensities(lookup.Llt, lookup.AllPages());
             }
-            var container = new Container(lookup.Llt.GetPage(lookup.State.TermsContainerId));
 
-            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages + container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
+            var lookupPageHeader = lookup.Llt.GetPageHeaderForDebug<ContainerPageHeader>(lookup.State.TermsContainerId);
+
+            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages + lookupPageHeader.NumberOfPages + lookupPageHeader.NumberOfOverflowPages;
 
             double density = pageDensities?.Average() ?? -1;
 
@@ -492,9 +493,9 @@ namespace Voron.Debugging
                 Name = lookup.Name.ToString(),
                 BranchPages = lookup.State.BranchPages,
                 NumberOfEntries = lookup.State.NumberOfEntries,
-                LeafPages = lookup.State.LeafPages + container.Header.NumberOfPages,
+                LeafPages = lookup.State.LeafPages + lookupPageHeader.NumberOfPages,
                 PageCount = pageCount,
-                OverflowPages = container.Header.NumberOfOverflowPages,
+                OverflowPages = lookupPageHeader.NumberOfOverflowPages,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
@@ -847,9 +848,8 @@ namespace Voron.Debugging
             var densities = new List<double>();
             foreach (var p in allPages)
             {
-                var page = llt.GetPage(p);
-                var state = new Lookup<Int64LookupKey>.CursorState { Page = page };
-                densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
+                var lookupPageHeader = llt.GetPageHeaderForDebug<LookupPageHeader>(p);
+                densities.Add((double)lookupPageHeader.FreeSpace / Constants.Storage.PageSize);
             }
             return densities;
         }
