@@ -11,8 +11,6 @@ class backupNowConfirm extends confirmViewModelBase<backupNowConfirmResult> {
     constructor(fullBackupType: string) {
         super();
         this.fullBackupType = fullBackupType;
-
-        this.fullBackupType = this.fullBackupType !== 'Snapshot' ? this.fullBackupType + ' Backup' : this.fullBackupType;
     }
 
     fullBackup() {
