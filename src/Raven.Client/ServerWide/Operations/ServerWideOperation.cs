@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Conventions;
+﻿using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 
@@ -16,6 +17,11 @@ namespace Raven.Client.ServerWide.Operations
         protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
         {
             return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(id, nodeTag);
+        }
+
+        protected override RavenCommand GetKillOperationCommand(long id, string nodeTag = null)
+        {
+            return new KillServerOperationCommand(id, nodeTag);
         }
     }
 }
