@@ -238,7 +238,7 @@ namespace InterversionTests
                     Assert.Equal(0, tombstonesCount);
                 }
 
-                await EnsureNoReplicationLoop(Server, ShardHelper.ToShardName(store.Database, newLocation));
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
             }
         }
 
@@ -304,7 +304,8 @@ namespace InterversionTests
                     Assert.Equal(4, revisionTombsCount); 
                     Assert.Equal(1, documentTombsCount);
                 }
-          
+
+                await Task.Delay(3000);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
             }
         }

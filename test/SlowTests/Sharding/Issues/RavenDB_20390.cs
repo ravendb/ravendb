@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -76,39 +77,30 @@ namespace SlowTests.Sharding.Issues
 
         private async Task CheckShardSubscriptionLastProcessedCVsAsync(DocumentStore store1, IDocumentStore store2, SubscriptionState state, int count)
         {
-            var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
-            var dbId = db1.DbBase64Id;
-            List<ChangeVectorEntry> cvList = null;
             var tt = await WaitForValueAsync(async () =>
             {
                 string cvs = null;
                 var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store2);
                 await foreach (var db in shards)
                 {
-                    using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docCtx))
+                    using (docCtx.OpenReadTransaction())
+                    using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterCtx))
+                    using (clusterCtx.OpenReadTransaction())
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
-                        if (connectionState != null)
+                        var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(docCtx);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(clusterCtx, state.SubscriptionName);
+                        if (ChangeVectorUtils.GetConflictStatus(databaseChangeVector, connectionState?.LastChangeVectorSent) != ConflictStatus.AlreadyMerged)
                         {
-                            cvs = ChangeVectorUtils.MergeVectors(cvs, connectionState.LastChangeVectorSent);
+                            return false;
                         }
                     }
                 }
 
-                var c = 0;
-                cvList = cvs.ToChangeVectorList();
-                foreach (var cv in cvList)
-                {
-                    if (cv.DbId == dbId)
-                        continue;
-                    c += (int)cv.Etag;
-                }
-                return c;
-            }, count, interval: 333);
+                return true;
+            }, true, interval: 333);
 
-            Assert.Equal(4, cvList.Count);
-            Assert.Equal(count, cvList.FirstOrDefault(x => x.DbId == dbId).Etag);
+            Assert.True(tt, "not all shards reached last document");
         }
     }
 }
