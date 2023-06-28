@@ -799,7 +799,8 @@ namespace Raven.Server.ServerWide
                     databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                 }
 
-                UpdateValue(index, items, keyLowered, key, databaseRecordJson);
+                using (databaseRecordJson)
+                    UpdateValue(index, items, keyLowered, key, databaseRecordJson);
             }
         }
 
