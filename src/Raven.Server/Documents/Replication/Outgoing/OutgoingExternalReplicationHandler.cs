@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     TaskId = _taskId.Value,
                     NodeTag = _parent._server.NodeTag,
                     LastSentEtag = _lastSentDocumentEtag,
-                    SourceChangeVector = LastSentChangeVectorDuringHeartbeat,
+                    SourceChangeVector = LastSentChangeVector,
                     DestinationChangeVector = LastAcceptedChangeVector
                 }
             };

@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         internal CancellationToken CancellationToken => _cts.Token;
         public bool IsConnectionDisposed => _connectionDisposed.IsSet;
         public ReplicationNode Destination { get; }
-        public string LastSentChangeVectorDuringHeartbeat;
+        public string LastSentChangeVector;
         public string LastAcceptedChangeVector { get; set; }
         public long LastHeartbeatTicks;
         public ReplicationNode Node => Destination;
@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     };
                     if (changeVector != null)
                     {
-                        LastSentChangeVectorDuringHeartbeat = changeVector;
+                        LastSentChangeVector = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
                     context.Write(writer, heartbeat);
