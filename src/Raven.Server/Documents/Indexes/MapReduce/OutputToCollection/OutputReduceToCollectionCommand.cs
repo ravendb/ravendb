@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         continue;
                     }
 
-                    _database.DocumentsStorage.Delete(context, id, null);
+                    _database.DocumentsStorage.Delete(context, id, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
                     _outputToCollectionReferences?.Delete(id);
                 }
                 else

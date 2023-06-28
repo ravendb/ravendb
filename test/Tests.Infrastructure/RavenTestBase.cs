@@ -139,6 +139,7 @@ namespace FastTests
 
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
+            DocumentStore adminStore = null;
             try
             {
                 lock (_getDocumentStoreSync)
@@ -150,6 +151,21 @@ namespace FastTests
 
                     if (options.ModifyDatabaseName != null)
                         name = options.ModifyDatabaseName(name) ?? name;
+
+                    if (options.AdminCertificate != null)
+                    {
+                        adminStore = new DocumentStore
+                        {
+                            Urls = UseFiddler(serverToUse.WebUrl),
+                            Database = name,
+                            Certificate = options.AdminCertificate,
+                            Conventions =
+                            {
+                                DisposeCertificate = false
+                            }
+                        };
+                        adminStore.Initialize();
+                    }
 
                     var hardDelete = true;
                     var runInMemory = options.RunInMemory;
@@ -221,6 +237,8 @@ namespace FastTests
 
                     store.Initialize();
 
+                    var serverOperationStore = adminStore ?? store;
+
                     if (options.CreateDatabase)
                     {
                         if (Servers.Contains(serverToUse))
@@ -235,26 +253,7 @@ namespace FastTests
                         long raftCommand;
                         try
                         {
-                            if (options.AdminCertificate != null)
-                            {
-                                using (var adminStore = new DocumentStore
-                                {
-                                    Urls = UseFiddler(serverToUse.WebUrl),
-                                    Database = name,
-                                    Certificate = options.AdminCertificate,
-                                    Conventions =
-                                    {
-                                        DisposeCertificate = false
-                                    }
-                                }.Initialize())
-                                {
-                                    raftCommand = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
-                                }
-                            }
-                            else
-                            {
-                                raftCommand = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
-                            }
+                            raftCommand = serverOperationStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
                         }
                         catch (ConcurrencyException)
                         {
@@ -287,18 +286,21 @@ namespace FastTests
                             if (CreatedStores.TryRemove(store) == false)
                                 return; // can happen if we are wrapping the store inside sharded one
 
-                            if (sharded && options.CreateDatabase)
+                            if (sharded)
                             {
                                 if (Servers.Contains(serverToUse) || IsGlobalOrLocalServer(serverToUse))
                                 {
-                                    AsyncHelpers.RunSync(() => Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database));
+                                    // check that the database wasn't deleted
+                                    var record = serverOperationStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
+                                    if (record != null)
+                                        AsyncHelpers.RunSync(() => Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database));
                                 }
                             }
 
                             DeleteDatabaseResult result = null;
-                            if (options.DeleteDatabaseOnDispose && options.CreateDatabase)
+                            if (options.DeleteDatabaseOnDispose)
                             {
-                                result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                                result = DeleteDatabase(serverOperationStore, serverToUse, name, hardDelete);
                             }
                             if (Servers.Contains(serverToUse) && result != null)
                             {
@@ -314,7 +316,10 @@ namespace FastTests
                             throw;
                         }
                     };
+                    
                     CreatedStores.Add(store);
+                    if (adminStore != null)
+                        CreatedStores.Add(adminStore);
 
                     return store;
                 }
@@ -372,28 +377,11 @@ namespace FastTests
             }
         }
 
-        private DeleteDatabaseResult DeleteDatabase(Options options, RavenServer serverToUse, string name, bool hardDelete, DocumentStore store)
+        private DeleteDatabaseResult DeleteDatabase(DocumentStore adminStore, RavenServer serverToUse, string name, bool hardDelete)
         {
             try
             {
-                if (options.AdminCertificate != null)
-                {
-                    using (var adminStore = new DocumentStore
-                    {
-                        Urls = UseFiddler(serverToUse.WebUrl),
-                        Database = name,
-                        Certificate = options.AdminCertificate,
-                        Conventions =
-                        {
-                            DisposeCertificate = false
-                        }
-                    }.Initialize())
-                    {
-                        return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
-                    }
-                }
-
-                return store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
+                return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
             }
             catch (OperationCanceledException)
             {

@@ -236,7 +236,7 @@ public partial class RavenTestBase
         public async IAsyncEnumerable<ShardedDocumentDatabase> GetShardsDocumentDatabaseInstancesFor(string database, List<RavenServer> servers = null)
         {
             servers ??= _parent.GetServers();
-            foreach (var server in servers)
+            foreach (var server in servers.Where(s => s.Disposed == false))
             {
                 foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database))
                 {
