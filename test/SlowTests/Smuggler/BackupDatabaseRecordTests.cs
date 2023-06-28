@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -613,6 +614,19 @@ namespace SlowTests.Smuggler
                     await store1.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig));
                     await store2.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig2));
 
+                    var refConfig = new RefreshConfiguration
+                    {
+                        RefreshFrequencyInSec = 66,
+                        Disabled = false
+                    };
+                    var refConfig2 = new RefreshConfiguration
+                    {
+                        RefreshFrequencyInSec = 33,
+                        Disabled = true
+                    };
+                    await store1.Maintenance.SendAsync(new ConfigureRefreshOperation(refConfig));
+                    await store2.Maintenance.SendAsync(new ConfigureRefreshOperation(refConfig2));
+
                     var hub1 = new PullReplicationDefinition
                     {
                         Name = "hub1",
@@ -926,6 +940,8 @@ namespace SlowTests.Smuggler
                     Assert.Equal(10, rcc.MinimumRevisionsToKeep);
 
                     Assert.Equal(60, record.Expiration.DeleteFrequencyInSec);
+
+                    Assert.Equal(66, record.Refresh.RefreshFrequencyInSec);
 
                     disabled = 0;
                     Assert.Equal(3, record.HubPullReplications.Count);
