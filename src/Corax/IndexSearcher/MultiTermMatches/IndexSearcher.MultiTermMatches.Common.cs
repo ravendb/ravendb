@@ -45,15 +45,15 @@ public partial class IndexSearcher
     private MultiTermMatch MultiTermMatchBuilderBase<TTermProvider>(FieldMetadata field, CompactTree termTree, CompactKey term, bool isNegated)
         where TTermProvider : ITermProvider
     {
-        if (typeof(TTermProvider) == typeof(StartWithTermProvider))
+        if (typeof(TTermProvider) == typeof(StartsWithTermProvider))
         {
             return (isNegated) switch
             {
-                (false) => MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(field, _transaction.Allocator,
-                    new StartWithTermProvider(this, termTree, field, term))),
+                (false) => MultiTermMatch.Create(new MultiTermMatch<StartsWithTermProvider>(field, _transaction.Allocator,
+                    new StartsWithTermProvider(this, termTree, field, term))),
 
-                (true) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(field, _transaction.Allocator,
-                    new NotStartWithTermProvider(this, _transaction.Allocator, termTree, field, term))),
+                (true) => MultiTermMatch.Create(new MultiTermMatch<NotStartsWithTermProvider>(field, _transaction.Allocator,
+                    new NotStartsWithTermProvider(this, _transaction.Allocator, termTree, field, term))),
             };
         }
 

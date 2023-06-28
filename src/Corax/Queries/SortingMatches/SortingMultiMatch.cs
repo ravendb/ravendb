@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -32,7 +32,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     private NativeIntegersList _results;
     public long TotalResults;
+    
     public bool DoNotSortResults() => throw new NotSupportedException();
+    public bool IsOrdered => true;
 
     public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
     {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace Corax.Queries
 {    
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct MemoizationMatch<TInner> : IQueryMatch
+    public struct MemoizationMatch<TInner> : IQueryMatch
         where TInner : IQueryMatch
     {
         private MemoizationMatchProvider<TInner> _inner;
@@ -13,6 +13,8 @@ namespace Corax.Queries
         public bool IsAllEntries = typeof(TInner) == typeof(AllEntriesMatch);
 
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _inner.Count;
         public bool DoNotSortResults()
         {

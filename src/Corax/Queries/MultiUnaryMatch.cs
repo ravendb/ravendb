@@ -14,7 +14,7 @@ public unsafe struct MultiUnaryItem
     /**
      *  MultiUnaryMatches are using same buffer from Voron to check every single condition per one document. There is no need to call UnaryMatch over and over.
      *  We decided to drop Generics here (like in rest of the code) and push comparers by pointer functions due to problems of creation complex unary queries.
-     *  We've 5 diffrent comparers (Equals are handled by TermMatch, not by scanning) so number of possible permutations grows extremly fast)
+     *  We've 5 different comparers (Equals are handled by TermMatch, not by scanning) so number of possible permutations grows extremly fast)
      */
     public FieldMetadata Binding;
     public DataType Type;
@@ -381,6 +381,8 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
+    
+    public bool IsOrdered => _inner.IsOrdered;
 
     public int Fill(Span<long> matches)
     {

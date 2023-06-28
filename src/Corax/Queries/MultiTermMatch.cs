@@ -35,6 +35,8 @@ namespace Corax.Queries
         private readonly ByteStringContext _context;
 
         public bool IsBoosting => _isBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 

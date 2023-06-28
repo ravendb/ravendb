@@ -59,6 +59,8 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => _confidence;
 
+        public bool IsOrdered => _inner.IsOrdered;
+
         private UnaryMatch(in TInner inner,
             UnaryMatchOperation operation,
             IndexSearcher searcher,

@@ -34,6 +34,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
     private NativeIntegersList _results;
     public long TotalResults;
+
+    public bool IsOrdered => true;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
     public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)

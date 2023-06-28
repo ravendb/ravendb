@@ -36,6 +36,7 @@ namespace Corax.Queries
         }
 
         public bool IsBoosting => false;
+        public bool IsOrdered => false;
         public long Count => _count;
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 

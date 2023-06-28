@@ -1239,16 +1239,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
             else
             {
-                using (var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context))
-                    mltQuery = mlt.Like(blittableJson);
+                using var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context);
+                mltQuery = mlt.Like(blittableJson);
             }
 
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
             {
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
-
-
 
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long[] ids = QueryPool.Rent(pageSize);

@@ -17,6 +17,8 @@ namespace Corax.Queries
 
         private CompactTreeForwardIterator _iterator;
 
+        public bool IsOrdered => true;
+
         public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
         {
             _tree = tree;

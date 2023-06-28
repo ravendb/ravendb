@@ -21,9 +21,10 @@ namespace Corax.Queries
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
         private readonly CancellationToken _token;
-
-
+        private readonly bool _isNotOr;
+        
         private bool _doNotSortResults;
+
 
         public bool DoNotSortResults()
         {
@@ -33,6 +34,8 @@ namespace Corax.Queries
 
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
+
+        public bool IsOrdered => _inner.IsOrdered && _isNotOr;
 
         public long Count => _totalResults;
 
@@ -46,7 +49,8 @@ namespace Corax.Queries
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
             QueryCountConfidence confidence,
-            in CancellationToken token)
+            in CancellationToken token,
+            bool isOr = false)
         {
             _totalResults = totalResults;
 
@@ -59,6 +63,7 @@ namespace Corax.Queries
             _confidence = confidence;
             _token = token;
             _ctx = ctx;
+            _isNotOr = !isOr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

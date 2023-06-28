@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Corax.Mappings;
 using Voron.Data.CompactTrees;
@@ -16,6 +16,9 @@ namespace Corax.Queries
         private readonly CompactKey _endsWith;
 
         private CompactTreeForwardIterator _iterator;
+        
+        public bool IsOrdered => true;
+
         public EndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _tree = tree;

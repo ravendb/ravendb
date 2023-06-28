@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -16,6 +16,7 @@ namespace Corax.Queries.SortingMatches
             _functionTable = functionTable;
         }
 
+        public bool IsOrdered => _inner.IsOrdered;
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
 
         public long Count => throw new NotSupportedException();

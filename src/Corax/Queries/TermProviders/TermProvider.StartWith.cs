@@ -13,7 +13,7 @@ using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct StartWithTermProvider : ITermProvider
+    public struct StartsWithTermProvider : ITermProvider
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
@@ -22,7 +22,9 @@ namespace Corax.Queries
 
         private  CompactTreeForwardIterator _iterator;
 
-        public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
+        public bool IsOrdered => true;
+
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;
             _field = field;
@@ -57,7 +59,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(StartsWithTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },

@@ -244,14 +244,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return disposable;
     }
     
-    public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
-   public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
+    public AllEntriesMatch AllEntries() => new(this, _transaction);
+    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
-   public long GetDictionaryIdFor(Slice field)
-   {
+    public long GetDictionaryIdFor(Slice field)
+    {
        var terms = _fieldsTree?.CompactTreeFor(field);
        return terms?.DictionaryId ?? -1;
-   }
+    }
    
     public long GetTermAmountInField(FieldMetadata field)
     {

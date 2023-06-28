@@ -21,6 +21,9 @@ public struct CoraxBooleanItem : IQueryMatch
     private readonly bool _isTime;
     public bool IsBoosting => Boosting.HasValue;
     public float? Boosting;
+
+    public bool IsOrdered => throw new NotImplementedException("Still not implemented at this level.");
+
     public long Count { get; }
 
     private CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation)

@@ -23,6 +23,8 @@ namespace Corax.Queries
         private readonly CancellationToken _token;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _totalResults;
 
         private readonly ByteStringContext _context;

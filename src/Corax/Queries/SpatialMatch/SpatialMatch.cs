@@ -21,13 +21,17 @@ public class SpatialMatch : IQueryMatch
     private readonly IShape _shape;
     private readonly CompactTree _tree;
     private readonly FieldMetadata _field;
-    private IEnumerator<(string Geohash, bool isTermMatch)> _termGenerator;
-    private TermMatch _currentMatch;
+    private readonly IEnumerator<(string Geohash, bool isTermMatch)> _termGenerator;
     private readonly ByteStringContext _allocator;
     private readonly Utils.Spatial.SpatialRelation _spatialRelation;
+
+    private TermMatch _currentMatch;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
+
+    // TODO: Check if there is any way we can consider something ordered.
+    public bool IsOrdered => false;
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
@@ -175,7 +179,7 @@ public class SpatialMatch : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
+        return new QueryInspectionNode($"{nameof(SpatialMatch)}",
             parameters: new Dictionary<string, string>()
             {
                 {"Field", _field.ToString()},

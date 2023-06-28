@@ -21,6 +21,8 @@ namespace Corax.Queries
         public bool DoNotSortResults() => _inner.DoNotSortResults();
         
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _functionTable.CountFunc(ref this);
 
         public QueryCountConfidence Confidence => _inner.Confidence;
@@ -136,6 +138,8 @@ namespace Corax.Queries
         private struct EmptyTermProvider : ITermProvider
         {
             public int TermsCount => 0;
+
+            public bool IsOrdered => true;
 
             public bool Next(out TermMatch term)
             {

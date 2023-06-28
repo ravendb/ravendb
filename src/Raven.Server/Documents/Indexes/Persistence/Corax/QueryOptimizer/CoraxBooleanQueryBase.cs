@@ -13,6 +13,8 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
     protected bool _hasBinary;
     public bool HasBinary => _hasBinary;
 
+    public bool IsOrdered => throw new NotImplementedException("Still not implemented at this level.");
+
     protected CoraxBooleanQueryBase(IndexSearcher indexSearcher)
     {
         IndexSearcher = indexSearcher;

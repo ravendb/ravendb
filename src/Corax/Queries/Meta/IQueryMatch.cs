@@ -47,6 +47,8 @@ namespace Corax.Queries
 
         bool IsBoosting { get; }
 
+        bool IsOrdered { get; }
+
         // Guarantees: The output of Fill will be sorted and deduplicated for the call.
         //             Different calls to Fill may return identical values are not guaranteed to be sorted between calls.
         //             0 return means no more matches. 

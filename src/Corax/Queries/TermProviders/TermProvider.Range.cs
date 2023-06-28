@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -32,6 +32,8 @@ namespace Corax.Queries
 
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;
+
+        public bool IsOrdered => true;
 
         public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
         {
@@ -125,6 +127,10 @@ namespace Corax.Queries
         private readonly TVal _low, _high;
         private Lookup<TVal>.ForwardIterator _iterator;
         private bool _first;
+
+        private const int TermBufferSize = 32;
+        private fixed byte _termsBuffer[TermBufferSize];
+        public bool IsOrdered => true;
 
         public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
         {

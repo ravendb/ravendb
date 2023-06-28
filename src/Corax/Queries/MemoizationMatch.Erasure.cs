@@ -20,6 +20,7 @@ namespace Corax.Queries
         }
 
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
 
         public long Count => _functionTable.CountFunc(ref this);
 
