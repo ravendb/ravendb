@@ -43,21 +43,21 @@ public class IndexFieldsMappingBuilder : IDisposable
     }
 
     public IndexFieldsMappingBuilder AddBindingToEnd(string fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         Slice.From(_context, fieldName, out var slice);
-        return AddBinding(_fields.Count, slice, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        return AddBinding(_fields.Count, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore, hasSpatial);
     }
 
     public IndexFieldsMappingBuilder AddBindingToEnd(Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false) =>
-        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false,  bool hasSpatial = false) =>
+        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, shouldStore,  hasSpatial);
 
-    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode)
+    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode, bool shouldStore)
     {
         if (_fields.TryGetValue(fieldName, out var storedBinding) == false)
         {
-            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode);
+            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode, shouldStore: shouldStore);
         }
         else
         {
@@ -83,7 +83,7 @@ public class IndexFieldsMappingBuilder : IDisposable
     }
     
     public IndexFieldsMappingBuilder AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         if (_fieldsById.TryGetValue(fieldId, out var storedAnalyzer) == false)
         {

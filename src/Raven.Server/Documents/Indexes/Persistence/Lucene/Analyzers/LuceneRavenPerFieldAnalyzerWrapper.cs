@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
                     if (scope?.DynamicFields != null && scope.DynamicFields.TryGetValue(fieldName, out var fieldIndexing))
                     {
-                        switch (fieldIndexing)
+                        switch (fieldIndexing.Indexing)
                         {
                             case FieldIndexing.Search:
                                 return _defaultSearchAnalyzer ??= _defaultSearchAnalyzerFactory(fieldName);
