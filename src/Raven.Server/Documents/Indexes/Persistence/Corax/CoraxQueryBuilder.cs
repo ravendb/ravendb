@@ -1061,7 +1061,7 @@ internal static class CoraxQueryBuilder
             if (field.OrderingType == OrderByFieldType.Random)
             {
                 var seed = field.Arguments.Length > 0 ? 
-                    field.Arguments[0].GetString(builderParameters.QueryParameters).GetHashCode() :
+                    (int)Hashing.XXHash32.CalculateRaw(field.Arguments[0].NameOrValue) :
                     Random.Shared.Next(); // use a random seed if none is provided  
                 sortArray[sortIndex++] = new OrderMetadata(seed);
                 continue;

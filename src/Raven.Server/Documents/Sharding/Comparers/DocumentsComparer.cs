@@ -35,8 +35,8 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                 continue;
 
             ref var randomField = ref orderByFields[idX];
-            randoms[randomIdx++] = randomField.Arguments is {Length: > 0} 
-                ? new Random(randomField.Arguments[0].NameOrValue.GetHashCode()) 
+            randoms[randomIdx++] = randomField.Arguments is {Length: > 0}
+                ? new Random((int)Sparrow.Hashing.XXHash32.CalculateRaw(randomField.Arguments[0].NameOrValue)) 
                 :  Random.Shared;
         }
         return randoms;
