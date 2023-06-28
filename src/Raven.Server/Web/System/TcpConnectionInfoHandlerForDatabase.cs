@@ -11,7 +11,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Get()
         {
-            var forExternalUse = CanConnectViaPrivateTcpUrl() == false;
+            var forExternalUse = CanConnectViaPublicClusterTcpUrl() == false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -21,7 +21,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private bool CanConnectViaPrivateTcpUrl()
+        private bool CanConnectViaPublicClusterTcpUrl()
         {
             var senderUrl = GetStringQueryString("senderUrl", required: false);
             if (string.IsNullOrEmpty(senderUrl))

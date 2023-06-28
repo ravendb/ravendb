@@ -56,10 +56,10 @@ namespace Raven.Client.ServerWide.Commands
                 {
                     url += $"&from-outgoing={_dbId}&etag={_etag}";
                 }
-            }
-            if (_senderUrl != null)
-            {
-                url += $"&senderUrl={_senderUrl}";
+                if (_senderUrl != null)
+                {
+                    url += $"&senderUrl={Uri.EscapeDataString(_senderUrl)}";
+                }
             }
 
             RequestedNode = node;
