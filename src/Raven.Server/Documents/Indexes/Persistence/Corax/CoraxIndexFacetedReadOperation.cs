@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
+using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -25,6 +27,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 {
     private readonly IndexFieldsMapping _fieldMappings;
+    private readonly Dictionary<string, long> _fieldNameToRootPage = new();
     private readonly IndexSearcher _indexSearcher;
     private readonly ByteStringContext _allocator;
     private readonly Dictionary<string, Slice> _fieldNameCache;
@@ -53,14 +56,13 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         var coraxPageSize = CoraxBufferSize(_indexSearcher, facetQuery.Query.PageSize, query);
         var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
 
-        using var analyzersScope = new AnalyzersScope(_indexSearcher, _fieldMappings, _index.Definition.HasDynamicFields);
-
+        Page page = default;
         int read = 0;
         while ((read = baseQuery.Fill(ids)) != 0)
         {
             for (int docId = 0; docId < read; docId++)
             {
-                var entryReader = _indexSearcher.GetEntryReaderFor(ids[docId]);
+                var reader = _indexSearcher.GetEntryTermsReader(ids[docId], ref page);
                 foreach (var result in results)
                 {
                     token.ThrowIfCancellationRequested();
@@ -69,7 +71,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                     {
-                        HandleFacetsPerDocument(ref entryReader, result, facetsByName, facetQuery.Legacy, facetTiming, analyzersScope, token);
+                        HandleFacetsPerDocument(ref reader, result, facetsByName, facetQuery.Legacy, facetTiming, token);
                         continue;
                     }
 
@@ -80,7 +82,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                         facetsByRange.Add(result.Key, facetValues);
                     }
 
-                    HandleRangeFacetsPerDocument(ref entryReader, result.Key, result.Value, facetQuery.Legacy, facetTiming, facetValues, token);
+                    HandleRangeFacetsPerDocument(ref reader, result.Key, result.Value, facetQuery.Legacy, facetTiming, facetValues, token);
                 }
             }
 
@@ -120,7 +122,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         }
     }
 
-    private void HandleRangeFacetsPerDocument(ref IndexEntryReader indexEntry,
+    private void HandleRangeFacetsPerDocument(ref EntryTermsReader reader,
         string name, FacetedQueryParser.FacetResult result,
         bool legacy,
         QueryTimingsScope queryTimings,
@@ -136,88 +138,32 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             CreateFacetMapping();
         }
 
-
         foreach (var parsedRange in ranges)
         {
             if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
                 continue;
 
-            GetFieldReader(ref indexEntry, in range.Field, out var fieldReader);
+            var fieldRootPage = GetFieldRootPage(range.Field);
 
-            //We don't have any correct way to read it from entry, lets skip it
-            if (fieldReader.Type == IndexEntryFieldType.Invalid)
-                continue;
-
-            var rangeType = result.RangeType;
             bool isMatching = false;
-            switch (fieldReader.Type)
+            reader.Reset();
+            while (reader.FindNext(fieldRootPage))
             {
-                case IndexEntryFieldType.List:
-                case IndexEntryFieldType.ListWithNulls:
-                    {
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto default;
-
-                        while (iterator.ReadNext())
-                        {
-                            if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmptyCollection || iterator.IsNull))
-                            {
-                                var value = iterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
-                                isMatching |= range.IsMatch(value);
-                                continue;
-                            }
-
-                            isMatching |= range.IsMatch(iterator.Sequence);
-                        }
-
-                        break;
-                    }
-                case IndexEntryFieldType.TupleList:
-                case IndexEntryFieldType.TupleListWithNulls:
-                    if (fieldReader.TryReadMany(out var tupleIterator) == false)
-                        goto default;
-
-                    while (tupleIterator.ReadNext())
-                    {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
-                        {
-                            var value = tupleIterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
-                            isMatching |= range.IsMatch(value);
-                            continue;
-                        }
-
-                        isMatching = rangeType switch
-                        {
-                            RangeType.Double => range.IsMatch(tupleIterator.Double),
-                            RangeType.Long => range.IsMatch(tupleIterator.Long),
-                            _ => range.IsMatch(tupleIterator.Sequence)
-                        };
-                    }
-
-                    break;
-                case IndexEntryFieldType.Tuple:
-                    fieldReader.Read(out _, out var longValue, out var doubleValue, out var spanValue);
-                    isMatching = rangeType switch
-                    {
-                        RangeType.Double => range.IsMatch(doubleValue),
-                        RangeType.Long => range.IsMatch(longValue),
-                        _ => range.IsMatch(spanValue)
-                    };
-                    break;
-                case IndexEntryFieldType.Simple:
-                    fieldReader.Read(out _, out spanValue);
-                    isMatching = range.IsMatch(spanValue);
-                    break;
-                default:
-                    break;
+                isMatching = result.RangeType switch
+                {
+                    RangeType.Double => range.IsMatch(reader.CurrentDouble),
+                    RangeType.Long => range.IsMatch(reader.CurrentLong),
+                    _ => range.IsMatch(reader.Current.Decoded())
+                };
+                break;
             }
-
+            
             var collectionOfFacetValues = facetValues[range.RangeText];
             if (isMatching)
             {
                 collectionOfFacetValues.IncrementCount(1);
                 if (needToApplyAggregation)
-                    ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref indexEntry);
+                    ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref reader);
             }
 
             token.ThrowIfCancellationRequested();
@@ -246,104 +192,68 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         }
     }
 
-    private void HandleFacetsPerDocument(ref IndexEntryReader entryReader,
+    private void HandleFacetsPerDocument(ref EntryTermsReader reader,
         KeyValuePair<string, FacetedQueryParser.FacetResult> result,
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
         bool legacy,
         QueryTimingsScope queryTimings,
-        AnalyzersScope analyzersScope,
         CancellationToken token)
     {
         var needToApplyAggregation = result.Value.Aggregations.Count > 0;
         if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
             facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
-        GetFieldReader(ref entryReader, result.Value.AggregateBy, out var fieldReader);
+        long fieldRootPage = GetFieldRootPage(result.Value.AggregateBy);
 
-        switch (fieldReader.Type)
+        var cloned = reader;
+        reader.Reset();
+        while (reader.FindNext(fieldRootPage))
         {
-            case IndexEntryFieldType.ListWithEmpty:
-            case IndexEntryFieldType.ListWithNulls:
-            case IndexEntryFieldType.List:
-            case IndexEntryFieldType.TupleList:
-            case IndexEntryFieldType.TupleListWithNulls:
-                if (fieldReader.TryReadMany(out var iterator) == false)
-                    break;
+            InsertTerm(reader.Current.Decoded(), ref cloned);
+        } 
 
-                while (iterator.ReadNext())
-                {
-                    if (iterator.IsNull || iterator.IsEmptyCollection)
-                    {
-                        facetValues[iterator.IsNull ? Constants.NullValue : Constants.EmptyString].IncrementCount(1);
-                        continue;
-                    }
-                    InsertTerm(iterator.Sequence, ref entryReader);
-                }
-
-                break;
-            case IndexEntryFieldType.Tuple:
-            case IndexEntryFieldType.Simple:
-                if (fieldReader.Read(out var source))
-                    InsertTerm(source, ref entryReader);
-                break;
-            case IndexEntryFieldType.Null:
-                break;
-            default:
-                throw new Exception($"Got type {fieldReader.Type}");
-        }
-
-        void InsertTerm(ReadOnlySpan<byte> source, ref IndexEntryReader entryReader)
+        void InsertTerm(ReadOnlySpan<byte> term, ref EntryTermsReader reader)
         {
-            var nameAsSlice = GetFieldNameAsSlice(result.Value.AggregateBy);
-            analyzersScope.Execute(nameAsSlice, source, out var buffer, out var tokens);
+            token.ThrowIfCancellationRequested();
+            var encodedTerm = Encodings.Utf8.GetString(term);
 
-            foreach (var tokenOutput in tokens)
+            if (facetValues.TryGetValue(encodedTerm, out var collectionOfFacetValues) == false)
             {
-                token.ThrowIfCancellationRequested();
-                var term = buffer.Slice(tokenOutput.Offset, (int)tokenOutput.Length);
-                var encodedTerm = Encodings.Utf8.GetString(term);
-
-
-                if (facetValues.TryGetValue(encodedTerm, out var collectionOfFacetValues) == false)
+                var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, encodedTerm);
+                collectionOfFacetValues = new FacetValues(legacy);
+                if (needToApplyAggregation == false)
+                    collectionOfFacetValues.AddDefault(range);
+                else
                 {
-                    var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, encodedTerm);
-                    collectionOfFacetValues = new FacetValues(legacy);
-                    if (needToApplyAggregation == false)
-                        collectionOfFacetValues.AddDefault(range);
-                    else
-                    {
-                        foreach (var aggregation in result.Value.Aggregations)
-                            collectionOfFacetValues.Add(aggregation.Key, range);
-                    }
-
-                    facetValues.Add(encodedTerm, collectionOfFacetValues);
+                    foreach (var aggregation in result.Value.Aggregations)
+                        collectionOfFacetValues.Add(aggregation.Key, range);
                 }
 
-                collectionOfFacetValues.IncrementCount(1);
+                facetValues.Add(encodedTerm, collectionOfFacetValues);
+            }
 
-                if (needToApplyAggregation)
-                {
-                    ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref entryReader);
-                }
+            collectionOfFacetValues.IncrementCount(1);
+
+            if (needToApplyAggregation)
+            {
+                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref reader);
             }
         }
     }
 
-    private void GetFieldReader(ref IndexEntryReader reader, in string name, out IndexEntryReader.FieldReader fieldReader)
+    private long GetFieldRootPage(string fieldName)
     {
-        if (_fieldMappings.TryGetByFieldName(_allocator, name, out var binding))
+        ref var fieldRootPage = ref CollectionsMarshal.GetValueRefOrAddDefault(_fieldNameToRootPage, fieldName, out var exists);
+        if (exists == false)
         {
-            // In this case we've to check if field is dynamic also
-            fieldReader = reader.GetFieldReaderFor(binding.FieldId);
-            return;
+            fieldRootPage = _indexSearcher.GetLookupRootPage(fieldName);
         }
 
-        var slicedFieldName = GetFieldNameAsSlice(name);
-        fieldReader = reader.GetFieldReaderFor(slicedFieldName);
+        return fieldRootPage;
     }
 
     private void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values,
-        ref IndexEntryReader entryReader)
+        ref EntryTermsReader reader)
     {
         foreach (var kvp in aggregations)
         {
@@ -355,39 +265,17 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             var name = kvp.Key.Name;
             var val = kvp.Value;
             double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0, avg = value.Average ?? 0;
-            GetFieldReader(ref entryReader, name, out var fieldReader);
-            switch (fieldReader.Type)
+
+            var fieldRootPage = GetFieldRootPage(name);
+            
+            reader.Reset();
+            while (reader.FindNext(fieldRootPage))
             {
-                case IndexEntryFieldType.TupleList:
-                case IndexEntryFieldType.TupleListWithNulls:
-                    if (fieldReader.TryReadMany(out var tupleIterator) == false)
-                        goto default;
-
-                    while (tupleIterator.ReadNext())
-                    {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
-                        {
-                            continue;
-                        }
-
-                        sum += tupleIterator.Double;
-                        avg += tupleIterator.Double;
-                        min = Math.Min(min, tupleIterator.Double);
-                        max = Math.Max(max, tupleIterator.Double);
-                    }
-
-                    break;
-                case IndexEntryFieldType.Tuple:
-                    fieldReader.Read(out _, out var longValue, out var doubleValue, out var spanValue);
-                    sum += doubleValue;
-                    avg += doubleValue;
-                    min = Math.Min(min, doubleValue);
-                    max = Math.Max(max, doubleValue);
-                    break;
-                default:
-                    break;
+                sum += reader.CurrentDouble;
+                avg += reader.CurrentDouble;
+                min = Math.Min(min, reader.CurrentDouble);
+                max = Math.Max(max, reader.CurrentDouble);
             }
-
 
             if (val.Min)
             {

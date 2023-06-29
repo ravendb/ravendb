@@ -75,11 +75,13 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             switch (orderByField.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    reader.Find(fieldRootPage);
+                    reader.Reset();
+                    reader.FindNext(fieldRootPage);
                     result.AddLongOrderByField(reader.CurrentLong);
                     break;
                 case OrderByFieldType.Double:
-                    reader.Find(fieldRootPage);
+                    reader.Reset();
+                    reader.FindNext(fieldRootPage);
                     result.AddDoubleOrderByField(reader.CurrentDouble);
                     break;
                 case OrderByFieldType.Distance:
@@ -96,7 +98,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     }
                 default:
                     {
-                        reader.Find(fieldRootPage);
+                        reader.Reset();
+                        reader.FindNext(fieldRootPage);
                         var stringValue = Encoding.UTF8.GetString(reader.Current.Decoded());
                         result.AddStringOrderByField(stringValue);
                         break;

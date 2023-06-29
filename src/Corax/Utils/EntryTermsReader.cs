@@ -97,9 +97,8 @@ public unsafe struct EntryTermsReader
         Current = new(llt);
     }
 
-    public bool Find(long fieldRootPage)
+    public bool FindNext(long fieldRootPage)
     {
-        Reset();
         while (MoveNext())
         {
             if (TermMetadata == fieldRootPage)
