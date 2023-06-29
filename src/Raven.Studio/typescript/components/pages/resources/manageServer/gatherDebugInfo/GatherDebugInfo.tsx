@@ -9,21 +9,6 @@ import useBoolean from "components/hooks/useBoolean";
 const infoPackageImg = require("Content/img/info_package.svg");
 const createPackageImg = require("Content/img/create_package.svg");
 
-function IconList() {
-    const icons: IconName[] = ["replication", "stats", "io-test", "storage", "memory", "other"];
-    const labels = ["Replication", "Performance", "I/O", "Storage", "Memory", "Other"];
-    return (
-        <div className="d-flex flex-row my-3 gap-4 flex-wrap justify-content-center icons-list">
-            {icons.map((icon, index) => (
-                <div key={icon} className="d-flex flex-column align-items-center text-center gap-3">
-                    <Icon icon={icon} margin="m-0" />
-                    <p>{labels[index]}</p>
-                </div>
-            ))}
-        </div>
-    );
-}
-
 function GatherDebugInfo() {
     const { value: selected, toggle } = useBoolean(true);
 
@@ -127,6 +112,21 @@ function GatherDebugInfo() {
                 </CardBody>
             </Card>
         </Col>
+    );
+}
+
+function IconList() {
+    const icons: IconName[] = ["replication", "stats", "io-test", "storage", "memory", "other"];
+    const labels = ["Replication", "Performance", "I/O", "Storage", "Memory", "Other"];
+    return (
+        <div className="d-flex flex-row my-3 gap-4 flex-wrap justify-content-center icons-list">
+            {icons.map((icon, index) => (
+                <div key={icon} className="d-flex flex-column align-items-center text-center gap-3">
+                    <Icon icon={icon} margin="m-0" />
+                    <p>{labels[index]}</p>
+                </div>
+            ))}
+        </div>
     );
 }
 

@@ -3,11 +3,11 @@ import React from "react";
 import { composeStories } from "@storybook/testing-react";
 import * as stories from "./AdminJsConsole.stories";
 
-const { JSConsole } = composeStories(stories);
+const { DefaultAdminJSConsole } = composeStories(stories);
 
 describe("AdminJsConsole", function () {
     it("can render", async () => {
-        const { screen } = rtlRender(<JSConsole />);
+        const { screen } = rtlRender(<DefaultAdminJSConsole />);
 
         expect(await screen.findByText("Admin JS Console")).toBeInTheDocument();
         expect(await screen.findAllByText("Press Shift+F11 to enter full screen mode")).toHaveLength(2);
