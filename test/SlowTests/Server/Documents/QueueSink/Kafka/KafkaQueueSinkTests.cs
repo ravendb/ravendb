@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
         private const string DefaultScript = "put(this.Id, this)";
         private readonly List<string> _defaultQueue = new() { "users" };
 
-        [RequiresKafkaRetryFact]
+        [Fact]
         public void SimpleScript()
         {
             var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
