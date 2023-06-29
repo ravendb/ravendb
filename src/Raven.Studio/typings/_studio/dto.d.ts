@@ -530,6 +530,7 @@ type dbCreationMode = "newDatabase" | "restore";
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
     Visible: KnockoutObservable<boolean>;
+    LastUsed: KnockoutObservable<string>;
 }
 
 type dashboardChartTooltipProviderArgs = {

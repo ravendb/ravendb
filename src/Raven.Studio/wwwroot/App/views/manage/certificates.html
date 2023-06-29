@@ -96,6 +96,19 @@
                                         <i class="icon-arrow-down pull-right"></i>
                                     </a>
                                 </li>
+                                <li class="divider"></li>
+                                <li data-bind="click: _.partial(sortCertificates, 'byLastUsedAsc')">
+                                    <a href="#">
+                                        <span>By Last Used Date - Asc</span>
+                                        <i class="icon-arrow-up pull-right"></i>
+                                    </a>
+                                </li>
+                                <li data-bind="click: _.partial(sortCertificates, 'byLastUsedDesc')">
+                                    <a href="#">
+                                        <span>By Last Used Date - Desc</span>
+                                        <i class="icon-arrow-down pull-right"></i>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -255,13 +268,18 @@
                                         <strong data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></strong>
                                     </div>
                                     <div class="valid-from">
-                                        <h5><i data-bind="attr: { class: validFromIcon }"></i> VALID FROM</h5>
-                                        <strong data-bind="attr: { class: validFromClass }, text: validFromText">
+                                        <h5><i class="icon-generation"></i> VALID FROM</h5>
+                                        <strong data-bind="text: validFromText">
                                         </strong>
                                     </div>
                                     <div class="expiration">
                                         <h5><i data-bind="attr: { class: expirationIcon }"></i> EXPIRATION</h5>
                                         <strong data-bind="attr: { class: expirationClass }, text: expirationText">
+                                        </strong>
+                                    </div>
+                                    <div class="last-used" data-bind="visible: !$root.spinners.lastUsed()">
+                                        <h5><i class="icon-user-info"></i> LAST USED</h5>
+                                        <strong data-bind="text: lastUsedText">
                                         </strong>
                                     </div>
                                     <div class="auto-renew" data-bind="visible: $root.canBeAutomaticallyRenewed(Thumbprints)">

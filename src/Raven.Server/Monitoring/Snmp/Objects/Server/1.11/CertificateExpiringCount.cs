@@ -29,7 +29,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                 if (now > notAfter)
                     continue; // we do not want to count already expired certificates
 
-                if (now > notAfter.Add(expiringThreshold))
+                if (now > notAfter.Subtract(expiringThreshold))
                     count++;
             }
 

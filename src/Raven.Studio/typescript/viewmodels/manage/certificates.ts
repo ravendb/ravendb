@@ -23,23 +23,29 @@ import getServerCertificateRenewalDateCommand = require("commands/auth/getServer
 import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import getAdminStatsCommand from "commands/resources/getAdminStatsCommand";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 type certificatesSortMode = "default" |
-                            "byNameAsc"  | "byExpirationAsc"  | "byValidFromAsc" |
-                            "byNameDesc" | "byExpirationDesc" | "byValidFromDesc";
+    "byNameAsc" |
+    "byNameDesc" | 
+    "byExpirationAsc" |
+    "byExpirationDesc" |
+    "byValidFromAsc" |
+    "byValidFromDesc" | 
+    "byLastUsedAsc" |
+    "byLastUsedDesc";
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
     expirationText: string;
     expirationIcon: string;
     isExpired: boolean;
-    expirationNumber: number;
     isAboutToExpire: boolean;
     
-    validFromClass: string;
     validFromText: string;
-    validFromIcon: string;
-    validFromNumber: number;
+    lastUsedText: KnockoutComputed<string>;
 }
 
 class certificates extends viewModelBase {
@@ -47,7 +53,8 @@ class certificates extends viewModelBase {
     view = require("views/manage/certificates.html");
 
     spinners = {
-        processing: ko.observable<boolean>(false)
+        processing: ko.observable<boolean>(false),
+        lastUsed: ko.observable<boolean>(true)
     };
     
     model = ko.observable<certificateModel>();
@@ -135,7 +142,7 @@ class certificates extends viewModelBase {
     }
     
     activate() {
-        this.loadCertificates();
+       this.loadCertificatesAndLastUsedDates();
         
         if (accessManager.default.isClusterAdminOrClusterNode()) {
             new getServerCertificateSetupModeCommand()
@@ -170,6 +177,39 @@ class certificates extends viewModelBase {
                 this.initPopover();
             }
         });
+    }
+    
+    private async loadCertificateLastUsedDates(): Promise<Record<string, string>> {
+        this.spinners.lastUsed(true);
+        try {
+            const nodeTags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
+            const tasks = nodeTags.map(async tag => {
+                try {
+                    const stats = await new getAdminStatsCommand(tag).execute();
+                    return stats.LastRequestTimePerCertificate;
+                } catch (e) {
+                    // we ignore errors here
+                    return {};
+                }
+            });
+
+            const allStats = await Promise.all(tasks);
+            
+            const result: Record<string, string> = {};
+            allStats.forEach(nodeStats => {
+                Object.keys(nodeStats).forEach(thumbprint => {
+                    const lastUsed = nodeStats[thumbprint];
+                    
+                    if (!result[thumbprint] || result[thumbprint].localeCompare(lastUsed) > 0) {
+                        result[thumbprint] = lastUsed;
+                    }
+                })
+            });
+            
+            return result;
+        } finally {
+            this.spinners.lastUsed(false);    
+        } 
     }
     
     private filterCertificates(): void {
@@ -258,7 +298,7 @@ class certificates extends viewModelBase {
         if (alert.AlertType === "Certificates_ReplaceError" ||
             alert.AlertType === "Certificates_ReplaceSuccess" ||
             alert.AlertType === "Certificates_EntireClusterReplaceSuccess") {
-            this.loadCertificates();
+            this.loadCertificatesAndLastUsedDates();
         }
     }
     
@@ -340,7 +380,9 @@ class certificates extends viewModelBase {
         });
         
         this.sortModeText = ko.pureComputed(() => {
-            switch (this.currentSortMode()) {
+            const mode = this.currentSortMode();
+            
+            switch (mode) {
                 case "byNameAsc":
                     return "Name - Ascending";
                 case "byNameDesc":
@@ -353,8 +395,14 @@ class certificates extends viewModelBase {
                     return "Valid-From Date - Ascending";
                 case "byValidFromDesc":
                     return "Valid-From Date - Descending";
+                case "byLastUsedAsc":
+                    return "Last Used Date - Ascending";
+                case "byLastUsedDesc":
+                    return "Last Used Date - Descending";
                 case "default":
                     return "";
+                default:
+                    assertUnreachable(mode);
             }
         });
         
@@ -432,7 +480,7 @@ class certificates extends viewModelBase {
         
         new deleteCertificateCommand(thumbprint)
             .execute()
-            .always(() => this.loadCertificates());
+            .always(() => this.loadCertificatesAndLastUsedDates());
     }
 
     exportServerCertificates() {
@@ -532,7 +580,7 @@ class certificates extends viewModelBase {
                                     .always(() => {
                                         this.spinners.processing(false);
                                         this.onCloseEdit();
-                                        this.loadCertificates();
+                                        this.loadCertificatesAndLastUsedDates();
                                     })
                             })
                             .fail(() => {
@@ -546,7 +594,7 @@ class certificates extends viewModelBase {
                             .execute()
                             .always(() => {
                                 this.spinners.processing(false);
-                                this.loadCertificates();
+                                this.loadCertificatesAndLastUsedDates();
                                 this.onCloseEdit();
                             });
                         break;
@@ -556,7 +604,7 @@ class certificates extends viewModelBase {
                             .execute()
                             .always(() => {
                                 this.spinners.processing(false);
-                                this.loadCertificates();
+                                this.loadCertificatesAndLastUsedDates();
                                 this.onCloseEdit();
                             });
                         break;
@@ -566,10 +614,27 @@ class certificates extends viewModelBase {
                             .execute()
                             .always(() => {
                                 this.spinners.processing(false);
-                                this.loadCertificates();
+                                this.loadCertificatesAndLastUsedDates();
                                 this.onCloseEdit();
                             });
                 }
+            });
+    }
+    
+    private loadCertificatesAndLastUsedDates() {
+        this.loadCertificates()
+            .done(() => {
+                this.loadCertificateLastUsedDates()
+                    .then(lastUsed => {
+                        Object.keys(lastUsed).map(thumbprint => {
+                            const lastUsedDate = lastUsed[thumbprint];
+
+                            const certificateToApply = this.certificates().find(x => x.Thumbprint === thumbprint);
+                            if (certificateToApply) {
+                                certificateToApply.LastUsed(lastUsedDate);
+                            }
+                        });
+                    });
             });
     }
     
@@ -587,6 +652,7 @@ class certificates extends viewModelBase {
                     } else {
                         (cert as unifiedCertificateDefinition).Thumbprints = [cert.Thumbprint];
                         (cert as unifiedCertificateDefinition).Visible = ko.observable<boolean>(true);
+                        (cert as unifiedCertificateDefinition).LastUsed = ko.observable<string>();
                         mergedCertificates.push(cert as unifiedCertificateDefinition);
                     }
                 });
@@ -636,20 +702,22 @@ class certificates extends viewModelBase {
                 cert.expirationClass = "text-warning";
                 cert.isAboutToExpire = true;
             }
-            
 
             if (cert.NotBefore) {
                 const validFromDate = moment.utc(cert.NotBefore);
                 cert.validFromText = validFromDate.format("YYYY-MM-DD");
             } else {
-                cert.validFromText = "Unavailable"
+                cert.validFromText = "Unavailable";
             }
             
-            cert.validFromIcon = "icon-generation";
-            cert.validFromClass = "";
-            
-            cert.expirationNumber = expirationDate.unix();
-            cert.validFromNumber = moment.utc(cert.NotBefore).unix();
+            cert.lastUsedText = ko.pureComputed(() => {
+                const lastUsed = cert.LastUsed();
+                if (!lastUsed) {
+                    return "(not used)";
+                }
+                
+                return moment.utc(lastUsed).format("YYYY-MM-DD");
+            });
         });
     }
     
@@ -782,6 +850,12 @@ class certificates extends viewModelBase {
             case "byExpirationDesc":
                 this.sortByExpiration("desc");
                 break;
+            case "byLastUsedAsc":
+                this.sortByLastUsed("asc");
+                break;
+            case "byLastUsedDesc":
+                this.sortByLastUsed("desc");
+                break;
             case "byValidFromAsc":
                 this.sortByValidFrom("asc");
                 break;
@@ -800,18 +874,25 @@ class certificates extends viewModelBase {
     }
 
     private sortByExpiration(mode: sortMode): void {
-        this.certificates.sort((a, b) =>
-        {
-            const result = (a as unifiedCertificateDefinitionWithCache).expirationNumber - (b as unifiedCertificateDefinitionWithCache).expirationNumber;
-            return mode === "asc" ? result : -result;
+        this.certificates.sort((a, b) => {
+            const sgn = mode === "asc" ? 1 : -1;
+            return sgn * a.NotAfter.localeCompare(b.NotAfter);
+        });
+    }
+
+    private sortByLastUsed(mode: sortMode): void {
+        this.certificates.sort((a, b) => {
+            const sgn = mode === "asc" ? 1 : -1;
+            const firstLastUsed = a.LastUsed() ?? "n/a";
+            const secondLastUsed = b.LastUsed() ?? "n/a";
+            return sgn * firstLastUsed.localeCompare(secondLastUsed);
         });
     }
 
     private sortByValidFrom(mode: sortMode): void {
-        this.certificates.sort((a, b) =>
-        {
-            const result = (a as unifiedCertificateDefinitionWithCache).validFromNumber - (b as unifiedCertificateDefinitionWithCache).validFromNumber;
-            return mode === "asc" ? result : -result;
+        this.certificates.sort((a, b) => {
+            const sgn = mode === "asc" ? 1 : -1;
+            return sgn * a.NotBefore.localeCompare(b.NotBefore);
         });
     }
 
