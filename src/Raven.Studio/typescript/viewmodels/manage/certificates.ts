@@ -9,7 +9,7 @@ import replaceClusterCertificateCommand = require("commands/auth/replaceClusterC
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
 import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
 import forceRenewServerCertificateCommand = require("commands/auth/forceRenewServerCertificateCommand");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
 import endpoints = require("endpoints");
@@ -559,7 +559,7 @@ class certificates extends viewModelBase {
                     case "regenerate":
                         this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
 
-                        new getNextOperationId(null)
+                        new getNextOperationIdCommand(null)
                             .execute()
                             .done(operationId => {
 

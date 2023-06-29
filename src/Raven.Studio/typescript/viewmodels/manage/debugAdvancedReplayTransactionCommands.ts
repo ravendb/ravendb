@@ -3,7 +3,7 @@ import databasesManager = require("common/shell/databasesManager");
 import replayTransactionsCommand = require("commands/database/debug/replayTransactionsCommand");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 
 class debugAdvancedReplayTransactionCommands extends viewModelBase {
@@ -83,7 +83,7 @@ class debugAdvancedReplayTransactionCommands extends viewModelBase {
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
-        return new getNextOperationId(db).execute()
+        return new getNextOperationIdCommand(db).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
                 this.isUploading(false);

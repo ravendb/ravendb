@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import endpoints = require("endpoints");
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import messagePublisher = require("common/messagePublisher");
 import notificationCenter = require("common/notifications/notificationCenter");
 import viewHelpers = require("common/helpers/view/viewHelpers");
@@ -90,7 +90,7 @@ class infoPackage extends viewModelBase {
     }
 
     private getNextOperationId(): JQueryPromise<number> {
-        return new getNextOperationId(null).execute()
+        return new getNextOperationIdCommand(null).execute()
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Could not get next task id.", response.responseText, response.statusText);
                 this.spinners.inProgress(false);
@@ -98,7 +98,7 @@ class infoPackage extends viewModelBase {
     }
 
     // TODO kalczur
-    
+
     downloadPackage() {
         if (!this.isValid(this.model.validationGroup)) {
             return;

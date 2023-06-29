@@ -1,6 +1,6 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import finishSetupCommand = require("commands/wizard/finishSetupCommand");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
 import router = require("plugins/router");
@@ -128,7 +128,7 @@ class finish extends setupStep {
     }
     
     private getNextOperationId(): JQueryPromise<number> {
-        return new getNextOperationId(null).execute()
+        return new getNextOperationIdCommand(null).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
             });

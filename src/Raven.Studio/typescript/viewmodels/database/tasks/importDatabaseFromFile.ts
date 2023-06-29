@@ -8,7 +8,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
 import appUrl = require("common/appUrl");
 import copyToClipboard = require("common/copyToClipboard");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import EVENTS = require("common/constants/events");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
@@ -253,7 +253,7 @@ class importDatabaseFromFile extends shardViewModelBase {
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
-        return new getNextOperationId(db).execute()
+        return new getNextOperationIdCommand(db).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
                 this.isUploading(false);
