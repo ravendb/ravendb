@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Corax;
 using Corax.Mappings;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
@@ -52,6 +53,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
         var result = ShardedQueryResultDocument.From(queryResult);
 
+        var reader = _indexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
+
         for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];
@@ -66,40 +69,35 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             }
 
             var orderByFieldMetadata = orderByFields[i];
-
-            IndexEntryReader entryReader = IndexSearcher.GetEntryReaderFor(indexEntryId);
-            IndexEntryReader.FieldReader reader = entryReader.GetFieldReaderFor(orderByFieldMetadata.Field);
+            reader.Reset();
+            long fieldRootPage = _indexSearcher.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
 
             switch (orderByField.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    reader.Read<long>(out var longValue);
-                    result.AddLongOrderByField(longValue);
+                    reader.Find(fieldRootPage);
+                    result.AddLongOrderByField(reader.CurrentLong);
                     break;
                 case OrderByFieldType.Double:
-                    reader.Read<double>(out var doubleValue);
-                    result.AddDoubleOrderByField(doubleValue);
+                    reader.Find(fieldRootPage);
+                    result.AddDoubleOrderByField(reader.CurrentDouble);
                     break;
                 case OrderByFieldType.Distance:
-                {
-                        var spatialReader = IndexSearcher.SpatialReader(orderByFieldMetadata.Field.FieldName);
-                        double distance;
-                        if (spatialReader.TryGetSpatialPoint(indexEntryId, out var coords) == false)
-                        {
-                            distance = orderByFieldMetadata.Ascending == false ? double.MinValue : double.MaxValue;
-                        }
-                        else
-                        {
-                            distance = SpatialUtils.GetGeoDistance(coords, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
-                        }
-                        
+                    {
+                        reader.FindSpatial(fieldRootPage);
+                        var coordinates = (reader.Latitude, reader.Longitude);
+                        ISpatialComparer comparer = orderByField.Ascending
+                            ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
+                            : _descSpatialComparer ??= new LegacySortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
+
+                        var distance = SpatialUtils.GetGeoDistance(in coordinates, in comparer);
                         result.AddDoubleOrderByField(distance);
                         break;
                     }
                 default:
                     {
-                        reader.Read(out var sv);
-                        var stringValue = Encoding.UTF8.GetString(sv);
+                        reader.Find(fieldRootPage);
+                        var stringValue = Encoding.UTF8.GetString(reader.Current.Decoded());
                         result.AddStringOrderByField(stringValue);
                         break;
                     }

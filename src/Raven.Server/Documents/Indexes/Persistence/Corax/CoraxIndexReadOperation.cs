@@ -28,6 +28,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
@@ -65,6 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         protected readonly IndexSearcher IndexSearcher;
         private readonly IndexFieldsMapping _fieldMappings;
+        protected Page _lastPage;
         private readonly ByteStringContext _allocator;
         private readonly int _maxNumberOfOutputsPerDocument;
         private TermsReader _documentIdReader;
@@ -1157,7 +1159,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 using (closeServerTransaction)
                 {
                     builderParameters = new(IndexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
+                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
             }

@@ -69,7 +69,7 @@ public unsafe struct EntryTermsReader
     private readonly LowLevelTransaction _llt;
     private readonly long _dicId;
     private byte* _cur;
-    private readonly byte* _end;
+    private readonly byte* _end, _start;
     private long _prevTerm;
     private long _prevLong;
 
@@ -87,12 +87,36 @@ public unsafe struct EntryTermsReader
     public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
     {
         _llt = llt;
+        _start = _cur;
         _cur = cur;
+        _start = cur;
         _dicId = dicId;
         _end = cur + size;
         _prevTerm = 0;
         _prevLong = 0;
         Current = new(llt);
+    }
+
+    public bool Find(long fieldRootPage)
+    {
+        Reset();
+        while (MoveNext())
+        {
+            if (TermMetadata == fieldRootPage)
+                return true;
+        }
+        return false;
+    }
+    
+    public bool FindSpatial(long fieldRootPage)
+    {
+        Reset();
+        while (MoveNextSpatial())
+        {
+            if (TermMetadata == fieldRootPage)
+                return true;
+        }
+        return false;
     }
 
     public bool MoveNext()
@@ -235,6 +259,11 @@ public unsafe struct EntryTermsReader
 
             _cur += sizeof(double) + sizeof(double);
         }
+    }
+
+    public void Reset()
+    {
+        _cur = _start;
     }
 }
 
