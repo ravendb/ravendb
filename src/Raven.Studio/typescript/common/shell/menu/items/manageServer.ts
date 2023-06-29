@@ -5,6 +5,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import AdminJsConsole from "components/pages/resources/manageServer/adminJsConsole/AdminJsConsole";
 import ClientGlobalConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration";
+import GatherDebugInfo from "components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo";
 
 export = getManageServerMenuItem;
 
@@ -152,7 +153,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
-            moduleId: require('viewmodels/manage/infoPackage'),
+            moduleId: bridgeToReact(GatherDebugInfo, "nonShardedView"),
             title: 'Gather Debug Info',
             nav: true,
             css: 'icon-gather-debug-information',

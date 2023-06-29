@@ -1,115 +1,128 @@
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
-import { Button, Card, CardBody, Col, Input, InputGroup } from "reactstrap";
+import React from "react";
+import { Card, CardBody, Col, Form, InputGroup } from "reactstrap";
 import IconName from "typings/server/icons";
 import "./GatherDebugInfo.scss";
-import { Checkbox, Switch } from "components/common/Checkbox";
-import useBoolean from "components/hooks/useBoolean";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import {
+    GatherDebugInfoFormData,
+    gatherDebugInfoYupResolver,
+    GatherDebugInfoPackageScope,
+    allGatherDebugInfoPackageScopes,
+} from "./GatherDebugInfoValidation";
+import { FormCheckbox, FormCheckboxOption, FormCheckboxes, FormSelect, FormSwitch } from "components/common/Form";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { SelectOption } from "components/common/Select";
+import assertUnreachable from "components/utils/assertUnreachable";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { tryHandleSubmit } from "components/utils/common";
+import { DevTool } from "@hookform/devtools";
 
 const infoPackageImg = require("Content/img/info_package.svg");
 const createPackageImg = require("Content/img/create_package.svg");
 
 function GatherDebugInfo() {
-    const { value: selected, toggle } = useBoolean(true);
+    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((x) => x.name);
 
-    const [serverDataTypeSelection, setServerDataType] = useState(true);
-    const toggleServerDataTypeSelection = () => {
-        setServerDataType(!serverDataTypeSelection);
+    const { watch, handleSubmit, control, reset, formState } = useForm<GatherDebugInfoFormData>({
+        resolver: gatherDebugInfoYupResolver,
+        mode: "all",
+        defaultValues: {
+            isSourceDatabases: true,
+            isSourceLogs: true,
+            isSourceServer: true,
+            isSelectAllDatabases: true,
+            selectedDatabases: allDatabaseNames,
+            packageScope: null,
+        },
+    });
+
+    useDirtyFlag(formState.isDirty);
+
+    // TODO kalczur - allow to customize text for dirty flag modal
+
+    const onSave: SubmitHandler<GatherDebugInfoFormData> = async (formData) => {
+        tryHandleSubmit(async () => {
+            // if (formData.)
+            // TODO kalczur
+
+            reset(formData);
+        });
     };
 
-    const [databasesDataTypeSelection, setDatabasesDataType] = useState(true);
-    const toggleDatabasesDataTypeSelection = () => {
-        setDatabasesDataType(!databasesDataTypeSelection);
-    };
-
-    const [logsDataTypeSelection, setLogsDataType] = useState(true);
-    const toggleLogsDataTypeSelection = () => {
-        setLogsDataType(!logsDataTypeSelection);
-    };
-
-    const [allDatabasesSelection, setAllDatabases] = useState(true);
-    const toggleAllDatabasesSelection = () => {
-        setAllDatabases(!allDatabasesSelection);
-    };
+    const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
 
     return (
-        <Col lg="6" md="9" sm="12" className="gather-debug-info">
+        <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
+            <DevTool control={control} />
             <Card>
-                <CardBody className="d-flex flex-center flex-column">
-                    <img src={infoPackageImg} alt="Info Package" width="120" />
-                    <h3 className="mt-3">Create Debug Package</h3>
-                    <p className="lead text-center w-75 fs-5">
-                        Generate a comprehensive diagnostic package to assist in troubleshooting and resolving issues.
-                    </p>
-                    <IconList />
-                    <div className="position-relative d-flex flex-row gap-4 w-100 flex-wrap">
-                        <div className="d-flex flex-column half-width-section">
-                            <h4>Select data source</h4>
-                            <div className="d-flex flex-column well px-4 py-3 border-radius-xs">
-                                <Checkbox
-                                    selected={serverDataTypeSelection}
-                                    toggleSelection={toggleServerDataTypeSelection}
-                                >
-                                    Server
-                                </Checkbox>
-                                <Checkbox
-                                    selected={databasesDataTypeSelection}
-                                    toggleSelection={toggleDatabasesDataTypeSelection}
-                                >
-                                    Databases
-                                </Checkbox>
-                                <Checkbox
-                                    selected={logsDataTypeSelection}
-                                    toggleSelection={toggleLogsDataTypeSelection}
-                                >
-                                    Logs
-                                </Checkbox>
-                            </div>
-                            <h4 className="mt-3 d-flex justify-content-between align-items-center">
-                                Select databases
-                                <Switch
-                                    selected={allDatabasesSelection}
-                                    toggleSelection={toggleAllDatabasesSelection}
-                                    color="primary"
-                                >
-                                    {" "}
-                                    <small>Select all</small>
-                                </Switch>
-                            </h4>
-                            {!allDatabasesSelection && (
+                <Form onSubmit={handleSubmit(onSave)}>
+                    <CardBody className="d-flex flex-center flex-column">
+                        <img src={infoPackageImg} alt="Info Package" width="120" />
+                        <h3 className="mt-3">Create Debug Package</h3>
+                        <p className="lead text-center w-75 fs-5">
+                            Generate a comprehensive diagnostic package to assist in troubleshooting and resolving
+                            issues.
+                        </p>
+                        <IconList />
+                        <div className="position-relative d-flex flex-row gap-4 w-100 flex-wrap">
+                            <div className="d-flex flex-column half-width-section">
+                                <h4>Select data source</h4>
                                 <div className="d-flex flex-column well px-4 py-3 border-radius-xs">
-                                    <Checkbox selected={selected} toggleSelection={toggle}>
-                                        DemoUser-3fdd8187-6940-4e25-a362-d57533
-                                    </Checkbox>
+                                    <FormCheckbox name="isSourceServer" control={control}>
+                                        Server
+                                    </FormCheckbox>
+                                    <FormCheckbox name="isSourceDatabases" control={control}>
+                                        Databases
+                                    </FormCheckbox>
+                                    <FormCheckbox name="isSourceLogs" control={control}>
+                                        Logs
+                                    </FormCheckbox>
                                 </div>
-                            )}
-                        </div>
-                        <div className="d-flex flex-column half-width-section">
-                            <div className="position-sticky package-download-section d-flex flex-column align-items-center well border-radius-xs p-4 gap-4">
-                                <img src={createPackageImg} alt="Info Package" width="90" />
-                                <h4 className="m-0">Create package for</h4>
-                                <InputGroup className="d-flex flex-column align-items-center gap-4">
-                                    <Input
-                                        id="packageDestinationSelect"
-                                        name="select"
-                                        type="select"
-                                        className="w-100 rounded-pill"
-                                    >
-                                        <option value="" hidden>
-                                            Select...
-                                        </option>
-                                        <option value="cluster">Entire cluster</option>
-                                        <option value="server">Current server only</option>
-                                    </Input>
-                                    <Button color="primary" className="rounded-pill" disabled>
-                                        <Icon icon="default" />
-                                        Download
-                                    </Button>
-                                </InputGroup>
+                                <h4 className="mt-3 d-flex justify-content-between align-items-center">
+                                    Select databases
+                                    <FormSwitch name="isSelectAllDatabases" color="primary" control={control}>
+                                        Select all
+                                    </FormSwitch>
+                                </h4>
+                                {!watch("isSelectAllDatabases") && (
+                                    <div className="well px-4 py-3 border-radius-xs">
+                                        <FormCheckboxes
+                                            name="selectedDatabases"
+                                            options={databaseOptions}
+                                            control={control}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="d-flex flex-column half-width-section">
+                                <div className="position-sticky package-download-section d-flex flex-column align-items-center well border-radius-xs p-4 gap-4">
+                                    <img src={createPackageImg} alt="Info Package" width="90" />
+                                    <h4 className="m-0">Create package for</h4>
+                                    <InputGroup className="d-flex flex-column align-items-center gap-4">
+                                        <FormSelect
+                                            control={control}
+                                            name="packageScope"
+                                            options={packageScopeOptions}
+                                        />
+                                        <ButtonWithSpinner
+                                            type="submit"
+                                            color="primary"
+                                            className="rounded-pill"
+                                            disabled={!formState.isDirty}
+                                            icon="default"
+                                            isSpinning={false}
+                                        >
+                                            Download
+                                        </ButtonWithSpinner>
+                                    </InputGroup>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </CardBody>
+                    </CardBody>
+                </Form>
             </Card>
         </Col>
     );
@@ -129,5 +142,18 @@ function IconList() {
         </div>
     );
 }
+
+const packageScopeOptions: SelectOption<GatherDebugInfoPackageScope>[] = allGatherDebugInfoPackageScopes.map(
+    (scope) => {
+        switch (scope) {
+            case "cluster":
+                return { label: "Entire cluster", value: scope };
+            case "server":
+                return { label: "Current server only", value: scope };
+            default:
+                assertUnreachable(scope);
+        }
+    }
+);
 
 export default GatherDebugInfo;

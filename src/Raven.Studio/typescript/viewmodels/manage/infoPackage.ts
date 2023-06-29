@@ -97,6 +97,8 @@ class infoPackage extends viewModelBase {
             });
     }
 
+    // TODO kalczur
+    
     downloadPackage() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
@@ -125,6 +127,8 @@ class infoPackage extends viewModelBase {
         eventsCollector.default.reportEvent("info-package", "cluster-wide");
         this.startDownload(endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage);
     }
+
+    // TODO kalczur
 
     private startDownload(url: string) {
         this.getNextOperationId()
