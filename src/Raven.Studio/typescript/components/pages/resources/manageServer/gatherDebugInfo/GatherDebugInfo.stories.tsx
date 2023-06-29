@@ -1,14 +1,25 @@
 import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import GatherDebugInfo from "./GatherDebugInfo";
+import { mockStore } from "test/mocks/store/MockStore";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { ShardedDatabaseSharedInfo } from "components/models/databases";
 
 export default {
     title: "Pages/ManageServer",
     component: GatherDebugInfo,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof GatherDebugInfo>;
+} satisfies Meta<typeof GatherDebugInfo>;
 
-export const CreateDebugPackage: ComponentStory<typeof GatherDebugInfo> = () => {
-    return <GatherDebugInfo />;
+export const DefaultGatherDebugInfo: StoryObj<typeof GatherDebugInfo> = {
+    name: "Admin Js Console",
+    render: () => {
+        const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();
+        const shardedDb = DatabasesStubs.shardedDatabase().toDto() as ShardedDatabaseSharedInfo;
+
+        mockStore.databases.withDatabases([clusterDb, shardedDb]);
+
+        return <GatherDebugInfo />;
+    },
 };
