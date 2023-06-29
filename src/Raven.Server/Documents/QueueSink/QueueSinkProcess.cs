@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Confluent.Kafka;
-using Org.BouncyCastle.Utilities.IO.Pem;
-using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -18,13 +16,12 @@ using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
-using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
 
-public class QueueSinkProcess : BackgroundWorkBase
+public abstract class QueueSinkProcess : BackgroundWorkBase
 {
-    private QueueSinkProcess(QueueSinkConfiguration configuration, QueueSinkScript script,
+    protected QueueSinkProcess(QueueSinkConfiguration configuration, QueueSinkScript script,
         DocumentDatabase database, string resourceName, CancellationToken shutdown)
         : base(resourceName, shutdown)
     {
@@ -39,14 +36,20 @@ public class QueueSinkProcess : BackgroundWorkBase
     public static QueueSinkProcess CreateInstance(QueueSinkScript script, QueueSinkConfiguration configuration,
         DocumentDatabase database)
     {
-        return new QueueSinkProcess(configuration, script, database, null, database.DatabaseShutdown);
+        switch (configuration.BrokerType)
+        {
+            case QueueBrokerType.Kafka:
+                return new KafkaQueueSink(configuration, script, database, null, database.DatabaseShutdown);
+            case QueueBrokerType.RabbitMq:
+                return new RabbitMqQueueSink(configuration, script, database, null, database.DatabaseShutdown);
+            default:
+                throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
+        }
     }
-
-    private IConsumer<string, byte[]> _consumer;
 
     private TestMode _testMode;
 
-    private string GroupId => $"{Database.DatabaseGroupId}/{Name}";
+    protected string GroupId => $"{Database.DatabaseGroupId}/{Name}";
 
     public DocumentDatabase Database { get; }
 
@@ -99,57 +102,7 @@ public class QueueSinkProcess : BackgroundWorkBase
         ProcessFallback();
         bool batchStopped = false;
 
-        if (_consumer == null)
-        {
-            try
-            {
-                _consumer = CreateKafkaConsumer();
-            }
-            catch (Exception e)
-            {
-                string msg = $"Failed to create kafka consumer for {Name}.";
-
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations(msg, e);
-                }
-
-                EnterFallbackMode();
-                return;
-            }
-        }
-
-        var messageBatch = new List<ConsumeResult<string, byte[]>>();
-
-        while (messageBatch.Count < Database.Configuration.QueueSink.MaxNumberOfConsumedMessagesInBatch)
-        {
-            try
-            {
-                var message = messageBatch.Count == 0
-                    ? _consumer.Consume(CancellationToken)
-                    : _consumer.Consume(TimeSpan.Zero);
-                if (message?.Message is null) break;
-                messageBatch.Add(message);
-            }
-            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception e)
-            {
-                string msg = $"Failed to consume message.";
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations(msg, e);
-                }
-
-                EnterFallbackMode();
-                Statistics.RecordConsumeError(e.Message, 0);
-                return;
-            }
-        }
-
-        if (messageBatch.Count == 0) return;
+        List<byte[]> messageBatch = ConsumeMessages();
 
         try
         {
@@ -166,7 +119,7 @@ public class QueueSinkProcess : BackgroundWorkBase
                     {
                         try
                         {
-                            using var o = await context.ReadForMemoryAsync(new MemoryStream(message.Message.Value),
+                            using var o = await context.ReadForMemoryAsync(new MemoryStream(message),
                                 "queue-message", CancellationToken);
                             using (documentScript.Run(context, context, "execute", new object[] { o })) { }
                         }
@@ -190,7 +143,7 @@ public class QueueSinkProcess : BackgroundWorkBase
                     if (batchStopped == false)
                     {
                         tx.Commit();
-                        _consumer.Commit();
+                        Commit();
                     }
                 }
             }
@@ -212,6 +165,10 @@ public class QueueSinkProcess : BackgroundWorkBase
         Statistics.ConsumeSuccess(messageBatch.Count);
         Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
     }
+
+    protected abstract List<byte[]> ConsumeMessages();
+
+    protected abstract void Commit();
 
     public static IDisposable TestScript(TestQueueSinkScript testScript, DocumentsOperationContext context, DocumentDatabase database,
         out TestQueueSinkScriptResult result)
@@ -271,42 +228,6 @@ public class QueueSinkProcess : BackgroundWorkBase
         });
     }
 
-    private IConsumer<string, byte[]> CreateKafkaConsumer()
-    {
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = Configuration.Connection.KafkaConnectionSettings.BootstrapServers,
-            GroupId = GroupId,
-            IsolationLevel = IsolationLevel.ReadCommitted,
-            // we are disabling auto commit option and we are manually commit only messages that are processed successfully
-            EnableAutoCommit = false,
-            // we are using Earliest option because we want to be able to see messages which are present before consumer is connected
-            AutoOffsetReset = AutoOffsetReset.Earliest
-        };
-        
-        var settings = Configuration.Connection.KafkaConnectionSettings;
-        var certificateHolder = Database.ServerStore.Server.Certificate;
-        
-        if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
-        {
-            consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
-            consumerConfig.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
-            consumerConfig.SecurityProtocol = SecurityProtocol.Ssl;
-        }
-
-        if (settings.ConnectionOptions != null)
-        {
-            foreach (KeyValuePair<string, string> option in settings.ConnectionOptions)
-            {
-                consumerConfig.Set(option.Key, option.Value);
-            }
-        }
-
-        var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
-        consumer.Subscribe(Script.Queues);
-        return consumer;
-    }
-
     public void Stop(string reason)
     {
         string msg = $"Stopping {Tag} process: '{Name}'. Reason: {reason}";
@@ -319,18 +240,6 @@ public class QueueSinkProcess : BackgroundWorkBase
         base.Stop();
     }
     
-    private static string ExportAsPem(object @object)
-    {
-        using (var sw = new StringWriter())
-        {
-            var pemWriter = new PemWriter(sw);
-            
-            pemWriter.WriteObject(@object);
-
-            return sw.ToString();
-        }
-    }
-
     private void HandleScriptParseException(Exception e)
     {
         var message = $"[{Name}] Could not parse script. Stopping Queue Sink process.";
@@ -359,7 +268,7 @@ public class QueueSinkProcess : BackgroundWorkBase
         Stop(message);
     }
 
-    private void EnterFallbackMode()
+    protected void EnterFallbackMode()
     {
         if (Statistics.LastConsumeErrorTime == null)
             FallbackTime = TimeSpan.FromSeconds(5);
