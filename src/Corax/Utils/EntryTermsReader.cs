@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow;
 using Sparrow.Compression;
 using Voron;
@@ -83,6 +84,7 @@ public unsafe struct EntryTermsReader
     public UnmanagedSpan? StoredField;
     public int Frequency;
     public bool HasNumeric;
+    public bool IsRaw;
 
     public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
     {
@@ -97,6 +99,15 @@ public unsafe struct EntryTermsReader
         Current = new(llt);
     }
 
+    public bool FindNextStored(long fieldRootPage)
+    {
+        while (MoveNextStoredField())
+        {
+            if (TermMetadata == fieldRootPage)
+                return true;
+        }
+        return false;
+    }
     public bool FindNext(long fieldRootPage)
     {
         while (MoveNext())
@@ -222,13 +233,16 @@ public unsafe struct EntryTermsReader
 
     void HandleSpecialTerm(long termContainerId)
     {
+        IsRaw = false;
         HasNumeric = false;
         TermMetadata = termContainerId >> 3;
         TermId = -1;
         var hasStoredField = (termContainerId & 0b100) != 0;
         if (hasStoredField)
         {
-            var type = (StoredFieldType)(termContainerId & ~0b111);
+            // we cast to byte first because we want to drop the positions markers we use
+            // to manage the stored fields order, see RegisterTerm in IndexWriter
+            var type = (StoredFieldType)(byte)(termContainerId & ~0b111);
             var val =  ZigZagEncoding.Decode<long>(_cur, out var offset) + _prevLong;
             _cur += offset;
             _prevLong = val;
@@ -247,6 +261,9 @@ public unsafe struct EntryTermsReader
                     TermMetadata = termItem.PageLevelMetadata;
                     StoredField = termItem.ToUnmanagedSpan();
                     break;
+                case StoredFieldType.Raw:
+                    IsRaw = true;
+                    goto case StoredFieldType.Term;
                 default:
                     throw new ArgumentOutOfRangeException(type.ToString());
             }
@@ -263,6 +280,54 @@ public unsafe struct EntryTermsReader
     public void Reset()
     {
         _cur = _start;
+        _prevLong = 0;
+        _prevTerm = 0;
+    }
+
+    public string Debug()
+    {
+        var sb = new StringBuilder();
+        
+        Reset();
+
+        while (MoveNext())
+        {
+            sb.Append(TermMetadata).Append(" - ").Append(Current);
+
+            if (HasNumeric)
+            {
+                sb.Append(" - long ").Append(CurrentLong).Append(" - double ").Append(CurrentDouble);
+            }
+
+            sb.AppendLine();
+        } 
+        Reset();
+        while (MoveNextSpatial())
+        {
+            sb.Append("spatial: ").Append(TermMetadata)
+                .Append("Lat: ")
+                .Append(Latitude)
+                .Append("Lng: ")
+                .Append(Longitude)
+                .AppendLine();
+        }
+        Reset();
+        while (MoveNextStoredField())
+        {
+            sb.Append("Stored: ").Append(TermMetadata);
+            if (StoredField == null)
+            {
+                sb.Append(" null value").AppendLine();
+                continue;
+            }
+
+            sb.Append(" '")
+                .Append(StoredField.Value.ToStringValue())
+                .Append('\'')
+                .AppendLine();
+        }
+
+        return sb.ToString();
     }
 }
 
@@ -271,5 +336,6 @@ public enum StoredFieldType : byte
     None = 0,
     Null = 1 << 3,
     Empty = 2 << 3,
-    Term = 4 << 3
+    Term = 4 << 3,
+    Raw = 8 << 3,
 }

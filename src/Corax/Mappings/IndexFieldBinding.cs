@@ -1,6 +1,8 @@
 using System;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Voron.Impl;
 
 namespace Corax.Mappings;
@@ -53,7 +55,17 @@ public class IndexFieldBinding
         if (_fieldRootPage != 0)
             return _fieldRootPage;
         _fieldRootPage = tree.GetLookupRootPage(FieldName);
-        return _fieldRootPage;
+        if (_fieldRootPage != -1) 
+            return _fieldRootPage;
+        
+        return CreateLookup();
+
+        long CreateLookup()
+        {
+            var lookup = tree.CompactTreeFor(FieldName);
+            _fieldRootPage = lookup.RootPage;
+            return _fieldRootPage;
+        }
     }
 
     public string FieldNameAsString

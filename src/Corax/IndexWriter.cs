@@ -593,7 +593,7 @@ namespace Corax
                         }
                         else
                         {
-                            RegisterTerm(it.Sequence, ref entryTerms);
+                            RegisterTerm(it.Sequence, ref entryTerms, fieldReader.Type);
                         }
                     }
                 }
@@ -611,20 +611,29 @@ namespace Corax
                             RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
                             break;
                         default:
-                            RegisterTerm(v, ref entryTerms);
+                            RegisterTerm(v, ref entryTerms, fieldReader.Type);
                             break;
                     }
                 }
             }
 
-            void RegisterTerm(ReadOnlySpan<byte> term, ref NativeList<RecordedTerm> entryTerms)
+            void RegisterTerm(ReadOnlySpan<byte> term, ref NativeList<RecordedTerm> entryTerms, IndexEntryFieldType type)
             {
                 var termId = Container.Allocate(_transaction.LowLevelTransaction, _entriesContainerId,
                     term.Length, fieldRootPage, out Span<byte> space);
                 term.CopyTo(space);
+                var storedFieldType = StoredFieldType.Term;
+                if (type.HasFlag(IndexEntryFieldType.Raw))
+                {
+                    storedFieldType = StoredFieldType.Raw;
+                }
                 entryTerms.Add(new RecordedTerm
                 {
-                    TermContainerId = (long)StoredFieldType.Term | 0b110, // marker for stored field
+                    // why: entryTerms.Count << 8 
+                    // we put entries count here because we are sorting the entries afterward
+                    // this ensure that stored values are then read using the same order we have for writing them
+                    // which is important for storing arrays
+                    TermContainerId = entryTerms.Count << 8 | (int)storedFieldType | 0b110, // marker for stored field
                     Long = termId
                 });
             }
@@ -633,7 +642,7 @@ namespace Corax
             {
                 entryTerms.Add(new RecordedTerm
                 {
-                    TermContainerId = (long)type | 0b110, // marker stored field entry
+                    TermContainerId = entryTerms.Count << 8 |  (int)type | 0b110, // marker stored field entry
                     Long = fieldRootPage
                 });
             }

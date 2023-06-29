@@ -389,12 +389,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return FieldMetadata.Build(fieldNameAsSlice, sumName, fieldId, fieldIndexingMode, analyzer, hasBoost);
     }
 
-    public FieldMetadata FieldMetadataBuilder(Slice fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
-        FieldIndexingMode fieldIndexingMode = default)
-    {
-        return FieldMetadata.Build(fieldName, default, fieldId, fieldIndexingMode, analyzer);
-    }
-
     public Slice GetDynamicFieldName(string fieldName)
     {
         _dynamicFieldNameMapping ??= new();

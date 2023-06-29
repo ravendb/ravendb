@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -13,6 +14,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -145,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                     : TryGetValueFromCorax(parent, property, indexField, out value);
             }
             
-            private unsafe bool TryGetValueFromCorax(BlittableObjectInstance parent, string property, IndexField indexField, out JsValue value)
+            private bool TryGetValueFromCorax(BlittableObjectInstance parent, string property, IndexField indexField, out JsValue value)
             {
                 value = null;
                 var fieldMapping = parent.IndexRetriever.KnownFields;
@@ -158,146 +160,69 @@ namespace Raven.Server.Documents.Patch
                 if (isDynamic == false && fieldMapping.TryGetByFieldId(indexField.Id, out binding) == false)
                     return false;
 
-                ref var reader = ref parent.IndexRetriever.CoraxEntry;
-                var fieldReader = binding is not null
-                    ? reader.GetFieldReaderFor(binding.Metadata)
-                    : reader.GetFieldReaderFor(parent.IndexRetriever.CoraxIndexSearcher.GetDynamicFieldName(property));
+                ref var reader = ref parent.IndexRetriever.CoraxTermsReader;
+                IndexSearcher indexSearcher = parent.IndexRetriever.CoraxIndexSearcher;
+                var fieldName = binding is not null
+                    ? binding.Metadata.FieldName
+                    : indexSearcher.GetDynamicFieldName(property);
 
-                switch (fieldReader.Type)
+
+                long fieldRootPage = indexSearcher.GetLookupRootPage(fieldName);
+
+                reader.Reset();
+             
+                while (reader.FindNextStored(fieldRootPage))
                 {
-                    case IndexEntryFieldType.Empty:
-                        value = string.Empty;
-                        break;
-                    case IndexEntryFieldType.Null:
-                        value = DynamicJsNull.ExplicitNull;
-                        break;
-                    case IndexEntryFieldType.TupleListWithNulls:
-                    case IndexEntryFieldType.TupleList:
+                    if (reader.StoredField == null)
                     {
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto case IndexEntryFieldType.Invalid;
+                        SetValue(ref value, Null);
+                        continue;
+                    }
 
-                        var tupleList = new string[iterator.Count];
+                    if (reader.StoredField.Value.Length == 0)
+                    {
+                        SetValue(ref value, string.Empty);
+                        continue;
+                    }
 
-                        for (int idX = 0; idX < iterator.Count && iterator.ReadNext(); ++idX)
+                    if (reader.IsRaw)
+                    {
+                        unsafe
                         {
-                            if (iterator.IsNull)
-                                tupleList[idX] = null;
-                            else if (iterator.IsEmptyCollection)
-                            {
-                                var identifierFound = reader.GetFieldReaderFor(0).Read(out var identifier);
-                                throw new InvalidDataException($"Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)" +
-                                                               $"{Environment.NewLine}Field: {binding?.FieldNameAsString ?? property}" +
-                                                               $"{Environment.NewLine}Document: {(identifierFound ? Encodings.Utf8.GetString(identifier) : "(unknown)")}");
-                            }
-                            else
-                                tupleList[idX] = Encodings.Utf8.GetString(iterator.Sequence);
-                        }
-                        
-                        value = FromObject(parent.Engine, tupleList);
-                    }
-                        break;
-
-                    case IndexEntryFieldType.Tuple:
-                    {
-                        if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
-                            goto case IndexEntryFieldType.Invalid;
-                        var hasTime = parent.IndexRetriever.IndexFieldsPersistence.HasTimeValues(binding?.FieldNameAsString ?? property);
-                        if (hasTime)
-                            value = Encodings.Utf8.GetString(valueInEntry);
-                        else if (dVal.AlmostEquals(lVal))
-                            value = lVal;
-                        else
-                            value = dVal;
-                    }
-
-                        break;
-
-                    case IndexEntryFieldType.SpatialPointList:
-                    {
-                        if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
-                            goto case IndexEntryFieldType.Invalid;
-
-                        var geoList = new string[spatialIterator.Count];
-                        for (int idX = 0; idX < spatialIterator.Count && spatialIterator.ReadNext(); ++idX)
-                            geoList[idX] = Encodings.Utf8.GetString(spatialIterator.Geohash);
-                        
-                        value = FromObject(parent.Engine, geoList);
-                    }
-
-                        break;
-
-                    case IndexEntryFieldType.SpatialPoint:
-                    {
-                        if (fieldReader.Read(out var valueInEntry) == false)
-                            goto case IndexEntryFieldType.Invalid;
-
-                        value = Encodings.Utf8.GetString(valueInEntry);
-                    } 
-                        break;
-                    case IndexEntryFieldType.ListWithEmpty:
-                    case IndexEntryFieldType.ListWithNulls:
-                    case IndexEntryFieldType.List:
-                    {
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto case IndexEntryFieldType.Invalid;
-                        
-                        var array = new string[iterator.Count];
-                        for (int idX = 0; idX < iterator.Count && iterator.ReadNext(); ++idX)
-                        {
-                            if (iterator.IsEmptyString || iterator.IsNull)
-                                array[idX] = (iterator.IsNull ? null : string.Empty);
-                            else
-                                array[idX] = Encodings.Utf8.GetString(iterator.Sequence);
-                        }
-                        
-                        value = FromObject(parent.Engine, array);
-                    }
-                        break;
-                    case IndexEntryFieldType.RawList:
-                    {
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto case IndexEntryFieldType.Invalid;
-
-                        JsValue[] arrayItems = new JsValue[iterator.Count];
-
-                        for (int idX = 0; idX < iterator.Count && iterator.ReadNext(); ++idX)
-                        {
-                            fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
-                            {
-                                var itemAsBlittable = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, parent.Blittable._context);
-                                arrayItems[idX] = TranslateToJs(parent, indexField?.Name ?? property, BlittableJsonToken.StartObject, itemAsBlittable);
-                            }
-                        }
-                        
-                        value = FromObject(parent.Engine, arrayItems);
-                    }
-                        break;
-                    case IndexEntryFieldType.Raw:
-                    {
-                        if (fieldReader.Read(out Span<byte> blittableBinary) == false)
-                            goto case IndexEntryFieldType.Invalid;
-
-                        fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-                        {
-                            var itemAsBlittable = new BlittableJsonReaderObject(ptr, blittableBinary.Length, parent.Blittable._context);
-                            value = TranslateToJs(parent, indexField?.Name ?? property, BlittableJsonToken.StartObject, itemAsBlittable);
+                            var itemAsBlittable = new BlittableJsonReaderObject(reader.StoredField.Value.Address,
+                                reader.StoredField.Value.Length, _parent.Blittable._context);
+                            SetValue(ref value, TranslateToJs(parent, property, BlittableJsonToken.StartObject, itemAsBlittable));
                         }
                     }
-                        break;
-                    case IndexEntryFieldType.Invalid:
-                        value = null;
-                        return false;
-                    default:
+                    else if (reader.HasNumeric)
                     {
-                        if (fieldReader.Read(out var valueInEntry) == false)
-                            goto case IndexEntryFieldType.Invalid;
-
-                        value = Encodings.Utf8.GetString(valueInEntry);
+                        SetValue(ref value, reader.CurrentDouble);
                     }
-                        break;
+                    else
+                    {
+                        SetValue(ref value, reader.StoredField.Value.ToStringValue());
+                    }
                 }
-                return true;
+                return value is not null;
+
+                void SetValue(ref JsValue value, JsValue newVal)
+                {
+                    if (value is JsArray l)
+                    {
+                        l.Push(newVal);
+                    }
+                    else if (value is not null)
+                    {
+                        JsArray jsArray = new JsArray(_parent._engine);
+                        jsArray.Push(value);
+                        jsArray.Push(newVal);
+                        value = jsArray;
+                    }
+                    else
+                    {
+                        value = newVal;
+                    }
+                }
             }
 
             private bool TryGetValueFromDocument(BlittableObjectInstance parent, string property, out JsValue value)
