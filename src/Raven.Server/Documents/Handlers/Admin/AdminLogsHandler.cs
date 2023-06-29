@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             });
         }
 
-        [RavenAction("/admin/logging-toggling/loggers", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/loggers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllLoggers()
         {
             using (AcquireLocksAndGetLoggers(out var generic, out var server))
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
         
-        [RavenAction("/admin/logging-toggling/configuration", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/loggers/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetLoggingTogglingConfiguration()
         {
             using (AcquireLocksAndGetLoggers(out var generic, out var server))
@@ -298,16 +298,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
         
-        [RavenAction("/admin/logging-toggling/configuration", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/loggers/configuration", "POST", AuthorizationStatus.Operator)]
         public async Task SetLoggerMode()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var input = await ctx.ReadForMemoryAsync(RequestBodyStream(), "SwitchLoggerConfiguration");
-                if (input.TryGet("Configuration", out BlittableJsonReaderObject json) == false)
-                    ThrowRequiredPropertyNameInRequest("Configuration");
             
-                var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(json);
+                var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(input);
                 using (AcquireLocksAndGetLoggers(out var generic, out var server))
                 {
                     generic.ResetRecursively();

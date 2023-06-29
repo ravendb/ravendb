@@ -11,12 +11,10 @@ class saveAdminLogsLoggersConfigurationCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.adminLogs.adminLoggingTogglingConfiguration;
+        const url = endpoints.global.adminLogs.adminLogsLoggersConfiguration;
         
         const args = {
-            Configuration: {
-                Loggers: this.configuration
-            }
+            Loggers: this.configuration
         };
 
         return this.post<void>(url, JSON.stringify(args), null, { dataType: undefined })

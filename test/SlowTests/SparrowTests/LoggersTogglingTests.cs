@@ -37,7 +37,7 @@ namespace SlowTests.SparrowTests
             server.Logger.SetLoggerMode(LogMode.Information);
             using var store = new DocumentStore {Urls = new[] {server.WebUrl}, Database = "Random"}.Initialize();
             var client = store.GetRequestExecutor().HttpClient;
-            var response = await client.GetAsync(store.Urls.First() + "/admin/logging-toggling/loggers");
+            var response = await client.GetAsync(store.Urls.First() + "/admin/logs/loggers");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var result = await response.Content.ReadAsStringAsync();
@@ -62,13 +62,13 @@ namespace SlowTests.SparrowTests
                     {"Server.Databases", LogMode.None}
                 }
             };
-            var data = new StringContent(JsonConvert.SerializeObject(new {Configuration = configuration}, new StringEnumConverter()), Encoding.UTF8, "application/json");
-            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/logging-toggling/configuration", data);
+            var data = new StringContent(JsonConvert.SerializeObject(configuration, new StringEnumConverter()), Encoding.UTF8, "application/json");
+            var setResponse = await client.PostAsync(store.Urls.First() + "/admin/logs/loggers/configuration", data);
             Assert.Equal(HttpStatusCode.NoContent, setResponse.StatusCode);
             Assert.Equal(LogMode.Information, server.Logger.GetLogMode());
             Assert.Equal(LogMode.None, server.DatabasesLogger.GetLogMode());
             
-            var getResponse = await client.GetAsync(store.Urls.First() + "/admin/logging-toggling/configuration");
+            var getResponse = await client.GetAsync(store.Urls.First() + "/admin/logs/loggers/configuration");
             Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
             var result = await getResponse.Content.ReadAsStringAsync();
             configuration = JsonConvert.DeserializeObject<AdminLogsHandler.SwitchLoggerConfiguration>(result);
@@ -386,6 +386,7 @@ namespace SlowTests.SparrowTests
                 //To be sure all logs where written to file
                 var lastLineLogger = loggingSource.GetLogger("Test", "Test");
                 await lastLineLogger.InfoWithWait("");
+                loggingSource.EndLogging();
 
                 var actualLogContent = await File.ReadAllTextAsync(logFile);
                 foreach (var msg in shouldContainList)
