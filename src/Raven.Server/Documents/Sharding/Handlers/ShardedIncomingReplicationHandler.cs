@@ -178,23 +178,23 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             var lastAcceptedEtag = stateForSingleSource.LastSourceEtag;
             List<string> handlersChangeVector = null;
-            foreach (var (destinationDatabaseName, destinationState) in stateForSingleSource.DestinationStates)
+            foreach (var (_, handler) in _handlers)
             {
-                foreach (var (_, handler) in _handlers)
-                {
-                    if (string.Equals(handler.DatabaseName, destinationDatabaseName, StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
+                if (stateForSingleSource.DestinationStates.TryGetValue(handler.DatabaseName, out var destinationState) == false)
+                    continue;
 
-                    var (acceptedChangeVector, acceptedEtag) = await handler.GetFirstChangeVectorFromShardAsync();
-                    if (string.IsNullOrEmpty(acceptedChangeVector))
-                        return (null, 0);
+                var (acceptedChangeVector, acceptedEtag) = await handler.GetFirstChangeVectorFromShardAsync();
+                if (string.IsNullOrEmpty(acceptedChangeVector))
+                    return (null, 0);
 
-                    handlersChangeVector ??= new List<string> { stateForSingleSource.LastSourceChangeVector };
-                    handlersChangeVector.Add(destinationState.DestinationChangeVector);
-                    handlersChangeVector.Add(acceptedChangeVector);
-                    lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
-                }
+                handlersChangeVector ??= new List<string> { stateForSingleSource.LastSourceChangeVector };
+                handlersChangeVector.Add(destinationState.DestinationChangeVector);
+                handlersChangeVector.Add(acceptedChangeVector);
+                lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
             }
+
+            if (handlersChangeVector == null)
+                return (null, 0);
 
             var mergedChangeVector = ChangeVectorUtils.MergeVectorsDown(handlersChangeVector);
             return (mergedChangeVector, lastAcceptedEtag);
@@ -205,59 +205,37 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (_shardedSource == false)
                 return;
 
-            var states = ShardReplicationLoader.GetShardedExternalReplicationStates(_parent.Server, _parent.DatabaseName, _sourceShardedDatabaseName, _sourceShardedDatabaseId);
+            var shardedSourceState = new ShardedExternalReplicationStateForSingleSource
+            {
+                LastSourceEtag = _lastDocumentEtag,
+                LastSourceChangeVector = _lastAcceptedChangeVectorDuringHeartbeat,
+                DestinationStates = new Dictionary<string, ExternalReplicationState>()
+            };
 
-            states ??= new ShardedExternalReplicationState
+            var states = new ShardedExternalReplicationState
             {
                 NodeTag = _parent._server.NodeTag,
                 SourceDatabaseName = _sourceShardedDatabaseName,
                 SourceShardedDatabaseId = _sourceShardedDatabaseId,
-                ReplicationStates = new Dictionary<string, ShardedExternalReplicationStateForSingleSource>()
+                ReplicationStates = new Dictionary<string, ShardedExternalReplicationStateForSingleSource> { [ConnectionInfo.SourceDatabaseName] = shardedSourceState }
             };
 
-            bool update = false;
             foreach (var (shardNumber, handler) in _handlers)
             {
                 if (_lastSentEtagPerDestination[shardNumber] == 0)
                     continue;
 
-                if (states.ReplicationStates.TryGetValue(ConnectionInfo.SourceDatabaseName, out var shardedSourceState) &&
-                    shardedSourceState.DestinationStates.TryGetValue(handler.DatabaseName, out var shardedDestinationState))
+                var shardedDestinationState = new ExternalReplicationState
                 {
-                    if (_lastSentEtagPerDestination[shardNumber] == shardedDestinationState.LastSentEtag)
-                        continue;
+                    NodeTag = _parent._server.NodeTag,
+                    LastSentEtag = _lastSentEtagPerDestination[shardNumber],
+                    DestinationChangeVector = handler.LastAcceptedChangeVector
+                };
 
-                    // update existing value
-                    shardedDestinationState.LastSentEtag = _lastSentEtagPerDestination[shardNumber];
-                    shardedDestinationState.DestinationChangeVector = handler.LastAcceptedChangeVector;
-                }
-                else
-                {
-                    shardedDestinationState = new ExternalReplicationState
-                    {
-                        NodeTag = _parent._server.NodeTag,
-                        LastSentEtag = _lastSentEtagPerDestination[shardNumber],
-                        DestinationChangeVector = handler.LastAcceptedChangeVector
-                    };
-
-                    shardedSourceState ??= new ShardedExternalReplicationStateForSingleSource();
-                    shardedSourceState.DestinationStates ??= new Dictionary<string, ExternalReplicationState>();
-                }
-
-                update = true;
                 shardedSourceState.DestinationStates[handler.DatabaseName] = shardedDestinationState;
-                shardedSourceState.LastSourceEtag = _lastDocumentEtag;
-                shardedSourceState.LastSourceChangeVector = _lastAcceptedChangeVectorDuringHeartbeat;
-                states.ReplicationStates[ConnectionInfo.SourceDatabaseName] = shardedSourceState;
             }
 
-            if (update == false)
-                return;
-
-            var command = new ShardedUpdateExternalReplicationStateCommand(_parent.DatabaseName, RaftIdGenerator.NewId())
-            {
-                ReplicationState = states
-            };
+            var command = new ShardedUpdateExternalReplicationStateCommand(_parent.DatabaseName, RaftIdGenerator.NewId()) { ReplicationState = states };
 
             _parent._server.SendToLeaderAsync(command)
                 .IgnoreUnobservedExceptions();

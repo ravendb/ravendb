@@ -285,14 +285,11 @@ namespace Raven.Server.Utils
                 if (string.IsNullOrEmpty(changeVectors[i]))
                     return null;
 
-                ChangeVectorParser.MergeChangeVectorDown(changeVectors[i], _mergeVectorBuffer);
+                if (ChangeVectorParser.MergeChangeVectorDown(changeVectors[i], _mergeVectorBuffer) == false)
+                    return null;
             }
 
-            var mergedChangeVector = _mergeVectorBuffer.SerializeVector();
-            if (string.Equals(changeVectors[0], mergedChangeVector, StringComparison.OrdinalIgnoreCase))
-                return null;
-
-            return mergedChangeVector;
+            return _mergeVectorBuffer.SerializeVector();
         }
 
         public static ChangeVector NewChangeVector(DocumentDatabase database, long etag, IChangeVectorOperationContext context)

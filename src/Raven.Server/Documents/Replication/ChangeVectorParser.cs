@@ -263,12 +263,13 @@ namespace Raven.Server.Documents.Replication
             ThrowInvalidEndOfString(state.ToString(), changeVector);
         }
 
-        public static void MergeChangeVectorDown(string changeVector, List<ChangeVectorEntry> entries)
+        public static bool MergeChangeVectorDown(string changeVector, List<ChangeVectorEntry> entries)
         {
             var start = 0;
             var current = 0;
             var state = State.Tag;
             int tag = -1;
+            bool found = false;
 
             while (current < changeVector.Length)
             {
@@ -296,6 +297,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (entries[i].DbId == dbId)
                                 {
+                                    found = true;
                                     if (entries[i].Etag > etag)
                                     {
                                         entries[i] = new ChangeVectorEntry
@@ -337,9 +339,10 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (state == State.Whitespace)
-                return;
+                return found;
 
             ThrowInvalidEndOfString(state.ToString(), changeVector);
+            return false;
         }
 
         private static void ThrowInvalidEndOfString(string state, string cv)
