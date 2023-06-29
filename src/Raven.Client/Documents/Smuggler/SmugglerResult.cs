@@ -287,7 +287,7 @@ namespace Raven.Client.Documents.Smuggler
             public bool OlapEtlsUpdated { get; set; }
 
             public bool OlapConnectionStringsUpdated { get; set; }
-            
+
             public bool ElasticSearchEtlsUpdated { get; set; }
 
             public bool ElasticSearchConnectionStringsUpdated { get; set; }
@@ -297,7 +297,7 @@ namespace Raven.Client.Documents.Smuggler
             public bool QueueEtlsUpdated { get; set; }
 
             public bool QueueConnectionStringsUpdated { get; set; }
-            
+
             public bool IndexesHistoryUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
@@ -366,7 +366,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (OlapEtlsUpdated)
                     json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
-                
+
                 if (ElasticSearchConnectionStringsUpdated)
                     json[nameof(ElasticSearchConnectionStringsUpdated)] = ElasticSearchConnectionStringsUpdated;
 
@@ -384,7 +384,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (IndexesHistoryUpdated)
                     json[nameof(IndexesHistoryUpdated)] = IndexesHistoryUpdated;
-                
+
                 return json;
             }
 
@@ -453,7 +453,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (OlapEtlsUpdated)
                     sb.AppendLine("- OLAP ETLs");
-                
+
                 if (ElasticSearchConnectionStringsUpdated)
                     sb.AppendLine("- ElasticSearch Connection Strings");
 
@@ -478,6 +478,23 @@ namespace Raven.Client.Documents.Smuggler
                 sb.Insert(0, "Following configurations were updated:" + Environment.NewLine);
 
                 return sb.ToString();
+            }
+        }
+
+        public class FileCounts
+        {
+            public string CurrentFileName { get; set; }
+            public long CurrentFile { get; set; }
+            public long FileCount { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(CurrentFileName)] = CurrentFileName,
+                    [nameof(CurrentFile)] = CurrentFile,
+                    [nameof(FileCount)] = FileCount
+                };
             }
         }
 
