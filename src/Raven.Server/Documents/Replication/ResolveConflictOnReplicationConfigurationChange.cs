@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Replication
                 using (Slice.From(context.Allocator, resolved.LowerId, out var lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null, null, changeVector, new CollectionName(resolved.Collection),
-                        documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
+                        newFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return;
                 }
             }
@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Replication
 
                 updatedConflict.Doc = resolved;
                 updatedConflict.Collection = collection;
-                updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+                updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
                 resolvedConflict = updatedConflict;
 
                 return true;
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
 
             return latestDoc;
         }

@@ -241,6 +241,9 @@ namespace Raven.Server.Utils
             if (string.IsNullOrEmpty(vectorBstring))
                 return vectorAstring;
 
+            if (vectorAstring.Contains('|') || vectorBstring.Contains('|'))
+                Debug.Assert(false, $"A: {vectorAstring}, B: {vectorBstring}");
+
             _mergeVectorBuffer ??= new List<ChangeVectorEntry>();
             _mergeVectorBuffer.Clear();
   
@@ -267,6 +270,17 @@ namespace Raven.Server.Utils
             }
 
             return _mergeVectorBuffer.SerializeVector();
+        }
+
+        public static ChangeVector MergeVectors(IChangeVectorOperationContext context, IEnumerable<ChangeVector> changeVectors)
+        {
+            var merged = context.GetChangeVector(null);
+            foreach (var changeVector in changeVectors)
+            {
+                merged = changeVector.MergeWith(merged, context);
+            }
+
+            return merged;
         }
 
         public static string MergeVectorsDown(List<string> changeVectors)

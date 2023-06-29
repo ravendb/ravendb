@@ -410,7 +410,7 @@ namespace Raven.Server.Documents
             return items;
         }
 
-        public string GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
+        public ChangeVector GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
             if (ConflictsCount == 0)
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
@@ -422,18 +422,18 @@ namespace Raven.Server.Documents
 
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             conflictChangeVectors.Add(newChangeVector);
-            return ChangeVectorUtils.MergeVectors(conflictChangeVectors);
+            return ChangeVectorUtils.MergeVectors(context, conflictChangeVectors.Select(context.GetChangeVector));
         }
 
-        private string MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
+        private ChangeVector MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
         {
             if (existing != null)
             {
                 var cv = context.GetChangeVector(existing);
                 var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, cv);
-                return result.ChangeVector;
+                return context.GetChangeVector(result.ChangeVector);
             }
-            return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+            return context.GetChangeVector(ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id));
         }
 
         public bool ShouldThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, Slice lowerId, long? expectedEtag, out long? currentMaxConflictEtag)
