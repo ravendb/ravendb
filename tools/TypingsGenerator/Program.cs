@@ -90,6 +90,7 @@ using Raven.Server.Integrations.PostgreSQL.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.ServerWide.Sharding;
@@ -205,6 +206,7 @@ namespace TypingsGenerator
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
 
+            scripter.AddType(typeof(ServerStatistics));
             scripter.AddType(typeof(CollectionStatistics));
             scripter.AddType(typeof(BatchRequestParser.CommandData));
             scripter.AddType(typeof(TransactionMode));
