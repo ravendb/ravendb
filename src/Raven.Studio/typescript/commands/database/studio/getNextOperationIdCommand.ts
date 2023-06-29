@@ -2,10 +2,13 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getNextOperationId extends commandBase {
+class getNextOperationIdCommand extends commandBase {
 
-    constructor(private db: database) {
+    private readonly db: database;
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<number> {
@@ -14,4 +17,4 @@ class getNextOperationId extends commandBase {
     }
 }
 
-export = getNextOperationId; 
+export = getNextOperationIdCommand; 

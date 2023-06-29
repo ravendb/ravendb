@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import importFromCsvCommand = require("commands/database/studio/importFromCsvCommand");
 import EVENTS = require("common/constants/events");
 
@@ -161,7 +161,7 @@ class importCollectionFromCsv extends viewModelBase {
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
-        return new getNextOperationId(db).execute()
+        return new getNextOperationIdCommand(db).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
                 this.isUploading(false);

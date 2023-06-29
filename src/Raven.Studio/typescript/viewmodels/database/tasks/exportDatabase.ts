@@ -10,7 +10,7 @@ import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel"
 import collectionsStats = require("models/database/documents/collectionsStats");
 import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
@@ -198,7 +198,7 @@ class exportDatabase extends shardViewModelBase {
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
-        return new getNextOperationId(db).execute()
+        return new getNextOperationIdCommand(db).execute()
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Could not get next task id.", response.responseText, response.statusText);
                 exportDatabase.isExporting(false);
