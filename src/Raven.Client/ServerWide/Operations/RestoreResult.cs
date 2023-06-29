@@ -11,10 +11,13 @@ namespace Raven.Client.ServerWide.Operations
         
         public Counts SnapshotRestore { get; set; }
 
+        public FileCounts SmugglerRestore { get; set; }
+
         public RestoreResult()
         {
             _progress = new RestoreProgress(this);
             SnapshotRestore = new Counts();
+            SmugglerRestore = new FileCounts();
         }
 
         public override DynamicJsonValue ToJson()
@@ -23,6 +26,7 @@ namespace Raven.Client.ServerWide.Operations
             json[nameof(DataDirectory)] = DataDirectory;
             json[nameof(JournalStoragePath)] = JournalStoragePath;
             json[nameof(SnapshotRestore)] = SnapshotRestore.ToJson();
+            json[nameof(SmugglerRestore)] = SmugglerRestore.ToJson();
             return json;
         }
     }

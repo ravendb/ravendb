@@ -651,6 +651,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (filesToRestore.Count == 0)
                 return;
 
+            result.SmugglerRestore.FileCount = filesToRestore.Count;
+
             // we do have at least one smuggler backup, we'll take the indexes from the last file
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
@@ -675,9 +677,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             for (var i = 0; i < filesToRestore.Count - 1; i++)
             {
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{filesToRestore.Count:#,#;;0}");
+
+                var fileName = filesToRestore[i];
+                result.SmugglerRestore.CurrentFileName = fileName;
+                result.SmugglerRestore.CurrentFile = i + 1;
+
                 onProgress.Invoke(result.Progress);
 
-                var filePath = GetBackupPath(filesToRestore[i]);
+                var filePath = GetBackupPath(fileName);
                 await ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
@@ -687,12 +694,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
-            var lastFilePath = GetBackupPath(filesToRestore.Last());
 
             result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
+
+            var lastFileName = filesToRestore.Last();
+            result.SmugglerRestore.CurrentFileName = lastFileName;
+            result.SmugglerRestore.CurrentFile = filesToRestore.Count;
+
             result.Indexes.Skipped = RestoreFromConfiguration.SkipIndexes;
 
             onProgress.Invoke(result.Progress);
+
+            var lastFilePath = GetBackupPath(lastFileName);
             await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
@@ -755,6 +768,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
+
+            result.SmugglerRestore.CurrentFileName = null;
 
             long totalExecutedCommands = 0;
 
