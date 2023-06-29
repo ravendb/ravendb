@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.Operations
                     await result.WithCancellation(token).ConfigureAwait(false);
 #endif
                 }
-                catch (TaskCanceledException e)
+                catch (TaskCanceledException e) when (token.IsCancellationRequested)
                 {
                     await StopProcessingUnderLock().ConfigureAwait(false);
                     throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
