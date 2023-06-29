@@ -7,6 +7,7 @@ import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
 import Select, { SelectProps } from "./Select";
+import classNames from "classnames";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -18,6 +19,18 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 type FormInputProps = InputProps & {
     type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
 };
+
+export interface FormCheckboxOption<T extends string | number = string> {
+    value: T;
+    label: string;
+}
+
+interface FormCheckboxesProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>
+    extends FormElementProps<TFieldValues, TName> {
+    options: FormCheckboxOption<TFieldValues[TName][any]>[];
+    className?: string;
+    checkboxClassName?: string;
+}
 
 type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = FormElementProps<
     TFieldValues,
@@ -39,6 +52,47 @@ export function FormInput<
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     return <FormInputGeneral {...props} />;
+}
+
+export function FormCheckboxes<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormCheckboxesProps<TFieldValues, TName>
+) {
+    const { name, control, defaultValue, rules, shouldUnregister, options, className, checkboxClassName } = props;
+
+    const {
+        field: { onChange, value: selectedValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const toggleSelection = (isChecked: boolean, optionValue: TFieldValues[TName][any]) => {
+        if (isChecked) {
+            onChange([...selectedValues, optionValue]);
+        } else {
+            onChange(selectedValues.filter((x: TFieldValues[TName][any]) => x !== optionValue));
+        }
+    };
+
+    return (
+        <div className={classNames("flex-vertical", className)}>
+            {options.map((option) => (
+                <Checkbox
+                    key={option.value}
+                    className={checkboxClassName}
+                    selected={selectedValues.includes(option.value)}
+                    toggleSelection={(x) => toggleSelection(x.currentTarget.checked, option.value)}
+                >
+                    {option.label}
+                </Checkbox>
+            ))}
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormCheckbox<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
