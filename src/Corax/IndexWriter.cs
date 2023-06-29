@@ -415,6 +415,7 @@ namespace Corax
 
         private long _postingListContainerId;
         private long _entriesContainerId;
+        private long _storedFieldsContainerId;
         private long _entriesTermsContainerId;
         private Lookup<Int64LookupKey> _entryIdToOffset;
         private Lookup<Int64LookupKey> _entryIdToLocation;
@@ -463,6 +464,7 @@ namespace Corax
         {
             _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoreFieldsSlice);
             _entriesTermsContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
@@ -619,7 +621,7 @@ namespace Corax
 
             void RegisterTerm(ReadOnlySpan<byte> term, ref NativeList<RecordedTerm> entryTerms, IndexEntryFieldType type)
             {
-                var termId = Container.Allocate(_transaction.LowLevelTransaction, _entriesContainerId,
+                var termId = Container.Allocate(_transaction.LowLevelTransaction, _storedFieldsContainerId,
                     term.Length, fieldRootPage, out Span<byte> space);
                 term.CopyTo(space);
                 var storedFieldType = StoredFieldType.Term;
@@ -1142,6 +1144,12 @@ namespace Corax
             long entryToDelete)
         {
             var reader = new EntryTermsReader(llt, entryTerms.Address, entryTerms.Length, dicId);
+            reader.Reset();
+            while (reader.MoveNextStoredField())
+            {
+                Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
+            }
+            reader.Reset();
             while (reader.MoveNext())
             {
                 if (fieldsByRootPage.TryGetValue(reader.TermMetadata, out var field) == false)

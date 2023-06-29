@@ -258,6 +258,7 @@ public unsafe struct EntryTermsReader
                     break;
                 case StoredFieldType.Term:
                     var termItem = Container.Get(_llt, val);
+                    TermId = val;
                     TermMetadata = termItem.PageLevelMetadata;
                     StoredField = termItem.ToUnmanagedSpan();
                     break;
