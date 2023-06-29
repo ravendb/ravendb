@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -176,6 +177,9 @@ namespace Raven.Server.Documents.Replication
         {
             if (string.IsNullOrEmpty(changeVector))
                 return;
+
+            if (changeVector.Contains('|'))
+                Debug.Assert(false, $"Cannot contain pipe {changeVector}");
 
             var start = 0;
             var current = 0;

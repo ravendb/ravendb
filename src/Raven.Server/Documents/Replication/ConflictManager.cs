@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, string changeVector)
+        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, ChangeVector changeVector)
         {
             long highestMax;
             if (doc == null)
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Replication
                 var localHiloDoc = _database.DocumentsStorage.Get(context, id);
                 if (localHiloDoc.Data.TryGet("Max", out long max) && max > highestMax)
                     resolvedHiLoDoc = localHiloDoc.Data.Clone(context);
-                mergedChangeVector = ChangeVectorUtils.MergeVectors(changeVector, localHiloDoc.ChangeVector);
+                mergedChangeVector = changeVector.MergeWith(localHiloDoc.ChangeVector, context);
             }
             else
             {
@@ -220,8 +220,9 @@ namespace Raven.Server.Documents.Replication
                         resolvedHiLoDoc = conflict.Doc.Clone(context);
                     }
                 }
-                var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-                mergedChangeVector = ChangeVectorUtils.MergeVectors(merged, changeVector);
+
+                var merged = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
+                mergedChangeVector = merged.MergeWith(changeVector, context);
             }
             _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc, changeVector: mergedChangeVector, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
         }

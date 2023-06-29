@@ -204,7 +204,9 @@ namespace Raven.Server.ServerWide.Context
             }
         }
 
-        public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion = false)
+        public ChangeVector GetChangeVector(string changeVector) => GetChangeVector(changeVector, throwOnRecursion: false);
+
+        public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion)
         {
             ChangeVector allocatedChangeVector;
             if (_numberOfAllocatedChangeVectors < _allocatedChangeVectors.Count)
