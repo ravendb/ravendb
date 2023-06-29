@@ -13,7 +13,7 @@ export default {
 } satisfies Meta<typeof GatherDebugInfo>;
 
 export const DefaultGatherDebugInfo: StoryObj<typeof GatherDebugInfo> = {
-    name: "Admin Js Console",
+    name: "Gather Debug Info",
     render: () => {
         const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();
         const shardedDb = DatabasesStubs.shardedDatabase().toDto() as ShardedDatabaseSharedInfo;
