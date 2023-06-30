@@ -7,7 +7,7 @@ namespace Raven.Client.ServerWide.Operations
     {
         public Counts SnapshotRestore => ((RestoreResult)_result).SnapshotRestore;
 
-        public FileCounts SmugglerRestore => ((RestoreResult)_result).SmugglerRestore;
+        public FileCounts Files => ((RestoreResult)_result).Files;
 
         public RestoreProgress(RestoreResult result) : base(result)
         {
@@ -18,7 +18,7 @@ namespace Raven.Client.ServerWide.Operations
         {
             var json = base.ToJson();
             json[nameof(SnapshotRestore)] = SnapshotRestore.ToJson();
-            json[nameof(SmugglerRestore)] = SmugglerRestore.ToJson();
+            json[nameof(Files)] = Files.ToJson();
             return json;
         }
     }
