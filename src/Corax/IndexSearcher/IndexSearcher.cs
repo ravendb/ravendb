@@ -454,4 +454,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return _fieldsTree?.GetLookupRootPage(name) ?? -1;
     }
+
+    public Dictionary<long, string> GetFieldsRootPages()
+    {
+        return _fieldsTree?.GetFieldsRootPages() ?? new();
+    }
 }

@@ -638,8 +638,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                     Include:
-                        IndexEntryReader indexEntryReader = IndexSearcher.GetEntryReaderFor(ids[i]);
-                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
+                        IndexEntryReader indexEntryReader = _indexSearcher.GetEntryReaderFor(ids[i]);
+                        EntryTermsReader entryTermsReader = _indexSearcher.GetEntryTermsReader(ids[i], ref page);
                         var key = _documentIdReader.GetTermFor(ids[i]);
                         float? documentScore = scores.Length > 0 ? scores[i] : null;
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, indexEntryReader, entryTermsReader, key, _index.IndexFieldsPersistence, documentScore);
@@ -1319,13 +1319,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using var coraxEntryReader = new CoraxIndexedEntriesReader(IndexSearcher, _fieldMappings);
             int read;
             long i = Skip();
+            Page page = default;
             while (true)
             {
                 token.ThrowIfCancellationRequested();
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryReaderFor(ids[i]);
+                    var reader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                     var id = _documentIdReader.GetTermFor(ids[i]);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }

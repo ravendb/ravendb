@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,14 +10,20 @@ using Amqp.Framing;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
+using Corax.Utils;
+using Esprima.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
+using Voron.Data.Containers;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public unsafe class CoraxIndexedEntriesReader : IDisposable
 {
+    private readonly JsonOperationContext _ctx;
     private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldsMapping _fieldsMapping;
 
@@ -28,12 +35,15 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
     private byte* _tempOutputBuffer;
     private int _tempOutputTokenSize;
     private Token* _tempTokenBuffer;
+    private Dictionary<long, string> _fieldsRootPages;
 
-    public CoraxIndexedEntriesReader(IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping)
+    public CoraxIndexedEntriesReader(JsonOperationContext ctx,IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping)
     {
+        _ctx = ctx;
         _indexSearcher = indexSearcher;
         _fieldsMapping = fieldsMapping;
         _dynamicMapping = new();
+        _fieldsRootPages = _indexSearcher.GetFieldsRootPages();
 
         foreach (var dynamicField in indexSearcher.GetFields())
             _dynamicMapping.Add(dynamicField, Encoding.UTF8.GetBytes(dynamicField));
@@ -43,30 +53,119 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         InitializeTemporaryBuffers(indexSearcher.Allocator);
     }
 
-    public DynamicJsonValue GetDocument(ref IndexEntryReader entryReader)
+    public DynamicJsonValue GetDocument(ref EntryTermsReader entryReader)
     {
-        var doc = new DynamicJsonValue();
-        foreach (var binding in _fieldsMapping)
+        var doc = new Dictionary<string, object>();
+        HashSet<string> spatialSeenFields = null; 
+        entryReader.Reset();
+        while (entryReader.MoveNext())
         {
-            var fieldReader = entryReader.GetFieldReaderFor(binding.FieldId);
-
-            if (fieldReader.Type == IndexEntryFieldType.Invalid)
+            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
                 continue;
 
-            doc[binding.FieldNameAsString] = GetValueForField(ref fieldReader, binding.Analyzer);
+            string value = entryReader.Current.ToString();
+            SetValue(fieldName, value);
         }
-
-        foreach (var (fieldAsString, fieldAsBytes) in _dynamicMapping)
+        entryReader.Reset();
+        while (entryReader.MoveNextSpatial())
         {
-            var fieldReader = entryReader.GetFieldReaderFor(fieldAsBytes);
-
-            if (fieldReader.Type == IndexEntryFieldType.Invalid)
+            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
+                continue;
+            spatialSeenFields ??= new();
+            if (spatialSeenFields.Add(fieldName))
+            {
+                doc.Remove(fieldName, out var geo); // move the geo-hashes to the side
+                doc[fieldName+" [geo hashes]"] = geo;
+            }
+            SetValue(fieldName, new DynamicJsonValue
+            {
+                [nameof(entryReader.Latitude)] = entryReader.Latitude,
+                [nameof(entryReader.Longitude)] = entryReader.Longitude,
+            });
+        }
+        
+        entryReader.Reset();
+        while (entryReader.MoveNextStoredField())
+        {
+            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
                 continue;
 
-            doc[fieldAsString] = GetValueForField(ref fieldReader, null);
+            if (entryReader.StoredField == null)
+            {
+                SetValue(fieldName, null);
+                continue;
+            }
+
+            UnmanagedSpan span = entryReader.StoredField.Value;
+            if (entryReader.IsList)
+            {
+                ForceList(fieldName);
+            }
+            
+            if (entryReader.HasNumeric)
+            {
+                if (Utf8Parser.TryParse(span.ToReadOnlySpan(), out double d, out var consumed) && consumed == span.Length)
+                {
+                    SetValue(fieldName, d);
+                }
+                else
+                {
+                    SetValue(fieldName, Encoding.UTF8.GetString(span.ToReadOnlySpan()));
+                }
+            }
+            else if (entryReader.IsRaw)
+            {
+                SetValue(fieldName, new BlittableJsonReaderObject(span.Address, span.Length, _ctx));
+            }
+            else
+            {
+                SetValue(fieldName, Encoding.UTF8.GetString(span.ToReadOnlySpan()));
+            }
         }
 
-        return doc;
+        return ToJson();
+
+        DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue();
+            foreach (var (k,v) in doc)
+            {
+                json[k] = v;
+            }
+
+            return json;
+        }
+
+        void ForceList(string name)
+        {
+            if (doc.TryGetValue(name, out var existing) == false)
+            {
+                doc[name] = new List<object>();
+            }
+
+            if (existing is List<object>)
+                return;
+            doc[name] = new List<object> { existing };
+        }
+
+        void SetValue(string name, object value)
+        {
+            if (doc.TryGetValue(name, out var existing))
+            {
+                if (existing is List<object> l)
+                {
+                    l.Add(value);
+                }
+                else
+                {
+                    doc[name] = new List<object> { existing, value };
+                }
+            }
+            else
+            {
+                doc[name] = value;
+            }
+        }
     }
 
     public object GetValueForField(ref IndexEntryReader.FieldReader fieldReader, Analyzer analyzer)

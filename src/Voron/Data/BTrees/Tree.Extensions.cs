@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -226,6 +227,28 @@ namespace Voron.Data.BTrees
             if (header->RootObjectType != RootObjectType.Lookup)
                 return -1;
             return header->RootPage;
+        }
+
+        public Dictionary<long, string> GetFieldsRootPages()
+        {
+            var dic = new Dictionary<long, string>();
+            using var it = Iterate(prefetch: false);
+            if (it.Seek(Slices.BeforeAllKeys) == false)
+                return dic;
+            do
+            {
+                if(it.GetCurrentDataSize() != sizeof(LookupState))
+                    continue;
+                
+                var header = (LookupState*)it.CreateReaderForCurrent().Base;
+                if(header->RootObjectType != RootObjectType.Lookup)
+                    continue;
+
+                dic[header->RootPage] = it.CurrentKey.ToString();
+
+            } while (it.MoveNext());
+
+            return dic;
         }
     }
 }
