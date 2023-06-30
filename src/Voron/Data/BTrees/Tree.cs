@@ -551,6 +551,8 @@ namespace Voron.Data.BTrees
 
         public void ValidateTree_Forced(long rootPageNumber)
         {
+
+
             var pages = new HashSet<long>();
             var stack = new Stack<TreePage>();
             var root = GetReadOnlyTreePage(rootPageNumber);
@@ -578,9 +580,9 @@ namespace Voron.Data.BTrees
                         {
                             for (int i = 0; i < p.NumberOfEntries; i++)
                             {
-                                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, p.GetNode(i), out Slice keySlice))
+                                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, p.GetNode(i), out Slice keySlice))
                                 {
-                                    var clonedKey = keySlice.Clone(_tx.Allocator);
+                                    var clonedKey = keySlice.Clone(_llt.Allocator);
 
                                     if (leafKeys.Add(clonedKey) == false)
                                     {
@@ -616,7 +618,7 @@ namespace Voron.Data.BTrees
             {
                 foreach (var key in leafKeys)
                 {
-                    key.Release(_tx.Allocator);
+                    key.Release(_llt.Allocator);
                 }
             }
         }
