@@ -98,7 +98,6 @@ class infoPackage extends viewModelBase {
     }
 
     // TODO kalczur
-
     downloadPackage() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
@@ -153,6 +152,8 @@ class infoPackage extends viewModelBase {
             });
     }
 
+
+    // TODO kalczur
     private confirmLeavingPage() {
         const abort = "Leave and Abort";
         const stay = "Stay on this page";

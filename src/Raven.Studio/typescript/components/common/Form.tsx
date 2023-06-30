@@ -131,8 +131,10 @@ export function FormSelect<
     });
 
     return (
-        <div className="form-dropdown-select">
-            <Select setSelectedValue={onChange} outline selectedValue={value} {...rest} />
+        <div>
+            <div className="form-dropdown-select">
+                <Select setSelectedValue={onChange} outline selectedValue={value} {...rest} />
+            </div>
             {invalid && <div className="text-danger small">{error.message}</div>}
         </div>
     );
