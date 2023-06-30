@@ -76,7 +76,7 @@ public unsafe struct EntryTermsReader
 
     public readonly CompactKey Current;
     public long CurrentLong;
-    public long TermMetadata;//TODO: rename
+    public long FieldRootPage;//TODO: rename
     public long TermId;
     public double CurrentDouble;
     public double Latitude;
@@ -104,7 +104,7 @@ public unsafe struct EntryTermsReader
     {
         while (MoveNextStoredField())
         {
-            if (TermMetadata == fieldRootPage)
+            if (FieldRootPage == fieldRootPage)
                 return true;
         }
         return false;
@@ -113,7 +113,7 @@ public unsafe struct EntryTermsReader
     {
         while (MoveNext())
         {
-            if (TermMetadata == fieldRootPage)
+            if (FieldRootPage == fieldRootPage)
                 return true;
         }
         return false;
@@ -124,7 +124,7 @@ public unsafe struct EntryTermsReader
         Reset();
         while (MoveNextSpatial())
         {
-            if (TermMetadata == fieldRootPage)
+            if (FieldRootPage == fieldRootPage)
                 return true;
         }
         return false;
@@ -197,7 +197,7 @@ public unsafe struct EntryTermsReader
 
     private void HandleRegularTerm(long termContainerId)
     {
-        var hasFreq = (termContainerId & 4) != 0;
+        var hasFreq = (termContainerId & 0b100) != 0;
         if (hasFreq == false)
         {
             Frequency = 1;
@@ -210,7 +210,7 @@ public unsafe struct EntryTermsReader
         }
 
         var termItem = Container.Get(_llt, TermId);
-        TermMetadata = termItem.PageLevelMetadata;
+        FieldRootPage = termItem.PageLevelMetadata;
         TermsReader.Set(Current, termItem, _dicId);
 
         HasNumeric = (termContainerId & 0b1) != 0;
@@ -237,7 +237,7 @@ public unsafe struct EntryTermsReader
         IsList = false;
         IsRaw = false;
         HasNumeric = false;
-        TermMetadata = termContainerId >> 3;
+        FieldRootPage = termContainerId >> 3;
         TermId = -1;
         var hasStoredField = (termContainerId & 0b100) != 0;
         if (hasStoredField)
@@ -256,16 +256,16 @@ public unsafe struct EntryTermsReader
                 {
                     case StoredFieldType.Null:
                         StoredField = null;
-                        TermMetadata = val;
+                        FieldRootPage = val;
                         break;
                     case StoredFieldType.Empty:
                         StoredField = new(null, 0);
-                        TermMetadata = val;
+                        FieldRootPage = val;
                         break;
                     case StoredFieldType.Term:
                         var termItem = Container.Get(_llt, val);
                         TermId = val;
-                        TermMetadata = termItem.PageLevelMetadata;
+                        FieldRootPage = termItem.PageLevelMetadata;
                         StoredField = termItem.ToUnmanagedSpan();
                         break;
                     case StoredFieldType.Raw:
@@ -300,7 +300,7 @@ public unsafe struct EntryTermsReader
 
         while (MoveNext())
         {
-            sb.Append(TermMetadata).Append(" - ").Append(Current);
+            sb.Append(FieldRootPage).Append(" - ").Append(Current);
 
             if (HasNumeric)
             {
@@ -312,7 +312,7 @@ public unsafe struct EntryTermsReader
         Reset();
         while (MoveNextSpatial())
         {
-            sb.Append("spatial: ").Append(TermMetadata)
+            sb.Append("spatial: ").Append(FieldRootPage)
                 .Append("Lat: ")
                 .Append(Latitude)
                 .Append("Lng: ")
@@ -322,7 +322,7 @@ public unsafe struct EntryTermsReader
         Reset();
         while (MoveNextStoredField())
         {
-            sb.Append("Stored: ").Append(TermMetadata);
+            sb.Append("Stored: ").Append(FieldRootPage);
             if (StoredField == null)
             {
                 sb.Append(" null value").AppendLine();

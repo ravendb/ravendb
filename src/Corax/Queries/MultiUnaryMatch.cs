@@ -408,7 +408,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                 var reader = _searcher.GetEntryTermsReader(matches[i], ref lastPage);
                 while (reader.MoveNext())
                 {
-                    if(reader.TermMetadata != fieldsRootPage)
+                    if(reader.FieldRootPage != fieldsRootPage)
                         continue;
                     var comparer = _comparers[comparerId];
                     if (IsAcceptedForIterator(comparer, in reader) == false)

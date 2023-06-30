@@ -58,7 +58,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNext())
         {
-            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
                 continue;
 
             string value = entryReader.Current.ToString();
@@ -67,7 +67,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNextSpatial())
         {
-            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
                 continue;
             spatialSeenFields ??= new();
             if (spatialSeenFields.Add(fieldName))
@@ -85,7 +85,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNextStoredField())
         {
-            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
                 continue;
 
             if (entryReader.StoredField == null)

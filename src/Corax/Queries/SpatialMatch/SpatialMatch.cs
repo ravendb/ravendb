@@ -121,7 +121,7 @@ public class SpatialMatch : IQueryMatch
         var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
         while (termsReader.MoveNextSpatial())
         {
-            if(termsReader.TermMetadata != _fieldRootPage)
+            if(termsReader.FieldRootPage != _fieldRootPage)
                 continue;
             _point.Reset(termsReader.Longitude, termsReader.Latitude);
             if (IsTrue(_point.Relate(_shape)))
@@ -151,7 +151,7 @@ public class SpatialMatch : IQueryMatch
             var termsReader = _indexSearcher.GetEntryTermsReader(buffer[i], ref _lastPage);
             while (termsReader.MoveNextSpatial())
             {
-                if(termsReader.TermMetadata != _fieldRootPage)
+                if(termsReader.FieldRootPage != _fieldRootPage)
                     continue;
                 _point.Reset(termsReader.Longitude, termsReader.Latitude);
                 if (IsTrue(_point.Relate(_shape)))

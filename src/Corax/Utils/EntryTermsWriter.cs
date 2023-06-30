@@ -20,12 +20,17 @@ public unsafe struct EntryTermsWriter : IDisposable
 
     public int Encode(in NativeList<IndexWriter.RecordedTerm> terms)
     {
-        const int maxItemSize = 32; // that should be more than enough to fit everything (except stored fields)
+        const int maxItemSize = 32; // that should be more than enough to fit everything 
         if (terms.Count * maxItemSize > _bs.Length)
         {
             _bsc.GrowAllocation(ref _bs, ref _scope, terms.Count * maxItemSize);
         }
         var buffer = _bs.Ptr;
+        // We sort the terms by the terms container id (to allow better delta compression)
+        // Note that the flags are on the low bits, so won't interfere with the sort order
+        // Stored fields are using a different term container id, which ensures that they have the 
+        // same order after sorting as we encountered them, would typically be sorted first, but we don't rely on that
+        // Spatial fields are using the fields root page as the term id, and will also tend to be first, again, not relying on that
         terms.Sort();
         int offset = 0;
         long prevTermId = 0;

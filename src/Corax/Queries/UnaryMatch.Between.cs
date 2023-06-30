@@ -43,7 +43,7 @@ namespace Corax.Queries
                     var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         var resultX = reader.Current.Decoded();
                         if (leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
@@ -97,7 +97,7 @@ namespace Corax.Queries
                     var reader = searcher.GetEntryTermsReader(currentMatches[i], ref lastPage);
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot || 
+                        if(reader.FieldRootPage != fieldRoot || 
                            reader.HasNumeric == false)
                             continue;
                         bool isMatch;
@@ -221,7 +221,7 @@ namespace Corax.Queries
                     var isMatch = true;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
 
                         var resultX = reader.Current.Decoded();
@@ -279,7 +279,7 @@ namespace Corax.Queries
                     var isMatch = true;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         bool curMatch;
                         if (typeof(TValueType) == typeof(long))

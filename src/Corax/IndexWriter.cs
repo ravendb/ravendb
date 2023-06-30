@@ -1163,9 +1163,9 @@ namespace Corax
             reader.Reset();
             while (reader.MoveNext())
             {
-                if (fieldsByRootPage.TryGetValue(reader.TermMetadata, out var field) == false)
+                if (fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field) == false)
                 {
-                    throw new InvalidOperationException($"Unable to find matching field for {reader.TermMetadata} with root page:  {reader.TermMetadata}. Term: '{reader.Current}'");
+                    throw new InvalidOperationException($"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
                 }
                 
                 var ptr = reader.Current.DecodedPtr(out var len);
@@ -1610,14 +1610,14 @@ namespace Corax
                     var entry = newAdditions.RawItems[i];
                     ref var entryTerms = ref GetEntryTerms(entry);
 
-                    Debug.Assert((termContainerId & 7) == 0); // ensure that the three bottom bits are cleared
+                    Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
                     var recordedTerm = new RecordedTerm
                     {
                         TermContainerId = entries.AdditionsFrequency[i] switch
                         {
                             > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
                                    EntryIdEncodings.FrequencyQuantization(entries.AdditionsFrequency[i]) << 3 |
-                                   4, // marker indicating that we have a term frequency here
+                                   0b100, // marker indicating that we have a term frequency here
                             _ => termContainerId
                         }
                     };

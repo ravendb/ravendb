@@ -207,7 +207,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         
         while (indexEntry.MoveNext())
         {
-            if(fields.Contains(indexEntry.TermMetadata) == false)
+            if(fields.Contains(indexEntry.FieldRootPage) == false)
                 continue;
             
             InsertTerm(indexEntry.Current.Decoded(), indexEntry.Frequency);

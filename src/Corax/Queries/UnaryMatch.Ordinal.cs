@@ -74,7 +74,7 @@ namespace Corax.Queries
 
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if (comparer.Compare(currentType, reader.Current.Decoded()) == false) 
                             continue;
@@ -173,7 +173,7 @@ namespace Corax.Queries
 
                     while (reader.MoveNext())
                     {
-                        if (reader.TermMetadata != fieldRoot)
+                        if (reader.FieldRootPage != fieldRoot)
                             continue;
                         CheckAndSet(reader.Current.Decoded());
                     }
@@ -253,7 +253,7 @@ namespace Corax.Queries
                     var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         
                         if (comparer.Compare(currentType, reader.Current.Decoded()) == false)
@@ -303,7 +303,7 @@ namespace Corax.Queries
                     var isNotMatch = false;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if (reader.TermId == -1) // TODO: this is wrong, need to figure out what this looks like 
                         {
@@ -352,7 +352,7 @@ namespace Corax.Queries
                     bool isMatch = false;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if (reader.TermId != -1) // TODO: this is wrong, need to fix it
                         {
@@ -405,7 +405,7 @@ namespace Corax.Queries
                     bool isMatch = true;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if (reader.TermId != -1) // TODO: this is wrong, need to fix it
                         {
@@ -457,7 +457,7 @@ namespace Corax.Queries
                     bool isMatch = false;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if (reader.TermId == -1) // TODO: this is wrong, need to fix it
                         {
@@ -505,7 +505,7 @@ namespace Corax.Queries
                     bool isMatch = false;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if(reader.HasNumeric == false)
                             continue;
@@ -571,7 +571,7 @@ namespace Corax.Queries
                     bool isMatch = true;
                     while (reader.MoveNext())
                     {
-                        if(reader.TermMetadata != fieldRoot)
+                        if(reader.FieldRootPage != fieldRoot)
                             continue;
                         if(reader.HasNumeric == false)
                             continue;

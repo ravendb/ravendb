@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries.SortingMatches.Comparers;
@@ -71,39 +72,58 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             var orderByFieldMetadata = orderByFields[i];
             reader.Reset();
             long fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
-
+            // Note that in here we have to check for the *lowest* value of the field, if there are multiple terms
+            // for the field, so we always order by the smallest value (regardless of the ascending / descending structure)
             switch (orderByField.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    reader.Reset();
-                    reader.FindNext(fieldRootPage);
-                    result.AddLongOrderByField(reader.CurrentLong);
+                    long l = long.MaxValue;
+                    while (reader.FindNext(fieldRootPage))
+                    {
+                        l = long.Min(l, reader.CurrentLong);
+                    }
+                    result.AddLongOrderByField(l);
                     break;
                 case OrderByFieldType.Double:
-                    reader.Reset();
-                    reader.FindNext(fieldRootPage);
-                    result.AddDoubleOrderByField(reader.CurrentDouble);
+                    double d = double.MaxValue;
+                    while (reader.FindNext(fieldRootPage))
+                    {
+                        d = double.Min(d, reader.CurrentDouble);
+                    }
+                    result.AddDoubleOrderByField(d);
                     break;
                 case OrderByFieldType.Distance:
+                {
+                    double m = double.MaxValue;
+                    while (reader.FindNextSpatial(fieldRootPage))
                     {
-                        reader.FindNextSpatial(fieldRootPage);
                         var coordinates = (reader.Latitude, reader.Longitude);
                         ISpatialComparer comparer = orderByField.Ascending
                             ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
                             : _descSpatialComparer ??= new LegacySortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
 
                         var distance = SpatialUtils.GetGeoDistance(in coordinates, in comparer);
-                        result.AddDoubleOrderByField(distance);
-                        break;
+                        m = double.Min(m, distance);
                     }
+
+                    result.AddDoubleOrderByField(m);
+                    break;
+                }
                 default:
+                {
+                    string m = null;
+                    while (reader.FindNext(fieldRootPage))
                     {
-                        reader.Reset();
-                        reader.FindNext(fieldRootPage);
+                        // we allocating managed string to make things easier, if this show up in profiling
+                        // we can do the comparisons using CompactKeys
                         var stringValue = Encoding.UTF8.GetString(reader.Current.Decoded());
-                        result.AddStringOrderByField(stringValue);
-                        break;
+                        m ??= stringValue;
+                        if (string.CompareOrdinal(m, stringValue) < 0)
+                            m = stringValue;
                     }
+                    result.AddStringOrderByField(m);
+                    break;
+                }
             }
         }
 
