@@ -6,6 +6,6 @@ namespace Raven.Server.Documents.QueueSink.Test
     {
         public QueueSinkConfiguration Configuration;
 
-        public string Script { get; set; }
+        public string Message { get; set; }
     }
 }

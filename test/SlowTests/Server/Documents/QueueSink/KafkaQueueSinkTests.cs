@@ -6,10 +6,15 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.QueueSink;
+using Raven.Server.Documents.QueueSink.Test;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -236,8 +241,8 @@ namespace SlowTests.Server.Documents.QueueSink
             }
         }
 
-        /*[Fact]
-        public async Task CanTestScript()
+        [Fact]
+        public void CanTestScript()
         {
             using (var store = GetDocumentStore())
             {
@@ -256,36 +261,60 @@ namespace SlowTests.Server.Documents.QueueSink
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(
                            out DocumentsOperationContext context))
                 {
-                    using (QueueSinkProcess.TestScript(
-                               new TestQueueSinkScript()
-                               {
-                                   Configuration = new QueueSinkConfiguration
-                                   {
-                                       Name = "simulate",
-                                       ConnectionStringName = "simulate",
-                                       BrokerType = QueueBrokerType.Kafka,
-                                       Scripts =
-                                       {
-                                           new QueueSinkScript
-                                           {
-                                               Queues = new List<string>() { "users" },
-                                               Name = "users",
-                                               Script = @"put(this.Id, this)"
-                                           }
-                                       }
-                                   }
-                               }, context, out var testResult))
-                    {
+                    var testResult = QueueSinkProcess.TestScript(
+                        new TestQueueSinkScript()
+                        {
+                            Configuration = new QueueSinkConfiguration
+                            {
+                                Name = "simulate",
+                                ConnectionStringName = "simulate",
+                                BrokerType = QueueBrokerType.Kafka,
+                                Scripts =
+                                {
+                                    new QueueSinkScript
+                                    {
+                                        Queues = new List<string>() {"users"},
+                                        Name = "users",
+                                        Script = @"this['@metadata']['@collection'] = 'Users'; put(this.Id, this); output('test output')"
+                                    }
+                                }
+                            },
+                            Message = @"{
+""Id"": ""users/13"",
+""FirstName"": ""Joe"",
+""LastName"": ""Doe"",
+""Birthday"": ""1955-03-04T00:00:00.0000000"",
+""Address"": {
+        ""Line1"": ""14 Garrett Hill"",
+        ""Line2"": null,
+        ""City"": ""London"",
+        ""Region"": null,
+        ""PostalCode"": ""SW1 8JR"",
+        ""Country"": ""UK"",
+        ""Location"": {
+            ""Latitude"": 51.52384070000001,
+            ""Longitude"": -0.0944233
+        }
+    }
+}"
+                        }, context, database);
+                    
+                    Assert.Equal("test output", testResult.DebugOutput[0]);
 
-                        Assert.Equal(0, testResult.ScriptErrors.Count);
+                    var putdoc = (DynamicJsonArray)testResult.Actions["PutDocument"];
 
-                        //Assert.Equal(1, result.Summary.Count);
+                    Assert.Equal(1, putdoc.Count);
 
-                        Assert.Equal("test output", testResult.DebugOutput[0]);
-                    }
+                    var data = (DynamicJsonValue)putdoc.First();
+
+                    Assert.Equal("users/13", data["Id"]);
+                    string json = data["Data"].ToString();
+
+                    Assert.Contains("\"FirstName\":\"Joe\"", json);
+                    Assert.Contains("\"@collection\":\"Users\"", json);
                 }
             }
-        }*/
+        }
 
         protected void SetupKafkaQueueSink(DocumentStore store, string script, List<string> queues,
             string configurationName = null,

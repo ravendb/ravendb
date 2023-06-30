@@ -18,13 +18,12 @@ public class QueueSinkHandler : DatabaseRequestHandler
             var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestQueueSinkScript");
             var testScript = JsonDeserializationServer.TestQueueSinkScript(dbDoc);
 
-            using (QueueSinkProcess.TestScript(testScript, context, Database, out var result))
+            var result = QueueSinkProcess.TestScript(testScript, context, Database);
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "queuesink/test"));
-                }
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
+                writer.WriteObject(context.ReadObject(djv, "queuesink/test"));
             }
         }
     }

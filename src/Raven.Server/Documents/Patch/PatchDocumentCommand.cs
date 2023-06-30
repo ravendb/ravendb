@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private Document GetCurrentDocument(DocumentsOperationContext context, string id)
+        protected virtual Document GetCurrentDocument(DocumentsOperationContext context, string id)
         {
             var originalDocument = _database.DocumentsStorage.Get(context, id);
 
