@@ -275,7 +275,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly ConcurrentDictionary<string, CollectionName> _missingDocumentsForRevisions;
             private readonly HashSet<string> _documentIdsOfMissingAttachments;
             private readonly DuplicateDocsHandler _duplicateDocsHandler;
-            private bool _throwOnCollectionMismatchError;
+            private readonly bool _throwOnCollectionMismatchError;
 
             public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, Logger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
             {
