@@ -1,7 +1,8 @@
+
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -9,13 +10,14 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.QueueSink;
 
@@ -46,8 +48,6 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                 throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
         }
     }
-
-    private TestMode _testMode;
 
     protected string GroupId => $"{Database.DatabaseGroupId}/{Name}";
 
@@ -111,8 +111,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var mainScript = new PatchRequest(Configuration.Scripts.First().Script,
-                        PatchRequestType.QueueSink);
+                    var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
                     Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
 
                     foreach (var message in messageBatch)
@@ -121,7 +120,8 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                         {
                             using var o = await context.ReadForMemoryAsync(new MemoryStream(message),
                                 "queue-message", CancellationToken);
-                            using (documentScript.Run(context, context, "execute", new object[] { o })) { }
+                            using (documentScript.Run(context, context, "execute", new object[] { o }))
+                            { }
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -170,10 +170,29 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
     protected abstract void Commit();
 
-    public static IDisposable TestScript(TestQueueSinkScript testScript, DocumentsOperationContext context, DocumentDatabase database,
-        out TestQueueSinkScriptResult result)
+    private class TestQueueMessageCommand : PatchDocumentCommand
     {
-        result = new TestQueueSinkScriptResult();
+        private readonly BlittableJsonReaderObject _message;
+
+        public TestQueueMessageCommand(JsonOperationContext context, PatchRequest patch, BlittableJsonReaderObject message) : base(context, Guid.NewGuid().ToString(),
+            null, false, (patch, null), (null, null), null, '/', isTest: true, debugMode: true, collectResultsNeeded: true, returnDocument: true)
+        {
+            _message = message;
+        }
+
+        protected override Document GetCurrentDocument(DocumentsOperationContext context, string id)
+        {
+            return new Document
+            {
+                Data = _message
+            };
+        }
+    }
+
+    public static TestQueueSinkScriptResult TestScript(TestQueueSinkScript testScript, DocumentsOperationContext context, DocumentDatabase database)
+    {
+        testScript.Configuration.Initialize(connectionString: null);
+
         testScript.Configuration.TestMode = true;
 
         if (testScript.Configuration.Validate(out List<string> errors) == false)
@@ -190,42 +209,25 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                 "while Queue Sink test expects to get exactly 1 script");
         }
 
-        List<string> debugOutput;
-        
-        //using (EnterTestMode(out debugOutput))
-        {
-            //result.DebugOutput = debugOutput;
+        if (string.IsNullOrEmpty(testScript.Message))
+            throw new InvalidOperationException("Sample message in JSON format must be provided");
 
-            try
+        using (context.OpenWriteTransaction())
+        {
+            using var messageDoc = context.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(testScript.Message)), "queue-sink-test-message");
+
+            var script = new PatchRequest(testScript.Configuration.Scripts[0].Script, PatchRequestType.QueueSink);
+
+            var command = new TestQueueMessageCommand(context, script, messageDoc);
+
+            command.Execute(context, null);
+
+            return new TestQueueSinkScriptResult
             {
-                var mainScript = new PatchRequest(testScript.Script, PatchRequestType.QueueSink);
-                database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
-                
-                /*using var o = context.ReadForMemoryAsync(new MemoryStream(message),
-                    "queue-message", CancellationToken);
-                using (documentScript.Run(context, context, "execute", new object[] { o })) { }*/
-            }
-            catch (JavaScriptParseException e)
-            {
-                
-            }
+                DebugOutput = command.DebugOutput,
+                Actions = command.DebugActions
+            };
         }
-
-        return null;
-    }
-
-    private IDisposable EnterTestMode(out List<string> debugOutput)
-    {
-        _testMode = new TestMode();
-        var disableAlerts = Statistics.PreventFromAddingAlertsToNotificationCenter();
-
-        debugOutput = _testMode.DebugOutput;
-
-        return new DisposableAction(() =>
-        {
-            _testMode = null;
-            disableAlerts.Dispose();
-        });
     }
 
     public void Stop(string reason)
@@ -239,7 +241,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
         base.Stop();
     }
-    
+
     private void HandleScriptParseException(Exception e)
     {
         var message = $"[{Name}] Could not parse script. Stopping Queue Sink process.";
@@ -292,10 +294,5 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
             Thread.Sleep(FallbackTime.Value);
             FallbackTime = null;
         }
-    }
-
-    private class TestMode
-    {
-        public readonly List<string> DebugOutput = new();
     }
 }

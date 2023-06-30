@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.QueueSink.Test
 {
     public class TestQueueSinkScriptResult
     {
-        public List<QueueSinkErrorInfo> ScriptErrors { get; set; }
-
         public List<string> DebugOutput { get; set; }
+
+        public DynamicJsonValue Actions { get; set; }
     }
 }
