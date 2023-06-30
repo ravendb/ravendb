@@ -6,8 +6,12 @@ using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
-    public class Random(ITestOutputHelper output) : RavenTestBase(output)
+    public class Random : RavenTestBase
     {
+        public Random(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var data = doc.Data;
-            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+            var flags = DocumentFlags.None;
 
             BlittableJsonReaderArray tsNames = null;
             if (doc.TryGetMetadata(out var metadata))
@@ -506,10 +506,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (tsNamesList.Count == 0)
             {
                 metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
-                flags = flags.Strip(DocumentFlags.HasTimeSeries);
             }
             else
             {
+                flags = DocumentFlags.HasTimeSeries;
                 metadata.Modifications[Constants.Documents.Metadata.TimeSeries] = tsNamesList;
             }
 

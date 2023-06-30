@@ -2088,17 +2088,19 @@ namespace Raven.Server.Documents
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
-            var newData = ApplyCounterUpdatesToMetadata(context, document.Data, docId, countersToAdd, countersToRemove, ref document.Flags);
+            var newData = ApplyCounterUpdatesToMetadata(context, document.Data, docId, countersToAdd, countersToRemove, out var flags);
             if (newData == null)
                 return null;
 
-            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
             return putResult.ChangeVector;
         }
 
         internal static BlittableJsonReaderObject ApplyCounterUpdatesToMetadata(JsonOperationContext context, BlittableJsonReaderObject data, string docId,
-            SortedSet<string> countersToAdd, HashSet<string> countersToRemove, ref DocumentFlags flags)
+            SortedSet<string> countersToAdd, HashSet<string> countersToRemove, out DocumentFlags flags)
         {
+            flags = DocumentFlags.None;
+
             if ((countersToRemove == null || countersToRemove.Count == 0) && countersToAdd.Count == 0)
                 return null;
 
@@ -2112,10 +2114,8 @@ namespace Raven.Server.Documents
             if (hadModifications == false)
                 return null;
 
-            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             if (counters.Count == 0)
             {
-                flags = flags.Strip(DocumentFlags.HasCounters);
                 if (metadata != null)
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -2125,7 +2125,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                flags |= DocumentFlags.HasCounters;
+                flags = DocumentFlags.HasCounters;
                 data.Modifications = new DynamicJsonValue(data);
                 if (metadata == null)
                 {

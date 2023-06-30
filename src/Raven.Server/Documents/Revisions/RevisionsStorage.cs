@@ -1610,22 +1610,20 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var document in _list)
                 {
                     _token.ThrowIfCancellationRequested();
+                    var flags = document.Flags.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved | DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication) | DocumentFlags.Reverted;
 
                     if (document.Data != null)
                     {
                         CollectionName collectionName = RemoveOldMetadataInfo(context, documentsStorage, document);
                         InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
 
-                        var flag = document.Flags | DocumentFlags.Reverted;
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved));
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flags);
                     }
                     else
                     {
                         using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerId))
                         {
-                            var etag = documentsStorage.GenerateNextEtag();
-                            var changeVector = documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, etag);
-                            documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: context.GetChangeVector(changeVector), documentFlags: DocumentFlags.Reverted);
+                            documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: documentsStorage.GetNewChangeVector(context).ChangeVector, newFlags: flags);
                         }
                     }
                 }

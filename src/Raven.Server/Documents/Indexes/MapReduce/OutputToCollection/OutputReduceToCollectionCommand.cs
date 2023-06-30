@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         }
                     }
 
-                    _database.DocumentsStorage.DeleteDocumentsStartingWith(context, prefix);
+                    _database.DocumentsStorage.DeleteDocumentsStartingWith(context, prefix, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
                 }
             }
 

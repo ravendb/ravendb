@@ -105,7 +105,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             ChangeVector changeVector = null,
             string oldChangeVectorForClusterTransactionIndexCheck = null,
-            DocumentFlags flags = DocumentFlags.None,
+            DocumentFlags newFlags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                if (flags.HasFlag(DocumentFlags.FromResharding) == false)
+                if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
                     ValidateId(lowerId);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
@@ -178,62 +178,31 @@ namespace Raven.Server.Documents
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    {
-                        flags = flags.Strip(DocumentFlags.FromReplication | DocumentFlags.FromResharding);
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) ||
-                            nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
-                            flags = flags.Strip(DocumentFlags.Reverted);
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
-                            oldFlags.Contain(DocumentFlags.HasAttachments))
-                        {
-                            flags |= DocumentFlags.HasAttachments;
-                        }
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate) == false &&
-                            oldFlags.Contain(DocumentFlags.HasCounters))
-                        {
-                            flags |= DocumentFlags.HasCounters;
-                        }
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate) == false &&
-                            oldFlags.Contain(DocumentFlags.HasTimeSeries))
-                        {
-                            flags |= DocumentFlags.HasTimeSeries;
-                        }
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
-                            oldFlags.Contain(DocumentFlags.HasRevisions))
-                        {
-                            flags |= DocumentFlags.HasRevisions;
-                        }
-                    }
+                    newFlags = _documentsStorage.GetFlagsFormOldDocument(newFlags, oldFlags, nonPersistentFlags);
                 }
 
-                var result = _documentsStorage.BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldChangeVector);
+                var result = _documentsStorage.BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document, changeVector, expectedChangeVector, newFlags, oldChangeVector);
 
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
+                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, newFlags, nonPersistentFlags))
                     changeVector = result.ChangeVector;
 
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 {
-                    flags |= DocumentFlags.Resolved;
+                    newFlags |= DocumentFlags.Resolved;
                 }
 
-                if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
+                if (collectionName.IsHiLo == false && newFlags.Contain(DocumentFlags.Artificial) == false)
                 {
-                    Recreate(context, id, oldDoc, ref document, ref flags, nonPersistentFlags, ref documentDebugHash);
+                    Recreate(context, id, oldDoc, ref document, ref newFlags, nonPersistentFlags, ref documentDebugHash);
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
-                        collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
+                        collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref newFlags, out var configuration);
 
                     if (shouldVersion)
                     {
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, newFlags, oldDoc, oldChangeVector, collectionName))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
@@ -242,12 +211,12 @@ namespace Raven.Server.Documents
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
 
-                        flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        newFlags |= DocumentFlags.HasRevisions;
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, newFlags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
 
-                FlagsProperlySet(flags, changeVector.AsString());
+                FlagsProperlySet(newFlags, changeVector);
                 using (Slice.From(context.Allocator, changeVector.AsString(), out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -257,7 +226,7 @@ namespace Raven.Server.Documents
                     tvb.Add(document.BasePointer, document.Size);
                     tvb.Add(cv.Content.Ptr, cv.Size);
                     tvb.Add(modifiedTicks);
-                    tvb.Add((int)flags);
+                    tvb.Add((int)newFlags);
                     tvb.Add(context.GetTransactionMarker());
 
                     if (oldValue.Pointer == null)
@@ -295,7 +264,7 @@ namespace Raven.Server.Documents
                     Id = id,
                     Collection = collectionName,
                     ChangeVector = changeVector.AsString(),
-                    Flags = flags,
+                    Flags = newFlags,
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }

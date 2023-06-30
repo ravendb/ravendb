@@ -46,7 +46,7 @@ public partial class RavenTestBase
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
-                Assert.True(await session.Advanced.ExistsAsync(id));
+                Assert.True(await session.Advanced.ExistsAsync(id), "The document doesn't exists on the source");
             }
 
             foreach (var server in servers)
