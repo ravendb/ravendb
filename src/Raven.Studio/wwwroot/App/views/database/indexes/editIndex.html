@@ -470,33 +470,36 @@
                 <div class="bg-info padding">
                     <div class="row" >
                         <div class="col-sm-2">
-                            <h3 id="test-title" class="margin-bottom margin-bottom-xs margin-top-sm">Test Index</h3>
+                            <h3 id="test-title" class="no-margin margin-top-xxs">Test Index</h3>
                         </div>
                         <div class="col-sm-10">
                             <div class="d-flex gap-3">
-                                <div class="d-flex gap-3 flex-grow" data-bind="with: testIndex">
-                                    <div class="input-group flex-grow">
-                                        <div class="input-group-addon">Scan limit</div>
-                                        <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
-                                    </div>
-                                    <div class="input-group flex-grow">
-                                        <div class="input-group-addon">Time limit</div>
-                                        <div class="input-group flex-grow">
-                                            <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
-                                            <div class="input-group-addon">
-                                                seconds
+                                <div class="d-flex gap-3 flex-grow" >
+                                    <div class="flex-grow" data-bind="visible: !testResultsVisible()"></div>
+                                    <div class="d-flex flex-grow gap-3" data-bind="visible: testResultsVisible">
+                                        <div class="input-group flex-grow" data-bind="with: testIndex"">
+                                            <div class="input-group-addon">Scan limit</div>
+                                            <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
+                                        </div>
+                                        <div class="input-group flex-grow" data-bind="with: testIndex">
+                                            <div class="input-group-addon">Time limit</div>
+                                            <div class="input-group flex-grow">
+                                                <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
+                                                <div class="input-group-addon">
+                                                    seconds
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
+                                    <div data-bind="with: testIndex">
                                         <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.testing }, disable: spinners.testing" title="Run test with current settings">
                                             <i class="icon-rocket"></i><span>Run Test</span>
                                         </button>
                                     </div>
                                 </div>
                                 <div>
-                                    <button class="btn" data-bind="click: toggleTestResults" title="Show/hide test results">
-                                        <i data-bind="css: {'icon-chevron-down': testResultsVisible(), 'icon-chevron-up': !testResultsVisible()}"></i><span>Test Results</span>
+                                    <button class="btn btn-default" data-bind="click: toggleTestResults" title="Show/hide test results">
+                                        <i data-bind="css: {'icon-chevron-down': testResultsVisible(), 'icon-chevron-up': !testResultsVisible()}"></i>
                                     </button>
                                 </div>
                             </div>
