@@ -38,6 +38,7 @@ class infoPackageModel {
         this.databases.extend({
             required: {
                 onlyIf: () => {
+                    // TODO kalczur
                     const databasesSelected = this.types().indexOf("Databases") !== -1;
                     const allDbs = this.allDatabases();
                     return databasesSelected && !allDbs; 
@@ -78,79 +79,77 @@ class infoPackage extends viewModelBase {
     constructor() {
         super();
         
-        this.databaseNames = ko.pureComputed(() => databasesManager.default.databases().map((db: database) => db.name))
+        // this.databaseNames = ko.pureComputed(() => databasesManager.default.databases().map((db: database) => db.name))
     }
     
-    canDeactivate(): boolean | JQueryPromise<canDeactivateResultDto> {
-        if (this.spinners.inProgress()) {
-            return this.confirmLeavingPage();
-        }
+    // canDeactivate(): boolean | JQueryPromise<canDeactivateResultDto> {
+    //     if (this.spinners.inProgress()) {
+    //         return this.confirmLeavingPage();
+    //     }
         
-        return true;
-    }
+    //     return true;
+    // }
 
-    private getNextOperationId(): JQueryPromise<number> {
-        return new getNextOperationIdCommand(null).execute()
-            .fail((response: JQueryXHR) => {
-                messagePublisher.reportError("Could not get next task id.", response.responseText, response.statusText);
-                this.spinners.inProgress(false);
-            });
-    }
+    // private getNextOperationId(): JQueryPromise<number> {
+    //     return new getNextOperationIdCommand(null).execute()
+    //         .fail((response: JQueryXHR) => {
+    //             messagePublisher.reportError("Could not get next task id.", response.responseText, response.statusText);
+    //             this.spinners.inProgress(false);
+    //         });
+    // }
 
     // TODO kalczur
-    downloadPackage() {
-        if (!this.isValid(this.model.validationGroup)) {
-            return;
-        }
+    // downloadPackage() {
+    //     if (!this.isValid(this.model.validationGroup)) {
+    //         return;
+    //     }
         
-        this.spinners.inProgress(true);
+    //     this.spinners.inProgress(true);
 
-        switch (this.model.scope()) {
-            case "currentServer":
-                this.downloadServerWidePackage();
-                break;
-            case "entireCluster":
-                this.downloadClusterWidePackage();
-                break;
-            default:
-                throw new Error("Unsupported scope: " + this.model.scope());
-        }
-    }
+    //     switch (this.model.scope()) {
+    //         case "currentServer":
+    //             this.downloadServerWidePackage();
+    //             break;
+    //         case "entireCluster":
+    //             this.downloadClusterWidePackage();
+    //             break;
+    //         default:
+    //             throw new Error("Unsupported scope: " + this.model.scope());
+    //     }
+    // }
 
-    private downloadServerWidePackage() {
-        eventsCollector.default.reportEvent("info-package", "server-wide");
-        this.startDownload(endpoints.global.serverWideDebugInfoPackage.adminDebugInfoPackage);
-    }
+    // private downloadServerWidePackage() {
+    //     eventsCollector.default.reportEvent("info-package", "server-wide");
+    //     this.startDownload(endpoints.global.serverWideDebugInfoPackage.adminDebugInfoPackage);
+    // }
 
-    private downloadClusterWidePackage() {
-        eventsCollector.default.reportEvent("info-package", "cluster-wide");
-        this.startDownload(endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage);
-    }
+    // private downloadClusterWidePackage() {
+    //     eventsCollector.default.reportEvent("info-package", "cluster-wide");
+    //     this.startDownload(endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage);
+    // }
 
-    // TODO kalczur
-
-    private startDownload(url: string) {
-        this.getNextOperationId()
-            .done((operationId: number) => {
-                this.operationId = operationId;
+    // private startDownload(url: string) {
+    //     this.getNextOperationId()
+    //         .done((operationId: number) => {
+    //             this.operationId = operationId;
                 
-                const urlParams = {
-                    ...this.model.toUrlParams(),
-                    operationId
-                };
+    //             const urlParams = {
+    //                 ...this.model.toUrlParams(),
+    //                 operationId
+    //             };
 
-                const $form = $("#downloadInfoPackageForm");
-                $form.attr("action", appUrl.baseUrl + url);
-                downloader.fillHiddenFields(urlParams, $form);
-                $form.submit();
+    //             const $form = $("#downloadInfoPackageForm");
+    //             $form.attr("action", appUrl.baseUrl + url);
+    //             downloader.fillHiddenFields(urlParams, $form);
+    //             $form.submit();
 
-                notificationCenter.instance.monitorOperation(null, operationId)
-                    .always(() => {
-                        this.spinners.inProgress(false);
-                        this.spinners.abort(false);
-                    });
-            });
-    }
+    //             notificationCenter.instance.monitorOperation(null, operationId)
+    //                 .always(() => {
+    //                     this.spinners.inProgress(false);
+    //                     this.spinners.abort(false);
+    //                 });
+    //         });
+    // }
 
 
     // TODO kalczur
@@ -170,23 +169,23 @@ class infoPackage extends viewModelBase {
         return abortResult;
     }
     
-    abortCreatePackage() {
-        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort package creation?", {
-            forceRejectWithResolve: true,
-            buttons: ["Cancel", "Abort"]
-        })
-            .done((result: confirmDialogResult) => {
-                if (result.can) {
-                    const operationId = this.operationId;
+    // abortCreatePackage() {
+    //     return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort package creation?", {
+    //         forceRejectWithResolve: true,
+    //         buttons: ["Cancel", "Abort"]
+    //     })
+    //         .done((result: confirmDialogResult) => {
+    //             if (result.can) {
+    //                 const operationId = this.operationId;
 
-                    new killOperationCommand(null, operationId)
-                        .execute()
-                        .always(() => {
-                            this.spinners.abort(true);
-                        });
-                }
-            });
-    }
+    //                 new killOperationCommand(null, operationId)
+    //                     .execute()
+    //                     .always(() => {
+    //                         this.spinners.abort(true);
+    //                     });
+    //             }
+    //         });
+    // }
 }
 
 export = infoPackage;

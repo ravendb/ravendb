@@ -1,33 +1,29 @@
 import React from "react";
-import { Button, Card, CardBody, Col, Form, InputGroup } from "reactstrap";
+import { Card, CardBody, Col, Form, InputGroup } from "reactstrap";
 import "./GatherDebugInfo.scss";
-import { useForm } from "react-hook-form";
-import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useForm, useWatch } from "react-hook-form";
 import { GatherDebugInfoFormData, gatherDebugInfoYupResolver } from "./GatherDebugInfoValidation";
 import { FormCheckboxes, FormSelect, FormSwitch } from "components/common/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { DevTool } from "@hookform/devtools";
-import { Icon } from "components/common/Icon";
 import GatherDebugInfoIcons from "./GatherDebugInfoIcons";
 import { useGatherDebugInfoHelpers } from "./useGatherDebugInfoHelpers";
+import GatherDebugInfoAbortConfirm from "./GatherDebugInfoAbortConfirm";
 
 const infoPackageImg = require("Content/img/info_package.svg");
 const createPackageImg = require("Content/img/create_package.svg");
 
 function GatherDebugInfo() {
-    const { dataTypesOptions, defaultValues, packageScopeOptions, inProgress, databaseOptions, onSave } =
+    const { dataTypesOptions, defaultValues, packageScopeOptions, isDownloading, databaseOptions, onSave, abortData } =
         useGatherDebugInfoHelpers();
 
-    const { watch, handleSubmit, control, formState } = useForm<GatherDebugInfoFormData>({
+    const { handleSubmit, control } = useForm<GatherDebugInfoFormData>({
         resolver: gatherDebugInfoYupResolver,
         mode: "all",
         defaultValues,
     });
 
-    useDirtyFlag(formState.isDirty);
-
-    // TODO kalczur - allow to customize text for dirty flag modal
-    // TODO on abort
+    const { isSelectAllDatabases } = useWatch({ control });
 
     return (
         <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
@@ -59,7 +55,7 @@ function GatherDebugInfo() {
                                         Select all
                                     </FormSwitch>
                                 </h4>
-                                {!watch("isSelectAllDatabases") && (
+                                {!isSelectAllDatabases && (
                                     <div className="well px-4 py-3 border-radius-xs">
                                         <FormCheckboxes
                                             name="selectedDatabases"
@@ -84,15 +80,19 @@ function GatherDebugInfo() {
                                             color="primary"
                                             className="rounded-pill"
                                             icon="default"
-                                            isSpinning={inProgress}
+                                            isSpinning={isDownloading}
                                         >
                                             Download
                                         </ButtonWithSpinner>
-                                        {inProgress && (
-                                            <Button>
-                                                <Icon icon="cancel" className="rounded-pill me-1" />
+                                        {isDownloading && (
+                                            <ButtonWithSpinner
+                                                className="rounded-pill"
+                                                icon="cancel"
+                                                color="warning"
+                                                isSpinning={abortData.isAborting}
+                                            >
                                                 Abort
-                                            </Button>
+                                            </ButtonWithSpinner>
                                         )}
                                     </InputGroup>
                                 </div>
@@ -101,6 +101,11 @@ function GatherDebugInfo() {
                     </CardBody>
                 </Form>
             </Card>
+            <GatherDebugInfoAbortConfirm
+                isOpen={abortData.isConfirmVisible}
+                onConfirm={abortData.onAbort}
+                toggle={abortData.toggleIsConfirmVisible}
+            />
             <form className="d-none" target="hidden-form" method="get" id="downloadInfoPackageForm"></form>
         </Col>
     );

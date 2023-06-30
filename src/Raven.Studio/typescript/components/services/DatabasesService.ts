@@ -19,6 +19,7 @@ import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesSt
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 import restartDatabaseCommand = require("commands/resources/restartDatabaseCommand");
 import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
+import killOperationCommand = require("commands/operations/killOperationCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -74,5 +75,9 @@ export default class DatabasesService {
 
     async getNextOperationId(db: database) {
         return new getNextOperationIdCommand(db).execute();
+    }
+
+    async killOperation(db: database, taskId: number) {
+        return new killOperationCommand(null, taskId).execute();
     }
 }

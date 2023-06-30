@@ -20,6 +20,8 @@ import { tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler } from "react-hook-form";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import endpoints = require("endpoints");
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useAsyncCallback } from "react-async-hook";
 
 const adminDebugInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugInfoPackage;
 const adminDebugClusterInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage;
@@ -31,7 +33,8 @@ interface DownloadPackageRequestDto {
 }
 
 export function useGatherDebugInfoHelpers() {
-    const { value: inProgress, setValue: setInProgress } = useBoolean(false);
+    const { value: isDownloading, setValue: setIsDownloading } = useBoolean(false);
+    const { value: isAbortConfirmVisible, toggle: toggleIsAbortConfirmVisible } = useBoolean(false);
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((x) => x.name);
@@ -39,18 +42,23 @@ export function useGatherDebugInfoHelpers() {
     const defaultValues = getDefaultValues(allDatabaseNames);
     const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
 
-    const getNextOperationId = async () => {
-        try {
-            return await databasesService.getNextOperationId(null);
-        } catch (error) {
-            messagePublisher.reportError("Could not get next task id.", error.responseText, error.statusText);
-            throw error;
-        }
-    };
+    useDirtyFlag(isDownloading);
+
+    const asyncGetNextOperationId = useAsyncCallback(() => databasesService.getNextOperationId(null), {
+        onError(error) {
+            messagePublisher.reportError("Could not get next task id.", error.message);
+            setIsDownloading(false);
+        },
+    });
+
+    const asyncKillOperation = useAsyncCallback(() =>
+        databasesService.killOperation(null, asyncGetNextOperationId.result)
+    );
 
     const startDownload = async (formData: GatherDebugInfoFormData, url: string) => {
-        setInProgress(true);
-        const operationId = await getNextOperationId();
+        setIsDownloading(true);
+        // TODO kalczur test if it work if fails
+        const operationId = await asyncGetNextOperationId.execute();
 
         const urlParams: DownloadPackageRequestDto = {
             operationId,
@@ -64,7 +72,7 @@ export function useGatherDebugInfoHelpers() {
         $form.submit();
 
         notificationCenter.instance.monitorOperation(null, operationId).always(() => {
-            setInProgress(false);
+            setIsDownloading(false);
         });
     };
 
@@ -88,12 +96,18 @@ export function useGatherDebugInfoHelpers() {
     };
 
     return {
-        inProgress,
+        isDownloading,
         defaultValues,
         databaseOptions,
         packageScopeOptions,
         dataTypesOptions,
         onSave,
+        abortData: {
+            isConfirmVisible: isAbortConfirmVisible,
+            toggleIsConfirmVisible: toggleIsAbortConfirmVisible,
+            onAbort: asyncKillOperation.execute,
+            isAborting: asyncKillOperation.loading,
+        },
     };
 }
 
