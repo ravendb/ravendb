@@ -1,11 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -14,24 +11,25 @@ namespace Raven.Server.NotificationCenter
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly string _database;
-        private readonly Logger _logger;
-        private const string _title = "Blocking of tombstones deletion";
-        private const string _msg = $"We have detected blocking of tombstones deletion. Consider deleting or enabling the following processes:";
 
         public TombstoneNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(Dictionary<(string Source, string Collection), long> blockingTombstones)
+        public void Add(List<BlockingTombstoneDetails> blockingTombstones)
         {
-            BlockingTombstonesDetails details = new BlockingTombstonesDetails(blockingTombstones);
-            _notificationCenter.Add(AlertRaised.Create(_database, _title, _msg, AlertType.BlockingTombstones,
-                NotificationSeverity.Warning,
-                nameof(AlertType.BlockingTombstones), details: details));
+            var details = new BlockingTombstonesDetails(blockingTombstones);
+            _notificationCenter.Add(AlertRaised.Create(
+                _database, 
+                title: "Blockage in tombstone deletion", 
+                msg: "We have detected a blockage in tombstone deletion. Deletion or enabling certain processes may be required.", 
+                type: AlertType.BlockingTombstones,
+                severity: NotificationSeverity.Warning,
+                key: nameof(AlertType.BlockingTombstones), 
+                details));
         }
 
         public List<BlockingTombstoneDetails> GetNotificationDetails(string id)
@@ -47,13 +45,13 @@ namespace Raven.Server.NotificationCenter
                     detail.TryGet(nameof(BlockingTombstoneDetails.Source), out string source);
                     detail.TryGet(nameof(BlockingTombstoneDetails.Collection), out string collection);
                     detail.TryGet(nameof(BlockingTombstoneDetails.NumberOfTombstones), out long numOfTombstones);
-                    var blockingTombstoneDetails = new BlockingTombstoneDetails()
+
+                    list.Add(new BlockingTombstoneDetails
                     {
-                        Source = source,
-                        Collection = collection,
+                        Source = source, 
+                        Collection = collection, 
                         NumberOfTombstones = numOfTombstones
-                    };
-                    list.Add(blockingTombstoneDetails);
+                    });
                 }
             }
 
@@ -62,29 +60,29 @@ namespace Raven.Server.NotificationCenter
 
         internal class BlockingTombstonesDetails : INotificationDetails
         {
-            public BlockingTombstonesDetails(Dictionary<(string Source, string Collection), long> blockingTombstones)
+            internal List<BlockingTombstoneDetails> BlockingTombstones { get; set; }
+
+            public BlockingTombstonesDetails(List<BlockingTombstoneDetails> blockingTombstones)
             {
                 BlockingTombstones = blockingTombstones;
             }
 
-            public Dictionary<(string Source, string Collection), long> BlockingTombstones { get; set; }
-
             public DynamicJsonValue ToJson()
             {
-                var djv = new DynamicJsonArray();
-                foreach (var key in BlockingTombstones.Keys)
+                var jsonArray = new DynamicJsonArray();
+                foreach (var tombstoneDetails in BlockingTombstones)
                 {
-                    djv.Add( new DynamicJsonValue
+                    jsonArray.Add( new DynamicJsonValue
                     {
-                        [nameof(BlockingTombstoneDetails.Source)] = key.Source,
-                        [nameof(BlockingTombstoneDetails.Collection)] = key.Collection,
-                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = BlockingTombstones[key]
+                        [nameof(BlockingTombstoneDetails.Source)] = tombstoneDetails.Source,
+                        [nameof(BlockingTombstoneDetails.Collection)] = tombstoneDetails.Collection,
+                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = tombstoneDetails.NumberOfTombstones
                     });
                 }
 
-                return new DynamicJsonValue()
+                return new DynamicJsonValue
                 {
-                    [nameof(BlockingTombstones)] = djv
+                    [nameof(BlockingTombstones)] = jsonArray
                 };
             }
         }

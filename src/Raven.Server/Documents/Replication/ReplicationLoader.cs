@@ -37,7 +37,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -1920,29 +1919,38 @@ namespace Raven.Server.Documents.Replication
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var replicationDestination in Destinations)
+            foreach (var replicationDestination in Destinations.Where(x => x.Disabled))
             {
-                if (replicationDestination.Disabled)
-                    dict[replicationDestination.FromString()] = tombstoneCollections;
+                dict[replicationDestination.GetDefaultTaskName()] = tombstoneCollections;
             }
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var externals = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name)?.ExternalReplications;
+                var hubPullReplications = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name)?.GetHubPullReplications();
+                var sinkPullReplications = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name)?.GetSinkPullReplications();
+                
                 if (externals != null)
-                {
-                    foreach (var external in externals)
+                    foreach (var external in externals.Where(x => x.Disabled))
                     {
-                        if (external.Disabled)
-                        {
-                            dict[external.Name] = tombstoneCollections;
-                        }
+                        dict[external.Name] = tombstoneCollections;
                     }
-                }
-            }
 
-            return dict;
+                if (hubPullReplications != null)
+                    foreach (var hubPullReplication in hubPullReplications.Where(x => x.Disabled))
+                    {
+                        dict[hubPullReplication.GetDefaultTaskName()] = tombstoneCollections;
+                    }
+
+                if (sinkPullReplications != null)
+                    foreach (var sinkPullReplication in sinkPullReplications.Where(x => x.Disabled))
+                    {
+                        dict[sinkPullReplication.Name] = tombstoneCollections;
+                    }
+                
+                return dict;
+            }
         }
 
         public class IncomingConnectionRejectionInfo

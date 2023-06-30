@@ -41,5 +41,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 return hashCode;
             }
         }
+
+        public override string GetDefaultTaskName() => $"Internal Replication {FromString()}";
     }
 }

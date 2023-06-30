@@ -112,6 +112,8 @@ namespace Raven.Client.Documents.Operations.Replication
                 TaskId = taskId
             };
         }
+
+        public string GetDefaultTaskName() => $"Replication Hub ({Mode}) for {Name}";
     }
 
     [Flags]

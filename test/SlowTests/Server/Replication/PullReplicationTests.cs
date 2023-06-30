@@ -312,7 +312,7 @@ namespace SlowTests.Server.Replication
 
                 pull.Disabled = false;
                 await AddWatcherToReplicationTopology(sink, pull, hub.Urls);
-
+                
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "hub/3");
@@ -691,12 +691,12 @@ namespace SlowTests.Server.Replication
 
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!
 
-        public Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
+        public static Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
         {
             return SetupPullReplicationAsync(remoteName, sink, null, hub);
         }
 
-        public async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
+        public static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();
@@ -707,7 +707,6 @@ namespace SlowTests.Server.Replication
                 {
                     pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
                 }
-                ModifyReplicationDestination(pull);
                 tasks.Add(AddWatcherToReplicationTopology(sink, pull, store.Urls));
             }
             await Task.WhenAll(tasks);

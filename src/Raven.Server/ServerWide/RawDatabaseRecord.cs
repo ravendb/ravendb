@@ -308,8 +308,26 @@ namespace Raven.Server.ServerWide
                 return _externalReplications;
             }
         }
-        
-        
+
+        public IEnumerable<PullReplicationDefinition> GetHubPullReplications()
+        {
+            if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null) 
+                return null;
+
+            return from BlittableJsonReaderObject element in bjra
+                select JsonDeserializationClient.PullReplicationDefinition(element);
+        }
+
+        public IEnumerable<PullReplicationDefinition> GetSinkPullReplications()
+        {
+            if (_record.TryGet(nameof(DatabaseRecord.SinkPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
+                return null;
+
+            return from BlittableJsonReaderObject element in bjra
+                select JsonDeserializationClient.PullReplicationDefinition(element);
+        }
+
+
         public PullReplicationDefinition GetHubPullReplicationByName(string name)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
