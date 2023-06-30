@@ -18,6 +18,7 @@ import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDa
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 import restartDatabaseCommand = require("commands/resources/restartDatabaseCommand");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -69,5 +70,9 @@ export default class DatabasesService {
 
     async restartDatabase(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
         return new restartDatabaseCommand(db, location).execute();
+    }
+
+    async getNextOperationId(db: database) {
+        return new getNextOperationIdCommand(db).execute();
     }
 }
