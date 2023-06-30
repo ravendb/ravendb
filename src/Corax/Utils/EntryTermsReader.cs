@@ -141,7 +141,7 @@ public unsafe struct EntryTermsReader
 
         if ((termContainerId & 0b11) == 0b10) // special term markers, rare
         {
-            HandleSpecialTerm(termContainerId);
+            HandleSpecialTerm(termContainerId, skipStoredFieldLoad: true);
             goto Start; // we skip those unless requested explicitly
         }
 
@@ -165,7 +165,7 @@ public unsafe struct EntryTermsReader
             goto Start; 
         }
 
-        HandleSpecialTerm(termContainerId);
+        HandleSpecialTerm(termContainerId, skipStoredFieldLoad: true);
         if((termContainerId & 0b110) == 0b110) // stored field, need to skip
             goto Start; 
         return true;
@@ -188,7 +188,7 @@ public unsafe struct EntryTermsReader
             goto Start; 
         }
 
-        HandleSpecialTerm(termContainerId);
+        HandleSpecialTerm(termContainerId, skipStoredFieldLoad: false);
         if((termContainerId & 0b110) != 0b110) // spatial field, need to skip
             goto Start; 
         return true;
@@ -231,7 +231,7 @@ public unsafe struct EntryTermsReader
         }
     }
 
-    void HandleSpecialTerm(long termContainerId)
+    void HandleSpecialTerm(long termContainerId, bool skipStoredFieldLoad)
     {
         IsRaw = false;
         HasNumeric = false;
@@ -246,27 +246,30 @@ public unsafe struct EntryTermsReader
             var val =  ZigZagEncoding.Decode<long>(_cur, out var offset) + _prevLong;
             _cur += offset;
             _prevLong = val;
-            switch (type)
+            if (skipStoredFieldLoad == false)
             {
-                case StoredFieldType.Null:
-                    StoredField = null;
-                    TermMetadata = val;
-                    break;
-                case StoredFieldType.Empty:
-                    StoredField = new(null, 0);
-                    TermMetadata = val;
-                    break;
-                case StoredFieldType.Term:
-                    var termItem = Container.Get(_llt, val);
-                    TermId = val;
-                    TermMetadata = termItem.PageLevelMetadata;
-                    StoredField = termItem.ToUnmanagedSpan();
-                    break;
-                case StoredFieldType.Raw:
-                    IsRaw = true;
-                    goto case StoredFieldType.Term;
-                default:
-                    throw new ArgumentOutOfRangeException(type.ToString());
+                switch (type)
+                {
+                    case StoredFieldType.Null:
+                        StoredField = null;
+                        TermMetadata = val;
+                        break;
+                    case StoredFieldType.Empty:
+                        StoredField = new(null, 0);
+                        TermMetadata = val;
+                        break;
+                    case StoredFieldType.Term:
+                        var termItem = Container.Get(_llt, val);
+                        TermId = val;
+                        TermMetadata = termItem.PageLevelMetadata;
+                        StoredField = termItem.ToUnmanagedSpan();
+                        break;
+                    case StoredFieldType.Raw:
+                        IsRaw = true;
+                        goto case StoredFieldType.Term;
+                    default:
+                        throw new ArgumentOutOfRangeException(type.ToString());
+                }
             }
         }
         else
