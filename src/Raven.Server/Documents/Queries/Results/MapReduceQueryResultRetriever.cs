@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
+using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -84,12 +85,15 @@ namespace Raven.Server.Documents.Queries.Results
             BlittableJsonReaderObject result;
             if (retrieverInput.IsLuceneDocument() == false)
             {
-                retrieverInput.CoraxEntry.GetFieldReaderFor(retrieverInput.KnownFields.StoredJsonPropertyOffset).Read(out var binaryValue);
-                fixed (byte* ptr = &binaryValue.GetPinnableReference())
-                {
-                    using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);
-                    result = temp.Clone(_context);
-                }
+                var binding = retrieverInput.KnownFields.GetByFieldId(retrieverInput.KnownFields.StoredJsonPropertyOffset);
+                long fieldRootPage = retrieverInput.CoraxIndexSearcher.FieldCache.GetLookupRootPage(binding.FieldName);
+                retrieverInput.CoraxTermsReader.Reset();
+                if (retrieverInput.CoraxTermsReader.FindNextStored(fieldRootPage) == false || 
+                    retrieverInput.CoraxTermsReader.StoredField == null)
+                    throw new InvalidOperationException("Unable to find map/reduce entry for " + id + ", this should not happen");
+                var span = retrieverInput.CoraxTermsReader.StoredField.Value;
+                using var temp = new BlittableJsonReaderObject(span.Address, span.Length, _context);
+                result = temp.Clone(_context);
             }
             else
             {

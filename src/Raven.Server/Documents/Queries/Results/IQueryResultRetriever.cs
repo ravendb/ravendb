@@ -31,8 +31,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         public IndexFieldsMapping KnownFields;
         
-        public IndexEntryReader CoraxEntry;
-        
         public EntryTermsReader CoraxTermsReader;
 
         public IState State;
@@ -45,8 +43,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         public float? CoraxScore;
 
-        public IndexFieldsPersistence IndexFieldsPersistence;
-
         public Corax.IndexSearcher CoraxIndexSearcher;
 
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
@@ -56,19 +52,15 @@ namespace Raven.Server.Documents.Queries.Results
             Score = score;
             
             KnownFields = null;
-            CoraxEntry = default;
             CoraxTermsReader = default;
             CoraxIndexSearcher = null;
-            IndexFieldsPersistence = null;
         }
 
-        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, EntryTermsReader reader, string id, IndexFieldsPersistence indexFieldsPersistence, float? score = null)
+        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, EntryTermsReader reader, string id, float? score = null)
         {
-            CoraxEntry = coraxEntry;
             CoraxTermsReader = reader;
             KnownFields = knownFields;
             DocumentId = id;
-            IndexFieldsPersistence = indexFieldsPersistence;
             CoraxIndexSearcher = searcher;
             CoraxScore = score;
 
