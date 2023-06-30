@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,9 +24,11 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
         public void streaming_and_projections_with_property_rename(Options options)
         {
+            IncludeDistancesAndScore(options);
+
             using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
@@ -42,6 +45,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Customer>(index.IndexName)
+                        .OrderByScore()
                     .Select(r => new
                     {
                         Name = r.Name,
@@ -62,10 +66,10 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
          public async Task streaming_and_projections_with_property_rename_Async(Options options)
         {
+            IncludeDistancesAndScore(options);
             using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
@@ -118,8 +122,17 @@ namespace SlowTests.Issues
                                    };
             }
         }
+        
+        private void IncludeDistancesAndScore(Options options)
+        {
+            if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+            {
+                options.ModifyDatabaseRecord += record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeSpatialDistance)] = true.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = true.ToString();
+                };
+            }
+        }
     }
-
-
-
 }

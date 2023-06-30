@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,9 +19,10 @@ public class RavenDB_19544 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task CanGetSpatialDistanceOnIndex_MapReduce(Options options)
     {
+        IncludeDistancesAndScore(options);
         using (var store = GetDocumentStore(options))
         {
             await store.ExecuteIndexAsync(new MapReduceRestoIndex());
@@ -56,9 +58,10 @@ public class RavenDB_19544 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task CanGetSpatialDistanceOnIndex_Map(Options options)
     {
+        IncludeDistancesAndScore(options);
         using (var store = GetDocumentStore(options))
         {
             await store.ExecuteIndexAsync(new RestoIndex());
@@ -92,6 +95,18 @@ public class RavenDB_19544 : RavenTestBase
         }
     }
 
+    private void IncludeDistancesAndScore(Options options)
+    {
+        if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+        {
+            options.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeSpatialDistance)] = true.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = true.ToString();
+            };
+        }
+    }
+    
     private class RestoIndex : AbstractIndexCreationTask<Resto, RestoIndex.Result>
     {
         public class Result

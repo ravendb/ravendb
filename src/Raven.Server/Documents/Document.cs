@@ -169,6 +169,14 @@ namespace Raven.Server.Documents
             Longitude = double.NaN
         };
 
+        public static explicit operator SpatialResult?(Corax.Utils.Spatial.SpatialResult? coraxSpatialResult)
+        {
+            if (coraxSpatialResult is null)
+                return null;
+            
+            return new SpatialResult {Distance = coraxSpatialResult.Value.Distance, Latitude = coraxSpatialResult.Value.Latitude, Longitude = coraxSpatialResult.Value.Longitude};
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

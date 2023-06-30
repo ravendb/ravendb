@@ -5,11 +5,11 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
-using Amazon.SQS.Model;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.SortingMatches;
+using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
@@ -17,6 +17,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 using Raven.Server.Documents.Queries.Results;
@@ -33,7 +34,7 @@ using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.IndexSearcher;
-
+using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
@@ -43,8 +44,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         // the actual executing thread. While the correct approach would be to amp-up the usage of shared buffers (which would make) this
         // hack irrelevant, the complexity it introduces is much greater than what it make sense to be done at the moment. Therefore, 
         // we are building a quick fix that allow us to avoid the locking convoys and we will defer the real fix to RavenDB-19665. 
-        [ThreadStatic] private static ArrayPool<long> _queryPool;
-        [ThreadStatic] private static ArrayPool<float> _queryScorePool;
+        [ThreadStatic] 
+        private static ArrayPool<long> _queryPool;
+        
+        [ThreadStatic] 
+        private static ArrayPool<float> _queryScorePool;
+
+        [ThreadStatic] 
+        private static ArrayPool<CoraxSpatialResult> _queryDistancePool;
+
 
         public static ArrayPool<long> QueryPool
         {
@@ -54,8 +62,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return _queryPool;
             }
         }
-        
-        public static ArrayPool<float> ScorePool
+
+        private static ArrayPool<float> ScorePool
         {
             get
             {
@@ -63,12 +71,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return _queryScorePool;
             }
         }
-        
+
+        private static ArrayPool<CoraxSpatialResult> DistancePool 
+        {
+            get
+            {
+                _queryDistancePool ??= ArrayPool<CoraxSpatialResult>.Create();
+                return _queryDistancePool;
+            }
+        }
+
         protected readonly IndexSearcher IndexSearcher;
         private readonly IndexFieldsMapping _fieldMappings;
         protected Page _lastPage;
         private readonly ByteStringContext _allocator;
+
         private readonly int _maxNumberOfOutputsPerDocument;
+
         private TermsReader _documentIdReader;
 
 
@@ -576,24 +595,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 int bufferSize = CoraxBufferSize(IndexSearcher, take, query);
                 var ids = QueryPool.Rent(bufferSize);
-                var scores = Array.Empty<float>();
-
+                SortingDataTransfer sortingData = default;
                 using var queryFilter = GetQueryFilter();
                 Page page = default;
                 bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
                 totalResults.Value = 0;
 
-                if (builderParameters?.HasBoost ?? false)
+                var hasOrderByDistance = query.Metadata.OrderBy is [{OrderingType: OrderByFieldType.Distance}, ..];
+                if (builderParameters.HasBoost || hasOrderByDistance)
                 {
-                    scores = ScorePool.Rent(bufferSize);
+                    sortingData = new()
+                    {
+                        ScoresBuffer = _index.Configuration.CoraxIncludeDocumentScore && builderParameters is {HasBoost: true}
+                            ? ScorePool.Rent(bufferSize)
+                            : null,
+                        DistancesBuffer = _index.Configuration.CoraxIncludeSpatialDistance && hasOrderByDistance
+                            ? DistancePool.Rent(bufferSize)
+                            : null
+                    };
+                    
                     switch (queryMatch)
                     {
                         case SortingMatch sm:
-                            sm.SetScoreBuffer(scores);
+                            sm.SetScoreAndDistanceBuffer(sortingData);
                             queryMatch = sm;
                             break;
                         case SortingMultiMatch smm:
-                            smm.SetScoreBuffer(scores);
+                            smm.SetSortingDataTransfer(sortingData);
                             queryMatch = smm;
                             break;
                     }
@@ -639,8 +667,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Include:
                         EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                         var key = _documentIdReader.GetTermFor(ids[i]);
-                        float? documentScore = scores.Length > 0 ? scores[i] : null;
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings,  entryTermsReader, key, documentScore);
+                        float? documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : null;
+                        CoraxSpatialResult? documentDistance = hasOrderByDistance ? sortingData.DistancesBuffer[i] : null;
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, entryTermsReader, key, _index.IndexFieldsPersistence, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -694,8 +723,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 QueryPool.Return(ids);
-                if (scores.Length > 0)
-                    ScorePool.Return(scores);
+                if (sortingData.IncludeScores)
+                    ScorePool.Return(sortingData.ScoresBuffer);
+                if (sortingData.IncludeDistances)
+                    DistancePool.Return(sortingData.DistancesBuffer);
                 
                 if (queryMatch is not SortingMatch && queryMatch is not SortingMultiMatch)
                     break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
@@ -738,7 +769,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     );
                 }
                 else
-                    throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
+                    throw new NotSupportedException($"The type {typeof(TQueryFilter)} is not supported.");
             }
         }
 

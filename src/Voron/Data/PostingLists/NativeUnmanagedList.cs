@@ -3,34 +3,37 @@ using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
-using Voron.Util;
 
 namespace Voron.Data.PostingLists;
 
-// When making changes here, please remember to update NativeUnmanagedList if necessary.
-public unsafe struct NativeIntegersList : IDisposable
+//This is based on the NativeIntegerList. If you make any changes to it, please go to the base class and ensure that everything is correct.
+public unsafe struct NativeUnmanagedList<T> : IDisposable
+    where T : unmanaged
 {
     private readonly ByteStringContext _ctx;
     public int Count;
     public int Capacity;
-    public long* RawItems;
+    public T* RawItems;
+    public readonly bool Initialized = false; 
+    
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
+    public Span<T> Items =>  new(RawItems, Count);
 
-    public NativeIntegersList(ByteStringContext ctx, int initialCapacity = 0)
+    public NativeUnmanagedList(ByteStringContext ctx, int initialCapacity = 0)
     {
         _ctx = ctx;
         RawItems = null;
         _releaseItems = default;
         Count = 0;
         Capacity = 0;
+        Initialized = true;
         if (initialCapacity != -1)
         {
             GrowListUnlikely(initialCapacity);
         }
     }
-
-    public void Add(ReadOnlySpan<long> values)
+    
+    public void Add(ReadOnlySpan<T> values)
     {
         if (Count + values.Length >= Capacity)
         {
@@ -38,10 +41,11 @@ public unsafe struct NativeIntegersList : IDisposable
             Debug.Assert(Count + values.Length <= Capacity);
         }
 
-        values.CopyTo(new Span<long>(RawItems + Count, Capacity - Count));
+        values.CopyTo(new Span<T>(RawItems + Count, Capacity - Count));
         Count += values.Length;
     }
-    public void Add(long l)
+    
+    public void Add(T l)
     {
         if (Count == Capacity)
         {
@@ -50,57 +54,34 @@ public unsafe struct NativeIntegersList : IDisposable
 
         RawItems[Count++] = l;
     }
-
-    public Span<long> Items =>  new(RawItems, Count);
-
+    
     private void GrowListUnlikely(int addition)
     {
         Capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
-        var scope = _ctx.Allocate(Capacity * sizeof(long), out var mem);
+        var scope = _ctx.Allocate(Capacity * sizeof(T), out var mem);
         if (RawItems != null)
         {
-            Memory.Copy(mem.Ptr, RawItems, Count * sizeof(long));
+            Memory.Copy(mem.Ptr, RawItems, Count * sizeof(T));
             _releaseItems.Dispose();
         }
         _releaseItems = scope;
-        RawItems = (long*)mem.Ptr;
+        RawItems = (T*)mem.Ptr;
     }
-
-    public void Dispose()
+    
+    public int MoveTo(Span<T> matches)
     {
-        _releaseItems.Dispose();
-    }
-
-    public void SortAndRemoveDuplicates()
-    {
-        if (Count <= 1)
-            return;
+        if (Initialized == false || matches.Length == 0)
+            return 0;
         
-        Count = Sorting.SortAndRemoveDuplicates(RawItems, Count);
-    }
-
-    public int MoveTo(Span<long> matches)
-    {
         var read = Math.Min(Count, matches.Length);
-        new Span<long>(this.RawItems, read).CopyTo(matches);
+        new Span<T>(this.RawItems, read).CopyTo(matches);
         Count -= read;
         RawItems += read;
         return read;
     }
-
-    public void Clear()
-    {
-        Count = 0;
-    }
-
-    public long First => *RawItems;
     
-    public long Pop()
+    public void Dispose()
     {
-        var val = *RawItems;
-        RawItems++;
-        Count--;
-        return val;
+        _releaseItems.Dispose();
     }
-
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -124,10 +125,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
-                if (match._scoringTable.Length > 0)
-                {
-                    match._scoringTable[i] = (float)batchTerms[indexes[i]].Double;
-                }
+                if (match._sortingDataTransfer.IncludeScores)
+                    match._scoresResults.Add((float)batchTerms[indexes[i]].Double);
             }
         }
 
@@ -579,19 +578,29 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 match._results.Add(batchResults);
                 return;
             }
-
+            
+            var spatialResults = match._sortingDataTransfer.IncludeDistances 
+                ? new Span<SpatialResult>((byte*)batchTerms + batchResults.Length * sizeof(UnmanagedSpan), batchResults.Length)
+                : Span<SpatialResult>.Empty;
+            
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchResults.Length; i++)
             {
                 double distance;
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
+                    if (spatialResults.Length > 0)
+                        spatialResults[i] = SpatialResult.Invalid;
+                    
                     // always at the bottom, then, desc & asc
                     distance = match._orderMetadata[0].Ascending == false ? double.MinValue : double.MaxValue;
                 }
                 else
                 {
                     distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
+
+                    if (spatialResults.Length > 0)
+                        spatialResults[i] = new SpatialResult() {Distance = distance, Latitude = coords.Lat, Longitude = coords.Lng};
                 }
 
                 batchTerms[i] = new UnmanagedSpan(distance);
@@ -601,9 +610,15 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             
             match._token.ThrowIfCancellationRequested();
             EntryComparerHelper.IndirectSort<EntryComparerByDouble, TComparer2, TComparer3>(ref match, indexes, batchTerms, new(), comparer2, comparer3);
+
+            
+            
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
+
+                if (match._sortingDataTransfer.IncludeDistances)
+                    match._distancesResults.Add(spatialResults[indexes[i]]);
             }
         }
 
