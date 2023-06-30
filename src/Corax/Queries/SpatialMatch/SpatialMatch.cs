@@ -50,7 +50,7 @@ public class SpatialMatch : IQueryMatch
             : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
         _point = new Point(0, 0, spatialContext);
-        _fieldRootPage = _indexSearcher.GetLookupRootPage(field.FieldName);
+        _fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(field.FieldName);
     }
 
     private bool GoNextMatch()

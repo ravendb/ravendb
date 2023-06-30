@@ -27,7 +27,7 @@ namespace Corax.Queries
             var currentMatches = matches;
             int totalResults = 0;
 
-            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+            long fieldRoot = match._searcher.FieldCache.GetLookupRootPage(match._field.FieldName);
 
             Page lastPage = default;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
@@ -79,7 +79,7 @@ namespace Corax.Queries
             var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;  
-            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+            long fieldRoot = match._searcher.FieldCache.GetLookupRootPage(match._field.FieldName);
 
             Page lastPage = default;
 
@@ -199,7 +199,7 @@ namespace Corax.Queries
 
             var currentType1 = ((Slice)(object)match._value).AsReadOnlySpan();
             var currentType2 = ((Slice)(object)match._valueAux).AsReadOnlySpan();
-            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+            long fieldRoot = match._searcher.FieldCache.GetLookupRootPage(match._field.FieldName);
 
             Page lastPage = default;
 
@@ -261,7 +261,7 @@ namespace Corax.Queries
             var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;
-            long fieldRoot = match._searcher.GetLookupRootPage(match._field.FieldName);
+            long fieldRoot = match._searcher.FieldCache.GetLookupRootPage(match._field.FieldName);
 
             Page lastPage = default;
 

@@ -392,7 +392,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         var comparerFieldsRootPages = new long[_comparers.Length];
         for (int i = 0; i < _comparers.Length; i++)
         {
-            long fieldRoot = _searcher.GetLookupRootPage(_comparers[i].Binding.FieldName);
+            long fieldRoot = _searcher.FieldCache.GetLookupRootPage(_comparers[i].Binding.FieldName);
             comparerFieldsRootPages[i] = fieldRoot;
         }
 

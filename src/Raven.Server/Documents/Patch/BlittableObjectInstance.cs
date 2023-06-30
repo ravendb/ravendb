@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Patch
                     : indexSearcher.GetDynamicFieldName(property);
 
 
-                long fieldRootPage = indexSearcher.GetLookupRootPage(fieldName);
+                long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(fieldName);
 
                 reader.Reset();
              

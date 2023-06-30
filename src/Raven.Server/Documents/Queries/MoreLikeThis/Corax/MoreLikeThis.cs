@@ -203,7 +203,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         Page p = default;
         var indexEntry = indexSearcher.GetEntryTermsReader(documentId, ref p);
 
-        var fields = _fieldNames.Select(x => indexSearcher.GetLookupRootPage(x)).ToHashSet();
+        var fields = _fieldNames.Select(x => indexSearcher.FieldCache.GetLookupRootPage(x)).ToHashSet();
         
         while (indexEntry.MoveNext())
         {

@@ -623,130 +623,49 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
         {
-            var fieldReader = fieldId == Corax.Constants.IndexWriter.DynamicField 
-                ? retrieverInput.CoraxEntry.GetFieldReaderFor(Encodings.Utf8.GetBytes(fieldName)) : retrieverInput.CoraxEntry.GetFieldReaderFor(fieldId);
-            var fieldType = fieldReader.Type;
+            long fieldRootPage = retrieverInput.CoraxIndexSearcher.FieldCache.GetLookupRootPage(fieldName);
+            ref var reader = ref retrieverInput.CoraxTermsReader;
+            reader.Reset();
             value = null;
-            switch (fieldType)
+            bool found = false;
+            while (reader.FindNextStored(fieldRootPage))
             {
-            case IndexEntryFieldType.Empty:
-            case IndexEntryFieldType.Null:
-                value = fieldType == IndexEntryFieldType.Null 
-                    ? null :
-                    string.Empty;
-                break;
-
-            case IndexEntryFieldType.TupleListWithNulls:
-            case IndexEntryFieldType.TupleList:
-                if (fieldReader.TryReadMany(out var iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                var tupleList = new DynamicJsonArray();
-                while (iterator.ReadNext())
-            {
-                    if (iterator.IsNull)
-                    {
-                        tupleList.Add(null);
-                    }
-                    else if (iterator.IsEmptyCollection)
-                    {
-                        throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
-                    }
-                    else
-                    {
-                        tupleList.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                    }
-                }
-
-                value = tupleList;
-                break;
-
-                case IndexEntryFieldType.Tuple:
-                if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-                
-                    break;
-
-            case IndexEntryFieldType.SpatialPointList:
-                if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                var geoList = new DynamicJsonArray();
-                
-                while (spatialIterator.ReadNext())
+                found = true;
+                if (reader.StoredField == null)
                 {
-                    geoList.Add(Encodings.Utf8.GetString(spatialIterator.Geohash));
+                    SetValue(ref value, null);
+                    continue;
                 }
 
-                value = geoList;
-                
-                break;
-
-            case IndexEntryFieldType.SpatialPoint:
-                if (fieldReader.Read(out valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-
-                break;
-
-            case IndexEntryFieldType.ListWithEmpty:
-            case IndexEntryFieldType.ListWithNulls:
-                case IndexEntryFieldType.List:
-                if (fieldReader.TryReadMany(out iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    var array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
+                var span = reader.StoredField.Value;    
+                if (reader.IsRaw)
                 {
-                    Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
-
-                    if (iterator.IsEmptyString || iterator.IsNull)
-                    {
-                        array.Add(iterator.IsNull ? null : string.Empty);
-                    }
-                    else
-                    {
-                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                    }
+                    var json = new BlittableJsonReaderObject(span.Address, span.Length, context);
+                    SetValue(ref value, json);
                 }
-
-                    value = array;
-                    break;
-                case IndexEntryFieldType.RawList:
-                if (fieldReader.TryReadMany(out iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
-                    {
-                        fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
-                            value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
-                    }
-                    value = array;
-                    break;
-                case IndexEntryFieldType.Raw:
-                if (fieldReader.Read(out Span<byte> blittableBinary) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-                        value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
-                    break;
-            
-            case IndexEntryFieldType.Invalid:
-                            value = null;
-                return false;
-            default:
-                if (fieldReader.Read(out valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-                    break;
+                else
+                {
+                    SetValue(ref value, span.ToStringValue());
+                }
             }
-
             
-            return true;
+            return found;
+
+            void SetValue(ref object value, object newVal)
+            {
+                if (value is DynamicJsonArray a)
+                {
+                    a.Add(newVal);
+                }
+                else if (value is not null)
+                {
+                    value = new DynamicJsonArray { value, newVal };
+                }
+                else
+                {
+                    value = newVal;
+                }
+            }
         }
 
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)

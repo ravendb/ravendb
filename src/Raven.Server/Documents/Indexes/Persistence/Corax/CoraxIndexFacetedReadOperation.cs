@@ -246,7 +246,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         ref var fieldRootPage = ref CollectionsMarshal.GetValueRefOrAddDefault(_fieldNameToRootPage, fieldName, out var exists);
         if (exists == false)
         {
-            fieldRootPage = _indexSearcher.GetLookupRootPage(fieldName);
+            fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(fieldName);
         }
 
         return fieldRootPage;

@@ -35,7 +35,6 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
     private byte* _tempOutputBuffer;
     private int _tempOutputTokenSize;
     private Token* _tempTokenBuffer;
-    private Dictionary<long, string> _fieldsRootPages;
 
     public CoraxIndexedEntriesReader(JsonOperationContext ctx,IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping)
     {
@@ -43,7 +42,6 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         _indexSearcher = indexSearcher;
         _fieldsMapping = fieldsMapping;
         _dynamicMapping = new();
-        _fieldsRootPages = _indexSearcher.GetFieldsRootPages();
 
         foreach (var dynamicField in indexSearcher.GetFields())
             _dynamicMapping.Add(dynamicField, Encoding.UTF8.GetBytes(dynamicField));
@@ -60,7 +58,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNext())
         {
-            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
                 continue;
 
             string value = entryReader.Current.ToString();
@@ -69,7 +67,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNextSpatial())
         {
-            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
                 continue;
             spatialSeenFields ??= new();
             if (spatialSeenFields.Add(fieldName))
@@ -87,7 +85,7 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNextStoredField())
         {
-            if(_fieldsRootPages.TryGetValue(entryReader.TermMetadata, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.TermMetadata, out var fieldName)==false)
                 continue;
 
             if (entryReader.StoredField == null)

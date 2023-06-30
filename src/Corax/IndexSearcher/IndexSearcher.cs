@@ -64,6 +64,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Lookup<Int64LookupKey> _entryIdToOffset;
     private long _dictionarId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
+    public FieldsCache FieldCache;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -94,6 +95,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
         //TODO: Temporary workaround until we are done with single dic
         _dictionarId = PersistentDictionary.GetDictionaryId(_transaction.LowLevelTransaction);
+        FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
@@ -443,20 +445,4 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
-
-    public long GetLookupRootPage(string name)
-    {
-        using var _ = Slice.From(_transaction.Allocator, name, out var slice);
-        return GetLookupRootPage(slice);
-    }
-    
-    public long GetLookupRootPage(Slice name)
-    {
-        return _fieldsTree?.GetLookupRootPage(name) ?? -1;
-    }
-
-    public Dictionary<long, string> GetFieldsRootPages()
-    {
-        return _fieldsTree?.GetFieldsRootPages() ?? new();
-    }
 }

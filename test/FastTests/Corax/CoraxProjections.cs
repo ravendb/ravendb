@@ -57,9 +57,8 @@ public class CoraxProjections : RavenTestBase
 
         var expected = (options.SearchEngineMode, projectionBehavior) switch
         {
-            (RavenSearchEngineMode.Lucene, ProjectionBehavior.FromIndex) => new int?[] {null, null, null},
+            (_, ProjectionBehavior.FromIndex) => new int?[] {null, null, null},
             (_, ProjectionBehavior.FromDocument) => new int?[] {1, 2, 3},
-            (RavenSearchEngineMode.Corax, ProjectionBehavior.FromIndex) => new int?[] {-1, -2, -3},
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -104,10 +103,8 @@ public class CoraxProjections : RavenTestBase
 
             var expected = (options.SearchEngineMode, projectionBehavior) switch
             {
-                (RavenSearchEngineMode.Lucene, ProjectionBehavior.FromIndex) => null,
-                (RavenSearchEngineMode.Lucene, ProjectionBehavior.FromDocument) => "Second",
-                (RavenSearchEngineMode.Corax, ProjectionBehavior.FromIndex) => "Maciej",
-                (RavenSearchEngineMode.Corax, ProjectionBehavior.FromDocument) => "Second",
+                (_, ProjectionBehavior.FromIndex) => null,
+                (_, ProjectionBehavior.FromDocument) => "Second",
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -142,8 +139,7 @@ public class CoraxProjections : RavenTestBase
             var expected = (options.SearchEngineMode, projectionBehavior) switch
             {
                 (_, ProjectionBehavior.FromDocument) => "Jan",
-                (RavenSearchEngineMode.Corax, ProjectionBehavior.FromIndex) => "Maciej",
-                (RavenSearchEngineMode.Lucene, ProjectionBehavior.FromIndex) => null,
+                (_, ProjectionBehavior.FromIndex) => "Maciej",
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -195,7 +191,7 @@ public class CoraxProjections : RavenTestBase
     {
         public DynamicIndexProjection()
         {
-            Map = dicts => dicts.Select(i => new {_ = i.Values.Select(z => CreateField(z.Key, z.Value))});
+            Map = dicts => dicts.Select(i => new {_ = i.Values.Select(z => CreateField(z.Key, z.Value,true, false))});
         }
     }
 

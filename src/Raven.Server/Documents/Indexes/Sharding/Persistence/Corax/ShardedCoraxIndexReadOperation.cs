@@ -70,7 +70,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
             var orderByFieldMetadata = orderByFields[i];
             reader.Reset();
-            long fieldRootPage = _indexSearcher.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
+            long fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
 
             switch (orderByField.OrderingType)
             {

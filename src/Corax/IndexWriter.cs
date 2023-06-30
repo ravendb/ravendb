@@ -413,8 +413,8 @@ namespace Corax
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
-        private Dictionary<Slice, long> _fieldNameToRootPage;
         private readonly HashSet<long> _deletedEntries = new();
+        private FieldsCache _fieldsCache;
 
         private long _postingListContainerId;
         private long _entriesContainerId;
@@ -578,29 +578,11 @@ namespace Corax
                 }
             }
         }
-        
-        public long GetFieldRootPage(Slice name, Tree tree)
-        {
-            _fieldNameToRootPage ??= new();
-
-            ref var fieldRootPage = ref CollectionsMarshal.GetValueRefOrAddDefault(_fieldNameToRootPage, name, out var exists);
-            if (exists)
-                return fieldRootPage;
-            
-            fieldRootPage = tree.GetLookupRootPage(name);
-            if (fieldRootPage != -1)
-                return fieldRootPage;
-
-            var lookup = tree.CompactTreeFor(name);
-            fieldRootPage = lookup.RootPage;
-            return fieldRootPage;
-        }
-
 
         private void StoreField(long entryId, ref IndexEntryReader.FieldReader fieldReader, Slice name)
         {
             var fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            long fieldRootPage = GetFieldRootPage(name, fieldsTree);
+            long fieldRootPage = _fieldsCache.GetFieldRootPage(name, fieldsTree);
             ref var entryTerms = ref GetEntryTerms(entryId);
 
             if (fieldReader.Type.HasFlag(IndexEntryFieldType.List))
