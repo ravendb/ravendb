@@ -36,7 +36,7 @@
     .history-dropdown-container {
         background-color: @gray-darker;
         max-height: 800px;
-        height: 800px;
+        height: 780px;
         width: 1000px;
         
         h3 {
@@ -116,6 +116,30 @@
     .analyzer-dropdown {
         max-height: 300px;
         cursor: default;
+    }
+
+    .text-index {
+        position: sticky;
+        bottom: 0;
+        z-index: 1000;
+    }
+    .index-test-results {
+        position: absolute;
+        top: 0;
+        height: 0;
+        width: 100%;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        border-radius: @gutter @gutter 0 0;
+        z-index: -1;
+        transform: translateY(-100%);
+        transition: height .5s cubic-bezier(0.56, 0.12, 0.29, 1);
+        overflow: hidden;
+
+        &.active {
+            height: 70vh;
+        }
     }
 }
 

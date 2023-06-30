@@ -86,6 +86,7 @@ class editIndex extends shardViewModelBase {
     indexHistory = ko.observableArray<Raven.Client.ServerWide.IndexHistoryEntry>([]);
     showIndexHistory = ko.observable<boolean>(false);
     loadedIndexHistory = ko.observable<boolean>(false);
+    testResultsVisible = ko.observable<boolean>(false);
 
     static previewEditorSelector = "#previewEditor";
     private previewEditor: AceAjax.Editor;
@@ -495,6 +496,10 @@ class editIndex extends shardViewModelBase {
         this.extractSearchEngineFromConfig();
         this.initFieldTooltips();
         this.loadedIndexHistory(true);
+    }
+
+    toggleTestResults() {
+        this.testResultsVisible(!this.testResultsVisible());
     }
 
     indexHistoryButtonHandler() {

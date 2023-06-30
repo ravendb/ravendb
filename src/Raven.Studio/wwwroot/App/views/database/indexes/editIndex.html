@@ -1,9 +1,9 @@
-<div data-bind="if: !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
-    <div class="flex-window edit-index">
-        <form class="flex-form" autocomplete="off" data-bind="submit: save">
+<div data-bind="if: !isAutoIndex(), css: { 'content-margin flex-vertical': !isAutoIndex() }">
+    <div class="flex-window edit-index flex-vertical flex-grow">
+        <form class="flex-form flex-vertical flex-grow" autocomplete="off" data-bind="submit: save">
             <div class="toolbar">
-                <div class="flex-horizontal">
-                    <div>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex flex-wrap gap-1">
                         <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }, requiredAccess: 'DatabaseReadWrite'">
                             <i class="icon-save"></i><span>Save</span>
                         </button>
@@ -13,12 +13,13 @@
                         <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex, requiredAccess: 'DatabaseReadWrite'" title="Clone this index">
                             <i class="icon-clone"></i><span>Clone</span>
                         </button>
+                        <div data-bind="if: showIndexHistory" style="margin: unset">
+                            <div class="dropdown dropdown-menu-left loadpatch" data-bind="template: { name: 'index-history-dialog' }"></div>
+                        </div>
                     </div>
-                    <div data-bind="if: showIndexHistory" style="margin: unset">
-                        <div class="dropdown dropdown-menu-left loadpatch margin-left margin-left-xs" data-bind="template: { name: 'index-history-dialog' }"></div>
-                    </div>
+                   
                     <div class="flex-separator"></div>
-                    <div>
+                    <div class="d-flex flex-wrap gap-1">
                         <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
@@ -61,162 +62,166 @@
                 </div>
             </div>
             
-            <div class="row margin-top">
-                <div class="col-sm-2">
-                    <h3 class="margin-bottom margin-bottom-xs on-base-background">Index Name</h3>
-                </div>
-                <div class="col-sm-10 col-lg-8">
-                    <div data-bind="if: !canEditIndexName()" class="force-text-wrap">
-                        <h2 data-bind="text: editedIndex().name, attr: { title: editedIndex().name }"></h2>
+            <div class="panel padding">
+                <div class="row margin-top">
+                    <div class="col-sm-2">
+                        <h3 class="margin-bottom margin-bottom-xs">Index Name</h3>
                     </div>
-                    <div data-bind="if: canEditIndexName, validationElement: editedIndex().name">
-                        <input class="form-control margin-bottom margin-bottom-sm" 
-                               data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" placeholder="Enter index name" />
-                    </div>
-                </div>
-            </div>
-            <div class="row margin-top">
-                <div class="col-sm-2"><h3>Deployment Mode</h3></div>
-                <div class="col-sm-10">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                            <span data-bind="text: $root.effectiveDeploymentMode"></span> <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, null)"><span data-bind="text: $root.defaultDeploymentModeFormatted"></span></a></li>
-                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Rolling')"><span data-bind="text: $root.formatDeploymentMode('Rolling')"></span></a></li>
-                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Parallel')"><span data-bind="text: $root.formatDeploymentMode('Parallel')"></span></a></li>
-                        </ul>
+                    <div class="col-sm-10 col-lg-8">
+                        <div data-bind="if: !canEditIndexName()" class="force-text-wrap">
+                            <h3 data-bind="attr: { title: editedIndex().name }"><strong data-bind="text: editedIndex().name"></strong></h3>
+                        </div>
+                        <div data-bind="if: canEditIndexName, validationElement: editedIndex().name">
+                            <input class="form-control margin-bottom margin-bottom-sm" 
+                                data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" placeholder="Enter index name" />
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-2">
-                    <h3 id="map-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Maps</h3>
-                    <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
+                <div class="row margin-top">
+                    <div class="col-sm-2"><h3>Deployment Mode</h3></div>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: $root.effectiveDeploymentMode"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, null)"><span data-bind="text: $root.defaultDeploymentModeFormatted"></span></a></li>
+                                <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Rolling')"><span data-bind="text: $root.formatDeploymentMode('Rolling')"></span></a></li>
+                                <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Parallel')"><span data-bind="text: $root.formatDeploymentMode('Parallel')"></span></a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-sm-10">
-                    <div data-bind="foreach: editedIndex().maps">
-                        <div class="clearfix">
-                            <div class="btn-group-sm pull-right" role="group" aria-label="...">
-                                <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
-                                <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1, requiredAccess: 'DatabaseReadWrite'"
-                                        title="Remove this map from the index">
-                                    <i class="icon-trash"></i> <span>Delete</span>
-                                </button>
+                <div class="row">
+                    <div class="col-sm-2">
+                        <h3 id="map-title" class="margin-bottom margin-bottom-xs margin-top">Maps</h3>
+                        <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
+                    </div>
+                    <div class="col-sm-10">
+                        <div data-bind="foreach: editedIndex().maps">
+                            <div class="clearfix">
+                                <div class="btn-group-sm pull-right" role="group" aria-label="...">
+                                    <button type="button" class="btn btn-default btn-sm" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
+                                    <button type="button" class="btn btn-danger btn-sm" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1, requiredAccess: 'DatabaseReadWrite'"
+                                            title="Remove this map from the index">
+                                        <i class="icon-trash"></i> <span>Delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- TODO: add ace props:
+                            readOnly: $parent.isSideBySideIndex(),
+                            -->
+                            <div class="margin-bottom">
+                                <pre class="form-control map"
+                                    data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq',
+                                                typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, readOnly: $root.isReadOnlyAccess() },
+                                                validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+        
+                                <div data-bind="validationElement: map">
+                                    <div class="help-block" data-bind="validationMessage: map"></div>
+                                </div>
                             </div>
                         </div>
-                        <!-- TODO: add ace props:
-                        readOnly: $parent.isSideBySideIndex(),
-                        -->
                         <div class="margin-bottom">
-                            <pre class="form-control map"
-                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq',
-                                            typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, readOnly: $root.isReadOnlyAccess() },
-                                            validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
-    
-                            <div data-bind="validationElement: map">
-                                <div class="help-block" data-bind="validationMessage: map"></div>
-                            </div>
+                            <button class="btn btn-info" data-bind="click: addMap, requiredAccess: 'DatabaseReadWrite'">
+                                <i class="icon-plus"></i><span>Add map</span>
+                            </button>
                         </div>
-                    </div>
-                    <div class="margin-bottom">
-                        <button class="btn btn-info" data-bind="click: addMap, requiredAccess: 'DatabaseReadWrite'">
-                            <i class="icon-plus"></i><span>Add map</span>
-                        </button>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-2">
-                    <h3 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Reduce</h3>
-                    <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-                </div>
-                <div class="col-sm-10" data-bind="with: editedIndex()">
-                    <div data-bind="if: hasReduce">
-                        <div class="clearfix">
-                            <div class="btn-group-sm pull-right" role="group" aria-label="...">
-                                <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
-                                <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce, requiredAccess: 'DatabaseReadWrite'" title="Remove the Reduce function from the index">
-                                    <i class="icon-trash"></i> <span>Delete</span>
-                                </button>
-                            </div>
-                        </div>
-                        <!-- TODO add ace props:
-                        readOnly: $parent.isSideBySideIndex(),
-                        -->
-                        <div class="margin-bottom">
-                            <pre class="form-control map"
-                                 data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq',
-                                            typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, readOnly: $root.isReadOnlyAccess() },
-                                            validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
-    
-                            <div data-bind="validationElement: reduce">
-                                <div class="help-block" data-bind="validationMessage: reduce"></div>
-                            </div>
-                        </div>
+                
+                <div class="row">
+                    <div class="col-sm-2">
+                        <h3 id="reduce-title" class="margin-bottom margin-bottom-xs margin-top">Reduce</h3>
+                        <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                     </div>
-                    <div class="margin-bottom margin-top" data-bind="visible: !hasReduce()">
-                        <button class="btn btn-info" data-bind="click: $root.addReduce">
-                            <i class="icon-plus"></i><span>Add Reduction</span>
-                        </button>
-                    </div>
-                    <div class="panel padding" data-bind="visible: hasReduce()">
-                        <div class="row">
-                            <div class="col-lg-4">
-                                <div class="toggle margin-left">
-                                    <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection,
-                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
-                                    <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
-                                        <small class="margin-left margin-left-xs"><i id="reduce-output-info" class="icon-info text-info"></i></small>
-                                    </label>
+                    <div class="col-sm-10" data-bind="with: editedIndex()">
+                        <div data-bind="if: hasReduce">
+                            <div class="clearfix">
+                                <div class="btn-group-sm pull-right" role="group" aria-label="...">
+                                    <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
+                                    <button type="button" class="btn btn-danger btn-sm" data-bind="click: $root.removeReduce, requiredAccess: 'DatabaseReadWrite'" title="Remove the Reduce function from the index">
+                                        <i class="icon-trash"></i> <span>Delete</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-lg-7 margin-left">
-                                <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
-                                    <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
-                                           data-bind="textInput: reduceOutputCollectionName, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row" data-bind="collapse: outputReduceToCollection()">
-                            <div class="col-lg-5">
-                                <div class="toggle margin-top margin-top-sm margin-left">
-                                    <input id="togglePatternForReferences" type="checkbox" 
-                                           data-bind="checked: createReferencesToResultsCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
-                                    <label class="control-label"><strong>Create References to Results Collection </strong>
-                                        <small class="margin-left margin-left-xs"><i id="reference-docs-info" class="icon-info text-info"></i></small>
-                                    </label>
+                            <!-- TODO add ace props:
+                            readOnly: $parent.isSideBySideIndex(),
+                            -->
+                            <div class="margin-bottom">
+                                <pre class="form-control map"
+                                    data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq',
+                                                typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, readOnly: $root.isReadOnlyAccess() },
+                                                validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
+        
+                                <div data-bind="validationElement: reduce">
+                                    <div class="help-block" data-bind="validationMessage: reduce"></div>
                                 </div>
                             </div>
                         </div>
-                        <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection()">
-                            <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
-                                <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
-                                    <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern<i class="required"></i>
-                                        <small class="margin-left margin-left-xs"><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
-                                    </label>
+                        <div class="margin-bottom margin-top" data-bind="visible: !hasReduce()">
+                            <button class="btn btn-info" data-bind="click: $root.addReduce">
+                                <i class="icon-plus"></i><span>Add Reduction</span>
+                            </button>
+                        </div>
+                        <div class="margin-top" data-bind="visible: hasReduce()">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="toggle">
+                                        <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection,
+                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                        <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
+                                            <small class="margin-left margin-left-xs"><i id="reduce-output-info" class="icon-info text-info"></i></small>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div class="col-lg-7 margin-left">
-                                    <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
-                                           data-bind="textInput: patternForReferencesToReduceOutputCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                <div class="col-lg-6">
+                                    <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
+                                        <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
+                                            data-bind="textInput: reduceOutputCollectionName, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
-                                <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
-                                    <label for="referenceCollectionName" class="control-label margin-top margin-top-sm">Reference Documents Collection Name
-                                        <small class="margin-left margin-left-xs"><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
-                                    </label>
+                            <div class="row" data-bind="collapse: outputReduceToCollection()">
+                                <div class="col-lg-6">
+                                    <div class="toggle margin-top margin-top-sm">
+                                        <input id="togglePatternForReferences" type="checkbox" 
+                                            data-bind="checked: createReferencesToResultsCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                        <label class="control-label"><strong>Create References to Results Collection </strong>
+                                            <small class="margin-left margin-left-xs"><i id="reference-docs-info" class="icon-info text-info"></i></small>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div class="col-lg-7 margin-left">
-                                    <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
-                                           data-bind="textInput: collectionNameForReferenceDocuments, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                            </div>
+                            <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection()">
+                                <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
+                                    <div class="col-lg-6">
+                                        <label for="referencePattern" class="control-label margin-top margin-top-sm margin-left margin-left-lg">Reference Documents ID Pattern<i class="required"></i>
+                                            <small class="margin-left margin-left-xs"><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
+                                            data-bind="textInput: patternForReferencesToReduceOutputCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                    </div>
+                                </div>
+                                <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
+                                    <div class="col-lg-6">
+                                        <label for="referenceCollectionName" class="control-label margin-top margin-top-sm margin-left">Reference Documents Collection Name
+                                            <small class="margin-left margin-left-xs"><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
+                                            data-bind="textInput: collectionNameForReferenceDocuments, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
             <div class="tabs margin-top">
                 <ul class="nav nav-tabs d-flex" role="tablist" id="tabsId">
                     <li role="presentation" class="active" id="fieldsTab">
@@ -247,12 +252,6 @@
                             <span>Additional Sources</span>
                             <span class="label label-primary margin-left margin-left-sm"
                                   data-bind="text: editedIndex().additionalSources().length || undefined"></span>
-                        </a>
-                    </li>
-                    <li role="presentation" id="testIndexTab">
-                        <a href="#testIndex" aria-controls="testIndex" role="tab" data-toggle="tab">
-                            <i class="icon-test-index"></i>
-                            <span>Test Index</span>
                         </a>
                     </li>
                 </ul>
@@ -464,14 +463,29 @@
                             </div>
                         </div>
                     </div>
-                    <div role="tabpanel" class="tab-pane fade" id="testIndex">
-                        <div class="panel padding flex-vertical flex-grow" data-bind="with: testIndex">
-                            <div class="flex-header">
-                                <div class="flex-horizontal margin-bottom margin-bottom-sm">
-                                    <div class="flex-grow flex-vertical">
-                                        <div class="input-group">
-                                            <div class="input-group-addon">Scan limit</div>
-                                            <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
+                </div>
+            </div>
+            <div class="flex-grow"></div>
+            <div class="text-index margin-top">
+                <div class="bg-info padding">
+                    <div class="row" >
+                        <div class="col-sm-2">
+                            <h3 id="test-title" class="margin-bottom margin-bottom-xs margin-top-sm">Test Index</h3>
+                        </div>
+                        <div class="col-sm-10">
+                            <div class="d-flex gap-3">
+                                <div class="d-flex gap-3 flex-grow" data-bind="with: testIndex">
+                                    <div class="input-group flex-grow">
+                                        <div class="input-group-addon">Scan limit</div>
+                                        <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
+                                    </div>
+                                    <div class="input-group flex-grow">
+                                        <div class="input-group-addon">Time limit</div>
+                                        <div class="input-group flex-grow">
+                                            <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
+                                            <div class="input-group-addon">
+                                                seconds
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
@@ -480,53 +494,55 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="flex-horizontal">
-                                    <div class="flex-grow flex-vertical">
-                                        <div class="input-group">
-                                            <div class="input-group-addon">Time limit</div>
-                                            <div class="input-group flex-grow">
-                                                <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
-                                                <div class="input-group-addon">
-                                                    seconds
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="btn-group dropdown-right open" data-bind="style: { visibility: currentTab() ? 'visible' : 'hidden' }">
-                                            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                                <i class="icon-table"></i><span>Display</span>
-                                                <span class="caret"></span>
-                                            </button>
-                                            <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
-                                                <div data-bind="compose: { model: columnsSelector }"></div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <button class="btn" data-bind="click: toggleTestResults" title="Show/hide test results">
+                                        <i data-bind="css: {'icon-chevron-down': testResultsVisible(), 'icon-chevron-up': !testResultsVisible()}"></i><span>Test Results</span>
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <div>
-                                <div class="toggle">
+                        </div>
+                    </div>
+                </div>
+                <div class="index-test-results bg-info" data-bind="css: {'active': testResultsVisible()}">
+                    <div class="padding flex-vertical flex-grow">
+                        <div>
+                            <div class="flex-horizontal margin-bottom-sm">
+                                <h3 class="nomargin padding-left-sm">Query</h3>
+                                <div class="toggle padding-left-md" data-bind="with: testIndex">
                                     <input id="toggleEncryption" type="checkbox" data-bind="checked: specifyQuery">
-                                    <label for="toggleEncryption">Override Default Query (<code>from index &quot;&lt;TestIndexName&gt;&quot;</code>)</label>
+                                    <label for="toggleEncryption" class="text-warning">Override</label>
                                 </div>
-                                <div data-bind="collapse: specifyQuery" class="margin-left"> 
-                                    <pre class="form-control margin-top query-source" placeholder="Enter transform script"
-                                         data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
-                                    </pre>
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
-                                        <div class="help-block" data-bind="validationMessage: query"></div>
+                                <div class="flex-grow"></div>
+                                <button class="btn btn-link margin-right" data-bind="click: toggleTestResults"><i class="icon-chevron-down"></i></button>
+                            </div>
+                            <div data-bind="with: testIndex"> 
+                                <pre class="form-control query-source" placeholder="Enter transform script"
+                                        data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: languageService.complete, readOnly: !specifyQuery()}, validationOptions: { errorsAsTitle: false }, validationElement: query, css: {'disabled': !specifyQuery()}" style="height: 160px;">
+                                </pre>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
+                                    <div class="help-block" data-bind="validationMessage: query"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-vertical flex-grow" data-bind="with: testIndex">
+                            <div class="d-flex margin-top">
+                                <div class="flex-grow"></div>
+                                <div class="btn-group dropdown-right open" >
+                                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <i class="icon-table"></i><span>Display</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                        <div data-bind="compose: { model: columnsSelector }"></div>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div class="flex-grow scroll" style="height: 50vh" data-bind="visible: currentTab">
+                            <div class="flex-grow scroll">
                                 <div class="objects-list-container">
-                                    <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-index-results-template'"></virtual-grid>
+                                    <virtual-grid class="resizable no-padding" params="controller: gridController, emptyTemplate: 'empty-test-index-results-template'"></virtual-grid>
                                 </div>
                             </div>
-                            <div class="flex-window-head" data-bind="visible: currentTab">
+                            <div class="flex-window-head" >
                                 <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'queryResults' }, click: _.partial(goToTab, 'queryResults')">
                                     Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().queryResults.toLocaleString(), visible: resultsCount().queryResults"></span>
                                 </button>
@@ -929,8 +945,8 @@
     <div class="dropdown-menu slidein-style history-dropdown-container" aria-labelledby="dropdownIndexHistory" data-bind="dropdownPanel: true">
         <div class="history-dropdown row">
             <div class="col-md-3 no-padding-right">
-                <h3 class="margin-left margin-top margin-bottom">Index Creation Time</h3>
-                <div class="history-list-container margin-left">
+                <h4 class="margin-left margin-left-sm margin-top margin-top-sm margin-bottom margin-bottom-sm">Index Creation Time</h4>
+                <div class="history-list-container margin-left margin-left-sm">
                     <ul class="history-list" data-bind="foreach: indexHistory">
                         <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewIndex },
                                        attr: { 'data-original-title': $parent.getTimeTooltip($data.CreatedAt, true) }"
@@ -944,7 +960,7 @@
             </div>
             <div class="col-md-9 no-padding-right">
                 <div class="row">
-                    <div class="margin-right margin-top pull-right">
+                    <div class="margin-right margin-top margin-top-sm pull-right">
                         <div class="btn-group margin-top margin-top-sm">
                             <button class="btn btn-success close-panel" data-bind="click: loadFullIndexDefinitionFromHistory" title="Load the full definition of this index revision">
                                 <i class="icon-load-index"></i>
@@ -964,7 +980,7 @@
                         </div>
                     </div>
                     <div>
-                        <h3 class="margin-left margin-top margin-bottom">Index Definition Preview</h3>
+                        <h4 class="margin-left margin-left-sm margin-top margin-top-sm margin-bottom margin-bottom-sm">Index Definition Preview</h4>
                     </div>
                 </div>
                 <div id="definition-preview" data-bind="attr: { class: previewItem() && previewItemNodes().length === 0 ? 'no-rolling-info' : 'has-rolling-info' }">
@@ -972,7 +988,7 @@
                 </div>
                 <div data-bind="if: previewItem">
                     <div class="flex-horizontal">
-                        <h3 class="margin-top">Created by:</h3>
+                        <h4 class="margin-top">Created by:</h4>
                         <h4 class="margin-top margin-left" data-bind="text: previewItem().Source"></h4>
                     </div>
                     <div data-bind="if: previewItemNodes().length">
