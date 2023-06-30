@@ -86,7 +86,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     break;
                 case OrderByFieldType.Distance:
                     {
-                        reader.FindSpatial(fieldRootPage);
+                        reader.FindNextSpatial(fieldRootPage);
                         var coordinates = (reader.Latitude, reader.Longitude);
                         ISpatialComparer comparer = orderByField.Ascending
                             ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)

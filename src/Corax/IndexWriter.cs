@@ -606,22 +606,19 @@ namespace Corax
                     }
                 }
             }
-            else
+            else if (fieldReader.Read(out var type, out Span<byte> v))
             {
-                if (fieldReader.Read(out var type,out Span<byte> v))
+                switch (type)
                 {
-                    switch (type)
-                    {
-                        case IndexEntryFieldType.Null:
-                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
-                            break;
-                        case IndexEntryFieldType.Empty:
-                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
-                            break;
-                        default:
-                            RegisterTerm(v, ref entryTerms, fieldReader.Type);
-                            break;
-                    }
+                    case IndexEntryFieldType.Null:
+                        RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
+                        break;
+                    case IndexEntryFieldType.Empty:
+                        RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
+                        break;
+                    default:
+                        RegisterTerm(v, ref entryTerms, fieldReader.Type);
+                        break;
                 }
             }
 

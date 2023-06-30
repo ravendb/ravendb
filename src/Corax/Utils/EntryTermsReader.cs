@@ -119,7 +119,7 @@ public unsafe struct EntryTermsReader
         return false;
     }
     
-    public bool FindSpatial(long fieldRootPage)
+    public bool FindNextSpatial(long fieldRootPage)
     {
         Reset();
         while (MoveNextSpatial())

@@ -224,12 +224,11 @@ public unsafe class DynamicFieldsTests : StorageTest
                 Span<long> ids = new long[16];
                 var entries = searcher.TermQuery("Coordinates_Home", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
-
-                var reader = searcher.GetEntryReaderFor(ids[0]);
-
-                reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Coordinates_Home")).Read(out (double, double) coords);
-                Assert.Equal(coords.Item1, latitude);
-                Assert.Equal(coords.Item2, longitude);
+                Page p = default;
+                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
+                Assert.True(reader.MoveNextSpatial());
+                Assert.Equal(reader.Latitude, latitude);
+                Assert.Equal(reader.Longitude, longitude);
             }
         }
 
