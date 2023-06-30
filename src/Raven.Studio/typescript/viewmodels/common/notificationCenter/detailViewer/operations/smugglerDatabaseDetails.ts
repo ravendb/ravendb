@@ -51,6 +51,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     messagesJoined: KnockoutComputed<string>;
     previousProgressMessages: string[];
     processingSpeed: KnockoutComputed<string>;
+    
+    filesProcessed: KnockoutComputed<File>;
+    
+    filesCount: KnockoutComputed<Raven.Client.Documents.Smuggler.SmugglerProgressBase.FileCounts>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -61,6 +65,29 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     protected initObservables() {
         super.initObservables();
+        
+        this.filesCount = ko.pureComputed(() => {
+            if (this.op.status() !== "InProgress") {
+                return null;
+            }
+
+            const status = this.op.progress();
+            if (!status) {
+                return null;
+            }
+
+            if ("Files" in status) {
+                const files = (status as Raven.Client.ServerWide.Operations.RestoreProgress).Files;
+
+                if (!files.FileCount) {
+                    return null;
+                }
+                
+                return files;
+            }
+            
+            return null;
+        });
         
         this.canDelay = ko.pureComputed(() => {
             const completed = this.op.isCompleted();

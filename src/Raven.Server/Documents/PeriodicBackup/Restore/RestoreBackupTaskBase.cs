@@ -337,11 +337,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
                         database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
 
+                        result.Files.FileCount = filesToRestore.Count + (snapshotRestore ? 1 : 0);
+                        
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
                             if (snapshotRestore)
                             {
-                                await RestoreFromSmugglerFile(onProgress, database, firstFile, context);
+                                await RestoreFromSmugglerFile(onProgress, database, firstFile, context, result);
                                 await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
 
                                 result.SnapshotRestore.Processed = true;
@@ -651,8 +653,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (filesToRestore.Count == 0)
                 return;
 
-            result.SmugglerRestore.FileCount = filesToRestore.Count;
-
             // we do have at least one smuggler backup, we'll take the indexes from the last file
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
@@ -679,8 +679,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{filesToRestore.Count:#,#;;0}");
 
                 var fileName = filesToRestore[i];
-                result.SmugglerRestore.CurrentFileName = fileName;
-                result.SmugglerRestore.CurrentFile = i + 1;
+                result.Files.CurrentFileName = fileName;
+                result.Files.CurrentFile++;
 
                 onProgress.Invoke(result.Progress);
 
@@ -698,8 +698,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
 
             var lastFileName = filesToRestore.Last();
-            result.SmugglerRestore.CurrentFileName = lastFileName;
-            result.SmugglerRestore.CurrentFile = filesToRestore.Count;
+            result.Files.CurrentFileName = lastFileName;
+            result.Files.CurrentFile++;
 
             result.Indexes.Skipped = RestoreFromConfiguration.SkipIndexes;
 
@@ -769,7 +769,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
 
-            result.SmugglerRestore.CurrentFileName = null;
+            result.Files.CurrentFileName = null;
 
             long totalExecutedCommands = 0;
 
@@ -928,7 +928,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         /// <param name="database"></param>
         /// <param name="smugglerFile"></param>
         /// <param name="context"></param>
-        protected async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context)
+        /// <param name="result"></param>
+        protected async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile,
+            DocumentsOperationContext context, RestoreResult result)
         {
             var destination = new DatabaseDestination(database);
 
@@ -941,6 +943,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var lastPath = GetSmugglerBackupPath(smugglerFile);
 
+            result.Files.CurrentFileName = smugglerFile; 
+            result.Files.CurrentFile++;
+
+            onProgress.Invoke(result.Progress);
             using (var zip = await GetZipArchiveForSnapshot(lastPath))
             {
                 foreach (var entry in zip.Entries)
