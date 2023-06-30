@@ -112,5 +112,11 @@ textarea.form-control {
     height: auto !important;
 }
 
+//Move to scss ace styles after PR merge
+.ace_editor.disabled {
+    filter: saturate(0.2);
+    opacity: 0.7;
+}
+
 // Custom Utilities
 @import "../scss/layout-tools.scss";
