@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -13,6 +14,8 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private ScriptRunner.SingleRun _run;
 
+        private readonly HashSet<string> _skippedDocumentIds = new(StringComparer.OrdinalIgnoreCase);
+
         public SmugglerPatcher(DatabaseSmugglerOptions options, DocumentDatabase database)
         {
             if (string.IsNullOrWhiteSpace(options.TransformScript))
@@ -24,9 +27,9 @@ namespace Raven.Server.Smuggler.Documents
         public Document Transform(Document document)
         {
             var ctx = document.Data._context;
-            object translatedResult;
             using (document)
             {
+                object translatedResult;
                 using (_run.ScriptEngine.ChangeMaxStatements(_options.MaxStepsForTransformScript))
                 {
                     try
@@ -39,7 +42,10 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Client.Exceptions.Documents.Patching.JavaScriptException e)
                     {
                         if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _skippedDocumentIds.Add(document.Id);
                             return null;
+                        }
 
                         throw;
                     }
@@ -60,8 +66,15 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public bool ShouldSkip(LazyStringValue documentId)
+        {
+            return _skippedDocumentIds.Count > 0 && _skippedDocumentIds.Contains(documentId);
+        }
+
         public IDisposable Initialize()
         {
+            _skippedDocumentIds.Clear();
+
             var key = new PatchRequest(_options.TransformScript, PatchRequestType.Smuggler);
             return _database.Scripts.GetScriptRunner(key, true, out _run);
         }

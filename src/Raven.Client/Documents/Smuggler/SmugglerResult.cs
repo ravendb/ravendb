@@ -31,18 +31,18 @@ namespace Raven.Client.Documents.Smuggler
             */
 
             DatabaseRecord = new DatabaseRecordProgress();
-            Documents = new CountsWithSkippedCountAndLastEtag();
-            RevisionDocuments = new CountsWithLastEtagAndAttachments();
+            Documents = new CountsWithSkippedCountAndLastEtagAndAttachments();
+            RevisionDocuments = new CountsWithSkippedCountAndLastEtagAndAttachments();
             Tombstones = new CountsWithLastEtag();
             Conflicts = new CountsWithLastEtag();
             Identities = new CountsWithLastEtag();
             Indexes = new Counts();
             CompareExchange = new CountsWithLastEtag();
-            Counters = new CountsWithLastEtag();
+            Counters = new CountsWithSkippedCountAndLastEtag();
             CompareExchangeTombstones = new Counts();
             Subscriptions = new Counts();
             ReplicationHubCertificates = new Counts();
-            TimeSeries = new CountsWithLastEtag();
+            TimeSeries = new CountsWithSkippedCountAndLastEtag();
             _progress = new SmugglerProgress(this);
         }
 
@@ -200,9 +200,9 @@ namespace Raven.Client.Documents.Smuggler
     {
         public DatabaseRecordProgress DatabaseRecord { get; set; }
 
-        public CountsWithSkippedCountAndLastEtag Documents { get; set; }
+        public CountsWithSkippedCountAndLastEtagAndAttachments Documents { get; set; }
 
-        public CountsWithLastEtagAndAttachments RevisionDocuments { get; set; }
+        public CountsWithSkippedCountAndLastEtagAndAttachments RevisionDocuments { get; set; }
 
         public CountsWithLastEtag Tombstones { get; set; }
 
@@ -218,9 +218,9 @@ namespace Raven.Client.Documents.Smuggler
 
         public Counts ReplicationHubCertificates { get; set; }
 
-        public CountsWithLastEtag Counters { get; set; }
+        public CountsWithSkippedCountAndLastEtag Counters { get; set; }
 
-        public CountsWithLastEtag TimeSeries { get; set; }
+        public CountsWithSkippedCountAndLastEtag TimeSeries { get; set; }
 
         public Counts CompareExchangeTombstones { get; set; }
 
@@ -542,7 +542,24 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtagAndAttachments
+        public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
+        {
+            public long SkippedCount { get; set; }
+
+            public override DynamicJsonValue ToJson()
+            {
+                var json = base.ToJson();
+                json[nameof(SkippedCount)] = SkippedCount;
+                return json;
+            }
+
+            public override string ToString()
+            {
+                return $"Skipped: {SkippedCount}. {base.ToString()}";
+            }
+        }
+
+        public class CountsWithSkippedCountAndLastEtagAndAttachments : CountsWithLastEtagAndAttachments
         {
             public long SkippedCount { get; set; }
 
