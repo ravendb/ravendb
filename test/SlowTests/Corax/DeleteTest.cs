@@ -114,15 +114,13 @@ public class DeleteTest : StorageTest
 
             Assert.Equal(read, match.Count);
 
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(_analyzers.GetByFieldId(0).FieldName);
+            Page p = default;
             for (int i = 0; i < read; i++)
             {
-                var entry = indexSearcher.GetEntryReaderFor(ids[i]);
-                Assert.True(entry.GetFieldReaderFor(0).Read(out Span<byte> id));
-                if (idAsBytes.SequenceEqual(id))
-                {
-                    entry.GetFieldReaderFor(ContentId).Read(out Span<byte> content);
-                    // Assert.False(nine.SequenceEqual(content));
-                }
+                var entry = indexSearcher.GetEntryTermsReader(ids[i], ref p);
+                Assert.True(entry.FindNext(fieldRootPage));
+                Assert.NotEqual(Encoding.UTF8.GetString(idAsBytes), Encoding.UTF8.GetString(entry.Current.Decoded()));
             }
         }
     }
