@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Meta;
 using System.Threading;
 using Corax.Utils;
+using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -27,12 +28,16 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
-    private float[] _scoringTable;
     private readonly int _take;
     private const int NotStarted = -1;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
     private NativeIntegersList _results;
+    private NativeUnmanagedList<SpatialResult> _distancesResults;
+    private NativeUnmanagedList<float> _scoresResults;
+    
+    
+    private SortingDataTransfer _sortingDataTransfer;
     public long TotalResults;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
@@ -44,7 +49,6 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         _cancellationToken = cancellationToken;
         _take = take;
         _results = new NativeIntegersList(searcher.Allocator);
-        _scoringTable =  Array.Empty<float>();
         TotalResults = NotStarted;
 
         if (_orderMetadata.HasBoost)
@@ -192,13 +196,17 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         }
 
         var read = match._results.MoveTo(matches);
-
+        match._distancesResults.MoveTo(match._sortingDataTransfer.DistancesBuffer);
+        match._scoresResults.MoveTo(match._sortingDataTransfer.ScoresBuffer);
+        
         if (read != 0) 
             return read;
             
         match._results.Dispose();
         match._entriesBufferScope.Dispose();
-
+        match._scoresResults.Dispose();
+        match._distancesResults.Dispose();
+        
         return 0;
     }
 
@@ -496,7 +504,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
 
-        var bufScope = allocator.Allocate( batchResults.Length * (sizeof(long)+sizeof(UnmanagedSpan)), out ByteString bs);
+        var sizeToAllocate = batchResults.Length * (sizeof(long) + sizeof(UnmanagedSpan));
+
+        //OrderBySpatial relies on this order of data. If you change it, please review the spatial ordering to ensure that everything works fine: [[ids], [terms], [spatial_distances]].
+        if (match._sortingDataTransfer.IncludeDistances)
+            sizeToAllocate += batchResults.Length * sizeof(SpatialResult);
+        
+        var bufScope = allocator.Allocate(sizeToAllocate, out ByteString bs);
         Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
         UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
 
@@ -513,9 +527,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void SetScoreBuffer(float[] scores)
+    internal void SetSortingDataTransfer(in SortingDataTransfer sortingDataTransfer)
     {
-        _scoringTable = scores;
+        _sortingDataTransfer = sortingDataTransfer;
+        if (_sortingDataTransfer.IncludeScores)
+            _scoresResults = new(_searcher.Allocator);
+        if (_sortingDataTransfer.IncludeDistances)
+            _distancesResults = new(_searcher.Allocator);
     }
 
     public long Count => _inner.Count;

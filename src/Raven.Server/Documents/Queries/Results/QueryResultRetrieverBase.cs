@@ -115,9 +115,13 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             doc.IndexScore = retrieverInput.Score?.Score ?? retrieverInput.CoraxScore ;
-            if (_query?.Distances != null && retrieverInput.IsLuceneDocument())
+            if ((_query?.Distances != null && retrieverInput.IsLuceneDocument()))
             {
                 doc.Distance = _query.Distances.Get(retrieverInput.Score.Doc);
+            }
+            else if (retrieverInput.CoraxDistance != null)
+            {
+                doc.Distance = (SpatialResult)retrieverInput.CoraxDistance;
             }
         }
 

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.SortingMatches.Meta;
+using Corax.Utils.Spatial;
 
 namespace Corax.Queries.SortingMatches
 {
@@ -10,7 +12,7 @@ namespace Corax.Queries.SortingMatches
         private readonly FunctionTable _functionTable;
         private IQueryMatch _inner;
 
-        internal SortingMatch(IQueryMatch match, FunctionTable functionTable)
+        private SortingMatch(IQueryMatch match, FunctionTable functionTable)
         {
             _inner = match;
             _functionTable = functionTable;
@@ -39,7 +41,7 @@ namespace Corax.Queries.SortingMatches
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetScoreBuffer(float[] scoreBuffer) => _functionTable.SetScoreBufferFunc(ref this, scoreBuffer);
+        public void SetScoreAndDistanceBuffer(in SortingDataTransfer sortingDataTransfer) => _functionTable.SetSortingDataTransfer(ref this, sortingDataTransfer);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
@@ -47,21 +49,13 @@ namespace Corax.Queries.SortingMatches
             _inner.Score(matches, scores, boostFactor);
         }
 
-        internal class FunctionTable
+        internal class FunctionTable(delegate*<ref SortingMatch, Span<long>, int> fillFunc,
+            delegate*<ref SortingMatch, long> totalResultsFunc,
+            delegate*<ref SortingMatch, in SortingDataTransfer, void> setSortingDataTransferFunc)
         {
-            public readonly delegate*<ref SortingMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref SortingMatch, long> TotalResultsFunc;
-            public readonly delegate*<ref SortingMatch, float[], void> SetScoreBufferFunc;
-
-            public FunctionTable(
-                delegate*<ref SortingMatch, Span<long>, int> fillFunc,
-                delegate*<ref SortingMatch, long> totalResultsFunc,
-                delegate*<ref SortingMatch, float[], void> setScoreBufferFunc)
-            {
-                FillFunc = fillFunc;
-                TotalResultsFunc = totalResultsFunc;
-                SetScoreBufferFunc = setScoreBufferFunc;
-            }
+            public readonly delegate*<ref SortingMatch, Span<long>, int> FillFunc = fillFunc;
+            public readonly delegate*<ref SortingMatch, long> TotalResultsFunc = totalResultsFunc;
+            public readonly delegate*<ref SortingMatch, in SortingDataTransfer, void> SetSortingDataTransfer = setSortingDataTransferFunc;
         }
 
         private static class StaticFunctionCache<TInner>
@@ -86,11 +80,11 @@ namespace Corax.Queries.SortingMatches
                     return 0;
                 }
 
-                static void SetScoreBufferFunc(ref SortingMatch match, float[] scoreTable)
+                static void SetScoreBufferFunc(ref SortingMatch match, in SortingDataTransfer sortingDataTransfer)
                 {
                     if (match._inner is SortingMatch<TInner> inner)
                     {
-                        inner.SetScoreBuffer(scoreTable);
+                        inner.SetSortingDataTransfer(sortingDataTransfer);
                         match._inner = inner;
                     }
                 }

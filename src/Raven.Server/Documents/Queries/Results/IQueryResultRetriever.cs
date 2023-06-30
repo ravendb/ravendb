@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Queries.Results
         public ScoreDoc Score;
 
         public float? CoraxScore;
+        
+        public Corax.Utils.Spatial.SpatialResult? CoraxDistance;
 
         public Corax.IndexSearcher CoraxIndexSearcher;
 
@@ -56,14 +58,15 @@ namespace Raven.Server.Documents.Queries.Results
             CoraxIndexSearcher = null;
         }
 
-        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, EntryTermsReader reader, string id, float? score = null)
+        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, EntryTermsReader reader, string id, float? score = null, Corax.Utils.Spatial.SpatialResult? distance = null)
         {
             CoraxTermsReader = reader;
             KnownFields = knownFields;
             DocumentId = id;
             CoraxIndexSearcher = searcher;
             CoraxScore = score;
-
+            CoraxDistance = distance;
+            
             State = null;
             Score = null;
             LuceneDocument = null;

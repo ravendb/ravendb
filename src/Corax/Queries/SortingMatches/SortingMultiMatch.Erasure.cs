@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.SortingMatches.Meta;
+using Corax.Utils.Spatial;
 
 namespace Corax.Queries.SortingMatches
 {
@@ -44,21 +46,13 @@ namespace Corax.Queries.SortingMatches
             _inner.Score(matches, scores, boostFactor);
         }
 
-        internal class FunctionTable
+        internal class FunctionTable(delegate*<ref SortingMultiMatch, Span<long>, int> fillFunc,
+            delegate*<ref SortingMultiMatch, long> totalResultsFunc,
+            delegate*<ref SortingMultiMatch,  in SortingDataTransfer, void> setSortingDataTransfer)
         {
-            public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref SortingMultiMatch, long> TotalResultsFunc;
-            public readonly delegate*<ref SortingMultiMatch, float[], void> SetScoreBufferFunc;
-
-            public FunctionTable(
-                delegate*<ref SortingMultiMatch, Span<long>, int> fillFunc,
-                delegate*<ref SortingMultiMatch, long> totalResultsFunc,
-                delegate*<ref SortingMultiMatch, float[], void> setScoreBufferFunc)
-            {
-                FillFunc = fillFunc;
-                TotalResultsFunc = totalResultsFunc;
-                SetScoreBufferFunc = setScoreBufferFunc;
-            }
+            public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc = fillFunc;
+            public readonly delegate*<ref SortingMultiMatch, long> TotalResultsFunc = totalResultsFunc;
+            public readonly delegate*<ref SortingMultiMatch, in SortingDataTransfer, void> SetSortingDataTransferFunc = setSortingDataTransfer;
         }
 
         private static class StaticFunctionCache<TInner>
@@ -83,11 +77,11 @@ namespace Corax.Queries.SortingMatches
                     return 0;
                 }
 
-                static void SetScoreBufferFunc(ref SortingMultiMatch match, float[] scoringTable)
+                static void SetScoreBufferFunc(ref SortingMultiMatch match, in SortingDataTransfer sortingDataTransfer)
                 {
                     if (match._inner is SortingMultiMatch<TInner> inner)
                     {
-                        inner.SetScoreBuffer(scoringTable);
+                        inner.SetSortingDataTransfer(sortingDataTransfer);
                         match._inner = inner;
                     }
                 }
@@ -97,7 +91,7 @@ namespace Corax.Queries.SortingMatches
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetScoreBuffer(float[] scoreBuffer) => _functionTable.SetScoreBufferFunc(ref this, scoreBuffer);
+        public void SetSortingDataTransfer(in SortingDataTransfer sortingDataTransfer) => _functionTable.SetSortingDataTransferFunc(ref this, sortingDataTransfer);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SortingMultiMatch Create<TInner>(in SortingMultiMatch<TInner> query)

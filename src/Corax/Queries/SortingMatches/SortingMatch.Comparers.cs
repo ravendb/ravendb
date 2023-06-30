@@ -2,7 +2,6 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -31,37 +30,32 @@ namespace Corax.Queries.SortingMatches;
      }
      
      
-    private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan> 
+    private struct Descending<TInnerCmp>(TInnerCmp cmp) : IEntryComparer, IComparer<UnmanagedSpan> 
         where TInnerCmp : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private TInnerCmp cmp;
-
-        public Descending(TInnerCmp cmp)
-        {
-            this.cmp = cmp;
-        }
+        private TInnerCmp _cmp = cmp;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
         {
-            return cmp.GetSortFieldName(ref match);
+            return _cmp.GetSortFieldName(ref match);
         }
 
         public void Init(ref SortingMatch<TInner> match)
         {
-            cmp.Init(ref match);
+            _cmp.Init(ref match);
         }
 
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
-            cmp.SortBatch(match: ref match, llt: llt, pageLocator: pageLocator, batchResults: batchResults, batchTermIds: batchTermIds, batchTerms: batchTerms, descending: true);
+            _cmp.SortBatch(match: ref match, llt: llt, pageLocator: pageLocator, batchResults: batchResults, batchTermIds: batchTermIds, batchTerms: batchTerms, descending: true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            return cmp.Compare(y, x); // note the revered args
+            return _cmp.Compare(y, x); // note the revered args
         }
     }
 
@@ -106,13 +100,12 @@ namespace Corax.Queries.SortingMatches;
 
             EntryComparerHelper.IndirectSort<EntryComparerByScore>(indexes, batchTerms, descending);
 
+            ref var scoreResults = ref match._scoresResults;
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
-                if (match._scoringTable.Length > 0)
-                {
-                    match._scoringTable[i] = (float)batchTerms[indexes[i]].Double;
-                }
+                if (match._sortingDataTransfer.IncludeScores)
+                    scoreResults.Add((float)batchTerms[indexes[i]].Double);
             }
         }
 
@@ -478,27 +471,39 @@ namespace Corax.Queries.SortingMatches;
                 return;
             }
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var spatialResults = match._sortingDataTransfer.IncludeDistances
+                ? new Span<SpatialResult>((byte*)batchTerms + batchResults.Length * sizeof(UnmanagedSpan), batchResults.Length)
+                : Span<SpatialResult>.Empty;
+            
             for (int i = 0; i < batchResults.Length; i++)
             {
                 double distance;
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
+                    if (match._sortingDataTransfer.IncludeDistances)
+                        spatialResults[i] = SpatialResult.Invalid;
                     // always at the bottom, then, desc & asc
                     distance = descending ? double.MinValue : double.MaxValue;
                 }
                 else
                 {
                     distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
+                    if (match._sortingDataTransfer.IncludeDistances)
+                        spatialResults[i] = new SpatialResult() {Distance = distance, Latitude = coords.Lat, Longitude = coords.Lng};
                 }
 
                 batchTerms[i] = new UnmanagedSpan(distance);
                 indexes[i] = i;
             }
-
+            
             EntryComparerHelper.IndirectSort<EntryComparerByDouble>(indexes, batchTerms, descending);
+            
             for (int i = 0; i < indexes.Length; i++)
             {
                 match._results.Add(batchResults[indexes[i]]);
+
+                if (match._sortingDataTransfer.IncludeDistances)
+                    match._distancesResults.Add(spatialResults[indexes[i]]);
             }
         }
 
