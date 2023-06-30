@@ -173,13 +173,19 @@ namespace Raven.Server.Documents.Patch
              
                 while (reader.FindNextStored(fieldRootPage))
                 {
+                    if (reader.IsList && // stored value is an array 
+                        value is null)   // and we haven't initialized it yet 
+                    {
+                        value = new JsArray(_parent.Engine);
+                    }
                     if (reader.StoredField == null)
                     {
                         SetValue(ref value, Null);
                         continue;
                     }
 
-                    if (reader.StoredField.Value.Length == 0)
+                    var span = reader.StoredField.Value;
+                    if (span.Length == 0)
                     {
                         SetValue(ref value, string.Empty);
                         continue;
@@ -189,18 +195,32 @@ namespace Raven.Server.Documents.Patch
                     {
                         unsafe
                         {
-                            var itemAsBlittable = new BlittableJsonReaderObject(reader.StoredField.Value.Address,
-                                reader.StoredField.Value.Length, _parent.Blittable._context);
+                            var itemAsBlittable = new BlittableJsonReaderObject(span.Address,
+                                span.Length, _parent.Blittable._context);
                             SetValue(ref value, TranslateToJs(parent, property, BlittableJsonToken.StartObject, itemAsBlittable));
                         }
                     }
                     else if (reader.HasNumeric)
                     {
-                        SetValue(ref value, reader.CurrentDouble);
+                        if (Utf8Parser.TryParse(span.ToReadOnlySpan(), out long l, out var consumed) && 
+                            consumed == span.Length)
+                        {
+                            SetValue(ref value, l);
+                        }
+                        else if (Utf8Parser.TryParse(span.ToReadOnlySpan(), out double d, out consumed) &&
+                                 consumed == span.Length)
+                        {
+                            SetValue(ref value, d);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Recognized field '{property}' as numeric but was unable to parse its value to 'long' or 'double'. " +
+                                                                $"documentId = '{parent.DocumentId}', value = {span.ToStringValue()}.");
+                        }
                     }
                     else
                     {
-                        SetValue(ref value, reader.StoredField.Value.ToStringValue());
+                        SetValue(ref value, span.ToStringValue());
                     }
                 }
                 return value is not null;

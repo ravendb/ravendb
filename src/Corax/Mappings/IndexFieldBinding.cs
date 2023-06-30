@@ -24,8 +24,6 @@ public class IndexFieldBinding
     private FieldIndexingMode? _silentlyChangedIndexingMode;
     private string _fieldName;
 
-    private long _fieldRootPage;
-    
     private readonly bool _isFieldBindingForWriter;
 
     public readonly FieldMetadata Metadata;
@@ -49,25 +47,7 @@ public class IndexFieldBinding
         _analyzer = analyzer;
         Metadata = FieldMetadata.Build(fieldName, fieldTermTotalSumField, fieldId, fieldIndexingMode, analyzer);
     }
-
-    public long GetFieldRootPage(Tree tree)
-    {
-        if (_fieldRootPage != 0)
-            return _fieldRootPage;
-        _fieldRootPage = tree.GetLookupRootPage(FieldName);
-        if (_fieldRootPage != -1) 
-            return _fieldRootPage;
-        
-        return CreateLookup();
-
-        long CreateLookup()
-        {
-            var lookup = tree.CompactTreeFor(FieldName);
-            _fieldRootPage = lookup.RootPage;
-            return _fieldRootPage;
-        }
-    }
-
+    
     public string FieldNameAsString
     {
         get

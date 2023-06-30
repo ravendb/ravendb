@@ -85,6 +85,7 @@ public unsafe struct EntryTermsReader
     public int Frequency;
     public bool HasNumeric;
     public bool IsRaw;
+    public bool IsList;
 
     public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
     {
@@ -233,6 +234,7 @@ public unsafe struct EntryTermsReader
 
     void HandleSpecialTerm(long termContainerId, bool skipStoredFieldLoad)
     {
+        IsList = false;
         IsRaw = false;
         HasNumeric = false;
         TermMetadata = termContainerId >> 3;
@@ -248,7 +250,9 @@ public unsafe struct EntryTermsReader
             _prevLong = val;
             if (skipStoredFieldLoad == false)
             {
-                switch (type)
+                IsList = type.HasFlag(StoredFieldType.List);
+                HasNumeric = type.HasFlag(StoredFieldType.Tuple);
+                switch (type & ~StoredFieldType.Markers)
                 {
                     case StoredFieldType.Null:
                         StoredField = null;
@@ -335,11 +339,19 @@ public unsafe struct EntryTermsReader
     }
 }
 
+[Flags]
 public enum StoredFieldType : byte
 {
     None = 0,
+    // Values
     Null = 1 << 3,
     Empty = 2 << 3,
-    Term = 4 << 3,
-    Raw = 8 << 3,
+    Term = 3 << 3,
+    Raw = 4 << 3,
+    
+    // Flag markers
+    Tuple = 8 << 3,
+    List = 16 << 3,
+    
+    Markers = Tuple | List,
 }

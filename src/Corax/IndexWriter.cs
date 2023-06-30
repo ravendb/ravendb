@@ -377,21 +377,22 @@ namespace Corax
             public readonly Dictionary<double, EntriesModifications> Doubles;
             public Dictionary<Slice, int> Suggestions;
             public readonly Analyzer Analyzer;
-            public readonly bool HasSuggestions;
             public readonly Slice Name;
             public readonly Slice NameLong;
             public readonly Slice NameDouble;
             public readonly Slice NameTotalLengthOfTerms;
             public readonly int Id;
             public readonly FieldIndexingMode FieldIndexingMode;
+            public readonly bool HasSuggestions;
+            public readonly bool ShouldStore;
 
             public IndexedField(IndexFieldBinding binding) : this(binding.FieldId, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble,
-                binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions)
+                binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore)
             {
             }
 
             public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-                FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
+                FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore)
             {
                 Name = name;
                 NameLong = nameLong;
@@ -400,6 +401,7 @@ namespace Corax
                 Id = id;
                 Analyzer = analyzer;
                 HasSuggestions = hasSuggestions;
+                ShouldStore = shouldStore;
                 Textual = new Dictionary<Slice, EntriesModifications>(SliceComparer.Instance);
                 Longs = new Dictionary<long, EntriesModifications>();
                 Doubles = new Dictionary<double, EntriesModifications>();
@@ -411,6 +413,7 @@ namespace Corax
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
+        private Dictionary<Slice, long> _fieldNameToRootPage;
         private readonly HashSet<long> _deletedEntries = new();
 
         private long _postingListContainerId;
@@ -546,7 +549,7 @@ namespace Corax
                     var fieldReader = entryReader.GetFieldReaderFor(binding.FieldId);
                     if (binding.ShouldStore)
                     {
-                        StoreField(entryId, ref fieldReader, binding);
+                        StoreField(entryId, ref fieldReader, binding.FieldName);
                     }
                     
                     if (binding.FieldIndexingMode is FieldIndexingMode.No)
@@ -562,7 +565,10 @@ namespace Corax
                     var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
 
                     var indexedField = GetDynamicIndexedField(context, it.CurrentFieldName);
-
+                    if (indexedField.ShouldStore)
+                    {
+                        StoreField(entryId, ref fieldReader, indexedField.Name);
+                    }
                     if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
                         continue;
 
@@ -572,11 +578,29 @@ namespace Corax
                 }
             }
         }
+        
+        public long GetFieldRootPage(Slice name, Tree tree)
+        {
+            _fieldNameToRootPage ??= new();
 
-        private void StoreField(long entryId, ref IndexEntryReader.FieldReader fieldReader, IndexFieldBinding binding)
+            ref var fieldRootPage = ref CollectionsMarshal.GetValueRefOrAddDefault(_fieldNameToRootPage, name, out var exists);
+            if (exists)
+                return fieldRootPage;
+            
+            fieldRootPage = tree.GetLookupRootPage(name);
+            if (fieldRootPage != -1)
+                return fieldRootPage;
+
+            var lookup = tree.CompactTreeFor(name);
+            fieldRootPage = lookup.RootPage;
+            return fieldRootPage;
+        }
+
+
+        private void StoreField(long entryId, ref IndexEntryReader.FieldReader fieldReader, Slice name)
         {
             var fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            long fieldRootPage = binding.GetFieldRootPage(fieldsTree);
+            long fieldRootPage = GetFieldRootPage(name, fieldsTree);
             ref var entryTerms = ref GetEntryTerms(entryId);
 
             if (fieldReader.Type.HasFlag(IndexEntryFieldType.List))
@@ -628,6 +652,14 @@ namespace Corax
                 if (type.HasFlag(IndexEntryFieldType.Raw))
                 {
                     storedFieldType = StoredFieldType.Raw;
+                }
+                if (type.HasFlag(IndexEntryFieldType.List))
+                {
+                    storedFieldType |= StoredFieldType.List;
+                }
+                if (type.HasFlag(IndexEntryFieldType.Tuple))
+                {
+                    storedFieldType |= StoredFieldType.Tuple;
                 }
                 entryTerms.Add(new RecordedTerm
                 {
@@ -717,7 +749,6 @@ namespace Corax
 
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
-
             
             var clonedFieldName = slice.Clone(context);
             
@@ -730,8 +761,9 @@ namespace Corax
             var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(slice);
             if (_dynamicFieldsMapping?.TryGetByFieldName(slice, out var binding) is true)
             {
-                
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, 
+                    binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer, 
+                    binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore);
                 
                 if (persistedAnalyzer != null)
                 {
@@ -777,7 +809,7 @@ namespace Corax
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false);
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false);
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
         }
