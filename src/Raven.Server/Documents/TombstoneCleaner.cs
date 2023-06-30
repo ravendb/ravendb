@@ -7,11 +7,10 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Background;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
+using static Raven.Server.NotificationCenter.TombstoneNotifications;
 
 namespace Raven.Server.Documents
 {
@@ -120,49 +119,53 @@ namespace Raven.Server.Documents
             return numberOfTombstonesDeleted;
         }
 
-        private void CreateWarningIfThereAreBlockingTombstones(HashSet<string> tombstoneCollections)
+        private void RaiseBlockingTombstonesNotificationIfNecessary(TombstonesState tombstoneCollections)
         {
-            var currentBlockingTombstones = new Dictionary<(string Source, string Collection), long>();
+            var detailsSet = new List<BlockingTombstoneDetails>();
             var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            bool needToWarn = false;
 
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var subscription in _subscriptions)
                 {
-                    var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections);
-                    foreach (var disabledSubscriber in disabledSubscribers.Keys)
+                    var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections.Tombstones.Keys.ToHashSet());
+
+                    foreach (var source in disabledSubscribers.Keys)
                     {
-                        HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
-                        foreach (var tombstoneCollection in blockedTombstoneCollections)
+                        HashSet<string> collectionNames = disabledSubscribers[source];
+
+                        foreach (var collectionName in collectionNames)
                         {
-                            if (tombstonesPerCollection.TryGetValue(tombstoneCollection, out var tombstonesCount) == false)
+                            if (tombstonesPerCollection.TryGetValue(collectionName, out var tombstonesCount) == false)
                             {
-                                tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
-                                tombstonesPerCollection[tombstoneCollection] = tombstonesCount;
+                                tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, collectionName);
+                                tombstonesPerCollection[collectionName] = tombstonesCount;
                             }
 
-                            if (tombstonesCount > 0)
+                            if (tombstonesCount == 0) 
+                                continue;
+
+                            detailsSet.Add(new BlockingTombstoneDetails
                             {
-                                needToWarn = true;
-                                currentBlockingTombstones.Add((disabledSubscriber, tombstoneCollection), tombstonesCount);
-                            }
+                                Source = source,
+                                Collection = collectionName,
+                                NumberOfTombstones = tombstonesCount
+                            });
                         }
                     }
                 }
             }
             
-            if (needToWarn)
-                _documentDatabase.NotificationCenter.TombstoneNotifications.Add(currentBlockingTombstones);
+            if (detailsSet.Count > 0)
+                _documentDatabase.NotificationCenter.TombstoneNotifications.Add(detailsSet);
             else
                 _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
         }
 
-        internal TombstonesState GetState(bool addInfoForDebug = false)
+        internal TombstonesState GetState()
         {
             var result = new TombstonesState();
-            HashSet<string> tombstoneCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (CancellationToken.IsCancellationRequested)
                 return result;
@@ -175,7 +178,6 @@ namespace Raven.Server.Documents
             {
                 foreach (var tombstoneCollection in _documentDatabase.DocumentsStorage.GetTombstoneCollections(tx))
                 {
-                    tombstoneCollections.Add(tombstoneCollection);
                     result.Tombstones[tombstoneCollection] = new StateHolder();
                 }
             }
@@ -199,8 +201,7 @@ namespace Raven.Server.Documents
 
                         foreach (var tombstone in subscriptionTombstones)
                         {
-                            if (addInfoForDebug)
-                                result.AddPerSubscriptionInfo(subscription.TombstoneCleanerIdentifier, tombstoneType, tombstone.Key, tombstone.Value);
+                            result.AddPerSubscriptionInfo(subscription.TombstoneCleanerIdentifier, tombstoneType, collection: tombstone.Key, etag: tombstone.Value);
 
                             if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
                             {
@@ -232,12 +233,12 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    CreateWarningIfThereAreBlockingTombstones(tombstoneCollections);
+                    RaiseBlockingTombstonesNotificationIfNecessary(result);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to notify on blocking tombstones in database '{_documentDatabase.Name}'", e);
+                        Logger.Operations($"Failed to notify of blockage in tombstone deletion detected in database '{_documentDatabase.Name}'", e);
                 }
             }
             finally

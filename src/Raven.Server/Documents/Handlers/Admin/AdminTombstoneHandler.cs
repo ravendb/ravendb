@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/tombstones/state", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task State()
         {
-            var state = Database.TombstoneCleaner.GetState(addInfoForDebug: true);
+            var state = Database.TombstoneCleaner.GetState();
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {

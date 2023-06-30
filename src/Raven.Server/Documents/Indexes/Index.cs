@@ -14,7 +14,6 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
@@ -4176,7 +4175,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
-                dict[Name] = Collections;
+                dict[TombstoneCleanerIdentifier] = Collections;
 
             return dict;
         }

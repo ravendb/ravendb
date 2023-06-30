@@ -1,32 +1,29 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Replication;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Context;
 using User = SlowTests.Core.Utils.Entities.User;
-using Raven.Server.Documents;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_19967 : ReplicationTestBase
     {
+        private readonly string _notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+        private const int Timeout = 3000;
+        private const int DocumentsCount = 13;
+        private const int TombstonesCount = 7;
+
         public RavenDB_19967(ITestOutputHelper output) : base(output)
         {
         }
@@ -57,13 +54,12 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
 
                 await store.Maintenance.SendAsync(new EnableIndexOperation(indexName));
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId) == false);
+                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId) == false);
             }
         }
 
@@ -72,12 +68,16 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var user = new User { Name = "Yonatan" };
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
-                using (var session = store.OpenAsyncSession())
+                // Documents creation
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(user);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Store(new User { Name = $"Yonatan{i}" }, docId);
+                    }
+                    session.SaveChanges();
                 }
 
                 var userIndex = new UserByName();
@@ -85,19 +85,25 @@ namespace SlowTests.Issues
                 await userIndex.ExecuteAsync(store);
                 await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
 
-                using (var session = store.OpenAsyncSession())
+                // When deleting documents, we expect the creation of Tombstones, since Index is disabled.
+                using (var session = store.OpenSession())
                 {
-                    session.Delete(user.Id);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= TombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
 
-                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
-                var detail = blockingTombstonesDetails[0];
-                Assert.Equal(1, detail.NumberOfTombstones);
+                var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, notificationDetails.Count);
+                Assert.Equal($"Index '{nameof(UserByName)}'", notificationDetails.First().Source);
+                Assert.Equal("Users", notificationDetails.First().Collection);
+                Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
         }
 
@@ -107,31 +113,140 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var user = new User { Name = "Yonatan" };
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                using (var session = store1.OpenAsyncSession())
+                var srcDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var destDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                
+                // Documents creation
+                var documentCreationTasks = new Task[DocumentsCount];
+                using (var session = store1.OpenSession())
                 {
-                    await session.StoreAsync(user);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Store(new User { Name = $"Yonatan{i}" }, docId);
+                        documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(store2, docId, Timeout));
+                    }
+                    session.SaveChanges();
                 }
 
+                // Assert documents replication
+                await Task.WhenAll(documentCreationTasks).ContinueWith(_ =>
+                {
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        Assert.True(documentCreationTasks[i - 1].IsCompletedSuccessfully, $"The document '{docId}' was not received within the timeout in the `Sink` database.");
+                    }
+                });
+
+                // Setup and subsequent disabling of the replication task
                 var externalList = await SetupReplicationAsync(store1, store2);
-                WaitForDocumentToReplicate<User>(store2, user.Id, 3000);
                 await store1.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(externalList.First().TaskId, OngoingTaskType.Replication, disable: true));
 
-                using (var session = store1.OpenAsyncSession())
+                // When deleting documents, we expect the creation of Tombstones, since replication task is disabled.
+                using (var session = store1.OpenSession())
                 {
-                    session.Delete(user.Id);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= TombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
                 }
 
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+                await srcDocumentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(srcDocumentDatabase.NotificationCenter.Exists(_notificationId));
 
-                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
-                var detail = blockingTombstonesDetails[0];
-                Assert.Equal(1, detail.NumberOfTombstones);
+                var notificationDetails = srcDocumentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, notificationDetails.Count);
+                Assert.Equal($"External Replication to ConnectionString-{Server.WebUrl} (DB: {destDocumentDatabase.Name})", notificationDetails.First().Source);
+                Assert.Equal("users", notificationDetails.First().Collection);
+                Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
+            }
+        }
+
+        [Fact]
+        public async Task TombstoneCleaningAfterPullExternalReplicationDisabled()
+        {
+            const int sinkTombstonesCount = 7;
+            const int hubTombstonesCount = 11;
+            var taskName = $"pull replication {Guid.NewGuid()}";
+
+            using (var hub = GetDocumentStore())
+            using (var sink = GetDocumentStore())
+            {
+                var hubCreationTaskId = hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName)).Result.TaskId;
+                var sinkCreationTaskId = PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub).Result.First().TaskId;
+
+                // Documents creation
+                var documentCreationTasks = new Task[DocumentsCount];
+                using (var session = hub.OpenSession())
+                {
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Store(new User { Name = $"Lev{i}" }, docId);
+                        documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(sink, docId, Timeout));
+                    }
+                    session.SaveChanges();
+                }
+
+                // Assert documents replication
+                await Task.WhenAll(documentCreationTasks).ContinueWith(_ =>
+                {
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        Assert.True(documentCreationTasks[i - 1].IsCompletedSuccessfully, $"The document '{docId}' was not received within the timeout in the `Sink` database.");
+                    }
+                });
+
+                // Disable replication tasks
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkCreationTaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await hub.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(hubCreationTaskId, OngoingTaskType.PullReplicationAsHub, disable: true));
+
+                // When deleting documents, we expect the creation of Tombstones, since replication tasks are disabled.
+                using (var session = sink.OpenSession())
+                {
+                    for (int i = 1; i <= sinkTombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = hub.OpenSession())
+                {
+                    for (int i = 1; i <= hubTombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
+                }
+
+                // Assert 'Sink' BlockingTombstones notification and its details.
+                var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
+                await sinkDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(sinkDatabase.NotificationCenter.Exists(_notificationId));
+
+                var sinkNotificationDetails = sinkDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, sinkNotificationDetails.Count);
+                Assert.Equal("users", sinkNotificationDetails.First().Collection);
+                Assert.Equal($"Replication Sink for {taskName}", sinkNotificationDetails.First().Source);
+                Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
+
+                // Assert 'Hub' BlockingTombstones notification and its details.
+                var hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
+                await hubDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(hubDatabase.NotificationCenter.Exists(_notificationId));
+
+                var hubNotificationDetails = hubDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, hubNotificationDetails.Count);
+                Assert.Equal("users", hubNotificationDetails.First().Collection);
+                Assert.Equal($"Replication Hub ({nameof(PullReplicationMode.HubToSink)}) for {taskName}", hubNotificationDetails.First().Source);
+                Assert.Equal(hubTombstonesCount, hubNotificationDetails.First().NumberOfTombstones);
             }
         }
 
@@ -141,11 +256,17 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var user = new User { Name = "Yonatan"};
-                using (var session = store1.OpenAsyncSession())
+                // Documents creation
+                var documentCreationTasks = new Task[DocumentsCount];
+                using (var session = store1.OpenSession())
                 {
-                    await session.StoreAsync(user);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Store(new User { Name = $"Yonatan{i}" }, docId);
+                        documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(store2, docId, Timeout));
+                    }
+                    session.SaveChanges();
                 }
 
                 var connectionString = new RavenConnectionString
@@ -171,64 +292,95 @@ namespace SlowTests.Issues
                 };
 
                 var result = await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
-                Assert.True(WaitForDocument(store2, user.Id));
+
+                // Assert documents replication
+                await Task.WhenAll(documentCreationTasks).ContinueWith(_ =>
+                {
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        Assert.True(documentCreationTasks[i - 1].IsCompletedSuccessfully, $"The document '{docId}' was not received within the timeout in the `Sink` database.");
+                    }
+                });
 
                 await store1.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, disable: true));
-                using (var session = store1.OpenAsyncSession())
+
+                // When deleting documents, we expect the creation of Tombstones, since ETL task is disabled.
+                using (var session = store1.OpenSession())
                 {
-                    session.Delete(user.Id);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= TombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
                 }
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
 
-                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
-                var detail = blockingTombstonesDetails[0];
-                Assert.Equal(1, detail.NumberOfTombstones);
+                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
+
+                var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, notificationDetails.Count);
+                Assert.Equal("users", notificationDetails.First().Collection);
+                Assert.Equal($"RavenDB ETL to {Server.WebUrl} (DB: {store2.Database})", notificationDetails.First().Source);
+                Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
         }
 
         [Fact]
         public async Task TombstoneCleaningAfterPeriodicBackupDisabled()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var backupTaskName = $"Backup {Guid.NewGuid()}";
+
             using (var store = GetDocumentStore())
             {
-                var user = new User { Name = "Yonatan"};
-                var user2 = new User { Name = "Yonatan2"};
-                var backupPath = NewDataPath(suffix: "BackupFolder");
-                using (var session = store.OpenAsyncSession())
-                { 
-                    await session.StoreAsync(user);
-                    await session.StoreAsync(user2);
-                    await session.SaveChangesAsync();
+                // Documents creation
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= DocumentsCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Store(new User { Name = $"Yonatan{i}" }, docId);
+                    }
+                    session.SaveChanges();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupPath: backupPath, backupType: BackupType.Backup, incrementalBackupFrequency: "0 0 1 1 *");
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
+                var config = Backup.CreateBackupConfiguration(
+                    backupPath: backupPath, 
+                    backupType: BackupType.Backup, 
+                    incrementalBackupFrequency: "0 0 1 1 *", 
+                    name: backupTaskName);
 
-                config.TaskId = backupTaskId;
+                config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
                 config.Disabled = true;
+
                 var operation = new UpdatePeriodicBackupOperation(config);
                 await store.Maintenance.SendAsync(operation);
 
-                using (var session = store.OpenAsyncSession())
+                // When deleting documents, we expect the creation of Tombstones, since Backup task is disabled.
+                using (var session = store.OpenSession())
                 {
-                    session.Delete(user.Id);
-                    session.Delete(user2.Id);
-                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= TombstonesCount; i++)
+                    {
+                        var docId = $"users/{i}";
+                        session.Delete(docId);
+                    }
+                    session.SaveChanges();
                 }
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
-                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
 
-                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
-                var detail = blockingTombstonesDetails[0];
-                Assert.Equal(2, detail.NumberOfTombstones);
+                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
+
+                var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
+                Assert.Equal(1, notificationDetails.Count);
+                Assert.Equal("users", notificationDetails.First().Collection);
+                Assert.Equal($"{config.BackupType} '{backupTaskName}'", notificationDetails.First().Source);
+                Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
         }
 
