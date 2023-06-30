@@ -42,14 +42,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             if (_originalPatternForReduceOutputReferences == null)
             {
-                deleteResults = _database.DocumentsStorage.DeleteDocumentsStartingWith(context, _documentsPrefix, _batchSize);
+                deleteResults = _database.DocumentsStorage.DeleteDocumentsStartingWith(context, _documentsPrefix, _batchSize, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
             }
             else
             {
                 idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
                 deleteResults = _database.DocumentsStorage.DeleteDocumentsStartingWith(context, _documentsPrefix, _batchSize,
-                    doc => RetrieveReferenceDocumentsToCleanup(doc, idsToDeleteByReferenceDocumentId));
+                    doc => RetrieveReferenceDocumentsToCleanup(doc, idsToDeleteByReferenceDocumentId), flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
             }
 
             DeleteCount = deleteResults.Count;

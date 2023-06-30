@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Sparrow;
@@ -170,9 +171,9 @@ namespace Raven.Server.Documents.ETL.Stats
                 _stats.LastTransformedEtags[type] = etag;
         }
 
-        public void RecordChangeVector(string changeVector)
+        public void RecordChangeVector(IChangeVectorOperationContext context, ChangeVector changeVector)
         {
-            _stats.ChangeVector = ChangeVectorUtils.MergeVectors(_stats.ChangeVector, changeVector);
+            _stats.ChangeVector = changeVector.MergeOrderWith(context.GetChangeVector(_stats.ChangeVector), context);
         }
 
         public void RecordLastLoadedEtag(long etag)

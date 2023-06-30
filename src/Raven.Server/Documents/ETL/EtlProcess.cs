@@ -336,10 +336,11 @@ namespace Raven.Server.Documents.ETL
                 foreach (var item in items)
                 {
                     extractedItemsSize++;
+                    var changeVector = context.GetChangeVector(item.ChangeVector);
 
                     if (item.Filtered)
                     {
-                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordChangeVector(context, changeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
                         item.Dispose();
@@ -353,7 +354,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
-                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordChangeVector(context, changeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
                         item.Dispose();
@@ -375,7 +376,7 @@ namespace Raven.Server.Documents.ETL
                         CollectionName.IsHiLoCollection(item.CollectionFromMetadata) &&
                         ShouldFilterOutHiLoDocument())
                     {
-                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordChangeVector(context, changeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
                         item.Dispose();
@@ -393,7 +394,7 @@ namespace Raven.Server.Documents.ETL
 
                             stats.RecordTransformedItem(item.Type, item.IsDelete);
                             stats.RecordLastTransformedEtag(item.Etag, item.Type);
-                            stats.RecordChangeVector(item.ChangeVector);
+                            stats.RecordChangeVector(context, changeVector);
 
                             batchSize++;
 

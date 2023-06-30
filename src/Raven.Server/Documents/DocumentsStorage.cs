@@ -1560,23 +1560,23 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Delete(context, lowerId, id, expectedChangeVector: null, documentFlags: flags);
+                return Delete(context, lowerId, id, expectedChangeVector: null, newFlags: flags);
             }
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector, DocumentFlags newFlags = DocumentFlags.None)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (var cv = context.GetLazyString(expectedChangeVector))
             {
-                return Delete(context, lowerId, id, expectedChangeVector: cv);
+                return Delete(context, lowerId, id, expectedChangeVector: cv, newFlags: newFlags);
             }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, ChangeVector changeVector = null,
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
-            DocumentFlags documentFlags = DocumentFlags.None)
+            DocumentFlags newFlags = DocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1618,11 +1618,11 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    flags = localFlags | documentFlags;
+                    flags = localFlags | newFlags;
                     var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
-                        localFlags.Contain(DocumentFlags.HasRevisions) != documentFlags.Contain(DocumentFlags.HasRevisions))
+                        localFlags.Contain(DocumentFlags.HasRevisions) != newFlags.Contain(DocumentFlags.HasRevisions))
                     {
                         var count = revisionsStorage.GetRevisionsCount(context, id);
                         if (count == 0)
@@ -1635,7 +1635,7 @@ namespace Raven.Server.Documents
                             (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                         {
                             revisionsStorage.Delete(context, id, lowerId, collectionName, context.GetChangeVector(changeVector ?? local.Tombstone.ChangeVector),
-                                modifiedTicks, nonPersistentFlags, documentFlags);
+                                modifiedTicks, nonPersistentFlags, newFlags);
                         }
                     }
                 }
@@ -1690,13 +1690,10 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
-                var ptr = table.DirectRead(doc.StorageId, out int size);
-                var tvr = new TableValueReader(ptr, size);
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromResharding | DocumentFlags.Artificial) | documentFlags;
+                var flags = GetFlagsFormOldDocument(newFlags, doc.Flags, nonPersistentFlags);
 
                 long etag;
-                using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
+                using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))
                 {
                     var tombstone = CreateTombstone(
                         context,
@@ -1735,7 +1732,7 @@ namespace Raven.Server.Documents
 
                         flags |= DocumentFlags.HasRevisions;
                         revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                            modifiedTicks, nonPersistentFlags, newFlags);
                     }
                 }
 
@@ -1743,18 +1740,18 @@ namespace Raven.Server.Documents
                     revisionsStorage.Configuration == null &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id, flags: documentFlags);
+                    revisionsStorage.DeleteRevisionsFor(context, id, flags: newFlags);
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration != null &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                     revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
-                        modifiedTicks, nonPersistentFlags, documentFlags);
+                        modifiedTicks, nonPersistentFlags, newFlags);
 
                 table.Delete(doc.StorageId);
 
                 if (flags.Contain(DocumentFlags.HasAttachments))
-                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks, documentFlags);
+                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks, newFlags);
 
                 if (flags.Contain(DocumentFlags.HasCounters))
                     CountersStorage.DeleteCountersForDocument(context, id, collectionName);
@@ -1800,7 +1797,7 @@ namespace Raven.Server.Documents
                     null,
                     modifiedTicks,
                     changeVector,
-                    documentFlags,
+                    newFlags,
                     nonPersistentFlags).Etag;
 
                 return new DeleteOperationResult
@@ -1833,7 +1830,7 @@ namespace Raven.Server.Documents
         }
 
         // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long maxDocsToDelete = long.MaxValue, Action<Document> beforeDeleted = null)
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long maxDocsToDelete = long.MaxValue, Action<Document> beforeDeleted = null, DocumentFlags flags = DocumentFlags.None)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1855,7 +1852,7 @@ namespace Raven.Server.Documents
 
                     var id = TableValueToId(context, (int)DocumentsTable.Id, ref reader);
 
-                    var deleteOperationResult = Delete(context, id, null);
+                    var deleteOperationResult = Delete(context, id, null, flags);
                     if (deleteOperationResult != null)
                         deleteResults.Add(deleteOperationResult.Value);
 
@@ -1972,7 +1969,13 @@ namespace Raven.Server.Documents
         }
 
         [Conditional("DEBUG")]
-        public static void FlagsProperlySet(DocumentFlags flags, string changeVector)
+        public static void FlagsProperlySet(DocumentFlags flags, ChangeVector changeVector)
+        {
+            CheckFlagsProperlySet(flags, changeVector.Version);
+        }
+
+        [Conditional("DEBUG")]
+        private static void CheckFlagsProperlySet(DocumentFlags flags, string changeVector)
         {
             var cvArray = changeVector.ToChangeVector();
             var expectedValues = new int[] { ChangeVectorParser.RaftInt, ChangeVectorParser.TrxnInt };
@@ -2535,7 +2538,7 @@ namespace Raven.Server.Documents
             {
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
                 oldChangeVector = oldChangeVector == null
-                    ? context.GetChangeVector(context.LastDatabaseChangeVector)
+                    ? context.LastDatabaseChangeVector
                     : oldChangeVector.MergeWith(context.LastDatabaseChangeVector, context);
             }
 
@@ -2582,7 +2585,52 @@ namespace Raven.Server.Documents
                 oldChangeVector = oldChangeVector.UpdateOrder(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, context);
                 return oldChangeVector;
             }
-            return context.GetChangeVector(ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag));
+            return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
+        }
+
+        public DocumentFlags GetFlagsFormOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
+                return newFlags;
+
+            newFlags = newFlags.Strip(DocumentFlags.FromReplication);
+
+            if (newFlags.Contain(DocumentFlags.Reverted))
+            {
+                // we set the flags in the caller, because we might revert not to _oldFlags_ but to something prior to that
+                return newFlags;
+            }
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
+            {
+                newFlags |= DocumentFlags.Resolved;
+            }
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
+                oldFlags.Contain(DocumentFlags.HasAttachments))
+            {
+                newFlags |= DocumentFlags.HasAttachments;
+            }
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate) == false &&
+                oldFlags.Contain(DocumentFlags.HasCounters))
+            {
+                newFlags |= DocumentFlags.HasCounters;
+            }
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate) == false &&
+                oldFlags.Contain(DocumentFlags.HasTimeSeries))
+            {
+                newFlags |= DocumentFlags.HasTimeSeries;
+            }
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                oldFlags.Contain(DocumentFlags.HasRevisions))
+            {
+                newFlags |= DocumentFlags.HasRevisions;
+            }
+
+            return newFlags;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

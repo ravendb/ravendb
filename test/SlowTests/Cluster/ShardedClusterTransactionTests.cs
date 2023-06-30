@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -67,6 +69,53 @@ namespace SlowTests.Cluster
                     var loadTestObj = await session2.LoadAsync<TestObj>(testObj.Id);
                     var loadChangeVector = session2.Advanced.GetChangeVectorFor(loadTestObj);
                     Assert.Equal(loadChangeVector, changeVector);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        [InlineData(TransactionMode.ClusterWide)]
+        [InlineData(TransactionMode.SingleNode)]
+        public async Task ShardedClusterTransactionAndResharding(TransactionMode modifyMode)
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                       {
+                           TransactionMode = TransactionMode.ClusterWide,
+                       }))
+                {
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        await session.StoreAsync(new User
+                        {
+                            Name = $"test {i}"
+                        }, $"Users/{i}");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                // ensure the document was created
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.LoadAsync<User>($"Users/1");
+                }
+
+                await Sharding.Resharding.MoveShardForId(store, "Users/1");
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                       {
+                           TransactionMode = modifyMode,
+                       }))
+                {
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        var u = await session.LoadAsync<User>($"Users/{i}");
+                        u.Age = i;
+                    }
+
+                    await session.SaveChangesAsync();
                 }
             }
         }
