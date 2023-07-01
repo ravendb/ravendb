@@ -301,6 +301,10 @@ public unsafe struct EntryTermsReader
         while (MoveNext())
         {
             sb.Append(FieldRootPage).Append(" - ").Append(Current);
+            if (Frequency > 1)
+            {
+                sb.Append(" x").Append(Frequency);
+            }
 
             if (HasNumeric)
             {

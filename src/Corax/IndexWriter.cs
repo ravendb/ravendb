@@ -1181,7 +1181,12 @@ namespace Corax
                     term = new EntriesModifications(llt.Allocator, len);
                     scope = default; // We dont want to reclaim the term name
                 }
-                term.Removal(entryToDelete);
+
+                //TODO: Maciej - we need to modify EntriesModifications to accept it externally 
+                for (int i = 0; i < reader.Frequency; i++)
+                {
+                    term.Removal(entryToDelete);
+                }
                 scope.Dispose();
                 
                 if(reader.HasNumeric == false)

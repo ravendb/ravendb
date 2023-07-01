@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries;
 using Corax.Utils;
 using FastTests.Voron;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -14,6 +15,7 @@ using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Version = Lucene.Net.Util.Version;
 
 namespace FastTests.Corax;
 
@@ -133,8 +135,130 @@ public unsafe class DynamicFieldsTests : StorageTest
             Assert.Equal(0, entries.Fill(ids));
         }
     }
+    
+    [Fact]
+    public void WillDeleteDynamicReferences()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice);
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Nick", "Ayende"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
+        }
 
 
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            writer.TryDeleteEntry("users/1");
+            writer.PrepareAndCommit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Nick", "Ayende").Fill(ids);
+            Assert.Equal(0, read);
+        }
+    }
+    
+    [Fact]
+    public void WillDeleteDynamicReferencesWithOutOfOrderRepeats()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice,  LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29)));
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Nick", "Ayende"u8);
+            entry.WriteDynamic("Name", "Eini Oren"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
+        }
+
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            writer.TryDeleteEntry("users/1");
+            writer.PrepareAndCommit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Oren").Fill(ids);
+            Assert.Equal(0, read);
+        }
+    }
+
+    
+    [Fact]
+    public void DynamicFieldWithSameNameOfStatic()
+    {
+        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, aSlice)
+            .AddBinding(1, dSlice);
+        var fields = builder.Build();
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            var entry = new IndexEntryWriter(bsc, fields);
+            entry.Write(0, "users/1"u8);
+            entry.Write(1, "Oren"u8);
+            entry.WriteDynamic("Name", "Oren"u8);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
+        }
+
+
+        using (var writer = new IndexWriter(Env, fields))
+        {
+            writer.TryDeleteEntry("users/1");
+            writer.PrepareAndCommit();
+        }
+
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Span<long> ids = stackalloc long[16];
+            var read = searcher.TermQuery("Name", "Oren").Fill(ids);
+            Assert.Equal(0, read);
+        }
+    }
+    
+    
     [Fact]
     public void MixingStaticAndDynamicFieldsCorax()
     {
@@ -155,8 +279,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Rank", "U"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
-            writer.Commit();
+            writer.Index("users/1", preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         using (var writer = new IndexWriter(Env, fields))
@@ -166,8 +290,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Name", "Oren"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
-            writer.Commit();
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
 
@@ -178,8 +302,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Eini"u8);
             entry.WriteDynamic("Name", "Eini"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
-            writer.Commit();
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -324,8 +448,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Rank", "U"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
-            writer.Commit();
+            writer.Index("users/1", preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
@@ -335,8 +459,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Name", "Maciej"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
-            writer.Commit();
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -348,8 +472,8 @@ public unsafe class DynamicFieldsTests : StorageTest
         
         using (var writer = new IndexWriter(Env, fields))
         {
-            writer.TryDeleteEntry("Id", "users/1");
-            writer.Commit();
+            writer.TryDeleteEntry("users/1");
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -380,8 +504,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Rank", "U"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
-            writer.Commit();
+            writer.Index("users/1", preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
@@ -391,8 +515,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Oren"u8);
             entry.WriteDynamic("Name", "Maciej"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
-            writer.Commit();
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -409,8 +533,8 @@ public unsafe class DynamicFieldsTests : StorageTest
             entry.Write(1, "Eini"u8);
             entry.WriteDynamic("Name", "Eini"u8);
             using var _ = entry.Finish(out var preparedItem);
-            writer.Update("Id", "users/1"u8, preparedItem.ToSpan());
-            writer.Commit();
+            writer.Update("users/1"u8, preparedItem.ToSpan());
+            writer.PrepareAndCommit();
         }
         
         using (var searcher = new IndexSearcher(Env, fields))
