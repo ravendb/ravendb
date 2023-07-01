@@ -723,9 +723,11 @@ namespace Corax
 
         private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName)
         {
-           _dynamicFieldsTerms ??= new(SliceComparer.Instance);
            using var _ = Slice.From(context, currentFieldName, out var slice);
+           if (_fieldsMapping.TryGetByFieldName(slice, out var indexFieldBinding))
+               return _knownFieldsTerms[indexFieldBinding.FieldId];
 
+           _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
             

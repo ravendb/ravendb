@@ -1,8 +1,5 @@
-﻿using System;
-using System.Text;
-using Corax;
+﻿using System.Text;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
@@ -54,7 +51,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
         var result = ShardedQueryResultDocument.From(queryResult);
 
-        var reader = _indexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
+        var reader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
 
         for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
         {
@@ -71,7 +68,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
             var orderByFieldMetadata = orderByFields[i];
             reader.Reset();
-            long fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
+            long fieldRootPage = IndexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
             // Note that in here we have to check for the *lowest* value of the field, if there are multiple terms
             // for the field, so we always order by the smallest value (regardless of the ascending / descending structure)
             switch (orderByField.OrderingType)
@@ -98,11 +95,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     while (reader.FindNextSpatial(fieldRootPage))
                     {
                         var coordinates = (reader.Latitude, reader.Longitude);
-                        ISpatialComparer comparer = orderByField.Ascending
-                            ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
-                            : _descSpatialComparer ??= new LegacySortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
-
-                        var distance = SpatialUtils.GetGeoDistance(in coordinates, in comparer);
+                     
+                        var distance = SpatialUtils.GetGeoDistance(in coordinates, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
                         m = double.Min(m, distance);
                     }
 

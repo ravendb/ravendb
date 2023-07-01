@@ -637,10 +637,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                     Include:
-                        EntryTermsReader entryTermsReader = _indexSearcher.GetEntryTermsReader(ids[i], ref page);
+                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                         var key = _documentIdReader.GetTermFor(ids[i]);
                         float? documentScore = scores.Length > 0 ? scores[i] : null;
-                        var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings,  entryTermsReader, key, documentScore);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings,  entryTermsReader, key, documentScore);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -1265,13 +1265,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (hit == baseDocId)
                         continue;
 
-                    var termsReader = _indexSearcher.GetEntryTermsReader(hit, ref page);
+                    var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
                     var id = _documentIdReader.GetTermFor(hit);
 
                     if (ravenIds.Add(id) == false)
                         continue;
 
-                    var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, termsReader, id);
+                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id);
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {
@@ -1313,7 +1313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
             int docsToLoad = CoraxBufferSize(IndexSearcher, pageSize, query);
-            using var coraxEntryReader = new CoraxIndexedEntriesReader(IndexSearcher, _fieldMappings);
+            using var coraxEntryReader = new CoraxIndexedEntriesReader(documentsContext, IndexSearcher, _fieldMappings);
             int read;
             long i = Skip();
             Page page = default;
