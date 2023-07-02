@@ -31,7 +31,7 @@ namespace Corax.Queries
                 _entriesPagesIt = new Lookup<Int64LookupKey>.ForwardIterator();
                 return;
             }
-            _entriesPagesIt = tx.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice).Iterate();
+            _entriesPagesIt = tx.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice).Iterate();
             _entriesPagesIt.Reset();
         }
 

@@ -417,10 +417,8 @@ namespace Corax
         private FieldsCache _fieldsCache;
 
         private long _postingListContainerId;
-        private long _entriesContainerId;
         private long _storedFieldsContainerId;
         private long _entriesTermsContainerId;
-        private Lookup<Int64LookupKey> _entryIdToOffset;
         private Lookup<Int64LookupKey> _entryIdToLocation;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
@@ -466,10 +464,8 @@ namespace Corax
         private void Init()
         {
             _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
-            _entriesContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoreFieldsSlice);
             _entriesTermsContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
-            _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _persistedDynamicFieldsAnalyzers = _transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
@@ -1140,15 +1136,11 @@ namespace Corax
             
             foreach (long entryToDelete in _deletedEntries)
             {
-                if (_entryIdToOffset.TryRemove(entryToDelete, out var entryContainerId) == false)
-                    throw new InvalidOperationException("Unable to find entry id: " + entryToDelete);
                 if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsId) == false)
                     throw new InvalidOperationException("Unable to locate entry id: " + entryToDelete);
 
                 RemoveDocumentBoost(entryToDelete);
-                Container.Delete(llt, _entriesContainerId, entryContainerId); // delete raw index entry
                 var entryTerms = Container.MaybeGetFromSamePage(llt, ref lastVisitedPage, entryTermsId);
-
                 RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, compactKey, dicId, entryToDelete);
             }
         }
@@ -1380,13 +1372,6 @@ namespace Corax
             foreach (var (entryId, entry)  in _bufferedIndexedEntries)
             {
                 ReadOnlySpan<byte> data = entry.ToReadOnlySpan();
-                // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
-                var entryContainerId = Container.Allocate(_transaction.LowLevelTransaction, _entriesContainerId, 
-                    data.Length, out var space);
-                data.CopyTo(space);
-                space = space.Slice(data.Length);
-                space.Clear();// clean any old data that may have already been there
-                _entryIdToOffset.Add(entryId, entryContainerId);
                 
                 IndexEntry(entryId, data);
             }

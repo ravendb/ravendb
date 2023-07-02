@@ -61,8 +61,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Tree _fieldsTree;
     private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
-    private Lookup<Int64LookupKey> _entryIdToOffset;
-    private long _dictionarId;
+    private long _dictionaryId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
 
@@ -92,9 +91,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
         _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
-        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
         //TODO: Temporary workaround until we are done with single dic
-        _dictionarId = PersistentDictionary.GetDictionaryId(_transaction.LowLevelTransaction);
+        _dictionaryId = PersistentDictionary.GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
@@ -111,37 +109,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _fieldMapping = fieldsMapping;
         }
     }
-
-    public UnmanagedSpan GetIndexEntryPointer(long id)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
-        return data.ToUnmanagedSpan();
-    }
     
     public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, item.Address, item.Length, _dictionarId);
-    }
-
-
-    public IndexEntryReader GetEntryReaderFor(long id)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-        
-        return GetEntryReaderForEntryContainerId(_transaction, entryId, ref _lastPage, out _);
-    }
-
-    public static IndexEntryReader GetEntryReaderForEntryContainerId(Transaction transaction,  long id, ref Page page,out int rawSize)
-    {
-        var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
-        rawSize = item.Length;
-        return new IndexEntryReader(item.Address, item.Length);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, item.Address, item.Length, _dictionaryId);
     }
 
 
