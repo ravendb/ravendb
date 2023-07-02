@@ -2,10 +2,15 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -20,6 +25,8 @@ namespace SlowTests.Issues
     public class RavenDB_19967 : ReplicationTestBase
     {
         private readonly string _notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+        private readonly string _customTaskName = $"Custom task name {Guid.NewGuid()}";
+
         private const int Timeout = 3000;
         private const int DocumentsCount = 13;
         private const int TombstonesCount = 7;
@@ -251,62 +258,93 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task TombstoneCleaningAfterEtlLoaderDisabled()
+        public void CheckForNewEtlTypes()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            var knownEtlTypes = new[]
+            {
+                EtlType.Raven,
+                EtlType.Sql,
+                EtlType.Olap,
+                EtlType.ElasticSearch,
+                EtlType.Queue
+            };
+
+            var currentEtlTypes = Enum.GetValues(typeof(EtlType)).Cast<EtlType>();
+            var newEtlTypes = currentEtlTypes.Except(knownEtlTypes).ToArray();
+
+            if (newEtlTypes.Any())
+                throw new Exception($"New EtlType values detected: {string.Join(", ", newEtlTypes)}. Update {nameof(TombstoneCleaningAfterEtlLoaderDisabled)} test to cover it.");
+        }
+
+        [Theory]
+        [InlineData(true, EtlType.Raven)]
+        [InlineData(false, EtlType.Raven)]
+        [InlineData(true, EtlType.Sql)]
+        [InlineData(false, EtlType.Sql)]
+        [InlineData(true, EtlType.Olap)]
+        [InlineData(false, EtlType.Olap)]
+        [InlineData(true, EtlType.ElasticSearch)]
+        [InlineData(false, EtlType.ElasticSearch)]
+        [InlineData(true, EtlType.Queue)]
+        [InlineData(false, EtlType.Queue)]
+        public async Task TombstoneCleaningAfterEtlLoaderDisabled(bool useCustomTaskName, EtlType etlType)
+        {
+            string expectedSource = default;
+            var etlConfigurationName = useCustomTaskName ? _customTaskName : null;
+
+            using (var store = GetDocumentStore())
             {
                 // Documents creation
-                var documentCreationTasks = new Task[DocumentsCount];
-                using (var session = store1.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     for (int i = 1; i <= DocumentsCount; i++)
                     {
                         var docId = $"users/{i}";
-                        session.Store(new User { Name = $"Yonatan{i}" }, docId);
-                        documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(store2, docId, Timeout));
+                        session.Store(new User { Name = $"Lev{i}" }, docId);
                     }
                     session.SaveChanges();
                 }
 
-                var connectionString = new RavenConnectionString
+                var transforms = new Transformation
                 {
-                    Name = store2.Identifier,
-                    Database = store2.Database,
-                    TopologyDiscoveryUrls = store2.Urls
+                    Name = "loadAll",
+                    Collections = { "Users" },
+                    Script = "loadToUsers(this)"
                 };
 
-                await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                var etlConfiguration = new RavenEtlConfiguration
+                switch (etlType)
                 {
-                    ConnectionStringName = connectionString.Name,
-                    Transforms =
-                    {
-                        new Transformation()
-                        {
-                            Name = "loadAll",
-                            Collections = {"Users"},
-                            Script = "loadToUsers(this)"
-                        }
-                    }
-                };
-
-                var result = await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
-
-                // Assert documents replication
-                await Task.WhenAll(documentCreationTasks).ContinueWith(_ =>
-                {
-                    for (int i = 1; i <= DocumentsCount; i++)
-                    {
-                        var docId = $"users/{i}";
-                        Assert.True(documentCreationTasks[i - 1].IsCompletedSuccessfully, $"The document '{docId}' was not received within the timeout in the `Sink` database.");
-                    }
-                });
-
-                await store1.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, disable: true));
+                    case EtlType.Raven:
+                        var ravenConnectionString = new RavenConnectionString { Name = store.Identifier };
+                        var ravenConfiguration = new RavenEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
+                        await AddEtlDisableItAndSetTaskName(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
+                        break;
+                    case EtlType.Sql:
+                        var sqlConnectionString = new SqlConnectionString { Name = store.Identifier, FactoryName = "System.Data.SqlClient", ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;" };
+                        var sqlConfiguration = new SqlEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = sqlConnectionString.Name, Transforms = { transforms }, SqlTables = { new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id" } } };
+                        await AddEtlDisableItAndSetTaskName(store, sqlConnectionString, sqlConfiguration, OngoingTaskType.SqlEtl);
+                        break;
+                    case EtlType.Olap:
+                        var olapConnectionString = new OlapConnectionString { Name = store.Identifier };
+                        var olapConfiguration = new OlapEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = olapConnectionString.Name, Transforms = { transforms } };
+                        await AddEtlDisableItAndSetTaskName(store, olapConnectionString, olapConfiguration, OngoingTaskType.OlapEtl);
+                        break;
+                    case EtlType.ElasticSearch:
+                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier };
+                        var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
+                        await AddEtlDisableItAndSetTaskName(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
+                        break;
+                    case EtlType.Queue:
+                        var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
+                        var queueConfiguration = new QueueEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms } };
+                        await AddEtlDisableItAndSetTaskName(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(etlType), etlType, "New EtlType values detected");
+                }
 
                 // When deleting documents, we expect the creation of Tombstones, since ETL task is disabled.
-                using (var session = store1.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     for (int i = 1; i <= TombstonesCount; i++)
                     {
@@ -316,7 +354,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
 
                 Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
@@ -324,8 +362,19 @@ namespace SlowTests.Issues
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
                 Assert.Equal("users", notificationDetails.First().Collection);
-                Assert.Equal($"RavenDB ETL to {Server.WebUrl} (DB: {store2.Database})", notificationDetails.First().Source);
+                Assert.Equal(expectedSource, notificationDetails.First().Source);
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
+            }
+
+            async Task AddEtlDisableItAndSetTaskName<T>(IDocumentStore store, T connectionString, EtlConfiguration<T> configuration, OngoingTaskType type) where T : ConnectionString
+            {
+                var putResult = store.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
+                Assert.NotNull(putResult.RaftCommandIndex);
+
+                var addResult = store.Maintenance.Send(new AddEtlOperation<T>(configuration));
+                await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
+
+                expectedSource = useCustomTaskName ? _customTaskName : configuration.GetDefaultTaskName();
             }
         }
 
