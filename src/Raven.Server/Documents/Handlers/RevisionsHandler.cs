@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Handlers
                 Database,
                 $"Enforce revision configuration in database '{Database.Name}'.",
                 Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, includeForceCreated, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, includeForceCreated, token),
                 operationId,
                 token: token);
 
