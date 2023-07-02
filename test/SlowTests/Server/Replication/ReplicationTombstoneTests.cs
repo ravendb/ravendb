@@ -1,10 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations;
-using Raven.Client.ServerWide;
+﻿using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -18,14 +13,16 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task DontReplicateTombstoneBack()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DontReplicateTombstoneBack(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 string changeVector1;
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var databaseName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                 using (var session = store1.OpenSession())
                 {
@@ -60,11 +57,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task RavenDB_12295()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RavenDB_12295(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -105,21 +103,22 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
-            using (var store3 = GetDocumentStore(new Options
+            using (var store3 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName3}"
             }))
@@ -155,21 +154,22 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_chain()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_chain(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
-            using (var store3 = GetDocumentStore(new Options
+            using (var store3 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName3}"
             }))
@@ -206,21 +206,22 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Tombstone_should_replicate_in_master_master_cycle()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Tombstone_should_replicate_in_master_master_cycle(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
-            using (var store3 = GetDocumentStore(new Options
+            using (var store3 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName3}"
             }))
@@ -278,16 +279,17 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Replication_of_document_should_delete_existing_tombstone_at_destination()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Replication_of_document_should_delete_existing_tombstone_at_destination(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
@@ -312,7 +314,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
-                var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                var stats = await GetDatabaseStatisticsAsync(store2);
                 Assert.Equal(1, stats.CountOfTombstones);
 
                 using (var s1 = store1.OpenSession())
@@ -329,87 +331,19 @@ namespace SlowTests.Server.Replication
                 var tombstonesAtStore2 = GetTombstones(store2);
                 Assert.Empty(tombstonesAtStore2);
 
-                stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                stats = await GetDatabaseStatisticsAsync(store2);
                 Assert.Equal(0, stats.CountOfTombstones);
             }
         }
 
-        [Fact]
-        public async Task Replication_of_document_should_delete_existing_tombstone_at_destination_sharding()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CreateConflictAndResolveItWithTombstone(Options options)
         {
-            var dbName1 = "FooBar-1";
-            var dbName2 = "FooBar-2";
-            using (var store1 = Sharding.GetDocumentStore(new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var store1 = GetDocumentStore(options: options))
+            using (var store2 = GetDocumentStore(options: options))
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
-            }))
-            using (var store2 = Sharding.GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
-            }))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                await SetupReplicationAsync(store1, store2);
-
-                Assert.True(WaitForDocument(store2, "foo/bar"));
-
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Delete("foo/bar");
-                    s1.SaveChanges();
-                }
-
-                var tombstoneIDs = WaitUntilHasTombstones(store2);
-                Assert.Equal(1, tombstoneIDs.Count);
-                Assert.Contains("foo/bar", tombstoneIDs);
-
-                long countOfTombstones = 0;
-                var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store2.Database);
-                foreach (var task in dbs)
-                {
-                    var db = await task;
-                    var shardNumber = ShardHelper.GetShardNumberFromDatabaseName(db.Name);
-                    var stats = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetStatisticsOperation(db.ServerStore.Server.DebugTag, db.ServerStore.NodeTag));
-                    if (stats.CountOfTombstones > 0)
-                        countOfTombstones += stats.CountOfTombstones;
-                }
-             
-                Assert.Equal(1, countOfTombstones);
-            }
-        }
-
-        [Fact]
-        public async Task CreateConflictAndResolveItWithTombstone()
-        {
-            using (var store1 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "foo" }, "foo/bar");
@@ -439,17 +373,17 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
-        [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_destination()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Tombstones_replication_should_delete_document_at_destination(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
@@ -478,16 +412,17 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "RavenDB-10864")]
-        public async Task Tombstone_should_replicate_in_master_master()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Tombstone_should_replicate_in_master_master(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
@@ -503,32 +438,33 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
-                using (var s2 = store1.OpenSession())
+                using (var s1 = store1.OpenSession())
                 {
-                    s2.Delete("foo/bar");
-                    s2.SaveChanges();
+                    s1.Delete("foo/bar");
+                    s1.SaveChanges();
                 }
 
                 var tombstoneIDs = WaitUntilHasTombstones(store1);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
-                var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
-                Assert.False(WaitForDocument(store1, "foo/bar", timeout));
+                await EnsureReplicatingAsync(store1, store2);
+
+                Assert.False(WaitForDocument(store1, "foo/bar"));
             }
         }
 
-
-        [Fact]
-        public async Task Two_tombstones_should_replicate_in_master_master()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Two_tombstones_should_replicate_in_master_master(Options options)
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName1}"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_{dbName2}"
             }))
