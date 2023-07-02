@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordChangeVector(IChangeVectorOperationContext context, ChangeVector changeVector)
         {
-            _stats.ChangeVector = changeVector.MergeOrderWith(context.GetChangeVector(_stats.ChangeVector), context);
+            _stats.ChangeVector = changeVector.Order.MergeWith(context.GetChangeVector(_stats.ChangeVector), context);
         }
 
         public void RecordLastLoadedEtag(long etag)

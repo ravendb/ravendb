@@ -32,6 +32,7 @@ using Xunit;
 using Raven.Server.Documents;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Client.Util;
 using Tests.Infrastructure;
 
 namespace FastTests
@@ -139,7 +140,7 @@ namespace FastTests
                 predicate ??= (n, statistics) => statistics.LoadSuccesses > 0;
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 return record.IsSharded
-                    ? _parent.Sharding.Etl.WaitForEtl(store, predicate, numOfProcessesToWaitFor)
+                    ? AsyncHelpers.RunSync(() => _parent.Sharding.Etl.WaitForEtlAsync(store, predicate, numOfProcessesToWaitFor))
                     : WaitForEtl(store, predicate);
             }
 
@@ -170,7 +171,7 @@ namespace FastTests
 
             public async Task<(string, string, EtlProcessStatistics)> WaitForEtlAsync(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, TimeSpan timeout)
             {
-                var database = _parent.GetDatabase(store.Database).Result;
+                var database = await _parent.GetDatabase(store.Database);
 
                 var taskCompletionSource = new TaskCompletionSource<(string, string, EtlProcessStatistics)>();
 
