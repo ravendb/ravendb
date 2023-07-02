@@ -226,6 +226,9 @@ namespace Raven.Server.Web.System
                 throw new NotSupportedException(
                     $"Cannot add a new shard to an existing shard instance. To increase a shard's replication factor use the {nameof(AddDatabaseNodeOperation)}.");
             }
+            
+            if (replicationFactor.HasValue && replicationFactor < 1)
+                throw new InvalidOperationException($"Cannot add a new shard to database {database} with a replication factor {replicationFactor}");
 
             var nodesList = new List<string>();
             foreach (var node in nodes)
