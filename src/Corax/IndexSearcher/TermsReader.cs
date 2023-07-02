@@ -36,8 +36,7 @@ public unsafe struct TermsReader : IDisposable
         _lookup = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
-        // temporary: until we move to proper single dic
-        _dictionaryId = PersistentDictionary.CreateDefault(llt);
+        _dictionaryId = CompactTree.GetDictionaryId(llt);
     }
 
     public string GetTermFor(long id)

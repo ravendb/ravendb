@@ -321,6 +321,17 @@ public sealed partial class CompactTree : IPrepareForCommit
         var existingDictionary = llt.RootObjects.Read(dictionarySlice);
         return existingDictionary != null;
     }
+    
+    public static unsafe long GetDictionaryId(LowLevelTransaction llt)
+    {
+        using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
+        var read = llt.RootObjects.Read(dictionarySlice);
+        if (read != null)
+        {
+            return ((PersistentDictionaryRootHeader*)read.Reader.Base)->PageNumber;
+        }
+        return -1;
+    }
 
     public bool TryGetValue(string key, out long value)
     {

@@ -76,7 +76,7 @@ public unsafe struct EntryTermsReader
 
     public readonly CompactKey Current;
     public long CurrentLong;
-    public long FieldRootPage;//TODO: rename
+    public long FieldRootPage;
     public long TermId;
     public double CurrentDouble;
     public double Latitude;

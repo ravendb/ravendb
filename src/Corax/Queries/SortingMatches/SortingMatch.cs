@@ -482,7 +482,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             var item = terms[i];
             int remainderBits = item.Address[0] >> 4;
             int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
-            long dicId = PersistentDictionary.CreateDefault(llt);
+            long dicId = CompactTree.GetDictionaryId(llt);
             s.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], dicId);
             l[i] = s.Key.ToString();
         }

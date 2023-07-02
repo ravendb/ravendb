@@ -1145,8 +1145,7 @@ namespace Corax
 
             var fieldsByRootPage = GetIndexedFieldByRootPage(fieldsTree);
             
-            //TODO: Temp, need to use the real one, for now is enough
-            long dicId = PersistentDictionary.CreateDefault(llt);
+            long dicId = CompactTree.GetDictionaryId(llt);
             var compactKey = llt.AcquireCompactKey();
             
             foreach (long entryToDelete in _deletedEntries)

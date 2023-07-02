@@ -89,7 +89,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
         _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
         //TODO: Temporary workaround until we are done with single dic
-        _dictionaryId = PersistentDictionary.GetDictionaryId(_transaction.LowLevelTransaction);
+        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
