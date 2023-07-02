@@ -41,6 +41,18 @@ namespace Tests.Infrastructure
         {
         }
 
+        public async Task EnsureNoReplicationLoopAsync(IDocumentStore store, RavenDatabaseMode mode)
+        {
+            using (var manager = await GetReplicationManagerAsync(store, store.Database, mode, new ReplicationManager.ReplicationOptions
+                   {
+                       BreakReplicationOnStart = false,
+                       MaxItemsCount = null
+                   }))
+            {
+                await manager.EnsureNoReplicationLoopAsync();
+            }
+        }
+
         public ValueTask<IReplicationManager> GetReplicationManagerAsync(IDocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
         {
             var options = new ReplicationManager.ReplicationOptions
