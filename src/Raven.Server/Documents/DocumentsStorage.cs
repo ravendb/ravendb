@@ -1578,13 +1578,6 @@ namespace Raven.Server.Documents
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
             DocumentFlags newFlags = DocumentFlags.None)
         {
-            if (ConflictsStorage.ConflictsCount != 0)
-            {
-                var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedChangeVector, changeVector);
-                if (result != null)
-                    return result;
-            }
-
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
             var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
@@ -1783,8 +1776,15 @@ namespace Raven.Server.Documents
 
                 if (collectionName == null)
                 {
-                    // this basically mean that we tried to delete document that doesn't exist.
-                    return null;
+                    // let's check the conflict storage
+                    var collection = ConflictsStorage.GetFirstOrNullCollection(context, id);
+                    if (collection == null)
+                    {
+                        // this basically mean that we tried to delete document that doesn't exist.
+                        return null;
+                    }
+
+                    collectionName = new CollectionName(collection);
                 }
 
                 // ensures that the collection trees will be created
@@ -2523,11 +2523,7 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var result = ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, lowerId, newEtag, document);
-                    nonPersistentFlags = result.NonPersistentFlags;
-
-                    if (result.ChangeVector != null)
-                        return (result.ChangeVector, nonPersistentFlags);
+                    (changeVector, nonPersistentFlags) = ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, lowerId, newEtag, document);
                 }
             }
 

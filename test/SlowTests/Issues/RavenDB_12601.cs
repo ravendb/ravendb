@@ -83,10 +83,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Change_vector_of_cluster_tx_updated_correctly_in_cluster()
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Change_vector_of_cluster_tx_updated_correctly_in_cluster(Options options)
         {
-            var (source, destination) = await CreateDuoCluster();
+            var (source, destination) = await CreateDuoCluster(options);
 
             using (source)
             using (destination)

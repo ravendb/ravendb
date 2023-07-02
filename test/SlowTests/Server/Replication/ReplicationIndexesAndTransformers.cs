@@ -76,7 +76,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_replicate_index(Options options)
         {
-            var (source, destination) = await CreateDuoCluster(options: options);
+            var (source, destination) = await CreateDuoCluster(options);
 
             using (source)
             using (destination)
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_replicate_multiple_indexes(Options options)
         {
-            var (source, destination) = await CreateDuoCluster(options: options);
+            var (source, destination) = await CreateDuoCluster(options);
 
             using (source)
             using (destination)
@@ -110,8 +110,6 @@ namespace SlowTests.Server.Replication
 
                 var userByName = new UserByNameIndex();
                 userByName.Execute(source);
-
-                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -130,7 +128,7 @@ namespace SlowTests.Server.Replication
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_replicate_multiple_indexes_and_multiple_transformers(Options options)
         {
-            var (source, destination) = await CreateDuoCluster(options: options);
+            var (source, destination) = await CreateDuoCluster(options);
 
             using (source)
             using (destination)

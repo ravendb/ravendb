@@ -107,8 +107,9 @@ namespace SlowTests.Server.Replication
 
                     var conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
-                    var cv1 = conflicts[0].ChangeVector.ToChangeVector();
-                    var cv2 = conflicts[1].ChangeVector.ToChangeVector();
+
+                    var cv1 = conflicts[0].ChangeVector.ToVersion().AsString().ToChangeVector();
+                    var cv2 = conflicts[1].ChangeVector.ToVersion().AsString().ToChangeVector();
                     Assert.NotEqual(cv1[0].DbId, cv2[0].DbId);
                     Assert.Equal(1, cv1[0].Etag);
                     Assert.Equal(1, cv2[0].Etag);
@@ -140,8 +141,8 @@ namespace SlowTests.Server.Replication
 
                     conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
-                    var cv1 = conflicts[0].ChangeVector.ToChangeVector();
-                    var cv2 = conflicts[1].ChangeVector.ToChangeVector();
+                    var cv1 = conflicts[0].ChangeVector.ToVersion().AsString().ToChangeVector();
+                    var cv2 = conflicts[1].ChangeVector.ToVersion().AsString().ToChangeVector();
                     Assert.NotEqual(cv1[0].DbId, cv2[0].DbId);
                     Assert.Equal(1, cv1[0].Etag);
                     Assert.Equal(1, cv2[0].Etag);
