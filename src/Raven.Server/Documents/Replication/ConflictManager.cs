@@ -241,6 +241,7 @@ namespace Raven.Server.Documents.Replication
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
             var existingDoc = existing.Document;
             var existingTombstone = existing.Tombstone;
+            var nonPersistentFlags = NonPersistentDocumentFlags.FromResolver;
 
             if (existingDoc != null)
             {
@@ -250,8 +251,6 @@ namespace Raven.Server.Documents.Replication
 
                 // no real conflict here, both documents have identical content so we only merge the change vector without increasing the local etag to prevent ping-pong replication
                 var mergedChangeVector = incomingChangeVector.MergeWith(existingDoc.ChangeVector, context);
-
-                var nonPersistentFlags = NonPersistentDocumentFlags.FromResolver;
 
                 nonPersistentFlags |= compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual)
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
@@ -271,10 +270,12 @@ namespace Raven.Server.Documents.Replication
             if (existingTombstone != null && incomingDoc == null)
             {
                 // Conflict between two tombstones resolves to the local tombstone
-                existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
-                using (Slice.External(context.Allocator, existingTombstone.LowerId, out Slice lowerId))
+                var mergedChangeVector = incomingChangeVector.MergeWith(existingTombstone.ChangeVector, context);
+
+                using (Slice.From(context.Allocator, existingTombstone.LowerId, out Slice lowerId))
                 {
-                    _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, lowerId, null, context.GetChangeVector(existingTombstone.ChangeVector));
+                    _database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null, lastModifiedTicks, mergedChangeVector,
+                        newFlags: existingTombstone.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
                 }
                 return true;
             }

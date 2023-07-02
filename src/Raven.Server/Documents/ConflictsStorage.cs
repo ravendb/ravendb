@@ -644,39 +644,6 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException($"No existing conflict or document was found for '{id}'.");
         }
 
-        public DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context, Slice lowerId,
-            string expectedChangeVector, ChangeVector changeVector)
-        {
-            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
-            {
-                var conflicts = GetConflictsFor(context, prefixSlice);
-                if (conflicts.Count > 0)
-                {
-                    // We do have a conflict for our deletion candidate
-                    // Since this document resolve the conflict we don't need to alter the change vector.
-                    // This way we avoid another replication back to the source
-
-                    ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
-
-                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out long etag);
-                    context.Transaction.AddAfterCommitNotification(new DocumentChange
-                    {
-                        Type = DocumentChangeTypes.Delete,
-                        Id = lowerId.ToString(),
-                        ChangeVector = changeVector,
-                        CollectionName = collectionName.Name,
-                    });
-                    return new DeleteOperationResult
-                    {
-                        Collection = collectionName,
-                        Etag = etag,
-                        ChangeVector = changeVector
-                    };
-                }
-            }
-            return null;
-        }
-
         public void ThrowConcurrencyExceptionOnConflictIfNeeded(DocumentsOperationContext context, Slice lowerId, string expectedChangeVector)
         {
             if (expectedChangeVector == null)
@@ -829,6 +796,20 @@ namespace Raven.Server.Documents
             }
 
             return collection;
+        }
+
+        public string GetFirstOrNullCollection(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                foreach (var conflict in GetConflictsFor(context, prefixSlice))
+                {
+                    return conflict.Collection;
+                }
+            }
+
+            return null;
         }
     }
 }

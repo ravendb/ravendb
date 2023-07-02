@@ -10,6 +10,7 @@ using FastTests;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -24,6 +25,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -432,34 +434,22 @@ namespace Tests.Infrastructure
             return handler;
         }
 
-        protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null, Options options = null)
+        protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster(Options options, [CallerMemberName] string caller = null)
         {
             var (_, leader) = await CreateRaftCluster(2);
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
 
-            var record = new DatabaseRecord(caller);
-            if (options != null)
-            {
-                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
-                modifyDatabaseRecord(record);
-            }
+            options.ReplicationFactor = 2;
+            options.ModifyDatabaseName = _ => caller;
+            options.ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true };
+            
+            options.Server = leader;
+            var dstOptions = options.Clone();
+            dstOptions.Server = follower;
+            dstOptions.CreateDatabase = false;
 
-            var res = await CreateDatabaseInCluster(record, replicationFactor: 2, leadersUrl: leader.WebUrl);
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.Index, TimeSpan.FromSeconds(5));
-
-            var source = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = caller
-            };
-            var destination = new DocumentStore
-            {
-                Urls = new[] { follower.WebUrl },
-                Database = caller
-            };
-            source.Initialize();
-            destination.Initialize();
-
+            var source = GetDocumentStore(options);
+            var destination = GetDocumentStore(dstOptions);
          
             return (source, destination);
         }
@@ -610,5 +600,10 @@ namespace Tests.Infrastructure
                     new ChangeVector(version, throwOnRecursion: true, this));
             }
         }
+    }
+
+    public static class ChangeVectorTestExtensions
+    {
+        public static ChangeVector ToVersion(this string changeVector) => new ChangeVector(changeVector, ReplicationTestBase.NoChangeVectorContext.Instance).Version;
     }
 }
