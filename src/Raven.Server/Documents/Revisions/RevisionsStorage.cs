@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Revisions
             TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
-        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None, bool zeroConfiguraionIfNeeded = false)
+        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None, bool zeroConfigInsteadOfEmptyConfig = false)
         {
             if (Configuration != null)
             {
@@ -266,17 +266,12 @@ namespace Raven.Server.Documents.Revisions
                     return Configuration.Default;
             }
 
-            if (zeroConfiguraionIfNeeded) // if configuration is ConflictConfiguration.Default or _emptyConfiguration
-            {
-                return ZeroConfiguration;
-            }
-
             if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
             {
                 return ConflictConfiguration.Default;
             }
 
-            return _emptyConfiguration;
+            return zeroConfigInsteadOfEmptyConfig ? ZeroConfiguration : _emptyConfiguration;
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
@@ -659,27 +654,24 @@ namespace Raven.Server.Documents.Revisions
             {
                 numberOfRevisionsToDelete = long.MaxValue;
             }
-            else if (configuration == ConflictConfiguration.Default 
-                     || configuration == ZeroConfiguration)  // conflict revisions config
+            else if (configuration == ConflictConfiguration.Default
+                     || configuration == ZeroConfiguration) // conflict revisions config
             {
-                if(documentDeleted && ConflictConfiguration.Default.PurgeOnDelete) // doc is deleted or came from delete *and* ConflictConfiguration PurgeOnDelete is true
-                    numberOfRevisionsToDelete = long.MaxValue;
-                else
+                HandleConflictRevisionsFlags handlingFlags = HandleConflictRevisionsFlags.Conflicted;
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
-                    HandleConflictRevisionsFlags handlingFlags = HandleConflictRevisionsFlags.Conflicted;
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
-                    {
-                        handlingFlags |= HandleConflictRevisionsFlags.Regular;
-                        if (skipForceCreated==false)
-                            handlingFlags |= HandleConflictRevisionsFlags.ForceCreated;
-                    }
-
-                    var databaseTime = _database.Time.GetUtcNow();
-                    var deletedCount = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, databaseTime, revisionsCount, lastModifiedTicks, handlingFlags, out var moreWork);
-                    IncrementCountOfRevisions(context, prefixSlice, -deletedCount);
-                    currentRevisionsCount-= deletedCount;
-                    return moreWork;
+                    handlingFlags |= HandleConflictRevisionsFlags.Regular;
+                    if (skipForceCreated == false)
+                        handlingFlags |= HandleConflictRevisionsFlags.ForceCreated;
                 }
+
+                var databaseTime = _database.Time.GetUtcNow();
+                var deletedCount = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, databaseTime, revisionsCount,
+                    lastModifiedTicks, handlingFlags, out var moreWork);
+                IncrementCountOfRevisions(context, prefixSlice, -deletedCount);
+                currentRevisionsCount -= deletedCount;
+                return moreWork;
+
             }
             else if (configuration.MinimumRevisionsToKeep.HasValue == false 
                      && configuration.MinimumRevisionAgeToKeep.HasValue == false) // doc isn't deleted and there's no limmit in the config except PurgeOnDelete
@@ -730,7 +722,7 @@ namespace Raven.Server.Documents.Revisions
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
 
-                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
+                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfigInsteadOfEmptyConfig: true);
 
                 var maxDeletesUponUpdate = configuration.MaximumRevisionsToDeleteUponDocumentUpdate;
 
@@ -760,7 +752,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var prevRevisionsCount = GetRevisionsCount(context, id);
-                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
+                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfigInsteadOfEmptyConfig: true);
 
                 bool deletedDoc;
                 if (fromDelete)
@@ -1688,10 +1680,14 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
                 var prevRevisionsCount = GetRevisionsCount(context, id);
-                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
 
                 var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
                 var deletedDoc = local.Document == null && local.Tombstone != null;
+                Debug.Assert(local.Document != null || local.Tombstone != null);
+
+                var docFlags = deletedDoc ? local.Tombstone.Flags : local.Document.Flags;
+
+                var configuration = GetRevisionsConfiguration(collectionName.Name, docFlags, zeroConfigInsteadOfEmptyConfig: true);
 
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
                     NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
