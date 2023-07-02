@@ -21,7 +21,7 @@ namespace StressTests.Issues
             {
                 using (var store = new ReplicationTombstoneTests(Output))
                 {
-                    store.Two_tombstones_should_replicate_in_master_master().Wait(TimeSpan.FromMinutes(10));
+                    store.Two_tombstones_should_replicate_in_master_master(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single)).Wait(TimeSpan.FromMinutes(10));
                 }
             });
         }

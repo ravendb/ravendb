@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
@@ -22,34 +20,17 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task CanReplicateRevisions()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateRevisions(Options options)
         {
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+
             var company = new Company { Name = "Company Name" };
             var company2 = new Company { Name = "Company Name2" };
 
-            using (var master = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(master);
                 await RevisionsHelper.SetupRevisionsAsync(slave);
@@ -75,36 +56,19 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task CreateRevisionsAndReplicateThemAll()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CreateRevisionsAndReplicateThemAll(Options options)
         {
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+
             var company = new Company { Name = "Company Name" };
             var company2 = new Company { Name = "Company Name2" };
             var company3 = new Company { Name = "Company Name3" };
             var company4 = new Company { Name = "Company Name4" };
 
-            using (var master = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var slave = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            using (var master = GetDocumentStore(options: options))
+            using (var slave = GetDocumentStore(options: options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(master);
                 await RevisionsHelper.SetupRevisionsAsync(slave);
@@ -143,35 +107,15 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ReplicateRevisionsIgnoringConflicts()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicateRevisionsIgnoringConflicts(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options: options))
+            using (var storeB = GetDocumentStore(options: options))
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB);
-
-
 
                 using (var session = storeA.OpenSession())
                 {
@@ -184,19 +128,22 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ChangeDefaultRevisionsConflictConfiguration()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ChangeDefaultRevisionsConflictConfiguration(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
                 {
                     MinimumRevisionsToKeep = 3,
                 }));
 
-                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                var rachisLogIndexNotifications = options.DatabaseMode == RavenDatabaseMode.Single ?
+                    (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications :
+                    Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
+                await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
 
                 using (var session = storeB.OpenAsyncSession())
                 {
@@ -220,7 +167,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
@@ -240,7 +187,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
                 {
@@ -249,19 +196,22 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task CanDisableRevisionsConflict()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDisableRevisionsConflict(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
                 {
                     Disabled = true
                 }));
 
-                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                var rachisLogIndexNotifications = options.DatabaseMode == RavenDatabaseMode.Single ?
+                    (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications :
+                    Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
+                await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
 
                 using (var session = storeB.OpenAsyncSession())
                 {
@@ -285,7 +235,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
                 {
@@ -294,33 +244,14 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task CreateConflictAndResolveItIncreaseTheRevisions(bool configureVersioning)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CreateConflictAndResolveItIncreaseTheRevisions(Options options, bool configureVersioning)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options: options))
+            using (var storeB = GetDocumentStore(options: options))
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB, configureVersioning);
 
@@ -342,9 +273,6 @@ namespace SlowTests.Server.Replication
                 };
 
                 await UpdateConflictResolver(storeA, config.ResolveByCollection, config.ResolveToLatest);
-
-                Assert.True(WaitForDocument(storeA, "foo/bar"));
-                Assert.True(WaitForDocument(storeB, "foo/bar"));
 
                 using (var session = storeA.OpenSession())
                 {
@@ -373,15 +301,16 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task ResolvedDocumentShouldNotGenerateRevision()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ResolvedDocumentShouldNotGenerateRevision(Options options)
         {
             const int revisionsAmountFromConflict = 3;
             const string docId = "foo/bar";
 
             var file = GetTempFileName();
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var user = new User { Name = "Name" };
                 var user2 = new User { Name = "Name2" };
@@ -417,8 +346,8 @@ namespace SlowTests.Server.Replication
                 await exportOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
+            using (var dst = GetDocumentStore(options))
             {
                 var importOp = await src.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
                 {
@@ -427,7 +356,7 @@ namespace SlowTests.Server.Replication
                 await importOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 await SetupReplicationAsync(src, dst);
-                WaitForDocument(dst, docId);
+                Assert.NotNull(WaitForDocument(dst, docId));
 
                 using (var session1 = src.OpenSession())
                 using (var session2 = dst.OpenSession())
@@ -438,13 +367,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task RevisionsAreReplicatedBack(bool configureVersioning)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsAreReplicatedBack(Options options, bool configureVersioning)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 if (configureVersioning)
                 {
@@ -457,7 +386,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new User(), "keep-conflicted-revision-insert-order$foo/bar");
                     await session.SaveChangesAsync();
 
                     await session.StoreAsync(company, "foo/bar");
@@ -505,13 +434,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task RevisionsAreReplicatedBackWithTombstoneAsResolved(bool configureVersioning)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsAreReplicatedBackWithTombstoneAsResolved(Options options, bool configureVersioning)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
@@ -532,7 +461,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeB.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order$foo/bar");
                     await session.SaveChangesAsync();
 
                     await session.StoreAsync(company2, "foo/bar");
@@ -589,13 +518,13 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task RevisionsAreReplicatedBackWithTombstone(bool configureVersioning)
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsAreReplicatedBackWithTombstone(Options options, bool configureVersioning)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
@@ -610,7 +539,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order$foo/bar");
                     await session.SaveChangesAsync();
 
                     await session.StoreAsync(company, "foo/bar");
@@ -686,7 +615,7 @@ namespace SlowTests.Server.Replication
 
             using (var session = storeB.OpenAsyncSession())
             {
-                await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order$foo/bar");
                 await session.SaveChangesAsync();
 
                 await session.StoreAsync(user2, "foo/bar");
@@ -705,42 +634,14 @@ namespace SlowTests.Server.Replication
             Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
         }
 
-        [Fact]
-        public async Task UpdateTheSameRevisionWhenGettingExistingRevision()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task UpdateTheSameRevisionWhenGettingExistingRevision(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeC = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options: options))
+            using (var storeB = GetDocumentStore(options: options))
+            using (var storeC = GetDocumentStore(options: options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(storeA);
                 await RevisionsHelper.SetupRevisionsAsync(storeB);
@@ -767,18 +668,8 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(storeA, storeC);
                 await SetupReplicationAsync(storeB, storeC);
 
-                using (var session = storeA.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Marker" }, "marker");
-                    await session.SaveChangesAsync();
-                }
-                Assert.True(WaitForDocument(storeC, "marker"));
-                using (var session = storeB.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Marker" }, "marker");
-                    await session.SaveChangesAsync();
-                }
-                Assert.True(WaitForDocument(storeB, "marker"));
+                await EnsureReplicatingAsync(storeA, storeC);
+                await EnsureReplicatingAsync(storeB, storeC);
 
                 using (var session = storeC.OpenSession())
                 {
