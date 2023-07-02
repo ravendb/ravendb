@@ -33,9 +33,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly IndexFieldsMapping _fieldMapping;
     private Tree _persistedDynamicTreeAnalyzer;
-
-
-    private Page _lastPage = default;
     private long? _numberOfEntries;
 
     /// <summary>

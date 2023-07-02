@@ -417,7 +417,6 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     }
                 }
             }
-            Match:
             matches[currentIdx++] = matches[i];
             NotMatch: ; // the ; so we have a label for the goto
         }
