@@ -26,16 +26,17 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");
                 var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                var token = CreateTimeLimitedOperationToken();
-                var ids = parameters.DocumentIds;
-                DeleteRevisionsCommand cmd;
-                do
+                using (var token = CreateTimeLimitedOperationToken())
                 {
-                    token.Delay();
-                    cmd = new DeleteRevisionsCommand(ids, Database, includeForceCreated, token);
-                    await Database.TxMerger.Enqueue(cmd);
-                } while (cmd.MoreWork);
-
+                    var ids = parameters.DocumentIds;
+                    DeleteRevisionsCommand cmd;
+                    do
+                    {
+                        token.Delay();
+                        cmd = new DeleteRevisionsCommand(ids, Database, includeForceCreated, token);
+                        await Database.TxMerger.Enqueue(cmd);
+                    } while (cmd.MoreWork);
+                }
                 NoContentStatus();
             }
         }
@@ -59,11 +60,12 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                var skipForceCreated = _includeForceCreated == false;
                 MoreWork = false;
                 foreach (var id in _ids)
                 {
                     _token.ThrowIfCancellationRequested();
-                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id, _includeForceCreated==false, ref MoreWork);
+                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id, skipForceCreated, ref MoreWork);
                 }
                 return 1;
             }

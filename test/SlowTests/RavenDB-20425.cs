@@ -68,7 +68,7 @@ namespace SlowTests
         {
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, includeForceCreated, token);
+                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated, token);
         }
 
         private async Task UpdateDoc(DocumentStore store, string docId)
@@ -1072,6 +1072,18 @@ return oldestDoc;"
                 Assert.Equal(3, revisionsMetadata.Count);
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
             }
+
+            /*
+                Preventing revisions to become orphans.
+                The scenario we wanted to solve:
+                    Go into the studio.
+                    Create a Doc.
+                    Create a force-created revision.
+                    Delete the doc.
+                    The doc wasn't in the 'Revisions Bin' and its revisions was still existing but we weren't able to see them (they are orphaned).
+                
+                this change is letting you see them in the revisions bin.
+             */
         }
 
         [Fact]
@@ -1184,8 +1196,19 @@ return oldestDoc;"
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
-
             }
+
+            /*
+             *The scenario I wanted to solve:
+                Go into the studio.
+                Create a Doc.
+                Create a force-created revision.
+                Delete the doc.
+                create the doc again (a doc with the same id).
+                The new (revived) doc will have 2 revisions, but you won't be able to see them (because it wont have a 'HasRevisions' flag).
+
+                this change is letting you to see them in the revisions bin, even if their doc has no config.
+             */
         }
 
     }

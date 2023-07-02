@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Revisions
             TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
-        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
+        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None, bool zeroConfiguraionIfNeeded = false)
         {
             if (Configuration != null)
             {
@@ -264,6 +264,11 @@ namespace Raven.Server.Documents.Revisions
 
                 if (Configuration.Default != null)
                     return Configuration.Default;
+            }
+
+            if (zeroConfiguraionIfNeeded) // if configuration is ConflictConfiguration.Default or _emptyConfiguration
+            {
+                return ZeroConfiguration;
             }
 
             if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
@@ -725,11 +730,7 @@ namespace Raven.Server.Documents.Revisions
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
 
-                var configuration = GetRevisionsConfiguration(collectionName.Name);
-                if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
-                {
-                    configuration = ZeroConfiguration;
-                }
+                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
 
                 var maxDeletesUponUpdate = configuration.MaximumRevisionsToDeleteUponDocumentUpdate;
 
@@ -759,11 +760,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var prevRevisionsCount = GetRevisionsCount(context, id);
-                var configuration = GetRevisionsConfiguration(collectionName.Name);
-                if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
-                {
-                    configuration = ZeroConfiguration;
-                }
+                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
 
                 bool deletedDoc;
                 if (fromDelete)
@@ -941,7 +938,7 @@ namespace Raven.Server.Documents.Revisions
 
             private long _skippedForceCreated = 0;
 
-            public bool FinishedRegualr { get; private set; }
+            public bool FinishedRegular { get; private set; }
             public bool FinishedConflicted { get; private set; }
 
             private bool _skipForceCreated;
@@ -958,15 +955,15 @@ namespace Raven.Server.Documents.Revisions
                 _regularCount = allRevisionCount - conflictRevisionsCount;
 
                 _databaseTime = databaseTime;
-                _skipForceCreated = FlagsContain(handlingFlags, HandleConflictRevisionsFlags.ForceCreated)==false;
+                _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated)==false;
 
-                FinishedRegualr = FlagsContain(handlingFlags, HandleConflictRevisionsFlags.Regular) == false || AllRegularAreDeleted();
+                FinishedRegular = handlingFlags.HasFlag(HandleConflictRevisionsFlags.Regular) == false || AllRegularAreDeleted();
                 FinishedConflicted = ConflictedReachedMinimumToKeep();
             }
 
             void ValidateFlags(HandleConflictRevisionsFlags flags)
             {
-                if (FlagsContain(flags, HandleConflictRevisionsFlags.Regular) == false && FlagsContain(flags, HandleConflictRevisionsFlags.ForceCreated))
+                if (flags.HasFlag(HandleConflictRevisionsFlags.Regular) == false && flags.HasFlag(HandleConflictRevisionsFlags.ForceCreated))
                 {
                     throw new InvalidOperationException($"Cannot delete force-created revisions without deleting also regular revisions");
                 }
@@ -999,7 +996,7 @@ namespace Raven.Server.Documents.Revisions
 
             public bool ShouldDeleteNonConflicted(bool revisionIsForceCreated)
             {
-                if (FinishedRegualr)
+                if (FinishedRegular)
                 {
                     return false;
                 }
@@ -1007,22 +1004,17 @@ namespace Raven.Server.Documents.Revisions
                 if (revisionIsForceCreated && _skipForceCreated)
                 {
                     _skippedForceCreated++;
-                    FinishedRegualr |= AllRegularAreDeleted();
+                    FinishedRegular |= AllRegularAreDeleted();
                     return false;
                 }
 
                 _regularDeletedCount++;
-                FinishedRegualr |= AllRegularAreDeleted();
+                FinishedRegular |= AllRegularAreDeleted();
                 return true;
             }
 
             private bool AllRegularAreDeleted() => _regularCount - (_regularDeletedCount + _skippedForceCreated) == 0;
             private bool ConflictedReachedMinimumToKeep() => _config.MinimumRevisionsToKeep.HasValue && _conflictCount - _conflictDeletedCount <= _config.MinimumRevisionsToKeep.Value;
-
-            private static bool FlagsContain(HandleConflictRevisionsFlags current, HandleConflictRevisionsFlags flag)
-            {
-                return (current & flag) == flag;
-            }
         }
 
         [Flags]
@@ -1030,7 +1022,7 @@ namespace Raven.Server.Documents.Revisions
         {
             Conflicted = 0x0,
             Regular = 0x1,
-            ForceCreated = 0x2
+            ForceCreated = 0x1 << 1
         }
 
 
@@ -1059,7 +1051,7 @@ namespace Raven.Server.Documents.Revisions
                         break;
                     }
 
-                    if (state.FinishedRegualr && state.FinishedConflicted)
+                    if (state.FinishedRegular && state.FinishedConflicted)
                     {
                         break;
                     }
@@ -1576,12 +1568,12 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public Task<IOperationResult> EnforceConfigurationIncludeForceCreated(Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> EnforceConfigurationIncludeForceCreatedAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return EnforceConfiguration(onProgress, includeForceCreated: true, token);
+            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, token);
         }
 
-        public async Task<IOperationResult> EnforceConfiguration(Action<IOperationProgress> onProgress, 
+        public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, 
             bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
             OperationCancelToken token)
         {
@@ -1696,13 +1688,7 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
                 var prevRevisionsCount = GetRevisionsCount(context, id);
-                var configuration = GetRevisionsConfiguration(collectionName.Name);
-
-                
-                if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
-                {
-                    configuration = ZeroConfiguration;
-                }
+                var configuration = GetRevisionsConfiguration(collectionName.Name, zeroConfiguraionIfNeeded: true);
 
                 var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
                 var deletedDoc = local.Document == null && local.Tombstone != null;
