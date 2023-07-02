@@ -84,7 +84,7 @@ public class RawCoraxFlag : StorageTest
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            Assert.True(indexWriter.TryDeleteEntry("1"));
+            indexWriter.TryDeleteEntry("1");
             indexWriter.PrepareAndCommit();
         }
 
@@ -154,7 +154,7 @@ public class RawCoraxFlag : StorageTest
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            Assert.True(indexWriter.TryDeleteEntry("1"));
+            indexWriter.TryDeleteEntry("1");
             indexWriter.PrepareAndCommit();
         }
 

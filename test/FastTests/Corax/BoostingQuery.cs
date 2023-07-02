@@ -319,7 +319,7 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
             using (var indexWriter = new IndexWriter(Env, knownFields))
             {
-                Assert.True(indexWriter.TryDeleteEntry("list/1"));
+                indexWriter.TryDeleteEntry("list/1");
                 indexWriter.PrepareAndCommit();
             }
             

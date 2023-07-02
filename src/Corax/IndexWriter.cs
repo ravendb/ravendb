@@ -52,6 +52,7 @@ namespace Corax
         private long _numberOfModifications;
         private readonly Dictionary<long, ByteString> _bufferedIndexedEntries = new();
         private readonly Dictionary<ByteString, EntriesContainer> _indexedEntriesByKey = new(new ByteStringEqualityComparer());
+        private readonly List<Slice> _entryKeysToRemove = new();
         private readonly IndexFieldsMapping _fieldsMapping;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
@@ -700,20 +701,18 @@ namespace Corax
         /// <returns>Encoded entryId</returns>
         public long Update(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data)
         {
-            using var _ = Slice.From(_transaction.Allocator, key, ByteStringType.Mutable, out var slice);
+            var scope = Slice.From(_transaction.Allocator, key, ByteStringType.Mutable, out var slice);
             if (_indexedEntriesByKey.Remove(slice.Content, out var existing))
             {
                 // if this is already in the index batch, we know that it was already marked for deletion
                 // from persistent storage, so we can just remove it from the batch and be done with it
                 RemoveEntriesFromBatch(ref existing);
+                scope.Dispose();
             }
-            else if (TryGetEntryTermId(_fieldsMapping.GetByFieldId(0).FieldName, key, out var idInTree))
+            else
             {
-                RecordDeletion(idInTree);
-                // TODO: optimize this
-                //return IndexEntry(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree),data);
+                _entryKeysToRemove.Add(slice);
             }
-
             return Index(key, data);
         }
 
@@ -1125,6 +1124,22 @@ namespace Corax
 
         private void ProcessDeletes(Tree fieldsTree) 
         {
+            // we need to copy the keys so we could sort them
+            Sorter<Slice, SliceStructComparer> sorter = default;
+            sorter.Sort(CollectionsMarshal.AsSpan(_entryKeysToRemove));
+            
+            // now run over the keys in sorted fashion in optimal manner
+            var primaryKeyTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName);
+            primaryKeyTree.InitializeStateForTryGetNextValue();
+            for (int i = 0; i < _entryKeysToRemove.Count; i++)
+            {
+                if (primaryKeyTree.TryGetNextValue(_entryKeysToRemove[i].AsSpan(), out var _, out var postingListId, out var scope))
+                {
+                    RecordDeletion(postingListId);
+                    scope.Dispose();
+                }
+            }
+            
             var llt = _transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
 
@@ -1232,34 +1247,30 @@ namespace Corax
             return pageToField;
         }
         
-        public bool TryDeleteEntry(string term)
+        public void TryDeleteEntry(string term)
         {
-            using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
+            var scope = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
 
             if (_indexedEntriesByKey.Remove(termSlice.Content, out var existing))
             {
                 // if this is already in the index batch, we know that it was already marked for deletion
                 // from persistent storage, so we can just remove it from the batch and be done with it
                 RemoveEntriesFromBatch(ref existing);
-                return true;
+                scope.Dispose();
+                return;
             }
             
-            if (TryGetEntryTermId(_fieldsMapping.GetByFieldId(0).FieldName, termSlice.AsSpan(), out long idInTree) == false) 
-                return false;
-
-            RecordDeletion(idInTree);
-            return true;
+            _entryKeysToRemove.Add(termSlice);
         }
         
-        public bool TryDeleteEntryByField(string field, string term)
+        public void TryDeleteEntryByField(string field, string term)
         {
             using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
             using var __ = Slice.From(_transaction.Allocator, field, ByteStringType.Immutable, out var fieldSlice);
             if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out long idInTree) == false) 
-                return false;
+                return;
 
             RecordDeletion(idInTree);
-            return true;
         }
         
         private void RemoveEntriesFromBatch(ref EntriesContainer entriesContainer)
@@ -1382,17 +1393,17 @@ namespace Corax
             _indexDebugDumper.Commit();
             using var _ = _transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+            
+            ProcessDeletes(fieldsTree);
+            
             Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
             _indexMetadata.Add(Constants.IndexWriter.LastEntryIdSlice, _lastEntryId);
-            
-            ProcessDeletes(fieldsTree);
-
-            Slice[] keys = Array.Empty<Slice>();
             _pForEncoder = new FastPForEncoder(_transaction.LowLevelTransaction.Allocator);
 
+            Slice[] keys = Array.Empty<Slice>();
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
                 var indexedField = _knownFieldsTerms[fieldId];
