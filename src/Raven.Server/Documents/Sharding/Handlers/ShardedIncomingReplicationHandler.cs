@@ -143,11 +143,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
             // so the replication won't start from scratch
 
             return _shardedSource == false ?
-                await GetInitialHandshakeResponseAsync() :
-                await GetInitialHandshakeResponseForShardedSourceAsync();
+                await HandleNonShardedSourceAsync() :
+                await HandleShardedSourceAsync();
         }
 
-        private async Task<(string MergedChangeVector, long LastEtag)> GetInitialHandshakeResponseAsync()
+        private async Task<(string MergedChangeVector, long LastEtag)> HandleNonShardedSourceAsync()
         {
             var lastAcceptedEtag = long.MaxValue;
             List<string> handlersChangeVector = null;
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return (mergedChangeVector, lastAcceptedEtag);
         }
 
-        private async Task<(string MergedChangeVector, long LastEtag)> GetInitialHandshakeResponseForShardedSourceAsync()
+        private async Task<(string MergedChangeVector, long LastEtag)> HandleShardedSourceAsync()
         {
             var shardedExternalReplicationStates = ShardReplicationLoader.GetShardedExternalReplicationStates(_parent.Server, _parent.DatabaseName,
                     _sourceShardedDatabaseName, _sourceShardedDatabaseId);
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             List<string> handlersChangeVector = null;
             foreach (var (_, handler) in _handlers)
             {
-                if (stateForSingleSource.DestinationStates.TryGetValue(handler.DatabaseName, out var destinationState) == false)
+                if (stateForSingleSource.DestinationStates.TryGetValue(handler.DestinationDatabaseName, out var destinationState) == false)
                     continue;
 
                 var (acceptedChangeVector, acceptedEtag) = await handler.GetFirstChangeVectorFromShardAsync();
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     DestinationChangeVector = handler.LastAcceptedChangeVector
                 };
 
-                shardedSourceState.DestinationStates[handler.DatabaseName] = shardedDestinationState;
+                shardedSourceState.DestinationStates[handler.DestinationDatabaseName] = shardedDestinationState;
             }
 
             var command = new ShardedUpdateExternalReplicationStateCommand(_parent.DatabaseName, RaftIdGenerator.NewId()) { ReplicationState = states };
