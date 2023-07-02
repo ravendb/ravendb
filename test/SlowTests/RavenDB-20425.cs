@@ -697,6 +697,17 @@ return oldestDoc;"
                 await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
                 await session.SaveChangesAsync();
             }
+            for (int i = 1; i <= 10; i++)
+            {
+                using (var session = dst.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"ForceCreated{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
             using (var session = dst.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Name = "New" }, "Docs/1");
@@ -704,22 +715,21 @@ return oldestDoc;"
             }
             await SetupReplicationAsync(src, dst); // Conflicts resolved
             await EnsureReplicatingAsync(src, dst);
-            using (var session = dst.OpenAsyncSession())
-            {
-                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); // obeys the Conflicted Config
-            }
 
             using (var session = dst.OpenAsyncSession())
             {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(13, doc1RevCount);
+
                 session.Delete("Docs/1");
                 await session.SaveChangesAsync();
-                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(4, doc1RevCount);
+
+                doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(14, doc1RevCount); // 10 force-created, 3 conflict, 1 delete
 
                 // check if delete revision has been created (even if you have no config - you have revisions so you need to create "delete revision" in delete).
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
-                Assert.Equal(4, revisionsMetadata.Count);
+                Assert.Equal(14, revisionsMetadata.Count);
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
             }
 
