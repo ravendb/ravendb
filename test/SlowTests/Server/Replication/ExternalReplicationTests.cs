@@ -137,19 +137,19 @@ namespace SlowTests.Server.Replication
                     : await Sharding.GetShardDatabaseNameForDocAsync((DocumentStore)store1, "foo/bar/store1"));
                 var collector = new LiveReplicationPerformanceCollector(db);
                 var stats = await collector.Stats.DequeueAsync();
-                Assert.Equal(4, stats.Count);
-                Assert.Equal(2,
-                    stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.IncomingPerformanceStats perf &&
-                                        perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal));
-                Assert.Equal(2,
-                    stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.OutgoingPerformanceStats perf &&
-                                                    perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal));
+                var incomingCount = stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.IncomingPerformanceStats perf &&
+                                                                    perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal);
+                var outgoingCount = stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.OutgoingPerformanceStats perf &&
+                                                                   perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal);
+                Assert.True(stats.Count == 4, $"Expected: 4, actual: {stats.Count}. Exiting stats: Incoming internal handlers count: {incomingCount}. Outgoing internal handles count: {outgoingCount}");
+                Assert.Equal(2, incomingCount);
+                Assert.Equal(2, outgoingCount);
 
                 void WaitForDocumentInAllStores(string documentId)
                 {
-                    WaitForDocument(store1, documentId);
-                    WaitForDocument(store2, documentId);
-                    WaitForDocument(store3, documentId);
+                    Assert.True(WaitForDocument(store1, documentId));
+                    Assert.True(WaitForDocument(store2, documentId));
+                    Assert.True(WaitForDocument(store3, documentId));
                 }
             }
         }
