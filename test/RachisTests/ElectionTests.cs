@@ -402,7 +402,6 @@ namespace RachisTests
             await c.WaitForTopology(Leader.TopologyModification.Witness);
 
             var bLeader = b.WaitForState(RachisState.Leader, CancellationToken.None);
-            //var cLeader = c.WaitForState(RachisState.Leader, CancellationToken.None);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {

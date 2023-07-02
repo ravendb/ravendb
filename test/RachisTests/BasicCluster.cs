@@ -199,7 +199,7 @@ namespace RachisTests
             using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                Assert.Equal(expected, b.StateMachine.Read(context, "test"));
+                Assert.Equal(expected, d.StateMachine.Read(context, "test"));
             }
         }
 
