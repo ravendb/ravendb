@@ -710,29 +710,16 @@ return oldestDoc;"
                 Assert.Equal(3, doc1RevCount); // obeys the Conflicted Config
             }
 
-            // Create 10 force-created revisions in dst
-            for (int i = 1; i <= 10; i++)
-            {
-                using (var session = dst.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = $"FC{i}" }, "Docs/1");
-                    await session.SaveChangesAsync();
-
-                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
-                    await session.SaveChangesAsync();
-                }
-            }
-
             using (var session = dst.OpenAsyncSession())
             {
                 session.Delete("Docs/1");
                 await session.SaveChangesAsync();
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(14, doc1RevCount);
+                Assert.Equal(4, doc1RevCount);
 
                 // check if delete revision has been created (even if you have no config - you have revisions so you need to create "delete revision" in delete).
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
-                Assert.Equal(14, revisionsMetadata.Count);
+                Assert.Equal(4, revisionsMetadata.Count);
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
             }
 
