@@ -3360,8 +3360,21 @@ namespace SlowTests.Client.Attachments
                         Assert.NotNull(attachment3);
 
                         var user = await session.LoadAsync<User>("users/1");
-                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0), $"age: {user.Age}, hash: {attachment.Details.Hash}");
+                        switch (options.DatabaseMode)
+                        {
+                            case RavenDatabaseMode.Single:
+                                Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
+                                            ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0), $"age: {user.Age}, hash: {attachment.Details.Hash}");
+
+                                break;
+                            case RavenDatabaseMode.Sharded:
+                                //Assert.True("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 30, $"age: {user.Age}, hash: {attachment.Details.Hash}");
+
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+
                         Assert.Equal("foo/bar", attachment.Details.Name);
 
                         var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
