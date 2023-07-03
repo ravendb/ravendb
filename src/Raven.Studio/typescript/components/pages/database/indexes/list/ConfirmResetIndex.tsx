@@ -36,7 +36,7 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">reset</span> following index
                 </div>
-                <span className="text-center bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
+                <span className="d-flex align-items-center word-break bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
                     <Icon icon="index" />
                     {indexName}
                 </span>
