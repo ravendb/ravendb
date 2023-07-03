@@ -49,7 +49,8 @@ namespace Raven.Client.Documents.Conventions
 #if NETCOREAPP3_1_OR_GREATER
             HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
 #endif
-            DisposeCertificate = false
+            DisposeCertificate = false,
+            DisableTopologyCache = true
         };
 
         private static readonly bool DefaultDisableTcpCompression = false;
