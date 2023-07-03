@@ -206,6 +206,8 @@ namespace Raven.Server.ServerWide.Context
 
         public ChangeVector GetChangeVector(string changeVector) => GetChangeVector(changeVector, throwOnRecursion: false);
 
+        public ChangeVector GetEmptyChangeVector() => GetChangeVector(null);
+
         public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion)
         {
             ChangeVector allocatedChangeVector;

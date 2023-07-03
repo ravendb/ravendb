@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Replication
 
                 updatedConflict.Doc = resolved;
                 updatedConflict.Collection = collection;
-                updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
+                updatedConflict.ChangeVector = ConflictManager.MergeConflicts(context, conflicts);
                 resolvedConflict = updatedConflict;
 
                 return true;
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
+            latestDoc.ChangeVector = ConflictManager.MergeConflicts(context, conflicts);
 
             return latestDoc;
         }

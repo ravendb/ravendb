@@ -178,8 +178,7 @@ namespace Raven.Server.Documents.Replication
             if (string.IsNullOrEmpty(changeVector))
                 return;
 
-            if (changeVector.Contains('|'))
-                Debug.Assert(false, $"Cannot contain pipe {changeVector}");
+            AssertChangeVector(changeVector);
 
             var start = 0;
             var current = 0;
@@ -348,6 +347,13 @@ namespace Raven.Server.Documents.Replication
 
             ThrowInvalidEndOfString(state.ToString(), changeVector);
             return false;
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertChangeVector(string changeVector)
+        {
+            if (changeVector.Contains('|'))
+                Debug.Assert(false, $"Cannot contain pipe {changeVector}");
         }
 
         private static void ThrowInvalidEndOfString(string state, string cv)

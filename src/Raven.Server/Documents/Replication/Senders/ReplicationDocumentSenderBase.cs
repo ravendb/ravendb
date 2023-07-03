@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.Replication.Senders
                     // filtering a lot of documents, because we need to let the other side know about this, and 
                     // at the same time, we need to send a heartbeat to keep the tcp connection alive
                     _lastEtag = _parent._lastSentDocumentEtag;
-                    ChangeVector _mergedChangeVector = documentsContext.GetChangeVector(null);
-                    ChangeVector _itemChangeVector = documentsContext.GetChangeVector(null);
+                    ChangeVector mergedChangeVector = documentsContext.GetEmptyChangeVector();
+                    ChangeVector itemChangeVector = documentsContext.GetEmptyChangeVector();
 
                     var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
                     if (lastEtagFromDestinationChangeVector > _lastEtag)
@@ -195,8 +195,8 @@ namespace Raven.Server.Documents.Replication.Senders
                             }
 
                             _lastEtag = item.Etag;
-                            _itemChangeVector.Renew(item.ChangeVector, throwOnRecursion: false, documentsContext);
-                            _mergedChangeVector = _mergedChangeVector.MergeOrderWith(_itemChangeVector, documentsContext);
+                            itemChangeVector.Renew(item.ChangeVector, throwOnRecursion: false, documentsContext);
+                            mergedChangeVector = mergedChangeVector.MergeOrderWith(itemChangeVector, documentsContext);
 
                             if (AddReplicationItemToBatch(documentsContext, item, _stats.Storage, state, skippedReplicationItemsInfo) == false)
                             {
@@ -232,8 +232,6 @@ namespace Raven.Server.Documents.Replication.Senders
                         Log.Info(msg);
                     }
 
-                    _parent.LastSentChangeVector = _mergedChangeVector;
-
                     if (_orderedReplicaItems.Count == 0)
                     {
                         var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
@@ -247,7 +245,9 @@ namespace Raven.Server.Documents.Replication.Senders
                         _parent.SendHeartbeat(changeVector);
                         return hasModification;
                     }
-
+                    
+                    _parent.LastSentChangeVector = mergedChangeVector;
+                    
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
                     MissingAttachmentsInLastBatch = false;

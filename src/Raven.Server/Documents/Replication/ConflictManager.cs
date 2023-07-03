@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                var merged = ChangeVectorUtils.MergeVectors(context, conflicts.Select(c => context.GetChangeVector(c.ChangeVector)));
+                var merged = MergeConflicts(context, conflicts);
                 mergedChangeVector = merged.MergeWith(changeVector, context);
             }
             _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc, changeVector: mergedChangeVector, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
@@ -283,12 +283,22 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        
+        public static ChangeVector MergeConflicts(DocumentsOperationContext context, IEnumerable<DocumentConflict> conflicts)
+        {
+            var merged = context.GetEmptyChangeVector();
+            foreach (var doc in conflicts)
+            {
+                merged = merged.MergeWith(doc.ChangeVector, context);
+            }
+
+            return merged;
+        }
+
         public static int Compare(DocumentConflict x, DocumentConflict y, IChangeVectorOperationContext context)
         {
             var cvx = new ChangeVector(x.ChangeVector, context);
             var cvy = new ChangeVector(y.ChangeVector, context);
-            return string.Compare(cvx.Version.AsString(), cvy.Version.AsString(), StringComparison.Ordinal);
+            return ChangeVector.CompareVersion(cvx, cvy);
         }
     }
 }
