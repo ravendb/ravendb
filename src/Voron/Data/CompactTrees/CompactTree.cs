@@ -393,6 +393,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         cacheScope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
 
         var lookup = new CompactKeyLookup(cacheScope.Key);
+        lookup.Key.EncodedWithCurrent(out _);
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;
