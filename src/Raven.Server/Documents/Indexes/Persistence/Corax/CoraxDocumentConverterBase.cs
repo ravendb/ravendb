@@ -95,7 +95,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                return CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, storeValue, storeValueFieldName, true, _canContainSourceDocumentId);
+                return CoraxIndexingHelpers.CreateMappingWithAnalyzers(_index, _index.Definition, _keyFieldName, storeValue, storeValueFieldName, true, _canContainSourceDocumentId);
             }
             catch (Exception e)
             {
@@ -112,7 +112,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                KnownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, _storeValue, _storeValueFieldName, false, _canContainSourceDocumentId);
+                KnownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(_index, _index.Definition, _keyFieldName, _storeValue, _storeValueFieldName, false, _canContainSourceDocumentId);
             }
             catch (Exception e)
             {
