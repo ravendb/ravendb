@@ -1683,7 +1683,7 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-                var flags = GetFlagsFormOldDocument(newFlags, doc.Flags, nonPersistentFlags);
+                var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
 
                 long etag;
                 using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))
@@ -2584,7 +2584,7 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
         }
 
-        public DocumentFlags GetFlagsFormOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        public DocumentFlags GetFlagsFromOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
                 return newFlags;

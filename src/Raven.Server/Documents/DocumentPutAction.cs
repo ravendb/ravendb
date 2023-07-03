@@ -178,7 +178,7 @@ namespace Raven.Server.Documents
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
-                    newFlags = _documentsStorage.GetFlagsFormOldDocument(newFlags, oldFlags, nonPersistentFlags);
+                    newFlags = _documentsStorage.GetFlagsFromOldDocument(newFlags, oldFlags, nonPersistentFlags);
                 }
 
                 var result = _documentsStorage.BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document, changeVector, expectedChangeVector, newFlags, oldChangeVector);

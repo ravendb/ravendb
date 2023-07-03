@@ -195,6 +195,8 @@ public class ChangeVector
         return result;
     }
 
+    public static int CompareVersion(ChangeVector changeVector1, ChangeVector changeVector2) => string.CompareOrdinal(changeVector1.Version.AsString(), changeVector2.Version.AsString());
+
     public ChangeVector RemoveId(string id, IChangeVectorOperationContext context)
     {
         if (TryRemoveIds(new HashSet<string>(capacity: 1) { id }, context, out var result))

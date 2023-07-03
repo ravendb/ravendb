@@ -422,7 +422,7 @@ namespace Raven.Server.Documents
 
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             conflictChangeVectors.Add(newChangeVector);
-            return ChangeVectorUtils.MergeVectors(context, conflictChangeVectors.Select(context.GetChangeVector));
+            return ChangeVectorUtils.MergeVectors(context, conflictChangeVectors);
         }
 
         private ChangeVector MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
