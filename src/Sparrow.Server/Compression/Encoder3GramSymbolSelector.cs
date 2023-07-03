@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Collections;
 
 namespace Sparrow.Server.Compression
@@ -297,10 +298,8 @@ namespace Sparrow.Server.Compression
                         continue;
 
                     int sliceDescriptor = slice[0] << 16 | slice[1] << 8 | slice[2];
-                    if (!frequencyMap.TryGetValue(sliceDescriptor, out var frequency))
-                        frequency = 0;
-
-                    frequencyMap[sliceDescriptor] = frequency + 1;
+                    ref var freq = ref CollectionsMarshal.GetValueRefOrAddDefault(frequencyMap, sliceDescriptor, out _);
+                    freq++;
                 }
             }          
         }
