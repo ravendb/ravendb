@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             _batches.CompleteAdding();
             foreach (var batch in _batches)
             {
-                batch.BatchSent.TrySetException(e);
+                batch.BatchSent?.TrySetException(e);
             }
         }
 
