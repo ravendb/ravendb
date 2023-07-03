@@ -79,7 +79,6 @@ namespace SlowTests.Sharding.Issues
         {
             var tt = await WaitForValueAsync(async () =>
             {
-                string cvs = null;
                 var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store2);
                 await foreach (var db in shards)
                 {

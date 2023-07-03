@@ -10,9 +10,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 {
     public DatabaseRecordProgress DatabaseRecord { get; set; }
 
-    public CountsWithSkippedCountAndLastEtag Documents { get; set; }
+    public CountsWithSkippedCountAndLastEtagAndAttachments Documents { get; set; }
 
-    public CountsWithLastEtagAndAttachments RevisionDocuments { get; set; }
+    public CountsWithSkippedCountAndLastEtagAndAttachments RevisionDocuments { get; set; }
 
     public CountsWithLastEtag Tombstones { get; set; }
 
@@ -28,9 +28,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
     public Counts ReplicationHubCertificates { get; set; }
 
-    public CountsWithLastEtag Counters { get; set; }
+    public CountsWithSkippedCountAndLastEtag Counters { get; set; }
 
-    public CountsWithLastEtag TimeSeries { get; set; }
+    public CountsWithSkippedCountAndLastEtag TimeSeries { get; set; }
 
     public Counts CompareExchangeTombstones { get; set; }
 
@@ -65,7 +65,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
     {
         throw new NotSupportedException();
     }
-        
+
     public class DatabaseRecordProgress : Counts
     {
         public bool SortersUpdated { get; set; }
@@ -109,7 +109,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool OlapEtlsUpdated { get; set; }
 
         public bool OlapConnectionStringsUpdated { get; set; }
-            
+
         public bool ElasticSearchEtlsUpdated { get; set; }
 
         public bool ElasticSearchConnectionStringsUpdated { get; set; }
@@ -188,7 +188,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (OlapEtlsUpdated)
                 json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
-                
+
             if (ElasticSearchConnectionStringsUpdated)
                 json[nameof(ElasticSearchConnectionStringsUpdated)] = ElasticSearchConnectionStringsUpdated;
 
@@ -275,7 +275,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (OlapEtlsUpdated)
                 sb.AppendLine("- OLAP ETLs");
-                
+
             if (ElasticSearchConnectionStringsUpdated)
                 sb.AppendLine("- ElasticSearch Connection Strings");
 
@@ -329,7 +329,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         {
             var sb = new StringBuilder();
             sb.Append($"Read: {ReadCount:#,#;;0}.");
-            if (ErroredCount > 0) 
+            if (ErroredCount > 0)
                 sb.Append($" Errored: {ErroredCount:#,#;;0}.");
             if (SizeInBytes > 0)
                 sb.Append($" Size: {new Size(SizeInBytes).HumaneSize}.");
@@ -378,7 +378,24 @@ public abstract class SmugglerProgressBase : IOperationProgress
         }
     }
 
-    public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtagAndAttachments
+    public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
+    {
+        public long SkippedCount { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(SkippedCount)] = SkippedCount;
+            return json;
+        }
+
+        public override string ToString()
+        {
+            return $"Skipped: {SkippedCount}. {base.ToString()}";
+        }
+    }
+
+    public class CountsWithSkippedCountAndLastEtagAndAttachments : CountsWithLastEtagAndAttachments
     {
         public long SkippedCount { get; set; }
 

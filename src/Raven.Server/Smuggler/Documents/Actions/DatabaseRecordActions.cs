@@ -350,7 +350,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.ExpirationConfigurationUpdated = true;
         }
 
-        if (databaseRecord.Refresh != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Expiration))
+        if (databaseRecord.Refresh != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Refresh))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring refresh from smuggler");

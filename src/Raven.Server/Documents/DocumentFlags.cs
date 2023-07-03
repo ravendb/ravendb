@@ -33,7 +33,6 @@ namespace Raven.Server.Documents
 
         FromResharding = 0x8000,
         ForceCreated = 0x10000
-
     }
 
     [Flags]

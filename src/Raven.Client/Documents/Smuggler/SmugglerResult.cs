@@ -211,7 +211,7 @@ namespace Raven.Client.Documents.Smuggler
                 return json;
             }
         }
-        
+
         public long GetLastEtag()
         {
             var lastEtag = Documents.LastEtag;

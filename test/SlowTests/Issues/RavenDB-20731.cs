@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using FastTests.Graph;
-using FastTests.Server.Replication;
 using FastTests.Utils;
-using Microsoft.AspNetCore.Http.HttpResults;
-using NetTopologySuite.Utilities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,8 +35,8 @@ namespace SlowTests.Issues
                     ["Products"] = new RevisionsCollectionConfiguration { Disabled = false, PurgeOnDelete = true, }
                 }
             };
-            await RevisionsHelper.SetupRevisions(store1, Server.ServerStore, configuration: configuration);
-            await RevisionsHelper.SetupRevisions(store2, Server.ServerStore, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(store1, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(store2, configuration: configuration);
 
             await SetupReplicationAsync(store1, store2);
 
@@ -73,7 +68,7 @@ namespace SlowTests.Issues
             }
 
             await EnsureReplicatingAsync((DocumentStore)store1, (DocumentStore)store2);
-            
+
             using (var session = store2.OpenAsyncSession())
             {
                 var count = await session.Advanced.Revisions.GetCountForAsync(id: userId);
@@ -102,7 +97,7 @@ namespace SlowTests.Issues
                     ["Products"] = new RevisionsCollectionConfiguration { Disabled = false, PurgeOnDelete = true, }
                 }
             };
-            await RevisionsHelper.SetupRevisions(leaderStore, leader.ServerStore, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(leaderStore, configuration: configuration);
 
             var userId = "Users/1";
             using (var session = leaderStore.OpenAsyncSession())
@@ -123,7 +118,7 @@ namespace SlowTests.Issues
                 user.Name = "Alice";
                 await session.SaveChangesAsync();
             }
-            
+
             using (var session = followerStore.OpenAsyncSession())
             {
                 session.Advanced.Revisions.ForceRevisionCreationFor(id: userId);
@@ -144,11 +139,11 @@ namespace SlowTests.Issues
         private IDocumentStore GetStoreForServer(RavenServer server, string database)
         {
             return new DocumentStore
-                {
-                    Database = database, 
-                    Urls = new[] { server.WebUrl }, 
-                    Conventions = new DocumentConventions { DisableTopologyUpdates = true }
-                }.Initialize();
+            {
+                Database = database,
+                Urls = new[] { server.WebUrl },
+                Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+            }.Initialize();
         }
 
     }

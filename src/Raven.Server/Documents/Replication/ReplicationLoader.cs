@@ -1240,11 +1240,11 @@ namespace Raven.Server.Documents.Replication
 
             if (newInternalDestinations != null)
             {
-            foreach (var item in newInternalDestinations)
-            {
-                _internalDestinations.Add(item);
+                foreach (var item in newInternalDestinations)
+                {
+                    _internalDestinations.Add(item);
+                }
             }
-        }
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
