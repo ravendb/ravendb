@@ -1587,8 +1587,10 @@ namespace Raven.Client.Documents.Indexes
                 }
                 Out(".");
             }
-            else if (isDictionaryReturn && isDictionaryReturnMethodExtension == false)
+            else if (isDictionaryReturn && isDictionaryReturnMethodExtension == false && 
+                     node is not { Method.Name: "get_Item" }) // we don't want to erase the indexer, see: RavenDB-20145
             {
+                // this portion is covered by tests such as: DynamicDictionaryIndexShouldWorkWithMethods and SlowTests.MailingList.IndexCompilation
                 if (isExtension)
                 {
                     // TODO: remove if unnecessary

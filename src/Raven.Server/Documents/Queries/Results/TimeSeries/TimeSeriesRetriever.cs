@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private readonly DocumentsOperationContext _context;
 
-        private Dictionary<string, Document> _loadedDocuments;
+        private LruDictionary<string, Document> _loadedDocuments;
         private readonly CancellationToken _token;
 
         private Dictionary<LazyStringValue, object> _bucketByTag;
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             [AggregationType.Average] = null
         };
 
-        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments,
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, LruDictionary<string, Document> loadedDocuments,
             CancellationToken token)
         {
             _context = context;
@@ -1053,7 +1054,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private string GetCollection(string documentId)
         {
-            _loadedDocuments ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+            _loadedDocuments ??= new LruDictionary<string, Document>(QueryResultRetrieverBase.LoadedDocumentsCacheSize);
 
             if (_loadedDocuments.TryGetValue(documentId, out var doc) == false)
             {
@@ -1145,7 +1146,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
         {
-            _loadedDocuments ??= new Dictionary<string, Document>();
+            _loadedDocuments ??= new LruDictionary<string, Document>(QueryResultRetrieverBase.LoadedDocumentsCacheSize);
 
             var tag = singleResult.Tag?.ToString();
             if (tag == null)

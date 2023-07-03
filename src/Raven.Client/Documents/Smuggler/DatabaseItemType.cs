@@ -59,6 +59,7 @@ namespace Raven.Client.Documents.Smuggler
         PostgreSQLIntegration = 1 << 23,
         QueueConnectionStrings = 1 << 24,
         QueueEtls = 1 << 25,
-        IndexesHistory = 1 << 26
+        IndexesHistory = 1 << 26,
+        Refresh = 1 << 27
     }
 }

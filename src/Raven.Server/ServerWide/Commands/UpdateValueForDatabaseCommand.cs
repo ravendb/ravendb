@@ -105,5 +105,12 @@ namespace Raven.Server.ServerWide.Commands
 
             return djv;
         }
+
+        public static string GetDatabaseNameFromJson(BlittableJsonReaderObject cmd)
+        {
+            string databaseName = null;
+            cmd?.TryGet(nameof(DatabaseName), out databaseName);
+            return databaseName;
+        }
     }
 }

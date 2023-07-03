@@ -30,18 +30,18 @@ namespace Raven.Client.Documents.Smuggler
             */
 
             DatabaseRecord = new DatabaseRecordProgress();
-            Documents = new CountsWithSkippedCountAndLastEtag();
-            RevisionDocuments = new CountsWithLastEtagAndAttachments();
+            Documents = new CountsWithSkippedCountAndLastEtagAndAttachments();
+            RevisionDocuments = new CountsWithSkippedCountAndLastEtagAndAttachments();
             Tombstones = new CountsWithLastEtag();
             Conflicts = new CountsWithLastEtag();
             Identities = new CountsWithLastEtag();
             Indexes = new Counts();
             CompareExchange = new CountsWithLastEtag();
-            Counters = new CountsWithLastEtag();
+            Counters = new CountsWithSkippedCountAndLastEtag();
             CompareExchangeTombstones = new Counts();
             Subscriptions = new Counts();
             ReplicationHubCertificates = new Counts();
-            TimeSeries = new CountsWithLastEtag();
+            TimeSeries = new CountsWithSkippedCountAndLastEtag();
             _progress = new SmugglerProgress(this);
         }
 

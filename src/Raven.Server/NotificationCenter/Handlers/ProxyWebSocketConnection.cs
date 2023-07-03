@@ -48,7 +48,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             if (certificate != null)
             {
-                var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
+                var tcpConnection = ReplicationUtils.GetServerTcpInfo(_nodeUrl, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
 
                 var expectedCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
 
