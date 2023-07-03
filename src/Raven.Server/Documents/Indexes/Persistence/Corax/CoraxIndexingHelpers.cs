@@ -17,6 +17,7 @@ using Corax;
 using Corax.Mappings;
 using Constants = Raven.Client.Constants;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -47,8 +48,9 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, string keyFieldName, bool storedValue, string storedValueFieldName,  bool forQuerying = false, bool canContainSourceDocumentId = false)
+    public static IndexFieldsMapping CreateMappingWithAnalyzers(Index index, IndexDefinitionBaseServerSide indexDefinition, string keyFieldName, bool storedValue, string storedValueFieldName,  bool forQuerying = false, bool canContainSourceDocumentId = false)
     {
+        using var context = new ByteStringContext(SharedMultipleUseFlag.None);
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(
                 $"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
