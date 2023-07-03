@@ -49,18 +49,18 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         if (_orderMetadata.HasBoost)
         {
-            _fillFunc = SortBy<EntryComparerByScore, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
+            _fillFunc = SortBy<EntryComparerByScore, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
         }
         else
         {
             _fillFunc = _orderMetadata.FieldType switch
             {
-                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.CompactKeyLookup,  Lookup<CompactTree.CompactKeyLookup>.ForwardIterator,  Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
-                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Int64LookupKey, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  DoubleLookupKey,Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, CompactTree.CompactKeyLookup, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
-                MatchCompareFieldType.Random => SortBy<EntryComparerByTerm, CompactTree.CompactKeyLookup, RandomDirection, RandomDirection>(orderMetadata),
+                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, Lookup<CompactTree.CompactKeyLookup>.ForwardIterator,  Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
+                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<Int64LookupKey>.ForwardIterator, Lookup<Int64LookupKey>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<DoubleLookupKey>.ForwardIterator, Lookup<DoubleLookupKey>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
+                MatchCompareFieldType.Random => SortBy<EntryComparerByTerm,  RandomDirection, RandomDirection>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
         }
@@ -142,24 +142,22 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     }
         
     private static delegate*<ref SortingMatch<TInner>, Span<long>, int> 
-        SortBy<TEntryComparer, TLookupKey, TFwdIt,TBackIt>(OrderMetadata metadata)
+        SortBy<TEntryComparer,TFwdIt,TBackIt>(OrderMetadata metadata)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
-        where TLookupKey : struct, ILookupKey
         where TFwdIt : struct,  ILookupIterator
         where TBackIt : struct, ILookupIterator
     {
         if (metadata.Ascending)
         {
-            return &Fill<TEntryComparer, TLookupKey, TFwdIt>;
+            return &Fill<TEntryComparer, TFwdIt>;
         }
 
-        return &Fill<Descending<TEntryComparer>,  TLookupKey, TBackIt>;
+        return &Fill<Descending<TEntryComparer>, TBackIt>;
     }
 
 
-    private static int Fill<TEntryComparer, TLookupKey, TDirection>(ref SortingMatch<TInner> match, Span<long> matches)
+    private static int Fill<TEntryComparer, TDirection>(ref SortingMatch<TInner> match, Span<long> matches)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
-        where TLookupKey : struct, ILookupKey
         where TDirection : struct, ILookupIterator
     {
         // This method should also be re-entrant for the case where we have already pre-sorted everything and 
