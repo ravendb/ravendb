@@ -121,14 +121,20 @@ namespace Voron.Data.CompactTrees
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
             encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);                
             
-            // Test the new dictionary to ensure that we have statistically better compression.
-            using var encodeBufferScope = llt.Allocator.Allocate(Constants.Storage.PageSize, out var encodeBuffer);
-            
+            var encodeBuffer = ArrayPool<byte>.Shared.Rent(Constants.Storage.PageSize);
+
             int incumbentSize = 0;
             int successorSize = 0;
-            var auxEncodeBuffer = encodeBuffer.ToSpan();
+            var auxEncodeBuffer = encodeBuffer.AsSpan();
             while (testEnumerator.MoveNext(out var testValue))
-            {                
+            {
+                if (testValue.Length > encodeBuffer.Length / 2)
+                {
+                    ArrayPool<byte>.Shared.Return(encodeBuffer);
+                    encodeBuffer = ArrayPool<byte>.Shared.Rent(testValue.Length * 2);
+                    auxEncodeBuffer = encodeBuffer.AsSpan();
+                }
+
                 incumbentSize += previousDictionary._encoder.Encode(testValue, auxEncodeBuffer);
                 successorSize += encoder.Encode(testValue, auxEncodeBuffer);
             }
