@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Binary;
 
 namespace Sparrow.Server.Compression
 {
@@ -33,6 +34,8 @@ namespace Sparrow.Server.Compression
 
             _length = (byte)startKey.Length;
         }
+
+        public uint StartKeyAsInt => Bits.SwapBytes(_startKey);
 
         public Span<byte> StartKey => new(Unsafe.AsPointer(ref _startKey), _length);
 
