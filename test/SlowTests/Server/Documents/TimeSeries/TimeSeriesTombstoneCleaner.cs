@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -24,10 +24,11 @@ namespace SlowTests.Server.Documents.TimeSeries
 
         private readonly DateTime _baseline = RavenTestHelper.UtcToday;
 
-        [Fact]
-        public async Task IndexCleanTimeSeriesTombstones()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IndexCleanTimeSeriesTombstones(Options options)
         {
-            using (var store = GetDocumentStore(new Options()))
+            using (var store = GetDocumentStore(options))
             {
                 new MyTsIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -60,7 +61,8 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -101,11 +103,12 @@ namespace SlowTests.Server.Documents.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task ReplicationCleanTimeSeriesTombstones()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationCleanTimeSeriesTombstones(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -143,7 +146,8 @@ namespace SlowTests.Server.Documents.TimeSeries
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "user/322");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -170,7 +174,7 @@ namespace SlowTests.Server.Documents.TimeSeries
 
                     return c;
                 }, 0);
-              
+
                 long tsCount1 = 0;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -178,7 +182,8 @@ namespace SlowTests.Server.Documents.TimeSeries
                     tsCount1 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
                 }
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var dbName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "user/322");
+                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2);
 
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
@@ -194,10 +199,11 @@ namespace SlowTests.Server.Documents.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task IncrementalBackupCleanTimeSeriesTombstones()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IncrementalBackupCleanTimeSeriesTombstones(Options options)
         {
-            using (var store = GetDocumentStore(new Options()))
+            using (var store = GetDocumentStore(options))
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
@@ -233,7 +239,8 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -274,15 +281,20 @@ namespace SlowTests.Server.Documents.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task CleanTimeSeriesTombstonesInTheClusterWithOnlyFullBackup()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CleanTimeSeriesTombstonesInTheClusterWithOnlyFullBackup(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
-            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            var record = new DatabaseRecord(database);
+            options.ModifyDatabaseRecord(record);
+
+            await CreateDatabaseInCluster(record, 3, cluster.Leader.WebUrl);
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 CreateDatabase = false,
                 Server = cluster.Leader,
@@ -324,17 +336,18 @@ namespace SlowTests.Server.Documents.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var markerId = $"marker/{Guid.NewGuid()}";
+                    var markerId = $"marker/{Guid.NewGuid()}$user/322";
                     session.Store(new User { Name = "Karmel" }, markerId);
                     session.SaveChanges();
                     Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, dbName), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
 
                 foreach (var server in cluster.Nodes)
                 {
-                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -351,7 +364,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     var c = 0L;
                     foreach (var server in cluster.Nodes)
                     {
-                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                         await storage.TombstoneCleaner.ExecuteCleanup();
                         using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
@@ -366,22 +379,24 @@ namespace SlowTests.Server.Documents.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task ShouldNotRemoveStatsOfExistingTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotRemoveStatsOfExistingTimeSeries(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
+                var id = "user/1";
                 var users = new List<string>()
                 {
                     "user/1",
-                    "user/2",
-                    "user/11",
-                    "user/21",
-                    "user/12",
-                    "user/22",
-                    "user/3",
-                    "user/13"
+                    $"user/2${id}",
+                    $"user/11${id}",
+                    $"user/21${id}",
+                    $"user/12${id}",
+                    $"user/22${id}",
+                    $"user/3${id}",
+                    $"user/13${id}"
                 };
 
                 using (var session = store1.OpenSession())
@@ -418,7 +433,8 @@ namespace SlowTests.Server.Documents.TimeSeries
                     }
                 }
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, id);
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                 var cleaner = storage.TombstoneCleaner;
 
                 await SetupReplicationAsync(store1, store2);
@@ -456,8 +472,9 @@ namespace SlowTests.Server.Documents.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task CanReplicateWhenStatsNameIsNull()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateWhenStatsNameIsNull(Options options)
         {
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "2022-03-27-12-38-05-8912792.ravendb-snapshot");
@@ -470,11 +487,11 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
             }
 
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 CreateDatabase = false
             }))
-            using (var store2 = GetDocumentStore())
+            using (var store2 = GetDocumentStore(options))
             {
                 using (Backup.RestoreDatabase(store1,
                            new RestoreBackupConfiguration
