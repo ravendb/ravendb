@@ -615,6 +615,7 @@ namespace Raven.Server.Documents
 
                 void AddToConflictsTable(string changeVector, string col, byte* data, int dataSize, long lastModified, int documentFlags)
                 {
+                    changeVector = context.GetChangeVector(changeVector).Version;
                     using (Slice.From(context.Allocator, changeVector, out Slice cv))
                     {
                         using (DocumentIdWorker.GetStringPreserveCase(context, col, out Slice collectionSlice))

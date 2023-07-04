@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         protected bool NotModified(string actualEtag)
         {
             var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-            if (etag == actualEtag)
+            if (etag == actualEtag && actualEtag != null)
                 return true;
 
             return false;

@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
             var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
 
-            string actualEtag = cmd.Etag ?? "";
+            string actualEtag = cmd.Etag;
             if (NotModified(actualEtag))
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
- using System.Globalization;
+using System.Globalization;
 using System.IO;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
             return djv;
         }
-        
+
         public override long AssertChangeVectorSize()
         {
             return sizeof(byte) + // type
@@ -75,7 +75,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 stats.RecordRevisionTombstoneRead();
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
-                SetLazyStringValueFromString(context, out Id);
+
+                var size = *(int*)Reader.ReadExactly(sizeof(int));
+                Id = context.AllocateStringValue(null, Reader.ReadExactly(size), size);
+
                 SetLazyStringValueFromString(context, out Collection);
                 Debug.Assert(Collection != null);
             }
