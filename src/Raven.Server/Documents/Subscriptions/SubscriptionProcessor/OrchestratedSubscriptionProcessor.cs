@@ -69,7 +69,7 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         return conflictStatus;
     }
 
-    public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
+    public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
     {
         var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
         if (_state.Batches.TryTake(out CurrentBatch, TimeSpan.Zero) == false)

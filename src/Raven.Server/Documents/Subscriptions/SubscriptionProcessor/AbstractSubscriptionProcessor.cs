@@ -63,7 +63,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : Abstract
         return result.CurrentBatch.Count > 0 ? BatchStatus.DocumentsSent : BatchStatus.EmptyBatch;
     }
 
-    public abstract Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch);
+    public abstract Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch);
 
     protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem);
 

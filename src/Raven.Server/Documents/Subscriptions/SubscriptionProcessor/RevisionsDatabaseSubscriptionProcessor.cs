@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         public List<RevisionRecord> BatchItems = new List<RevisionRecord>();
     
-        public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
+        public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (Database.DocumentsStorage.RevisionsStorage.Configuration == null ||
                 Database.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(Collection).Disabled)

@@ -46,12 +46,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return conflictStatus;
     }
 
-    protected override async ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
         if (batchItem.Status == BatchItemStatus.ActiveMigration)
-            return false;
+            return ValueTask.FromResult(false);
 
-        return await base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+        return base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
     }
 
     protected override BatchStatus SetBatchStatus(SubscriptionBatchResult result)
@@ -192,12 +192,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return result.Index;
     }
 
-    public override async Task AcknowledgeBatchAsync(long batchId, string changeVector)
+    public override Task AcknowledgeBatchAsync(long batchId, string changeVector)
     {
         ItemsToRemoveFromResend.Clear();
         BatchItems.Clear();
 
-        await SubscriptionConnectionsState.AcknowledgeShardingBatchAsync(Connection.LastSentChangeVectorInThisConnection, changeVector, batchId, BatchItems);
+        return SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection, batchId, BatchItems, command => command.LastKnownSubscriptionChangeVector = changeVector);
     }
 
     protected override ShardIncludesCommandImpl CreateIncludeCommands()
