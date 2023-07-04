@@ -7,7 +7,7 @@ using Voron;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminStorageHandler : RequestHandler
+    public class AdminStorageHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = false)]
         public async Task SystemEnvironmentReport()

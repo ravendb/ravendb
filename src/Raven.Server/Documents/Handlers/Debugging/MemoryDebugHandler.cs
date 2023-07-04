@@ -23,7 +23,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class MemoryDebugHandler : RequestHandler
+    public class MemoryDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/memory/gc", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GcInfo()
