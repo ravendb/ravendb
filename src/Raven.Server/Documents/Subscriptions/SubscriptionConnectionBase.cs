@@ -175,7 +175,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
+        internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(
+            TState state, SubscriptionBatchStatus status, 
+            Stopwatch sendingCurrentBatchStopwatch, 
+            SubscriptionConnectionInUse markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
@@ -197,7 +200,7 @@ namespace Raven.Server.Documents.Subscriptions
                     break;
 
                 case SubscriptionBatchStatus.DocumentsSent:
-                    markInUse.Dispose();
+                    markInUse?.Dispose();
 
                     using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
                     {
@@ -981,7 +984,7 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract Task OnClientAckAsync(string clientReplyChangeVector);
         public abstract Task SendNoopAckAsync();
         protected abstract bool FoundAboutMoreDocs();
-        public abstract DisposeOnce<SingleAttempt> MarkInUse();
+        protected abstract SubscriptionConnectionInUse MarkInUse();
 
         protected abstract void AfterProcessorCreation();
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
@@ -1040,7 +1043,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     // ignored
                 }
-                
+
                 try
                 {
                     _tcpConnectionDisposable?.Dispose();
@@ -1058,7 +1061,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     // ignored
                 }
-                
+
                 try
                 {
                     CancellationTokenSource.Dispose();
@@ -1070,12 +1073,12 @@ namespace Raven.Server.Documents.Subscriptions
 
                 try
                 {
-                    if (_lastReplyFromClientTask is {IsCompleted: false})
+                    if (_lastReplyFromClientTask is { IsCompleted: false })
                     {
                         // it's supposed this task will fail here since we disposed all resources used by connection
                         // but we must wait for it before we release _copiedBuffer
                         _lastReplyFromClientTask.Wait();
-                    } 
+                    }
                 }
                 catch
                 {
@@ -1091,6 +1094,32 @@ namespace Raven.Server.Documents.Subscriptions
         public void Dispose()
         {
             _disposeOnce.Dispose();
+        }
+
+        public class SubscriptionConnectionInUse : IDisposable
+        {
+            private readonly IDisposable _release;
+            private bool _disposed;
+
+            public SubscriptionConnectionInUse(IDisposable release)
+            {
+                _release = release;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                try
+                {
+                    _release?.Dispose();
+                }
+                finally
+                {
+                    _disposed = true;
+                }
+            }
         }
     }
 }

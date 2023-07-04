@@ -168,7 +168,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
     }
 
-    internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse, SubscriptionBatchStatsScope batchScope)
+    internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, SubscriptionConnectionInUse markInUse, SubscriptionBatchStatsScope batchScope)
     {
         if (status == SubscriptionBatchStatus.ActiveMigration)
         {

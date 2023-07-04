@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        public override DisposeOnce<SingleAttempt> MarkInUse() => new DisposeOnce<SingleAttempt>(() => _database.DatabaseInUse(skipUsagesCount: false));
+        protected override SubscriptionConnectionInUse MarkInUse() => new(_database.DatabaseInUse(skipUsagesCount: false));
 
         protected override void AfterProcessorCreation()
         {
