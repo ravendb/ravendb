@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -9,7 +8,6 @@ using Jint.Runtime;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +16,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
 {
-    public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor
+    public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor2<T>
     {
         protected SubscriptionFetcher<T> Fetcher;
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
@@ -73,7 +71,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             //merge with this node's local etag
         }
 
-        protected SubscriptionBatchItem GetBatchItem(T item)
+        protected override SubscriptionBatchItem GetBatchItem(T item)
         {
             var batchItem = ShouldSend(item, out var reason);
 
@@ -104,12 +102,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected abstract SubscriptionFetcher<T> CreateFetcher();
 
-        protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, T item);
-
         protected abstract SubscriptionBatchItem ShouldSend(T item, out string reason);
     }
 
-    public abstract class DatabaseSubscriptionProcessor : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl>
+    public abstract class DatabaseSubscriptionProcessor2<TItem> : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl, TItem>, IDatabaseSubscriptionProcessor
     {
         protected readonly Size MaximumAllowedMemory;
 
@@ -118,11 +114,11 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         protected SubscriptionConnectionsState SubscriptionConnectionsState;
         protected HashSet<long> Active;
 
-        public SubscriptionPatchDocument Patch;
+        public SubscriptionPatchDocument Patch { get; set; }
         protected ScriptRunner.SingleRun Run;
         private ScriptRunner.ReturnRun? _returnRun;
 
-        protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection, database.Name)
+        protected DatabaseSubscriptionProcessor2(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection, database.Name)
         {
             Database = database;
             MaximumAllowedMemory = new Size(Database.Is32Bits ? 4 : 32, SizeUnit.Megabytes);

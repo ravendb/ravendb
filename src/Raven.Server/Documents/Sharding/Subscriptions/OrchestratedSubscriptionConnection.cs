@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        public override AbstractSubscriptionProcessor<OrchestratorIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<OrchestratorIncludesCommandImpl> connection)
+        public override ISubscriptionProcessor<OrchestratorIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<OrchestratorIncludesCommandImpl> connection)
         {
             if (connection is OrchestratedSubscriptionConnection orchestratedSubscription)
                 return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, orchestratedSubscription);

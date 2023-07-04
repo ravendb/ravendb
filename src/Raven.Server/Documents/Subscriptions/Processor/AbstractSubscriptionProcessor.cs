@@ -13,7 +13,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions.Processor;
 
-public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposable
+public abstract class AbstractSubscriptionProcessor<TIncludesCommand, TItem> : ISubscriptionProcessor<TIncludesCommand>
     where TIncludesCommand : AbstractIncludesCommand
 {
     protected readonly ServerStore Server;
@@ -92,6 +92,10 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
     protected abstract TIncludesCommand CreateIncludeCommands();
 
     protected abstract ConflictStatus GetConflictStatus(string changeVector);
+
+    protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, TItem item);
+
+    protected abstract SubscriptionBatchItem GetBatchItem(TItem item);
 
     public virtual void Dispose()
     {

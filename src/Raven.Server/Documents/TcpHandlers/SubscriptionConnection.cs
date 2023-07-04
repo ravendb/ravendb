@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.TcpHandlers
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var p = Processor as DatabaseSubscriptionProcessor;
+                var p = (IDatabaseSubscriptionProcessor)Processor;
                 var globalEtag = p.GetLastItemEtag(context, Subscription.Collection);
                 return globalEtag > State.GetLastEtagSent();
             }
@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override void AfterProcessorCreation()
         {
-            var p = Processor as DatabaseSubscriptionProcessor;
+            var p = (IDatabaseSubscriptionProcessor)Processor;
             p.Patch = SetupFilterAndProjectionScript();
         }
 
@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.TcpHandlers
             };
         }
 
-        public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
+        public override ISubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
         {
             if (connection is SubscriptionConnection subscriptionConnection)
             {

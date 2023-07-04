@@ -68,13 +68,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             var timeLimit = TimeSpan.FromSeconds(RequestHandler.GetIntValueQueryString("timeLimit", false) ?? 15);
             var startEtag = cv.Etag;
 
-            DatabaseSubscriptionProcessor processor;
+            ISubscriptionProcessor<DatabaseIncludesCommandImpl> processor;
             if (subscription.Revisions)
                 processor = new TestRevisionsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), timeLimit, pageSize);
             else
                 processor = new TestDocumentsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), timeLimit, pageSize);
 
-            processor.Patch = patch;
+            ((IDatabaseSubscriptionProcessor)processor).Patch = patch;
 
             using (processor)
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

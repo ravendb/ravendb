@@ -15,11 +15,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions.Processor;
 
-public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<OrchestratorIncludesCommandImpl>
+public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<OrchestratorIncludesCommandImpl, SubscriptionBatchBase<BlittableJsonReaderObject>.Item>
 {
     private readonly ShardedDatabaseContext _databaseContext;
     private SubscriptionConnectionsStateOrchestrator _state;
-    private CancellationToken _token;
+    private readonly CancellationToken _token;
     public ShardedSubscriptionBatch CurrentBatch;
 
     public OrchestratedSubscriptionProcessor(ServerStore server, ShardedDatabaseContext databaseContext, OrchestratedSubscriptionConnection connection) : base(server, connection, connection.DatabaseName)
@@ -103,16 +103,14 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         }
     }
 
-    protected void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
     {
-        //TODO: egor abstract this with DatabaseSubscriptionProcessor<T>.HandleBatchItem()
         Connection.TcpConnection.LastEtagSent = batchItem.Document.Etag;
         result.CurrentBatch.Add(batchItem);
         result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
-
     }
 
-    private SubscriptionBatchItem GetBatchItem(SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    protected override SubscriptionBatchItem GetBatchItem(SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
     {
         if (GetConflictStatus(item.ChangeVector) == ConflictStatus.AlreadyMerged)
         {
