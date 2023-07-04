@@ -5,14 +5,7 @@ namespace Raven.Server.Web
 {
     public abstract class ServerRequestHandler : RequestHandler
     {
-        public override void Init(RequestHandlerContext context)
-        {
-            base.Init(context);
-
-            context.HttpContext.Response.OnStarting(() => CheckForTopologyChanges(context));
-        }
-
-        public Task CheckForTopologyChanges(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Server.ServerStore.HasTopologyChanged(topologyEtag.Value))

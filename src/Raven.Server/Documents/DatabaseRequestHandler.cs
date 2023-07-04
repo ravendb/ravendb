@@ -21,7 +21,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public abstract class DatabaseRequestHandler : ServerRequestHandler
+    public abstract class DatabaseRequestHandler : RequestHandler
     {
         protected DocumentsContextPool ContextPool;
         protected DocumentDatabase Database;
@@ -29,17 +29,19 @@ namespace Raven.Server.Documents
 
         public override void Init(RequestHandlerContext context)
         {
-            base.Init(context);
-
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+            base.Init(context);
         }
 
-        public Task CheckForChanges(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
+            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
+            if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
+                context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
+
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
             if (clientConfigurationEtag.HasValue && Database.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
