@@ -105,12 +105,13 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new RevisionSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
+        protected override BatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
         {
-            exception = null;
             reason = null;
-            isActiveMigration = false;
-            result = item.Current.CloneWith(DocsContext, newData: null);
+            var result = new BatchItem
+            {
+                Document = item.Current.CloneWith(DocsContext, newData: null)
+            };
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
@@ -119,13 +120,15 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
                     reason = $"{item.Current.Id} is already merged";
-                    return false;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
 
                 if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current, Active))
                 {
                     reason = $"{item.Current.Id} is in active batch";
-                    return false;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
             }
 
@@ -138,10 +141,13 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 ["Previous"] = item.Previous?.Data
             }, item.Current.Id);
 
-            result.Data = transformResult;
+            result.Document.Data = transformResult;
 
             if (Patch == null)
-                return true;
+            {
+                result.Status = BatchItemStatus.Send;
+                return result;
+            }
 
             item.Current.ResetModifications();
             item.Previous?.ResetModifications();
@@ -149,22 +155,25 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
+                var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Document.Data);
                 if (match == false)
                 {
-                    result.Data.Dispose();
-                    result.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
-                    return false;
+                    result.Document.Data.Dispose();
+                    result.Document.Data = null;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
 
-                return true;
+                result.Status = BatchItemStatus.Send;
+                return result;
             }
             catch (Exception ex)
             {
                 reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
-                exception = ex;
-                return false;
+                result.Exception = ex;
+                result.Status = BatchItemStatus.Skip;
+                return result;
             }
         }
     }

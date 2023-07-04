@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                             var status = await TrySendingBatchToClient<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
 
-                            await HandleBatchStatus<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
+                            await HandleBatchStatusAsync<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
                         }
                         catch (Exception e)
                         {
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        internal virtual async Task HandleBatchStatus<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
+        internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
