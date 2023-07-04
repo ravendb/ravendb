@@ -671,7 +671,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        result.RevisionDocuments.SkippedCount++;
+                        SkipDocument(item, result.RevisionDocuments);
                     }
 
                     result.RevisionDocuments.LastEtag = item.Document.Etag;
@@ -736,20 +736,20 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (CanSkipDocument(item.Document, buildType))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
                     if (_options.IncludeExpired == false &&
                         ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
@@ -758,7 +758,7 @@ namespace Raven.Server.Smuggler.Documents
                         var patchedDocument = _patcher.Transform(item.Document);
                         if (patchedDocument == null)
                         {
-                            SkipDocument(item, result);
+                            SkipDocument(item, result.Documents);
 
                             if (result.Documents.SkippedCount % 1000 == 0)
                                 AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
@@ -1226,9 +1226,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private static void SkipDocument(DocumentItem item, SmugglerResult result)
+        private static void SkipDocument(DocumentItem item, SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments counts)
         {
-            result.Documents.SkippedCount++;
+            counts.SkippedCount++;
 
             if (item.Document != null)
             {
