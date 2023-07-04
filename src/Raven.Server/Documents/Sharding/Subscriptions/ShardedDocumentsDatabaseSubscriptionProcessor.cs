@@ -95,19 +95,20 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return result;
     }
 
-    protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
+    protected override BatchItem ShouldSend(Document item, out string reason)
     {
-        exception = null;
-        result = item;
-
-        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out isActiveMigration))
+        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out var isActiveMigration))
         {
             item.Data = null;
             item.ChangeVector = string.Empty;
-            return false;
+            return new BatchItem
+            {
+                Document = item,
+                Status = isActiveMigration ? BatchItemStatus.ActiveMigration : BatchItemStatus.Skip
+            };
         }
 
-        return base.ShouldSend(item, out reason, out exception, out result, out isActiveMigration);
+        return base.ShouldSend(item, out reason);
     }
   
     public static bool IsUnderActiveMigration(string id, ShardingConfiguration sharding, ByteStringContext allocator, int shardNumber, FetchingOrigin fetchingFrom, out string reason, out bool isActiveMigration)

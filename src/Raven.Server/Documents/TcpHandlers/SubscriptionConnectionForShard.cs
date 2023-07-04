@@ -169,7 +169,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
     }
 
-    internal override async Task HandleBatchStatus<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse, SubscriptionBatchStatsScope batchScope)
+    internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse, SubscriptionBatchStatsScope batchScope)
     {
         if (status == BatchStatus.ActiveMigration)
         {
@@ -184,7 +184,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             await CancelSubscriptionAndThrowAsync();
         }
 
-        await base.HandleBatchStatus<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
+        await base.HandleBatchStatusAsync<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
     }
 
     private async Task<bool> WaitForDocsMigrationAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)

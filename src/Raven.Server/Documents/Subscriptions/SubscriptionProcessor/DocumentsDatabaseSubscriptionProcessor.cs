@@ -95,8 +95,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 }
             }
 
-            await SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection 
-                                                                ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), batchId, BatchItems);
+            await SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection
+                                                                ?? nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), batchId, BatchItems);
 
             if (BatchItems?.Count > 0)
             {
@@ -121,12 +121,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
+        protected override BatchItem ShouldSend(Document item, out string reason)
         {
-            exception = null;
             reason = null;
-            isActiveMigration = false;
-            result = item;
+
+            var result = new BatchItem
+            {
+                Document = item
+            };
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
@@ -135,13 +137,15 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
                     reason = $"{item.Id} is already merged";
-                    return false;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
 
                 if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, item.Id, Active))
                 {
                     reason = $"{item.Id} exists in an active batch";
-                    return false;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
             }
 
@@ -151,22 +155,26 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector, out reason) == false)
                 {
                     item.ChangeVector = string.Empty;
-                    return false;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
-                result.Id = current.Document.Id; // use proper casing
-                result.Data = current.Document.Data;
-                result.ChangeVector = current.Document.ChangeVector;
+                result.Document.Id = current.Document.Id; // use proper casing
+                result.Document.Data = current.Document.Data;
+                result.Document.ChangeVector = current.Document.ChangeVector;
             }
 
             if (Patch == null)
-                return true;
+            {
+                result.Status = BatchItemStatus.Send;
+                return result;
+            }
 
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref result.Data);
+                var match = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref result.Document.Data);
 
                 if (match == false)
                 {
@@ -176,18 +184,21 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         ItemsToRemoveFromResend.Add(item.Id);
                     }
 
-                    result.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
-                    return false;
+                    result.Document.Data = null;
+                    result.Status = BatchItemStatus.Skip;
+                    return result;
                 }
 
-                return true;
+                result.Status = BatchItemStatus.Send;
+                return result;
             }
             catch (Exception ex)
             {
-                exception = ex;
                 reason = $"Criteria script threw exception for document id {item.Id}";
-                return false;
+                result.Exception = ex;
+                result.Status = BatchItemStatus.Skip;
+                return result;
             }
         }
 

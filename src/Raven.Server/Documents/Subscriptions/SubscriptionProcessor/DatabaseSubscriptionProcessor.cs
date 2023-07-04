@@ -75,41 +75,29 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         protected BatchItem GetBatchItem(T item)
         {
-            var batchItem = new BatchItem();
-            if (ShouldSend(item, out var reason, out var exception, out var result, out var isActiveMigration))
+            var batchItem = ShouldSend(item, out var reason);
+
+            if (batchItem.Status == BatchItemStatus.Send)
             {
                 if (IncludesCmd != null && IncludesCmd.IncludeDocumentsCommand != null && Run != null)
-                    IncludesCmd.IncludeDocumentsCommand.AddRange(Run.Includes, result.Id);
+                    IncludesCmd.IncludeDocumentsCommand.AddRange(Run.Includes, batchItem.Document.Id);
 
-                if (result.Data != null)
+                if (batchItem.Document.Data != null)
                     Fetcher.MarkDocumentSent();
-
-                batchItem.Document = result;
-                if (isActiveMigration)
-                    batchItem.Status = BatchItemStatus.ActiveMigration;
 
                 return batchItem;
             }
 
             if (Logger.IsInfoEnabled)
-                Logger.Info(reason, exception);
+                Logger.Info(reason, batchItem.Exception);
 
-            if (exception != null)
+            if (batchItem.Exception != null)
             {
-                if (result.Data != null)
+                if (batchItem.Document.Data != null)
                     Fetcher.MarkDocumentSent();
-                batchItem.Document = result;
-                batchItem.Exception = exception;
-                if (isActiveMigration)
-                    batchItem.Status = BatchItemStatus.ActiveMigration;
+
                 return batchItem;
             }
-
-            result.Data = null;
-
-            batchItem.Document = result;
-            if (isActiveMigration)
-                batchItem.Status = BatchItemStatus.ActiveMigration;
 
             return batchItem;
         }
@@ -118,7 +106,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, T item);
 
-        protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result, out bool isActiveMigration);
+        protected abstract BatchItem ShouldSend(T item, out string reason);
     }
 
     public abstract class DatabaseSubscriptionProcessor : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl>

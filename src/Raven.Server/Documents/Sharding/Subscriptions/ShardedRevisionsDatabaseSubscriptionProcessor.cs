@@ -29,21 +29,22 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
         return base.CreateFetcher();
     }
 
-    protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result, out bool isActiveMigration)
+    protected override BatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
     {
-        exception = null;
-        result = item.Current;
-        isActiveMigration = false;
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-18881/Sharding-Subscription-Revisions");
         
-        var shard = ShardHelper.GetShardNumberFor(_sharding, _allocator, result.Id);
+        var shard = ShardHelper.GetShardNumberFor(_sharding, _allocator, item.Current.Id);
         if (shard != _database.ShardNumber)
         {
-            reason = $"The owner of {result.Id} is shard {shard} ({_database.ShardNumber})";
-            return false;
+            reason = $"The owner of {item.Current.Id} is shard {shard} ({_database.ShardNumber})";
+            return new BatchItem
+            {
+                Document = item.Current,
+                Status = BatchItemStatus.Skip
+            };
         }
 
-        return base.ShouldSend(item, out reason, out exception, out result, out isActiveMigration);
+        return base.ShouldSend(item, out reason);
     }
 
     public override void Dispose()
