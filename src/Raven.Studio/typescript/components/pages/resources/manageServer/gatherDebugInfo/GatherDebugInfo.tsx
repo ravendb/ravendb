@@ -5,7 +5,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { GatherDebugInfoFormData, gatherDebugInfoYupResolver } from "./GatherDebugInfoValidation";
 import { FormCheckboxes, FormSelect, FormSwitch } from "components/common/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { DevTool } from "@hookform/devtools";
 import GatherDebugInfoIcons from "./GatherDebugInfoIcons";
 import { useGatherDebugInfoHelpers } from "./useGatherDebugInfoHelpers";
 import GatherDebugInfoAbortConfirm from "./GatherDebugInfoAbortConfirm";
@@ -23,11 +22,10 @@ function GatherDebugInfo() {
         defaultValues,
     });
 
-    const { isSelectAllDatabases } = useWatch({ control });
+    const { isSelectAllDatabases, dataTypes } = useWatch({ control });
 
     return (
         <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
-            <DevTool control={control} />
             <Card>
                 <Form onSubmit={handleSubmit(onSave)}>
                     <CardBody className="d-flex flex-center flex-column">
@@ -44,25 +42,29 @@ function GatherDebugInfo() {
                                 <div className="d-flex flex-column well px-4 py-3 border-radius-xs">
                                     <FormCheckboxes name="dataTypes" options={dataTypesOptions} control={control} />
                                 </div>
-                                <h4 className="mt-3 d-flex justify-content-between align-items-center">
-                                    Select databases
-                                    <FormSwitch
-                                        name="isSelectAllDatabases"
-                                        color="primary"
-                                        control={control}
-                                        disabled={databaseOptions.length === 0}
-                                    >
-                                        Select all
-                                    </FormSwitch>
-                                </h4>
-                                {!isSelectAllDatabases && (
-                                    <div className="well px-4 py-3 border-radius-xs">
-                                        <FormCheckboxes
-                                            name="selectedDatabases"
-                                            options={databaseOptions}
-                                            control={control}
-                                        />
-                                    </div>
+                                {dataTypes.includes("Databases") && (
+                                    <>
+                                        <h4 className="mt-3 d-flex justify-content-between align-items-center">
+                                            Select databases
+                                            <FormSwitch
+                                                name="isSelectAllDatabases"
+                                                color="primary"
+                                                control={control}
+                                                disabled={databaseOptions.length === 0}
+                                            >
+                                                Select all
+                                            </FormSwitch>
+                                        </h4>
+                                        {!isSelectAllDatabases && (
+                                            <div className="well px-4 py-3 border-radius-xs">
+                                                <FormCheckboxes
+                                                    name="selectedDatabases"
+                                                    options={databaseOptions}
+                                                    control={control}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                             <div className="d-flex flex-column half-width-section">
@@ -90,6 +92,7 @@ function GatherDebugInfo() {
                                                 icon="cancel"
                                                 color="warning"
                                                 isSpinning={abortData.isAborting}
+                                                onClick={abortData.toggleIsConfirmVisible}
                                             >
                                                 Abort
                                             </ButtonWithSpinner>
