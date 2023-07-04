@@ -73,8 +73,11 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
+            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
 
+        public abstract Task CheckForChanges(RequestHandlerContext context);
+        
         protected Stream TryGetRequestFromStream(string itemName)
         {
             if (HttpContext.Request.HasFormContentType == false)
