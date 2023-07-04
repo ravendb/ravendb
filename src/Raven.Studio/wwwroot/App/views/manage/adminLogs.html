@@ -16,13 +16,13 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
-                    <div class="dropdown-extended" data-bind="with: editedConfiguration">
-                            <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="flex-vertical">
-                                <label class="small-label">Max Log Entries</label>
+                    <div class="dropdown-extended padding" data-bind="with: editedConfiguration">
+                        <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries" class="flex-vertical">
+                            <label class="small-label">Max Log Entries</label>
                             <input class="form-control input-sm full-width" type="number" min="0" data-bind="numericInput: maxEntries" />
                             <span class="help-block" data-bind="validationMessage: maxEntries"></span>
                         </div>
-                            <label class="small-label margin-top-sm">Log filters</label>
+                        <label class="small-label margin-top-sm">Log filters</label>
                         <div class="flex-horizontal margin-bottom margin-bottom-sm">
                             <div class="dropdown">
                                 <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
@@ -44,9 +44,9 @@
                             </div>
                         </div>
                         <div class="flex-grow">
-                            <ul class="column-list scroll" data-bind="foreach: entries">
-                                <li>
-                                    <div class="column-name flex-center">
+                            <ul class="column-list scroll no-padding-left" data-bind="foreach: entries">
+                                <li class="d-flex gap-3 padding-xxs panel-bg-1 margin-bottom-xs">
+                                    <div class="column-name flex-grow">
                                         <div class="padding padding-xs" data-bind="text: headerName() + ': ' + headerValue()"></div>
                                     </div>
                                     <div class="flex-center">
@@ -143,7 +143,6 @@
                                     <div class="flex-grow"></div>
                                     <button class="btn btn-success btn-sm close-panel margin-top-sm"><span>Close</span></button>
                         </div>
-                        
                             </form>
                     </div>
                 </div>
@@ -154,69 +153,62 @@
                     <span class="caret"></span>
                 </button>
                 <div class="dropdown-menu slidein-style" data-bind="dropdownPanel: true">
-                        <div class="dropdown-extended">
-                    <form class="flex-form" autocomplete="off">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <div class="margin-left">
-                                        <h4>Specify logs date range:</h4>
+                    <div class="dropdown-extended padding">
+                        <form class="flex-form" autocomplete="off">
+                            <h4>Specify logs date range</h4>
+                            <div class="margin-top margin-bottom">
+                                <div class="form-group flex-grow flex-vertical">
+                                    <label for="startDate" class="small-label">Start Date</label>
+                                    <div class="d-flex justify-content-between w-100">
+                                        <div class="checkbox no-padding-left">
+                                            <input id="useMinStartDate" class="styled" type="checkbox" data-bind="checked: useMinStartDate">
+                                            <label for="useMinStartDate">
+                                                <span class="margin-left-xs">Use minimum</span>
+                                            </label>
+                                        </div>
+                                        <code class="bg-transparent d-flex align-items-center border-radius-xs" data-bind="text: dateFormattedAsUtc(startDate()), visible: !useMinStartDate()"></code>
+                                    </div>
+                                    <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMinStartDate(), validationElement: startDate">
+                                        <input type="text" class="form-control" id="startDate" placeholder="Start date"
+                                            data-bind="datePicker: startDate, datepickerOptions: datePickerOptions" />
+                                        <div class="input-group-addon">(local)</div>
+                                        <span class="help-block" data-bind="validationMessage: startDate"></span>
                                     </div>
                                 </div>
-                                <div class="modal-body margin-top margin-bottom margin-right-sm">
-                                    <div class="form-group">
-                                        <label for="startDate" class="control-label">Start Date</label>
-                                        <div class="flex-grow margin-left">
-                                            <div class="checkbox no-padding-left">
-                                                <input id="useMinStartDate" class="styled" type="checkbox" data-bind="checked: useMinStartDate">
-                                                <label for="useMinStartDate">
-                                                    <span class="margin-left-xs">Use minimum</span>
-                                                </label>
-                                            </div>
-                                            <code class="form-control-static" data-bind="text: dateFormattedAsUtc(startDate()), visible: !useMinStartDate()"></code>
+                                <div class="form-group margin-top flex-grow flex-vertical">
+                                    <label for="endDate" class="small-label">End Date</label>
+                                    <div class="d-flex justify-content-between w-100">
+                                        <div class="checkbox no-padding-left">
+                                            <input id="useMinEndDate" class="styled" type="checkbox" data-bind="checked: useMaxEndDate">
+                                            <label for="useMinEndDate">
+                                                <span class="margin-left-xs">Use maximum</span>
+                                            </label>
                                         </div>
-                                        <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMinStartDate(), validationElement: startDate">
-                                                <input type="text" class="form-control" id="startDate" placeholder="Start date"
-                                                       data-bind="datePicker: startDate, datepickerOptions: datePickerOptions" />
-                                                <div class="input-group-addon">(local)</div>
-                                                <span class="help-block" data-bind="validationMessage: startDate"></span>
-                                            </div>
-                                        </div>
+                                        <code class="bg-transparent d-flex align-items-center border-radius-xs" data-bind="text: dateFormattedAsUtc(endDate()), visible: !useMaxEndDate()"></code>
                                     </div>
-                                    <div class="form-group margin-top">
-                                        <label for="endDate" class="control-label">End Date</label>
-                                        <div class="flex-grow margin-left">
-                                            <div class="checkbox no-padding-left">
-                                                <input id="useMinEndDate" class="styled" type="checkbox" data-bind="checked: useMaxEndDate">
-                                                <label for="useMinEndDate">
-                                                    <span class="margin-left-xs">Use maximum</span>
-                                                </label>
-                                            </div>
-                                            <code class="form-control-static" data-bind="text: dateFormattedAsUtc(endDate()), visible: !useMaxEndDate()"></code>
-                                        </div>
-                                        <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMaxEndDate(), validationElement: endDate">
-                                                <input type="text" class="form-control" id="endDate" placeholder="End date"
-                                                       data-bind="datePicker: endDate, datepickerOptions: datePickerOptions" />
-                                                <div class="input-group-addon">(local)</div>
-                                                <span class="help-block" data-bind="validationMessage: endDate"></span>
-                                            </div>
-                                        </div>
+                                    <div class="input-group margin-top margin-top-sm w-100" data-bind="visible: !useMaxEndDate(), validationElement: endDate">
+                                        <input type="text" class="form-control" id="endDate" placeholder="End date"
+                                            data-bind="datePicker: endDate, datepickerOptions: datePickerOptions" />
+                                        <div class="input-group-addon">(local)</div>
+                                        <span class="help-block" data-bind="validationMessage: endDate"></span>
                                     </div>
-                                    <div class="flex-horizontal">
-                                        <div class="flex-separator"></div>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-default btn-sm margin-right-xs close-panel" title="Click to close dropdown">
-                                                <span>Close</span>
-                                            </button>
-                                            <button class="btn btn-success btn-sm" title="Click to download log files" data-bind="click: onDownloadLogs">
-                                                <span>Download</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                            </form>
                                 </div>
                             </div>
-                        </div>
+                            <div class="flex-horizontal margin-top-sm margin-bottom-sm margin-right-sm">
+                                <div class="flex-separator"></div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default btn-sm margin-right-xs close-panel" title="Click to close dropdown">
+                                        <span>Close</span>
+                                    </button>
+                                    <button class="btn btn-success btn-sm" title="Click to download log files" data-bind="click: onDownloadLogs">
+                                        <span>Download</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
             <small class="margin-left margin-left-sm">
                 <label>Log Level:</label>
                 <strong data-bind="text: onDiskConfiguration().selectedLogMode"></strong>
