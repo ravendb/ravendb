@@ -34,15 +34,15 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
-                return ValueTask.FromResult(false);
+                return false;
 
             if (numberOfDocs >= _pageSize)
-                return ValueTask.FromResult(false);
+                return false;
 
-            return ValueTask.FromResult(true);
+            return true;
         }
 
         protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
@@ -95,15 +95,15 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
-                return ValueTask.FromResult(false);
+                return false;
 
             if (numberOfDocs >= _pageSize)
-                return ValueTask.FromResult(false);
+                return false;
 
-            return ValueTask.FromResult(true);
+            return true;
         }
 
         public override void InitializeProcessor()

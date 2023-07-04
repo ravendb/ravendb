@@ -51,14 +51,14 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             return conflictStatus;
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                return ValueTask.FromResult(false);
+                return false;
             if (numberOfDocs >= BatchSize)
-                return ValueTask.FromResult(false);
+                return false;
 
-            return base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+            return base.CanContinueBatch(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
         }
 
         protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)

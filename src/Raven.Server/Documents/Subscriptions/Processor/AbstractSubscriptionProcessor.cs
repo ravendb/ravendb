@@ -43,7 +43,15 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
         RemoteEndpoint = Connection.TcpConnection.TcpClient.Client.RemoteEndPoint;
     }
 
-    protected virtual async ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected virtual bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    {
+        if (Connection.CancellationTokenSource.Token.IsCancellationRequested)
+            return false;
+
+        return true;
+    }
+
+    protected async ValueTask SendHeartbeatIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch)
     {
         if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
         {
@@ -51,11 +59,6 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
             await Connection.SendHeartBeatAsync($"Skipping docs for more than '{ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}' ms without sending any data");
             sendingCurrentBatchStopwatch.Restart();
         }
-
-        if (Connection.CancellationTokenSource.Token.IsCancellationRequested)
-            return false;
-
-        return true;
     }
 
     protected virtual SubscriptionBatchStatus SetBatchStatus(SubscriptionBatchResult result)

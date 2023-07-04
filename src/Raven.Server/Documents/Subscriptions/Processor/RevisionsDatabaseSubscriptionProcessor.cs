@@ -24,10 +24,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             base(server, database, connection)
         {
             _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
-    }
+        }
 
         public List<RevisionRecord> BatchItems = new List<RevisionRecord>();
-    
+
         public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (Database.DocumentsStorage.RevisionsStorage.Configuration == null ||
@@ -52,8 +52,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                     HandleBatchItem(batchScope, batchItem, result, item);
                     size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
-                    if (await CanContinueBatchAsync(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                    if (CanContinueBatch(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
                         break;
+
+                    await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
                 }
             }
 
@@ -84,10 +86,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
         }
 
-        public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) => 
+        public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
             (await SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch)).Index;
 
-        public override Task AcknowledgeBatchAsync(long batchId, string changeVector) => 
+        public override Task AcknowledgeBatchAsync(long batchId, string changeVector) =>
             SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection, batchId, null);
 
         public override long GetLastItemEtag(DocumentsOperationContext context, string collection)

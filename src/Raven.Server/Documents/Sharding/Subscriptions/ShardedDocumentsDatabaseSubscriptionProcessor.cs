@@ -46,12 +46,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return conflictStatus;
     }
 
-    protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
         if (batchItem.Status == SubscriptionBatchItemStatus.ActiveMigration)
-            return ValueTask.FromResult(false);
+            return false;
 
-        return base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+        return base.CanContinueBatch(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
     }
 
     protected override SubscriptionBatchStatus SetBatchStatus(SubscriptionBatchResult result)
