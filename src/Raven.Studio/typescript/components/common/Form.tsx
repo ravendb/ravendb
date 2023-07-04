@@ -20,14 +20,14 @@ type FormInputProps = InputProps & {
     type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
 };
 
-export interface FormCheckboxOption<T extends string | number = string> {
+export interface FormCheckboxesOption<T extends string | number = string> {
     value: T;
     label: string;
 }
 
 interface FormCheckboxesProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>
     extends FormElementProps<TFieldValues, TName> {
-    options: FormCheckboxOption<TFieldValues[TName][any]>[];
+    options: FormCheckboxesOption<TFieldValues[TName][any]>[];
     className?: string;
     checkboxClassName?: string;
 }
