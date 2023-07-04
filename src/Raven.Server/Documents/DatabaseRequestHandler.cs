@@ -21,7 +21,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public abstract class DatabaseRequestHandler : RequestHandler
+    public abstract class DatabaseRequestHandler : ServerRequestHandler
     {
         protected DocumentsContextPool ContextPool;
         protected DocumentDatabase Database;
@@ -40,10 +40,6 @@ namespace Raven.Server.Documents
 
         public Task CheckForChanges(RequestHandlerContext context)
         {
-            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
-            if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
-                context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
-
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
             if (clientConfigurationEtag.HasValue && Database.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";

@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ProcStatsHandler : RequestHandler
+    public class ProcStatsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/cpu/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task CpuStats()
