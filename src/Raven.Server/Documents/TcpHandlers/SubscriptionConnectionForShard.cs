@@ -55,7 +55,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     protected override RawDatabaseRecord GetRecord(ClusterOperationContext context) => ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
 
 
-    public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
+    public override ISubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
     {
         if (connection is SubscriptionConnectionForShard shardConnection)
         {

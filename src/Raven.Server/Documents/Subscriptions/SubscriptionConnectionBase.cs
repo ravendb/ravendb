@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
-        protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
+        protected ISubscriptionProcessor<TIncludesCommand> Processor;
 
         private TestingStuff _forTestingPurposes;
 
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Subscriptions
             return null;
         }
 
-        public abstract AbstractSubscriptionProcessor<TIncludesCommand> CreateProcessor(SubscriptionConnectionBase<TIncludesCommand> connection);
+        public abstract ISubscriptionProcessor<TIncludesCommand> CreateProcessor(SubscriptionConnectionBase<TIncludesCommand> connection);
 
         public async Task ProcessSubscriptionAsync<TState, TConnection>(TState state)
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
