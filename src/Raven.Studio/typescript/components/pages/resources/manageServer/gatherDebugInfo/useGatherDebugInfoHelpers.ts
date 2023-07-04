@@ -22,6 +22,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import endpoints = require("endpoints");
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useAsyncCallback } from "react-async-hook";
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 const adminDebugInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugInfoPackage;
 const adminDebugClusterInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage;
@@ -42,7 +43,7 @@ export function useGatherDebugInfoHelpers() {
     const defaultValues = getDefaultValues(allDatabaseNames);
     const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
 
-    useDirtyFlag(isDownloading);
+    useDirtyFlag(isDownloading, confirmLeavingPage);
 
     const asyncGetNextOperationId = useAsyncCallback(() => databasesService.getNextOperationId(null), {
         onError(error) {
@@ -146,4 +147,21 @@ function getDefaultValues(allDatabaseNames: string[]): Required<GatherDebugInfoF
         selectedDatabases: allDatabaseNames,
         packageScope: null,
     };
+}
+
+function confirmLeavingPage(): JQueryDeferred<confirmDialogResult> {
+    const abortResult = $.Deferred<confirmDialogResult>();
+
+    const confirmation = viewHelpers.confirmationMessage(
+        "Abort Debug Package Creation",
+        "Leaving this page will abort package creation.<br>How do you want to proceed?",
+        {
+            buttons: ["Stay on this page", "Leave and Abort"],
+            forceRejectWithResolve: true,
+            html: true,
+        }
+    );
+
+    confirmation.done((result: confirmDialogResult) => abortResult.resolve(result));
+    return abortResult;
 }

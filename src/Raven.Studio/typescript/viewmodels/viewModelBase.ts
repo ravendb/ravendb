@@ -66,6 +66,8 @@ abstract class viewModelBase {
     //holds full studio version eg. 4.0.40000
     static clientVersion = ko.observable<string>();
 
+    customDiscardStayResult = ko.observable<() => JQueryDeferred<confirmDialogResult>>(null);
+
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
 
@@ -159,7 +161,7 @@ abstract class viewModelBase {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
         if (this.dirtyFlag().isDirty()) {
-            return this.discardStayResult();
+            return this.customDiscardStayResult()?.() ??this.discardStayResult();
         }
 
         return true;

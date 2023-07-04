@@ -27,24 +27,24 @@ class infoPackageModel {
     }
     
     private initValidation() {
-        this.scope.extend({
-            required: true
-        });
+        // this.scope.extend({
+        //     required: true
+        // });
 
-        this.types.extend({
-            required: true
-        });
+        // this.types.extend({
+        //     required: true
+        // });
         
-        this.databases.extend({
-            required: {
-                onlyIf: () => {
-                    // TODO kalczur
-                    const databasesSelected = this.types().indexOf("Databases") !== -1;
-                    const allDbs = this.allDatabases();
-                    return databasesSelected && !allDbs; 
-                }
-            }
-        });
+        // this.databases.extend({
+        //     required: {
+        //         onlyIf: () => {
+        //             // TODO kalczur
+        //             // const databasesSelected = this.types().indexOf("Databases") !== -1;
+        //             // const allDbs = this.allDatabases();
+        //             // return databasesSelected && !allDbs; 
+        //         }
+        //     }
+        // });
         
         this.validationGroup = ko.validatedObservable({
             scope: this.scope,

@@ -6,15 +6,15 @@ export function DirtyFlagProvider({ setIsDirty, children }: ReactDirtyFlag & { c
     return <DirtyFlagContext.Provider value={{ setIsDirty }}>{children}</DirtyFlagContext.Provider>;
 }
 
-export const useDirtyFlag = (isDirty: boolean) => {
+export const useDirtyFlag = (isDirty: boolean, customDialog?: () => JQueryDeferred<confirmDialogResult>) => {
     const { setIsDirty } = useContext(DirtyFlagContext);
 
     useEffect(() => {
         if (isDirty) {
-            setIsDirty(true);
+            setIsDirty(true, customDialog);
             return;
         }
 
-        setIsDirty(false);
-    }, [isDirty, setIsDirty]);
+        setIsDirty(false, null);
+    }, [isDirty, customDialog, setIsDirty]);
 };

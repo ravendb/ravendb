@@ -1,7 +1,14 @@
-export function getReactDirtyFlag(dirtyFlag: () => DirtyFlag): ReactDirtyFlag {
+
+export function getReactDirtyFlag(dirtyFlag: () => DirtyFlag, customDiscardStayResult: KnockoutObservable<() => JQueryDeferred<confirmDialogResult>>): ReactDirtyFlag {
     return {
-        setIsDirty: (value: boolean) => value
-            ? dirtyFlag().forceDirty()
-            : dirtyFlag().reset(),
+        setIsDirty: (value: boolean, customDialog?: () => JQueryDeferred<confirmDialogResult>) => {
+            if (value) {
+                dirtyFlag().forceDirty();
+                customDiscardStayResult(customDialog);
+            } else {
+                dirtyFlag().reset();
+                customDiscardStayResult(null);
+            }
+        }
     };
 }
