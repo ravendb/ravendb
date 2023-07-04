@@ -9,7 +9,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Sparrow;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
+namespace Raven.Server.Documents.Subscriptions.Processor
 {
     public class TestDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor, IEtagSettable
     {
@@ -29,12 +29,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             RemoteEndpoint = endpoint;
         }
 
-        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
         {
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
                 return ValueTask.FromResult(false);
@@ -90,12 +90,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             RemoteEndpoint = endpoint;
         }
 
-        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
         {
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
                 return ValueTask.FromResult(false);

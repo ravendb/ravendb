@@ -17,9 +17,8 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Subscriptions.Sharding;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -32,7 +31,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -177,14 +175,14 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
+        internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             switch (status)
             {
-                case BatchStatus.EmptyBatch:
-                    await LogBatchStatusAndUpdateStatsAsync(sendingCurrentBatchStopwatch, $"Got '{nameof(BatchStatus.EmptyBatch)}' for subscription '{Options.SubscriptionName}'.");
+                case SubscriptionBatchStatus.EmptyBatch:
+                    await LogBatchStatusAndUpdateStatsAsync(sendingCurrentBatchStopwatch, $"Got '{nameof(SubscriptionBatchStatus.EmptyBatch)}' for subscription '{Options.SubscriptionName}'.");
 
                     if (FoundAboutMoreDocs())
                         state.NotifyHasMoreDocs();
@@ -198,7 +196,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                     break;
 
-                case BatchStatus.DocumentsSent:
+                case SubscriptionBatchStatus.DocumentsSent:
                     markInUse.Dispose();
 
                     using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
@@ -260,13 +258,13 @@ namespace Raven.Server.Documents.Subscriptions
         /// Iterates on a batch in document collection, process it and send documents if found any match
         /// </summary>
         /// <returns>Whether succeeded finding any documents to send</returns>
-        private async Task<BatchStatus> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
+        private async Task<SubscriptionBatchStatus> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             if (await state.WaitForSubscriptionActiveLock(300) == false)
-                return BatchStatus.EmptyBatch;
+                return SubscriptionBatchStatus.EmptyBatch;
 
             try
             {
@@ -290,7 +288,7 @@ namespace Raven.Server.Documents.Subscriptions
                             SubscriptionBatchResult result = await Processor.GetBatchAsync(batchScope, sendingCurrentBatchStopwatch);
 
                             var batchStatus = await TryRecordBatchAndUpdateStatusAsync(clusterOperationContext, result);
-                            if (batchStatus != BatchStatus.DocumentsSent)
+                            if (batchStatus != SubscriptionBatchStatus.DocumentsSent)
                             {
                                 // empty batch or active migration
                                 return batchStatus;
@@ -318,7 +316,7 @@ namespace Raven.Server.Documents.Subscriptions
                             await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, result.CurrentBatch.Count, endOfBatch: true,
                                 CancellationTokenSource.Token);
 
-                            return BatchStatus.DocumentsSent;
+                            return SubscriptionBatchStatus.DocumentsSent;
                         }
                     }
                 }
@@ -329,7 +327,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, AbstractSubscriptionProcessorBase.BatchItem result,
+        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchItem result,
             TIncludesCommand includeCommand)
         {
             writer.WriteStartObject();
@@ -987,7 +985,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected abstract void AfterProcessorCreation();
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
-        protected abstract Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result);
+        protected abstract Task<SubscriptionBatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result);
 
         internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)
         {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -29,7 +29,7 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
         return base.CreateFetcher();
     }
 
-    protected override BatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
+    protected override SubscriptionBatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-18881/Sharding-Subscription-Revisions");
         
@@ -37,10 +37,10 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
         if (shard != _database.ShardNumber)
         {
             reason = $"The owner of {item.Current.Id} is shard {shard} ({_database.ShardNumber})";
-            return new BatchItem
+            return new SubscriptionBatchItem
             {
                 Document = item.Current,
-                Status = BatchItemStatus.Skip
+                Status = SubscriptionBatchItemStatus.Skip
             };
         }
 

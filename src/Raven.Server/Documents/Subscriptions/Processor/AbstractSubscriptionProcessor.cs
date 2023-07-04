@@ -11,9 +11,9 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
+namespace Raven.Server.Documents.Subscriptions.Processor;
 
-public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : AbstractSubscriptionProcessorBase
+public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposable
     where TIncludesCommand : AbstractIncludesCommand
 {
     protected readonly ServerStore Server;
@@ -32,7 +32,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : Abstract
     {
         Server = server;
         Connection = connection;
-        Logger = LoggingSource.Instance.GetLogger(databaseName, connection == null ? $"{nameof(TestDocumentsDatabaseSubscriptionProcessor)}" : $"{nameof(SubscriptionProcessor)}<{connection.Options.SubscriptionName}>");
+        Logger = LoggingSource.Instance.GetLogger(databaseName, connection == null ? $"{nameof(TestDocumentsDatabaseSubscriptionProcessor)}" : $"{GetType().Name}<{connection.Options.SubscriptionName}>");
     }
 
     public virtual void InitializeProcessor()
@@ -43,7 +43,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : Abstract
         RemoteEndpoint = Connection.TcpConnection.TcpClient.Client.RemoteEndPoint;
     }
 
-    protected virtual async ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected virtual async ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
         if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
         {
@@ -58,14 +58,14 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : Abstract
         return true;
     }
 
-    protected virtual BatchStatus SetBatchStatus(SubscriptionBatchResult result)
+    protected virtual SubscriptionBatchStatus SetBatchStatus(SubscriptionBatchResult result)
     {
-        return result.CurrentBatch.Count > 0 ? BatchStatus.DocumentsSent : BatchStatus.EmptyBatch;
+        return result.CurrentBatch.Count > 0 ? SubscriptionBatchStatus.DocumentsSent : SubscriptionBatchStatus.EmptyBatch;
     }
 
     public abstract Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch);
 
-    protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem);
+    protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem);
 
     public abstract Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch);
 
@@ -89,4 +89,8 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : Abstract
     protected abstract TIncludesCommand CreateIncludeCommands();
 
     protected abstract ConflictStatus GetConflictStatus(string changeVector);
+
+    public virtual void Dispose()
+    {
+    }
 }

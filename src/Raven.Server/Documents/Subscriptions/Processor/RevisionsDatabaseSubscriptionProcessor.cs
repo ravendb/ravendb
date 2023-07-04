@@ -14,7 +14,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
+namespace Raven.Server.Documents.Subscriptions.Processor
 {
     public class RevisionsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<(Document Previous, Document Current)>
     {
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {Database.Name} does not have revisions configuration.");
 
             Size size = default;
-            var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
+            var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 using (item.Current)
                 using (item.Previous)
                 {
-                    BatchItem batchItem = GetBatchItem(item);
+                    SubscriptionBatchItem batchItem = GetBatchItem(item);
 
                     HandleBatchItem(batchScope, batchItem, result, item);
                     size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return result;
         }
 
-        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
         {
             if (batchItem.Document.Data != null)
             {
@@ -105,10 +105,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new RevisionSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override BatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
+        protected override SubscriptionBatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
         {
             reason = null;
-            var result = new BatchItem
+            var result = new SubscriptionBatchItem
             {
                 Document = item.Current.CloneWith(DocsContext, newData: null)
             };
@@ -120,14 +120,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
                     reason = $"{item.Current.Id} is already merged";
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
                 if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current, Active))
                 {
                     reason = $"{item.Current.Id} is in active batch";
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
             }
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             if (Patch == null)
             {
-                result.Status = BatchItemStatus.Send;
+                result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
 
@@ -161,18 +161,18 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     reason = $"{item.Current.Id} filtered by criteria";
                     result.Document.Data.Dispose();
                     result.Document.Data = null;
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
-                result.Status = BatchItemStatus.Send;
+                result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
             catch (Exception ex)
             {
                 reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
                 result.Exception = ex;
-                result.Status = BatchItemStatus.Skip;
+                result.Status = SubscriptionBatchItemStatus.Skip;
                 return result;
             }
         }

@@ -18,15 +18,14 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
-using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
@@ -394,7 +393,7 @@ namespace Raven.Server.Documents.TcpHandlers
         protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last) => _database.SubscriptionStorage.RaiseNotificationForBatchEnded(name, last);
 
 
-        protected override async Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
+        protected override async Task<SubscriptionBatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
         {
             //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
             LastSentChangeVectorInThisConnection = result.LastChangeVectorSentInThisBatch;
@@ -405,9 +404,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 result.LastChangeVectorSentInThisBatch);
 
             if (result.CurrentBatch.Count == 0)
-                return BatchStatus.EmptyBatch;
+                return SubscriptionBatchStatus.EmptyBatch;
 
-            return BatchStatus.DocumentsSent;
+            return SubscriptionBatchStatus.DocumentsSent;
         }
 
         protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)

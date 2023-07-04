@@ -6,8 +6,8 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -46,36 +46,36 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return conflictStatus;
     }
 
-    protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
-        if (batchItem.Status == BatchItemStatus.ActiveMigration)
+        if (batchItem.Status == SubscriptionBatchItemStatus.ActiveMigration)
             return ValueTask.FromResult(false);
 
         return base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
     }
 
-    protected override BatchStatus SetBatchStatus(SubscriptionBatchResult result)
+    protected override SubscriptionBatchStatus SetBatchStatus(SubscriptionBatchResult result)
     {
-        if (result.Status == BatchStatus.ActiveMigration)
-            return BatchStatus.ActiveMigration;
+        if (result.Status == SubscriptionBatchStatus.ActiveMigration)
+            return SubscriptionBatchStatus.ActiveMigration;
 
         return base.SetBatchStatus(result);
     }
 
-    protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+    protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
     {
-        if (batchItem.Status == BatchItemStatus.ActiveMigration)
+        if (batchItem.Status == SubscriptionBatchItemStatus.ActiveMigration)
         {
             item.Data?.Dispose();
             item.Data = null;
-            result.Status = BatchStatus.ActiveMigration;
+            result.Status = SubscriptionBatchStatus.ActiveMigration;
             return;
         }
 
         base.HandleBatchItem(batchScope, batchItem, result, item);
     }
 
-    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)
     {
         if (batchItem.Document.Etag == 0) // got this document from resend
         {
@@ -95,16 +95,16 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return result;
     }
 
-    protected override BatchItem ShouldSend(Document item, out string reason)
+    protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
     {
         if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out var isActiveMigration))
         {
             item.Data = null;
             item.ChangeVector = string.Empty;
-            return new BatchItem
+            return new SubscriptionBatchItem
             {
                 Document = item,
-                Status = isActiveMigration ? BatchItemStatus.ActiveMigration : BatchItemStatus.Skip
+                Status = isActiveMigration ? SubscriptionBatchItemStatus.ActiveMigration : SubscriptionBatchItemStatus.Skip
             };
         }
 

@@ -11,8 +11,8 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -20,7 +20,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Need to implement events + ws for this");
         }
 
-        protected override Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
+        protected override Task<SubscriptionBatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
         {
             var vector = context.GetChangeVector(result.LastChangeVectorSentInThisBatch);
             vector.TryRemoveIds(_dbIdsToRemove, context, out vector);
@@ -144,9 +143,9 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             LastSentChangeVectorInThisConnection = vector.Order;
 
             if (result.CurrentBatch.Count == 0)
-                return Task.FromResult(BatchStatus.EmptyBatch);
+                return Task.FromResult(SubscriptionBatchStatus.EmptyBatch);
 
-            return Task.FromResult(BatchStatus.DocumentsSent);
+            return Task.FromResult(SubscriptionBatchStatus.DocumentsSent);
         }
 
         protected override void AssertSupportedFeatures()
