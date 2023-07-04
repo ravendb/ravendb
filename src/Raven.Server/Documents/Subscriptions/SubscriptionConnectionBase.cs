@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                         using (Processor.InitializeForNewBatch(clusterOperationContext, out var includeCommand))
                         {
-                            SubscriptionBatchResult result = await Processor.GetBatch(batchScope, sendingCurrentBatchStopwatch);
+                            SubscriptionBatchResult result = await Processor.GetBatchAsync(batchScope, sendingCurrentBatchStopwatch);
 
                             var batchStatus = await TryRecordBatchAndUpdateStatusAsync(clusterOperationContext, result);
                             if (batchStatus != BatchStatus.DocumentsSent)

@@ -110,17 +110,10 @@ namespace Raven.Server.Documents.Subscriptions
             return set;
         }
 
-        public async Task AcknowledgeShardingBatchAsync(string changeVector, string cvForOrchestrator, long batchId, List<DocumentRecord> addDocumentsToResend)
-        {
-            AcknowledgeSubscriptionBatchCommand command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
-            command.LastKnownSubscriptionChangeVector = cvForOrchestrator;
-            var (etag, _) = await _server.SendToLeaderAsync(command);
-            await WaitForIndexNotificationAsync(etag);
-        }
-
-        public async Task AcknowledgeBatchAsync(string changeVector, long batchId, List<DocumentRecord> addDocumentsToResend)
+        public async Task AcknowledgeBatchAsync(string changeVector, long batchId, List<DocumentRecord> addDocumentsToResend, Action<AcknowledgeSubscriptionBatchCommand> modifyCommand = null)
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, addDocumentsToResend);
+            modifyCommand?.Invoke(command);
 
             var (etag, _) = await _server.SendToLeaderAsync(command);
             await WaitForIndexNotificationAsync(etag);

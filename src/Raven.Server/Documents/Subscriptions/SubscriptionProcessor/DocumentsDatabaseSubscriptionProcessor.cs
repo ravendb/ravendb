@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
         }
 
-        public override async Task<SubscriptionBatchResult> GetBatch(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
+        public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             Size size = default;
             var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };

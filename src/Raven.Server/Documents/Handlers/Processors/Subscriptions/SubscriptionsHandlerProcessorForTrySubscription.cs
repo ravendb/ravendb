@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 
                 var first = true;
                 ((IEtagSettable)processor).SetStartEtag(startEtag);
-                var items = await processor.GetBatch(batchScope: null, sendingCurrentBatchStopwatch: sp);
+                var items = await processor.GetBatchAsync(batchScope: null, sendingCurrentBatchStopwatch: sp);
                 foreach (var itemDetails in items.CurrentBatch)
                 {
                     if (itemDetails.Document.Data != null)
