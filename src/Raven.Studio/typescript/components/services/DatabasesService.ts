@@ -78,6 +78,6 @@ export default class DatabasesService {
     }
 
     async killOperation(db: database, taskId: number) {
-        return new killOperationCommand(null, taskId).execute();
+        return new killOperationCommand(db, taskId).execute();
     }
 }

@@ -13,7 +13,7 @@ class downloader {
         this.$downloadFrame.attr("src", "");
     }
     
-    static fillHiddenFields(object: any, targetForm: JQuery)  {
+    static fillHiddenFields(object: any, targetForm: JQuery) {
         targetForm.empty();
         
         const addField = (key: string, value: any) => {

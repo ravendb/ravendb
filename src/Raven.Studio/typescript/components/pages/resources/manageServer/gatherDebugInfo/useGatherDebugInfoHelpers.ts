@@ -1,4 +1,4 @@
-import { FormCheckboxOption } from "components/common/Form";
+import { FormCheckboxesOption } from "components/common/Form";
 import { SelectOption } from "components/common/Select";
 import {
     GatherDebugInfoFormData,
@@ -92,7 +92,7 @@ export function useGatherDebugInfoHelpers() {
         });
     };
 
-    const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
+    const databaseOptions: FormCheckboxesOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
 
     return {
         isDownloading,
@@ -114,16 +114,24 @@ const packageScopeOptions: SelectOption<GatherDebugInfoPackageScope>[] = allGath
     (scope) => {
         switch (scope) {
             case "cluster":
-                return { label: "Entire cluster", value: scope };
+                return {
+                    label: "Entire cluster",
+                    value: scope,
+                    icon: "cluster",
+                } satisfies SelectOption<GatherDebugInfoPackageScope>;
             case "server":
-                return { label: "Current server only", value: scope };
+                return {
+                    label: "Current server only",
+                    value: scope,
+                    icon: "server",
+                } satisfies SelectOption<GatherDebugInfoPackageScope>;
             default:
                 assertUnreachable(scope);
         }
     }
 );
 
-const dataTypesOptions: FormCheckboxOption<DebugInfoPackageContentType>[] = allGatherDebugInfoPackageDataTypes.map(
+const dataTypesOptions: FormCheckboxesOption<DebugInfoPackageContentType>[] = allGatherDebugInfoPackageDataTypes.map(
     (dataType) => {
         switch (dataType) {
             case "Databases":

@@ -161,7 +161,7 @@ abstract class viewModelBase {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
         if (this.dirtyFlag().isDirty()) {
-            return this.customDiscardStayResult()?.() ??this.discardStayResult();
+            return this.customDiscardStayResult()?.() ?? this.discardStayResult();
         }
 
         return true;
