@@ -118,11 +118,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return false;
         }
 
-        public override DisposeOnce<SingleAttempt> MarkInUse()
+        protected override SubscriptionConnectionInUse MarkInUse()
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Do we need something like this in the database context?");
-        
-            return new DisposeOnce<SingleAttempt>(() => { });
+
+            return null;
         }
 
         protected override void AfterProcessorCreation()
