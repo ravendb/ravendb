@@ -951,7 +951,7 @@ interface StudioDatabasesResponse {
 }
 
 interface ReactDirtyFlag {
-    setIsDirty: (isDirty: boolean) => void;
+    setIsDirty: (isDirty: boolean, customDialog?: () => JQueryPromise<confirmDialogResult>) => void;
 }
 
 interface ReactInKnockoutOptions<T> {

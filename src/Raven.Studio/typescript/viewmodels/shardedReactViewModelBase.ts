@@ -26,7 +26,7 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
 
-        const reactDirtyFlag = getReactDirtyFlag(this.dirtyFlag);
+        const reactDirtyFlag = getReactDirtyFlag(this.dirtyFlag, this.customDiscardStayResult);
         const reactProps = {
             ...args,
             database: this.db,
