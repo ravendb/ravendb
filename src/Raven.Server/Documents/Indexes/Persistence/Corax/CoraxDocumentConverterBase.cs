@@ -31,12 +31,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
     private readonly bool _canContainSourceDocumentId;
-    private static readonly Memory<byte> _trueLiteral = new(Encoding.UTF8.GetBytes("true"));
-    private static ReadOnlySpan<byte> TrueLiteral => _trueLiteral.Span;
-
-    private static readonly Memory<byte> _falseLiteral = new(Encoding.UTF8.GetBytes("false"));
-    private static ReadOnlySpan<byte> FalseLiteral => _falseLiteral.Span;
-
+    private static ReadOnlySpan<byte> TrueLiteral => "true"u8;
+    private static ReadOnlySpan<byte> FalseLiteral => "false"u8;
 
     private static readonly StandardFormat StandardFormat = new('g');
     private static readonly StandardFormat TimeSpanFormat = new('c');
