@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         public RevisionsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
+            _token = connection == null ? CancellationToken.None : connection.CancellationTokenSource.Token;
         }
 
         public List<RevisionRecord> BatchItems = new List<RevisionRecord>();

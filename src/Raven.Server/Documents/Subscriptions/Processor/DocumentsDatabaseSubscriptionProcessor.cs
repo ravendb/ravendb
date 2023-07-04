@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         public DocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            _token = connection == null ? new CancellationToken() : connection.CancellationTokenSource.Token;
+            _token = connection == null ? CancellationToken.None : connection.CancellationTokenSource.Token;
         }
 
         public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
