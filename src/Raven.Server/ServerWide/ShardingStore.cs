@@ -103,7 +103,8 @@ namespace Raven.Server.ServerWide
                 UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
                 GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeout.AsTimeSpan,
                 HttpClientType = typeof(ShardingStore),
-                DisableTopologyCache = true,
+                DisableTopologyCache = DocumentConventions.DefaultForServer.DisableTopologyCache,
+                DisposeCertificate = DocumentConventions.DefaultForServer.DisposeCertificate,
                 CreateHttpClient = handler =>
                 {
                     handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
