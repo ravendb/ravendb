@@ -7,9 +7,9 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -17,7 +17,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using static Raven.Server.Documents.Subscriptions.SubscriptionProcessor.AbstractSubscriptionProcessorBase;
 
 namespace Raven.Server.Documents.TcpHandlers;
 
@@ -75,14 +74,14 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnectionForShard)}', but got: '{connection.GetType().Name}'.");
     }
 
-    protected override async Task<BatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
+    protected override async Task<SubscriptionBatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
     {
-        if (result.Status == BatchStatus.ActiveMigration)
+        if (result.Status == SubscriptionBatchStatus.ActiveMigration)
         {
             if (result.CurrentBatch.Count == 0)
             {
                 // we didn't pull anything and there is migration, we don't update the cv and will wait for migration to complete
-                return BatchStatus.ActiveMigration;
+                return SubscriptionBatchStatus.ActiveMigration;
             }
 
             // we already pulled some docs, we will send the docs in CurrentBatch and then will wait for migration to complete
@@ -105,7 +104,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
                 _logger.Info($"Got '{nameof(DocumentUnderActiveMigrationException)}' on shard '{ShardName}' will roll back the change vector from '{LastSentChangeVectorInThisConnection}' to '{cvBeforeRecordBatch}', and wait for migration to complete.", e);
             }
             LastSentChangeVectorInThisConnection = cvBeforeRecordBatch;
-            return BatchStatus.ActiveMigration;
+            return SubscriptionBatchStatus.ActiveMigration;
         }
 
         if (_processor.Skipped != null)
@@ -129,19 +128,19 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             }
         }
 
-        if (result.CurrentBatch.Count == 0 && result.Status == BatchStatus.ActiveMigration)
+        if (result.CurrentBatch.Count == 0 && result.Status == SubscriptionBatchStatus.ActiveMigration)
         {
             // all current batch items were skipped, relevant for shard after resharding
-            return BatchStatus.ActiveMigration;
+            return SubscriptionBatchStatus.ActiveMigration;
         }
 
         if (result.CurrentBatch.Count == 0)
         {
             // empty batch
-            return BatchStatus.EmptyBatch;
+            return SubscriptionBatchStatus.EmptyBatch;
         }
 
-        return BatchStatus.DocumentsSent;
+        return SubscriptionBatchStatus.DocumentsSent;
     }
 
     protected override bool FoundAboutMoreDocs()
@@ -169,11 +168,11 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
     }
 
-    internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, BatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse, SubscriptionBatchStatsScope batchScope)
+    internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, DisposeOnce<SingleAttempt> markInUse, SubscriptionBatchStatsScope batchScope)
     {
-        if (status == BatchStatus.ActiveMigration)
+        if (status == SubscriptionBatchStatus.ActiveMigration)
         {
-            await LogBatchStatusAndUpdateStatsAsync(sendingCurrentBatchStopwatch, $"Subscription '{Options.SubscriptionName}' is '{nameof(BatchStatus.ActiveMigration)}'");
+            await LogBatchStatusAndUpdateStatsAsync(sendingCurrentBatchStopwatch, $"Subscription '{Options.SubscriptionName}' is '{nameof(SubscriptionBatchStatus.ActiveMigration)}'");
 
             if (await WaitForDocsMigrationAsync(state, _lastReplyFromClientTask))
             {

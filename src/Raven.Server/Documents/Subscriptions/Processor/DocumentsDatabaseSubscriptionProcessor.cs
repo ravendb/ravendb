@@ -12,7 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
+namespace Raven.Server.Documents.Subscriptions.Processor
 {
     public class DocumentsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<Document>
     {
@@ -30,14 +30,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
             Size size = default;
-            var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
+            var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
             ItemsToRemoveFromResend.Clear();
 
             foreach (var item in Fetcher.GetEnumerator())
             {
-                BatchItem batchItem = GetBatchItem(item);
+                SubscriptionBatchItem batchItem = GetBatchItem(item);
 
                 HandleBatchItem(batchScope, batchItem, result, item);
                 size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return result;
         }
 
-        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, Document item)
+        protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
         {
             if (batchItem.Document.Data != null)
             {
@@ -121,11 +121,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override BatchItem ShouldSend(Document item, out string reason)
+        protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
         {
             reason = null;
 
-            var result = new BatchItem
+            var result = new SubscriptionBatchItem
             {
                 Document = item
             };
@@ -137,14 +137,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
                     reason = $"{item.Id} is already merged";
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
                 if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, item.Id, Active))
                 {
                     reason = $"{item.Id} exists in an active batch";
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
             }
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector, out reason) == false)
                 {
                     item.ChangeVector = string.Empty;
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             if (Patch == null)
             {
-                result.Status = BatchItemStatus.Send;
+                result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
 
@@ -186,18 +186,18 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                     reason = $"{item.Id} filtered out by criteria";
                     result.Document.Data = null;
-                    result.Status = BatchItemStatus.Skip;
+                    result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
-                result.Status = BatchItemStatus.Send;
+                result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
             catch (Exception ex)
             {
                 reason = $"Criteria script threw exception for document id {item.Id}";
                 result.Exception = ex;
-                result.Status = BatchItemStatus.Skip;
+                result.Status = SubscriptionBatchItemStatus.Skip;
                 return result;
             }
         }

@@ -10,7 +10,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
+using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;

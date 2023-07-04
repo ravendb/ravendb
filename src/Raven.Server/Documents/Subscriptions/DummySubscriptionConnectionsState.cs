@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Subscriptions;

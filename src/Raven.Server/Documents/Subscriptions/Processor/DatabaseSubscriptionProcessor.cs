@@ -16,7 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
+namespace Raven.Server.Documents.Subscriptions.Processor
 {
     public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor
     {
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return conflictStatus;
         }
 
-        protected override ValueTask<bool> CanContinueBatchAsync(BatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override ValueTask<bool> CanContinueBatchAsync(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
                 return ValueTask.FromResult(false);
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return base.CanContinueBatchAsync(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
         }
 
-        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)
         {
             if (batchItem.Document.Etag == 0) // got this document from resend
                 return currentLast;
@@ -73,11 +73,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             //merge with this node's local etag
         }
 
-        protected BatchItem GetBatchItem(T item)
+        protected SubscriptionBatchItem GetBatchItem(T item)
         {
             var batchItem = ShouldSend(item, out var reason);
 
-            if (batchItem.Status == BatchItemStatus.Send)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
             {
                 if (IncludesCmd != null && IncludesCmd.IncludeDocumentsCommand != null && Run != null)
                     IncludesCmd.IncludeDocumentsCommand.AddRange(Run.Includes, batchItem.Document.Id);
@@ -104,9 +104,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         protected abstract SubscriptionFetcher<T> CreateFetcher();
 
-        protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, T item);
+        protected abstract void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, T item);
 
-        protected abstract BatchItem ShouldSend(T item, out string reason);
+        protected abstract SubscriptionBatchItem ShouldSend(T item, out string reason);
     }
 
     public abstract class DatabaseSubscriptionProcessor : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl>

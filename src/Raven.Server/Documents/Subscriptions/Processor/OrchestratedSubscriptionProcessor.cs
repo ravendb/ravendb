@@ -13,7 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
+namespace Raven.Server.Documents.Subscriptions.Processor;
 
 public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<OrchestratorIncludesCommandImpl>
 {
@@ -43,7 +43,7 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
 
     private OrchestratorIncludesCommandImpl _includes;
 
-    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, BatchItem batchItem)
+    protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)
     {
         return batchItem.Document.ChangeVector;
     }
@@ -71,10 +71,10 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
 
     public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
     {
-        var result = new SubscriptionBatchResult { CurrentBatch = new List<BatchItem>(), LastChangeVectorSentInThisBatch = null };
+        var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
         if (_state.Batches.TryTake(out CurrentBatch, TimeSpan.Zero) == false)
         {
-            result.Status = BatchStatus.EmptyBatch;
+            result.Status = SubscriptionBatchStatus.EmptyBatch;
             return result;
         }
 
@@ -82,8 +82,8 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         {
             foreach (SubscriptionBatchBase<BlittableJsonReaderObject>.Item item in CurrentBatch.Items)
             {
-                BatchItem batchItem = GetBatchItem(item);
-                if (batchItem.Status == BatchItemStatus.Skip)
+                SubscriptionBatchItem batchItem = GetBatchItem(item);
+                if (batchItem.Status == SubscriptionBatchItemStatus.Skip)
                 {
                     continue;
                 }
@@ -101,7 +101,7 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         }
     }
 
-    protected void HandleBatchItem(SubscriptionBatchStatsScope batchScope, BatchItem batchItem, SubscriptionBatchResult result, SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    protected void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
     {
         //TODO: egor abstract this with DatabaseSubscriptionProcessor<T>.HandleBatchItem()
         Connection.TcpConnection.LastEtagSent = batchItem.Document.Etag;
@@ -110,20 +110,20 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
 
     }
 
-    private BatchItem GetBatchItem(SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
+    private SubscriptionBatchItem GetBatchItem(SubscriptionBatchBase<BlittableJsonReaderObject>.Item item)
     {
         if (GetConflictStatus(item.ChangeVector) == ConflictStatus.AlreadyMerged)
         {
-            return new BatchItem { Status = BatchItemStatus.Skip };
+            return new SubscriptionBatchItem { Status = SubscriptionBatchItemStatus.Skip };
         }
 
 
         if (item.ExceptionMessage != null)
         {
-            return new BatchItem { Exception = new Exception(item.ExceptionMessage) };
+            return new SubscriptionBatchItem { Exception = new Exception(item.ExceptionMessage) };
         }
 
-        return new BatchItem
+        return new SubscriptionBatchItem
         {
             Document = new Document
             {
