@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -431,7 +432,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        var message = $"Documents: {result.Documents}"; 
+                        var message = $"Documents: {result.Documents}";
                         AddInfoToSmugglerResult(result, message);
                     }
 
@@ -450,33 +451,36 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (CanSkipDocument(item.Document, buildType))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
                     if (_options.IncludeExpired == false &&
                         ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
-                        SkipDocument(item, result);
+                        SkipDocument(item, result.Documents);
                         continue;
                     }
 
                     if (_patcher != null)
                     {
-                        item.Document = _patcher.Transform(item.Document);
-                        if (item.Document == null)
+                        var patchedDocument = _patcher.Transform(item.Document);
+                        if (patchedDocument == null)
                         {
-                            result.Documents.SkippedCount++;
+                            SkipDocument(item, result.Documents);
+
                             if (result.Documents.SkippedCount % 1000 == 0)
                                 AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
                             continue;
                         }
+
+                        item.Document = patchedDocument;
                     }
 
                     SetDocumentOrTombstoneFlags(ref item.Document.Flags, ref item.Document.NonPersistentFlags, buildType);
@@ -543,15 +547,28 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(item.Document.Id != null);
 
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    var shouldSkip = ShouldSkip(item, _patcher);
 
-                    await actions.WriteDocumentAsync(item, result.RevisionDocuments);
+                    if (shouldSkip == false)
+                    {
+                        item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                        await actions.WriteDocumentAsync(item, result.RevisionDocuments);
+                    }
+                    else
+                    {
+                        SkipDocument(item, result.RevisionDocuments);
+                    }
 
                     result.RevisionDocuments.LastEtag = item.Document.Etag;
                 }
             }
 
             return result.RevisionDocuments;
+
+            static bool ShouldSkip(DocumentItem item, SmugglerPatcher patcher)
+            {
+                return patcher != null && patcher.ShouldSkip(item.Document.Id);
+            }
         }
 
         protected virtual async Task<SmugglerProgressBase.Counts> ProcessTombstonesAsync(SmugglerResult result, BuildVersionType buildType)
@@ -672,7 +689,7 @@ namespace Raven.Server.Smuggler.Documents
                         result.AddWarning(msg);
                         continue;
                     }
-                    
+
                     if (OnIndexAction != null)
                     {
                         OnIndexAction(index);
@@ -856,13 +873,25 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
-                    await actions.WriteCounterAsync(counterGroup);
+                    var shouldSkip = ShouldSkip(counterGroup, _patcher);
+
+                    if (shouldSkip == false)
+                        await actions.WriteCounterAsync(counterGroup);
+                    else
+                    {
+                        result.Counters.SkippedCount++;
+                    }
 
                     result.Counters.LastEtag = counterGroup.Etag;
                 }
             }
 
             return result.Counters;
+
+            static bool ShouldSkip(CounterGroupDetail counterGroup, SmugglerPatcher patcher)
+            {
+                return patcher != null && patcher.ShouldSkip(counterGroup.DocumentId);
+            }
         }
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result) =>
@@ -887,15 +916,28 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.TimeSeries.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Time Series entries {result.TimeSeries}");
 
-                    result.TimeSeries.LastEtag = ts.Etag;
+                    var shouldSkip = ShouldSkip(ts, _patcher, isFullBackup);
 
-                    var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
                     if (shouldSkip == false)
                         await actions.WriteTimeSeriesAsync(ts);
+                    else
+                    {
+                        result.TimeSeries.SkippedCount += ts.Segment.NumberOfEntries;
+                    }
+
+                    result.TimeSeries.LastEtag = ts.Etag;
                 }
             }
 
             return result.TimeSeries;
+
+            static bool ShouldSkip(TimeSeriesItem ts, SmugglerPatcher patcher, bool isFullBackup)
+            {
+                if (isFullBackup && ts.Segment.NumberOfLiveEntries == 0)
+                    return true;
+
+                return patcher != null && patcher.ShouldSkip(ts.DocId);
+            }
         }
 
         protected async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordInternalAsync(SmugglerResult result, IDatabaseRecordActions action)
@@ -1071,9 +1113,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected static void SkipDocument(DocumentItem item, SmugglerResult result)
+        protected static void SkipDocument(DocumentItem item, SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments counts)
         {
-            result.Documents.SkippedCount++;
+            counts.SkippedCount++;
 
             if (item.Document != null)
             {

@@ -43,7 +43,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration |
                                                                                   DatabaseRecordItemType.QueueConnectionStrings |
                                                                                   DatabaseRecordItemType.QueueEtls |
-                                                                                  DatabaseRecordItemType.IndexesHistory;
+                                                                                  DatabaseRecordItemType.IndexesHistory |
+                                                                                  DatabaseRecordItemType.Refresh;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

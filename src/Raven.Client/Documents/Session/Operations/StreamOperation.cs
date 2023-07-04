@@ -348,6 +348,7 @@ namespace Raven.Client.Documents.Session.Operations
             private UnmanagedJsonParser _parser;
             private JsonOperationContext.MemoryBuffer _buffer;
             private bool _initialized;
+            private bool _done;
             private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
             private readonly bool _isAsync;
@@ -400,6 +401,9 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 AssertInitialized();
 
+                if (_done)
+                    return false;
+
                 CheckIfContextOrCacheNeedToBeRenewed();
 
                 _timeSeriesIt?.Dispose();
@@ -415,6 +419,7 @@ namespace Raven.Client.Documents.Session.Operations
                     if (_state.CurrentTokenType != JsonParserToken.EndObject)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
+                    _done = true;
                     return false;
                 }
 
@@ -444,6 +449,9 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 AssertInitialized();
 
+                if (_done)
+                    return false;
+
                 CheckIfContextOrCacheNeedToBeRenewed();
 
                 if (_timeSeriesIt != null)
@@ -460,6 +468,7 @@ namespace Raven.Client.Documents.Session.Operations
                     if (_state.CurrentTokenType != JsonParserToken.EndObject)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
+                    _done = true;
                     return false;
                 }
 
@@ -498,6 +507,7 @@ namespace Raven.Client.Documents.Session.Operations
                 try
                 {
                     _initialized = true;
+                    _done = false;
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");
@@ -538,6 +548,7 @@ namespace Raven.Client.Documents.Session.Operations
                 try
                 {
                     _initialized = true;
+                    _done = false;
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");

@@ -355,6 +355,9 @@ namespace Raven.Server.Documents.Revisions
                     return true;
 
                 flags |= DocumentFlags.Revision;
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
+                    flags |= DocumentFlags.ForceCreated;
+
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(etag);
 

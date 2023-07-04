@@ -10,6 +10,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 
 import ShardedSmugglerResult = Raven.Client.Documents.Smuggler.ShardedSmugglerResult;
 import CountsWithSkippedCountAndLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag;
+import CountsWithSkippedCountAndLastEtagAndAttachments = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments;
 import Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 import CountsWithLastEtagAndAttachments = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments;
 import CountsWithLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag;
@@ -49,20 +50,20 @@ type uploadListItem = {
 class smugglerDatabaseDetails extends abstractOperationDetails {
 
     view = require("views/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails.html");
-    
+
     private static sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";
     static ProcessingText = 'Processing';
-    
+
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(true);
-    
+
     itemsLastCount: dictionary<number> = {};
     lastProcessingSpeedText = smugglerDatabaseDetails.ProcessingText;
-    
+
     canDelay: KnockoutComputed<boolean>;
-    
+
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     uploadItems: KnockoutComputed<Array<uploadListItem>>;
     messages: KnockoutComputed<Array<string>>;
@@ -79,31 +80,31 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         this.initObservables();
     }
-    
+
     private static extractType(value: object): string {
         return value && "$type" in value ? (value as any)["$type"] : null;
     }
-    
+
     private static isShardedResult(value: object): value is ShardedSmugglerResult {
         const type = smugglerDatabaseDetails.extractType(value);
 
         if (!type) {
             return false;
         }
-        
+
         return type.includes("ShardedSmugglerResult") || type.includes("ShardedBackupResult") || type.includes("ShardedRestoreResult");
     }
-    
+
     private static isShardedProgress(value: object): value is ShardedSmugglerProgress {
         const type = smugglerDatabaseDetails.extractType(value);
 
         if (!type) {
             return false;
         }
-        
+
         return type.includes("ShardedSmugglerProgress") || type.includes("ShardedBackupProgress") || type.includes("ShardedRestoreResult");
     }
-    
+
     private static isShardedBackupResult(value: object): value is ShardedBackupResult {
         const type = smugglerDatabaseDetails.extractType(value);
         if (!type) {
@@ -112,7 +113,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         return type.includes("ShardedBackupResult");
     }
-    
+
     private mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
         const mergeCounts = (items: Counts[]): Counts => {
             return {
@@ -124,55 +125,62 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 StartTime: null,
             }
         }
-        
+
         const mergeCountsWithLastEtag = (items: CountsWithLastEtag[]): CountsWithLastEtag => {
             return {
                 ...mergeCounts(items),
                 LastEtag: -1,
             }
         }
-        
-        const mergeCountsWithAttachments = (items: CountsWithLastEtagAndAttachments[]): CountsWithLastEtagAndAttachments => {
+
+        const mergeCountsWithLastEtagAndAttachments = (items: CountsWithLastEtagAndAttachments[]): CountsWithLastEtagAndAttachments => {
             return {
                 ...mergeCountsWithLastEtag(items),
                 Attachments: mergeCounts(items.map(x => x.Attachments))
             }
         }
-        
-        const mergeCountsWithSkipped = (items: CountsWithSkippedCountAndLastEtag[]): CountsWithSkippedCountAndLastEtag => {
+
+        const mergeCountsWithSkippedCountAndLastEtag = (items: CountsWithSkippedCountAndLastEtag[]): CountsWithSkippedCountAndLastEtag => {
             return {
-                ...mergeCountsWithAttachments(items),
+                ...mergeCountsWithLastEtag(items),
                 SkippedCount: items.reduce((p, c) => p + c.SkippedCount, 0),
             }
         }
-        
+
+        const mergeCountsWithSkippedCountAndLastEtagAndAttachments = (items: CountsWithSkippedCountAndLastEtagAndAttachments[]): CountsWithSkippedCountAndLastEtagAndAttachments => {
+            return {
+                ...mergeCountsWithLastEtagAndAttachments(items),
+                SkippedCount: items.reduce((p, c) => p + c.SkippedCount, 0),
+            }
+        }
+
         const results: Array<ShardNodeSmugglerResult | ShardNodeBackupResult> = result.Results;
-        
+
         let extraProps: object = {};
-        
+
         if (smugglerDatabaseDetails.isShardedBackupResult(result)) {
             // noinspection UnnecessaryLocalVariableJS
             const backup: Partial<BackupResult> = {
                 SnapshotBackup: mergeCounts(result.Results.map(x => x.Result.SnapshotBackup))
             }
-            
+
             extraProps = backup;
         }
-        
+
         return {
             CanMerge: false,
             CompareExchange: mergeCountsWithLastEtag(results.map(x => x.Result.CompareExchange)),
             CompareExchangeTombstones: mergeCounts(results.map(x => x.Result.CompareExchangeTombstones)),
             Conflicts: mergeCountsWithLastEtag(results.map(x => x.Result.Conflicts)),
-            Counters: mergeCountsWithLastEtag(results.map(x => x.Result.Counters)),
-            DatabaseRecord: mergeCounts(results.map(x => x.Result.DatabaseRecord)) as DatabaseRecordProgress, 
-            Documents: mergeCountsWithSkipped(results.map(x => x.Result.Documents)),
+            Counters: mergeCountsWithSkippedCountAndLastEtag(results.map(x => x.Result.Counters)),
+            DatabaseRecord: mergeCounts(results.map(x => x.Result.DatabaseRecord)) as DatabaseRecordProgress,
+            Documents: mergeCountsWithSkippedCountAndLastEtagAndAttachments(results.map(x => x.Result.Documents)),
             Identities: mergeCountsWithLastEtag(results.map(x => x.Result.Identities)),
             Indexes: mergeCounts(results.map(x => x.Result.Indexes)),
             ReplicationHubCertificates: mergeCounts(results.map(x => x.Result.ReplicationHubCertificates)),
-            RevisionDocuments: mergeCountsWithAttachments(results.map(x => x.Result.RevisionDocuments)),
+            RevisionDocuments: mergeCountsWithSkippedCountAndLastEtagAndAttachments(results.map(x => x.Result.RevisionDocuments)),
             Subscriptions: mergeCounts(results.map(x => x.Result.Subscriptions)),
-            TimeSeries: mergeCountsWithLastEtag(results.map(x => x.Result.TimeSeries)),
+            TimeSeries: mergeCountsWithSkippedCountAndLastEtag(results.map(x => x.Result.TimeSeries)),
             Tombstones: mergeCountsWithLastEtag(results.map(x => x.Result.Tombstones)),
             ...extraProps
         };
@@ -180,11 +188,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     protected initObservables() {
         super.initObservables();
-        
+
         this.canDelay = ko.pureComputed(() => {
             const completed = this.op.isCompleted();
             const isBackup = this.op.taskType() === "DatabaseBackup";
-            
+
             return !completed && isBackup;
         });
 
@@ -192,16 +200,16 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             if (this.op.status() === "Faulted") {
                 return [];
             }
-            
+
             let status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as SmugglerProgressBase;
             if (!status) {
                 return [];
             }
-            
+
             if (smugglerDatabaseDetails.isShardedResult(status)) {
                 status = this.mergeShardedResult(status);
             }
-            
+
             const result: smugglerListItem[] = [];
             if ("SnapshotBackup" in status) {
                 const backupCount = (status as BackupProgress).SnapshotBackup;
@@ -214,7 +222,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             if ("SnapshotRestore" in status) {
                 const restoreCounts = (status as RestoreProgress).SnapshotRestore;
-                
+
                 // skip it this case means it is not restore progress object or it is restore of non-binary data 
                 if (restoreCounts && restoreCounts.Skipped) {
                     result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
@@ -222,7 +230,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";
-            
+
             if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
                 result.push(this.mapToExportListItem("Documents", status.Documents));
                 if (isDatabaseMigration) {
@@ -235,14 +243,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
                 const attachments = (status.Documents as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", attachments, true));
-                
+
                 result.push(this.mapToExportListItem("Counters", status.Counters, true));
                 result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries, true));
-                
+
                 if (this.op.taskType() === "DatabaseImport") {
                     result.push(this.mapToExportListItem("Tombstones", status.Tombstones, true));
                 }
-                
+
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
                 const revisionsAttachments = (status.RevisionDocuments as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", revisionsAttachments, true));
@@ -255,12 +263,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 if (this.op.taskType() === "DatabaseImport") {
                     result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones, true));
                 }
-                
+
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);
-            
+
             result.forEach(item => {
                 if (item.stage === "processing" && !_.includes(currentlyProcessingItems, item.name)) {
                     item.stage = "pending";
@@ -292,14 +300,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             if (!status) {
                 return [];
             }
-            
+
             if (smugglerDatabaseDetails.isShardedResult(status)) {
                 return status.Results.flatMap(shardResult => smugglerDatabaseDetails.mapUploadItems(shardResult.Result));
             } else {
-                return smugglerDatabaseDetails.mapUploadItems(status);    
+                return smugglerDatabaseDetails.mapUploadItems(status);
             }
         });
-         
+
         this.messages = ko.pureComputed(() => {
             if (this.operationFailed()) {
                 const errors = this.errorMessages();
@@ -307,11 +315,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
                 const result = this.op.result() as SmugglerResult;
-                
+
                 if (smugglerDatabaseDetails.isShardedResult(result)) {
                     return result.Results.flatMap(x => x.Result.Messages);
                 } else {
-                    return result ? result.Messages : [];    
+                    return result ? result.Messages : [];
                 }
             } else {
                 const progress = this.op.progress() as SmugglerResult;
@@ -323,7 +331,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         });
 
         this.messagesJoined = ko.pureComputed(() => this.messages() ? this.messages().join("\n") : "");
-        
+
         this.registerDisposable(this.operationFailed.subscribe(failed => {
             if (failed) {
                 this.detailsVisible(true);
@@ -333,19 +341,19 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (this.operationFailed()) {
             this.detailsVisible(true);
         }
-        
+
         this.shardedSmugglerInProgress = ko.pureComputed(() => smugglerDatabaseDetails.isShardedProgress(this.op.progress() as object));
-        
+
         this.currentShard = ko.pureComputed(() => {
             const progress = this.op.progress() as object;
             if (!smugglerDatabaseDetails.isShardedProgress(progress)) {
                 return null;
             }
-            
+
             return progress.ShardNumber;
         });
     }
-    
+
     private static mapUploadItems(status: SmugglerProgressBase): uploadListItem[] {
         const result: uploadListItem[] = [];
         if ("S3Backup" in status) {
@@ -402,12 +410,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (!this.canDelay()) {
             return;
         }
-        
+
         this.close();
-        
+
         const durationFormatted = generalUtils.formatTimeSpan(duration, true);
-        
-        viewHelpers.confirmationMessage("Delay backup", "Do you want to delay backup by " + durationFormatted +  "?", {
+
+        viewHelpers.confirmationMessage("Delay backup", "Do you want to delay backup by " + durationFormatted + "?", {
             buttons: ["Cancel", "Delay"]
         })
             .done(result => {
@@ -421,25 +429,25 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             .fail(() => {
                 this.openDetails();
             })
-        
+
     }
-    
+
     private static findCurrentlyProcessingItems(result: Array<smugglerListItem>): string[] {
         // since we don't know the contents of smuggler import file we assume that currently processed
         // items are all items with status: 'processing' and positive read count
         // if such item doesn't exist when use first item with processing state
-        
+
         const processing = result.filter(x => x.stage === "processing");
-        
+
         const withPositiveReadCounts = processing.filter(x => x.hasReadCount && x.readCount !== '0');
         if (withPositiveReadCounts.length) {
             return withPositiveReadCounts.map(x => x.name);
         }
-        
+
         if (processing.length) {
             return [processing[0].name];
         }
-        
+
         return [];
     }
 
@@ -453,7 +461,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     toggleDetails() {
         this.detailsVisible(!this.detailsVisible());
     }
-    
+
     attached() {
         super.attached();
 
@@ -474,9 +482,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (!item) {
             return null;
         }
-        
+
         let stage: smugglerListItemStatus = "processing";
-        
+
         if (item.Skipped) {
             stage = "skipped";
         } else if (item.Processed) {
@@ -490,10 +498,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         const isDocuments = name === "Documents";
 
         const skippedCount = isDocuments ? (item as CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
-        
+
         if (smugglerDatabaseDetails.showSpeed(name) && item.StartTime) {
             const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
-            
+
             if (itemsCount === this.itemsLastCount[name]) {
                 processingSpeedText = this.lastProcessingSpeedText;
             } else {
@@ -519,24 +527,24 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     private static showSpeed(name: string) {
         return name === "Documents" || name === "Revisions" || name === "Counters" || name === "TimeSeries";
     }
-    
+
     private calcSpeedText(count: number, startTime: string) {
         const durationInSeconds = this.op.getElapsedSeconds(startTime);
         const processingSpeed = abstractOperationDetails.calculateProcessingSpeed(durationInSeconds, count);
         return processingSpeed ? `${processingSpeed.toLocaleString()} items/sec` : smugglerDatabaseDetails.ProcessingText;
     }
-    
+
     static supportsDetailsFor(notification: abstractNotification) {
         return (notification instanceof operation) &&
-        (notification.taskType() === "DatabaseExport" ||
-            notification.taskType() === "DatabaseImport" ||
-            notification.taskType() === "DatabaseMigrationRavenDb" ||
-            notification.taskType() === "DatabaseRestore" ||
-            notification.taskType() === "MigrationFromLegacyData" ||
-            notification.taskType() === "CollectionImportFromCsv" ||
-            notification.taskType() === "DatabaseBackup" ||
-            notification.taskType() === "DatabaseMigration"
-        );
+            (notification.taskType() === "DatabaseExport" ||
+                notification.taskType() === "DatabaseImport" ||
+                notification.taskType() === "DatabaseMigrationRavenDb" ||
+                notification.taskType() === "DatabaseRestore" ||
+                notification.taskType() === "MigrationFromLegacyData" ||
+                notification.taskType() === "CollectionImportFromCsv" ||
+                notification.taskType() === "DatabaseBackup" ||
+                notification.taskType() === "DatabaseMigration"
+            );
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
@@ -555,9 +563,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             if (!existing.isCompleted()) {
                 const result = existing.progress() as SmugglerResult;
-                result.Messages = result.Message ?  [result.Message] : [];
+                result.Messages = result.Message ? [result.Message] : [];
             }
-            
+
         } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
             const incomingResult = incoming.State.Progress as SmugglerResult;
             const existingResult = existing.progress() as SmugglerResult;
@@ -570,7 +578,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (isUpdate) {
             existing.updateWith(incoming);
         }
-        
+
         return true;
     }
 }

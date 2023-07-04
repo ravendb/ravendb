@@ -74,6 +74,10 @@
                         <label data-bind="attr: { for: 'includeRevisions_' + instanceCounter }" class="margin-right margin-right-sm">Revisions Configuration</label>
                     </div>
                     <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeRefresh, attr: { id: 'includeRefresh_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeRefresh_' + instanceCounter }" class="margin-right margin-right-sm">Document Refresh</label>
+                    </div>
+                    <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeExpiration, attr: { id: 'includeExpiration_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeExpiration_' + instanceCounter }" class="margin-right margin-right-sm">Document Expiration</label>
                     </div>

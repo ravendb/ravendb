@@ -531,37 +531,54 @@ namespace Raven.Client.Documents.Subscriptions
         {
             Task notifiedSubscriber = Task.CompletedTask;
 
-            var batch = CreateEmptyBatch();
-
-            while (_processingCts.IsCancellationRequested == false)
+            try
             {
-                var incomingBatch = await PrepareBatchAsync(contextPool, tcpStreamCopy, buffer, batch, notifiedSubscriber).ConfigureAwait(false);
+                var batch = CreateEmptyBatch();
 
-                notifiedSubscriber = Task.Run(async () => // the 2'nd thread
+                while (_processingCts.IsCancellationRequested == false)
                 {
-                    // ReSharper disable once AccessToDisposedClosure
-                    using (incomingBatch.ReturnContext)
+                    var incomingBatch = await PrepareBatchAsync(contextPool, tcpStreamCopy, buffer, batch, notifiedSubscriber).ConfigureAwait(false);
+
+                    notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                     {
-                        try
+                        // ReSharper disable once AccessToDisposedClosure
+                        using (incomingBatch.ReturnContext)
                         {
-                            if (_subscriber.Async != null)
-                                await _subscriber.Async(batch).ConfigureAwait(false);
-                            else
-                                _subscriber.Sync(batch);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (_logger.IsInfoEnabled)
+                            try
                             {
-                                _logger.Info($"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
+                                if (_subscriber.Async != null)
+                                    await _subscriber.Async(batch).ConfigureAwait(false);
+                                else
+                                    _subscriber.Sync(batch);
                             }
+                            catch (Exception ex)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
+                                }
 
-                            HandleSubscriberError(ex);
+                                HandleSubscriberError(ex);
+                            }
                         }
-                    }
 
-                    await SendAckAsync(batch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
-                });
+                        await SendAckAsync(batch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
+                    });
+                }
+            }
+            finally
+            {
+                try
+                {
+                    if (notifiedSubscriber is { IsCompleted: false })
+                    {
+                        await notifiedSubscriber.WaitWithTimeout(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
             }
         }
 
@@ -763,7 +780,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 var message = new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = batch.LastSentChangeVectorInBatch, 
+                    ChangeVector = batch.LastSentChangeVectorInBatch,
                     Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
                 };
 

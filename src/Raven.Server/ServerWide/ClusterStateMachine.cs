@@ -404,7 +404,7 @@ namespace Raven.Server.ServerWide
                             throw new RachisApplyException(errorMessage);
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
-                        SetIndexForBackup(context, cmd, index, type);
+                        SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
 
                     case nameof(IncrementClusterIdentitiesBatchCommand):
@@ -412,7 +412,7 @@ namespace Raven.Server.ServerWide
                             throw new RachisApplyException(errorMessage);
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
-                        SetIndexForBackup(context, cmd, index, type);
+                        SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
 
                     case nameof(UpdateClusterIdentityCommand):
@@ -420,7 +420,7 @@ namespace Raven.Server.ServerWide
                             throw new RachisApplyException(errorMessage);
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
-                        SetIndexForBackup(context, cmd, index, type);
+                        SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
 
                     case nameof(PutSortersCommand):
@@ -514,7 +514,6 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveCompareExchangeCommand):
                         ExecuteCompareExchange(context, type, cmd, index, out result);
                         leader?.SetStateOf(index, result);
-                        SetIndexForBackup(context, cmd, index, type);
                         break;
 
                     case nameof(InstallUpdatedServerCertificateCommand):
@@ -799,14 +798,13 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void SetIndexForBackup(ClusterOperationContext context, BlittableJsonReaderObject bjro, long index, string type)
+        private static void SetIndexForBackup(ClusterOperationContext context, string databaseName, long index, string type)
         {
             if (index < 0)
                 return;
 
-            if ((bjro.TryGet(nameof(CompareExchangeCommandBase.Database), out string databaseName) == false ||
-                 string.IsNullOrEmpty(databaseName)) && type.Equals(nameof(AddOrUpdateCompareExchangeCommand)))
-                throw new RachisApplyException($"Command {type} must contain a DatabaseName property. Index {index}");
+            if (string.IsNullOrEmpty(databaseName))
+                throw new RachisApplyException($"Command '{type}' must contain a DatabaseName property. Index {index}");
 
             var dbKey = $"db/{databaseName}";
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -825,6 +823,7 @@ namespace Raven.Server.ServerWide
                     databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                 }
 
+                using (databaseRecordJson)
                 UpdateValue(index, items, keyLowered, key, databaseRecordJson);
             }
         }
@@ -857,8 +856,12 @@ namespace Raven.Server.ServerWide
 
                 var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
+                HashSet<string> databasesToUpdate = null;
+
                 if (hasAddCommands)
                 {
+                    databasesToUpdate = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                     foreach (BlittableJsonReaderObject command in addCommands)
                     {
                         if (command.TryGet("Type", out string type) == false || type != nameof(AddOrUpdateCompareExchangeCommand))
@@ -868,12 +871,15 @@ namespace Raven.Server.ServerWide
 
                         compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](command);
                         compareExchange.Execute(context, items, index);
-                        SetIndexForBackup(context, command, index, type);
+
+                        databasesToUpdate.Add(compareExchange.Database);
                     }
                 }
 
                 if (hasRemoveCommands)
                 {
+                    databasesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                     foreach (BlittableJsonReaderObject command in removeCommands)
                     {
                         if (command.TryGet("Type", out string type) == false || type != nameof(RemoveCompareExchangeCommand))
@@ -883,8 +889,15 @@ namespace Raven.Server.ServerWide
 
                         compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](command);
                         compareExchange.Execute(context, items, index);
-                        SetIndexForBackup(context, command, index, type);
+
+                        databasesToUpdate.Add(compareExchange.Database);
                     }
+                }
+
+                if (databasesToUpdate is { Count: > 0 })
+                {
+                    foreach (var databaseName in databasesToUpdate)
+                        SetIndexForBackup(context, databaseName, index, commandType);
                 }
 
                 OnTransactionDispose(context, index);
@@ -2663,7 +2676,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    UpdateEtagForBackup(databaseRecord, type, index);
+                    UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
@@ -2702,58 +2715,52 @@ namespace Raven.Server.ServerWide
             _parent.Log.Info(msg);
         }
 
-        private void UpdateEtagForBackup(DatabaseRecord databaseRecord, string type, long index)
+        private static void UpdateIndexForBackup(DatabaseRecord databaseRecord, string type, long index)
         {
             switch (type)
             {
-                case nameof(UpdateClusterIdentityCommand):
-                case nameof(IncrementClusterIdentitiesBatchCommand):
-                case nameof(IncrementClusterIdentityCommand):
-                case nameof(AddOrUpdateCompareExchangeCommand):
-                case nameof(RemoveCompareExchangeCommand):
-                case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                case nameof(UpdatePeriodicBackupCommand):
-                case nameof(UpdateExternalReplicationCommand):
+                case nameof(AddElasticSearchEtlCommand):
+                case nameof(AddOlapEtlCommand):
+                case nameof(AddQueueEtlCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
-                case nameof(AddOlapEtlCommand):
-                case nameof(AddElasticSearchEtlCommand):
-                case nameof(AddQueueEtlCommand):
-                case nameof(UpdateRavenEtlCommand):
-                case nameof(UpdateSqlEtlCommand):
-                case nameof(UpdateOlapEtlCommand):
-                case nameof(UpdateElasticSearchEtlCommand):
-                case nameof(UpdateQueueEtlCommand):
+                case nameof(DeleteIndexCommand):
+                case nameof(DeleteIndexHistoryCommand):
                 case nameof(DeleteOngoingTaskCommand):
+                case nameof(EditDatabaseClientConfigurationCommand):
+                case nameof(EditExpirationCommand):
+                case nameof(EditLockModeCommand):
+                case nameof(EditPostgreSqlConfigurationCommand):
+                case nameof(EditRefreshCommand):
+                case nameof(EditRevisionsConfigurationCommand):
+                case nameof(EditRevisionsForConflictsConfigurationCommand):
+                case nameof(EditTimeSeriesConfigurationCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(PutDatabaseClientConfigurationCommand):
+                case nameof(PutDatabaseSettingsCommand):
+                case nameof(PutDatabaseStudioConfigurationCommand):
+                case nameof(PutElasticSearchConnectionStringCommand):
+                case nameof(PutIndexCommand):
+                case nameof(PutIndexHistoryCommand):
+                case nameof(PutOlapConnectionStringCommand):
+                case nameof(PutQueueConnectionStringCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
-                case nameof(PutOlapConnectionStringCommand):
-                case nameof(PutElasticSearchConnectionStringCommand):
-                case nameof(PutQueueConnectionStringCommand):
+                case nameof(RemoveElasticSearchConnectionStringCommand):
+                case nameof(RemoveOlapConnectionStringCommand):
+                case nameof(RemoveQueueConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
-                case nameof(RemoveOlapConnectionStringCommand):
-                case nameof(RemoveElasticSearchConnectionStringCommand):
-                case nameof(RemoveQueueConnectionStringCommand):
-                case nameof(PutIndexCommand):
-                case nameof(PutDatabaseStudioConfigurationCommand):
-                case nameof(PutDatabaseSettingsCommand):
-                case nameof(PutDatabaseClientConfigurationCommand):
-                case nameof(PutAutoIndexCommand):
-                case nameof(DeleteIndexCommand):
                 case nameof(SetIndexLockCommand):
                 case nameof(SetIndexPriorityCommand):
                 case nameof(SetIndexStateCommand):
-                case nameof(EditRevisionsConfigurationCommand):
-                case nameof(EditTimeSeriesConfigurationCommand):
-                case nameof(EditRevisionsForConflictsConfigurationCommand):
-                case nameof(EditExpirationCommand):
-                case nameof(EditRefreshCommand):
-                case nameof(EditDatabaseClientConfigurationCommand):
-                case nameof(EditLockModeCommand):
-                case nameof(EditPostgreSqlConfigurationCommand):
-                case nameof(PutIndexHistoryCommand):    
-                case nameof(DeleteIndexHistoryCommand):
+                case nameof(UpdateElasticSearchEtlCommand):
+                case nameof(UpdateExternalReplicationCommand):
+                case nameof(UpdateOlapEtlCommand):
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(UpdateQueueEtlCommand):
+                case nameof(UpdateRavenEtlCommand):
+                case nameof(UpdateSqlEtlCommand):
                 case nameof(StartBucketMigrationCommand):
                 case nameof(SourceMigrationSendCompletedCommand):
                 case nameof(DestinationMigrationConfirmCommand):
@@ -3123,7 +3130,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void ExecuteCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
+        private void ExecuteCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
             Exception exception = null;
             CompareExchangeCommandBase compareExchange = null;
@@ -3133,6 +3140,8 @@ namespace Raven.Server.ServerWide
                 compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
 
                 result = compareExchange.Execute(context, items, index);
+
+                SetIndexForBackup(context, compareExchange.Database, index, type);
 
                 OnTransactionDispose(context, index);
             }
@@ -3894,7 +3903,7 @@ namespace Raven.Server.ServerWide
             {
                 cts.CancelAfter(_parent.TcpConnectionTimeout);
 
-                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
+                info = await ReplicationUtils.GetServerTcpInfoAsync(url, "Cluster", certificate, cts.Token);
             }
 
             TcpClient tcpClient = null;
