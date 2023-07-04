@@ -475,7 +475,6 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             SkipDocument(item, result);
 
-                            result.Documents.SkippedCount++;
                             if (result.Documents.SkippedCount % 1000 == 0)
                                 AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
                             continue;
