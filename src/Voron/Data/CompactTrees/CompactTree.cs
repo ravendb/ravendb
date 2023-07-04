@@ -244,6 +244,18 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
+    public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    {
+        _inner.AddAfterTryGetNext(ref lookup, value);
+        return lookup.ContainerId;
+    }
+    
+    public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    {
+        _inner.SetAfterTryGetNext(ref lookup, value);
+    }
+
+
     public long Add(CompactKey key, long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
@@ -383,16 +395,21 @@ public sealed partial class CompactTree : IPrepareForCommit
         return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);
     }
 
+    public bool TryRemoveExistingValue(ref CompactKeyLookup key, out long oldValue)
+    {
+        return _inner.TryRemoveExistingValue(ref key, out oldValue);
+    }
+
     public void InitializeStateForTryGetNextValue()
     {
         _inner.InitializeCursorState();
     }
 
-    public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyCacheScope cacheScope)
+    public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyLookup lookup, out CompactKeyCacheScope cacheScope)
     {
         cacheScope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
 
-        var lookup = new CompactKeyLookup(cacheScope.Key);
+        lookup = new CompactKeyLookup(cacheScope.Key);
         lookup.Key.EncodedWithCurrent(out _);
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;

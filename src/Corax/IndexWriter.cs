@@ -1133,7 +1133,7 @@ namespace Corax
             primaryKeyTree.InitializeStateForTryGetNextValue();
             for (int i = 0; i < _entryKeysToRemove.Count; i++)
             {
-                if (primaryKeyTree.TryGetNextValue(_entryKeysToRemove[i].AsSpan(), out var _, out var postingListId, out var scope))
+                if (primaryKeyTree.TryGetNextValue(_entryKeysToRemove[i].AsSpan(), out var _, out var postingListId, out _, out var scope))
                 {
                     RecordDeletion(postingListId);
                     scope.Dispose();
@@ -1560,7 +1560,7 @@ namespace Corax
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
 
-                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var keyLookup, out var scope);
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
                 {
@@ -1571,7 +1571,7 @@ namespace Corax
                     totalLengthOfTerm += entries.TermSize;
                     
                     dumper.WriteAddition(term, termId);
-                    termContainerId = fieldTree.Add(scope.Key, termId);
+                    termContainerId = fieldTree.AddAfterTryGetNext(ref keyLookup, termId);
                 }
                 else
                 {
@@ -1583,10 +1583,10 @@ namespace Corax
                                 dumper.WriteRemoval(term, existingIdInTree);
                             }
                             dumper.WriteAddition(term, termId);
-                            fieldTree.Add(scope.Key, termId);
+                            fieldTree.SetAfterTryGetNext(ref keyLookup, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
-                            if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
+                            if (fieldTree.TryRemoveExistingValue(ref keyLookup, out var ttt) == false)
                             {
                                 dumper.WriteRemoval(term, termId);
                                 ThrowTriedToDeleteTermThatDoesNotExists();

@@ -334,7 +334,6 @@ public class IndexSearcherTest : StorageTest
             {
                 var match = searcher.ContainsQuery(searcher.FieldMetadataBuilder("Content"), "ing");
                 int read;
-                Page p = default;
                 int whole = 0;
                 var reader = searcher.TermsReaderFor(contentSlice);
                 while ((read = match.Fill(ids)) != 0)
