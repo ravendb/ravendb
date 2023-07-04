@@ -42,8 +42,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 HandleBatchItem(batchScope, batchItem, result, item);
                 size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
 
-                if (await CanContinueBatchAsync(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                if (CanContinueBatch(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
                     break;
+
+                await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
             }
 
             _token.ThrowIfCancellationRequested();

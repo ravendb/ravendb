@@ -89,8 +89,10 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
                 }
 
                 HandleBatchItem(batchScope: null, batchItem, result, item);
-                if (await CanContinueBatchAsync(batchItem, size: default, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                if (CanContinueBatch(batchItem, size: default, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
                     break;
+
+                await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
             }
 
             CurrentBatch.CloneIncludes(ClusterContext, _includes);
