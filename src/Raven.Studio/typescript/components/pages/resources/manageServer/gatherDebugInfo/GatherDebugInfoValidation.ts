@@ -16,9 +16,17 @@ export const allGatherDebugInfoPackageDataTypes = exhaustiveStringTuple<
 
 const schema = yup
     .object({
-        dataTypes: yup.array().of(yup.string<DebugInfoPackageContentType>()),
+        dataTypes: yup.array().of(yup.string<DebugInfoPackageContentType>()).required(),
         isSelectAllDatabases: yup.boolean().required(),
-        selectedDatabases: yup.array().of(yup.string()),
+        selectedDatabases: yup
+            .array()
+            .of(yup.string())
+            .when(["dataTypes", "isSelectAllDatabases"], {
+                is: (dataTypes: DebugInfoPackageContentType, isSelectAllDatabases: boolean) => {
+                    return dataTypes.includes("Databases") && !isSelectAllDatabases;
+                },
+                then: (schema) => schema.required(),
+            }),
         packageScope: yup
             .mixed<GatherDebugInfoPackageScope>()
             .oneOf(allGatherDebugInfoPackageScopes)
