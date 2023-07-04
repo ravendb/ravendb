@@ -40,9 +40,6 @@ export function useGatherDebugInfoHelpers() {
     const { reportEvent } = useEventsCollector();
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((x) => x.name);
 
-    const defaultValues = getDefaultValues(allDatabaseNames);
-    const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
-
     useDirtyFlag(isDownloading, confirmLeavingPage);
 
     const asyncGetNextOperationId = useAsyncCallback(() => databasesService.getNextOperationId(null), {
@@ -58,7 +55,6 @@ export function useGatherDebugInfoHelpers() {
 
     const startDownload = async (formData: GatherDebugInfoFormData, url: string) => {
         setIsDownloading(true);
-        // TODO kalczur test if it work if fails
         const operationId = await asyncGetNextOperationId.execute();
 
         const urlParams: DownloadPackageRequestDto = {
@@ -95,6 +91,8 @@ export function useGatherDebugInfoHelpers() {
             }
         });
     };
+
+    const databaseOptions: FormCheckboxOption[] = allDatabaseNames.map((x) => ({ value: x, label: x }));
 
     return {
         isDownloading,
@@ -140,14 +138,12 @@ const dataTypesOptions: FormCheckboxOption<DebugInfoPackageContentType>[] = allG
     }
 );
 
-function getDefaultValues(allDatabaseNames: string[]): Required<GatherDebugInfoFormData> {
-    return {
-        dataTypes: allGatherDebugInfoPackageDataTypes,
-        isSelectAllDatabases: true,
-        selectedDatabases: allDatabaseNames,
-        packageScope: null,
-    };
-}
+const defaultValues: Required<GatherDebugInfoFormData> = {
+    dataTypes: allGatherDebugInfoPackageDataTypes,
+    isSelectAllDatabases: true,
+    selectedDatabases: [],
+    packageScope: null,
+};
 
 function confirmLeavingPage(): JQueryDeferred<confirmDialogResult> {
     const abortResult = $.Deferred<confirmDialogResult>();

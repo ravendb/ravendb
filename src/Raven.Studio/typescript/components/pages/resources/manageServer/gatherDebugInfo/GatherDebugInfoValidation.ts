@@ -12,7 +12,7 @@ export const allGatherDebugInfoPackageScopes = exhaustiveStringTuple<GatherDebug
 
 export const allGatherDebugInfoPackageDataTypes = exhaustiveStringTuple<
     Exclude<DebugInfoPackageContentType, "Default">
->()("Databases", "LogFile", "ServerWide");
+>()("ServerWide", "Databases", "LogFile");
 
 const schema = yup
     .object({
@@ -25,7 +25,7 @@ const schema = yup
                 is: (dataTypes: DebugInfoPackageContentType, isSelectAllDatabases: boolean) => {
                     return dataTypes.includes("Databases") && !isSelectAllDatabases;
                 },
-                then: (schema) => schema.required(),
+                then: (schema) => schema.min(1, "Required"),
             }),
         packageScope: yup
             .mixed<GatherDebugInfoPackageScope>()
