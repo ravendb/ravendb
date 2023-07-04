@@ -729,6 +729,9 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
             {
+                if (databaseRecord == null)
+                    yield break;
+
                 foreach (var shard in databaseRecord.Topologies)
                 {
                     if (shard.Topology.RelevantFor(_serverStore.NodeTag))
