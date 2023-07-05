@@ -67,7 +67,7 @@ namespace SlowTests.Tests
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
                 from handler in GetAssemblyTypes(assembly)
                 where handler != typeof(DatabaseRequestHandler) && handler != typeof(ServerRequestHandler)
-                where handler.IsSubclassOf(typeof(RequestHandler)) && handler.IsSubclassOf(typeof(ServerRequestHandler)) == false
+                where handler.IsSubclassOf(typeof(RequestHandler)) && handler.IsSubclassOf(typeof(ServerRequestHandler)) == false && handler.IsSubclassOf(typeof(DatabaseRequestHandler)) == false
                 select handler;
 
             var array = types.ToArray();
