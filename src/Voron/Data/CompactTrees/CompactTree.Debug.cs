@@ -61,6 +61,7 @@ unsafe partial class CompactTree
             prevKey = prevKeyStorage.AsSpan();
             key.CopyTo(prevKey);
             prevKey = prevKey.Slice(0, key.Length);
+            compactKey.Dispose();
         }
     }
 }
