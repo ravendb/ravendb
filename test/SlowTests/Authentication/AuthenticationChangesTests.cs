@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,8 +18,9 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Fact]
-        public async Task ChangesWithAuthentication()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ChangesWithAuthentication(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -28,12 +30,11 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => dbName
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = s => dbName;
+
+            using (var store = GetDocumentStore(options))
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
