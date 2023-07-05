@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Monitoring.Snmp
 {
-    public class SnmpHandler : RequestHandler
+    public class SnmpHandler : ServerRequestHandler
     {
         [RavenAction("/monitoring/snmp", "GET", AuthorizationStatus.Operator)]
         public async Task Get()

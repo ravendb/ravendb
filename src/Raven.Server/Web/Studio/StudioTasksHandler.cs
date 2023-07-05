@@ -30,7 +30,7 @@ using Voron.Util.Settings;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioTasksHandler : RequestHandler
+    public class StudioTasksHandler : ServerRequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
         [RavenAction("/admin/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]

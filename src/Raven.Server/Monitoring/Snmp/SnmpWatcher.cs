@@ -245,8 +245,9 @@ namespace Raven.Server.Monitoring.Snmp
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));
             engine.Listener.ExceptionRaised += (sender, e) =>
             {
+                // MessageFactoryException hides inner exception
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("SNMP error: " + e.Exception.Message, e.Exception);
+                    Logger.Operations($"SNMP error: {e.Exception.Message}. Inner: {e.Exception.InnerException}", e.Exception);
             };
 
             return engine;

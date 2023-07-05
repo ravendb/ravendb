@@ -26,13 +26,11 @@ namespace Raven.Server.Documents
 
         public override void Init(RequestHandlerContext context)
         {
-            base.Init(context);
-
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+            base.Init(context);
         }
 
         public override char IdentityPartsSeparator => Database.IdentityPartsSeparator;
@@ -47,7 +45,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Task CheckForChanges(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))

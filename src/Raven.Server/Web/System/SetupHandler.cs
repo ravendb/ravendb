@@ -41,7 +41,7 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 
 namespace Raven.Server.Web.System
 {
-    public class SetupHandler : RequestHandler
+    public class SetupHandler : ServerRequestHandler
     {
         [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients, CorsMode = CorsMode.Public)]
         public Task ServerAlive()

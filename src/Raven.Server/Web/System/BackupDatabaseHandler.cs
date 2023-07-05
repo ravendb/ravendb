@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public sealed class BackupDatabaseHandler : RequestHandler
+    public sealed class BackupDatabaseHandler : ServerRequestHandler
     {
         [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetPeriodicBackup()
