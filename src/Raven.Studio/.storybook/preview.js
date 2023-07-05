@@ -55,6 +55,10 @@ window.jest = new ModuleMocker(window);
 
 commonInit();
 
+import studioSettings from "common/settings/studioSettings";
+const mockJQueryPromise = () => $().promise();
+studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mockJQueryPromise, mockJQueryPromise);
+
 import { Provider } from "react-redux";
 
 
