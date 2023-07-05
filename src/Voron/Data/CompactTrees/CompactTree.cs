@@ -338,7 +338,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
     {
-        var compactKey = new CompactKey(_inner.Llt);
+        using var compactKey = new CompactKey(_inner.Llt);
         compactKey.Set(key);
         compactKey.ChangeDictionary(_inner.State.DictionaryId);
         return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);
