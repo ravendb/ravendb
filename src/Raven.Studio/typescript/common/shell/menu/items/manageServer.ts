@@ -5,6 +5,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import AdminJsConsole from "components/pages/resources/manageServer/adminJsConsole/AdminJsConsole";
 import ClientGlobalConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration";
+import StudioGlobalConfiguration from "components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration";
 import GatherDebugInfo from "components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo";
 
 export = getManageServerMenuItem;
@@ -38,7 +39,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/studioConfiguration',
-            moduleId: require("viewmodels/manage/studioConfiguration"),
+            moduleId: bridgeToReact(StudioGlobalConfiguration, "nonShardedView"),
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-studio-configuration',
