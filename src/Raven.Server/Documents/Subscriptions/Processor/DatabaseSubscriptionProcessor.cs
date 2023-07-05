@@ -8,6 +8,7 @@ using Jint.Runtime;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -16,7 +17,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
 {
-    public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor2<T>
+    public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessorBase<T>
     {
         protected SubscriptionFetcher<T> Fetcher;
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
@@ -49,19 +50,20 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             return conflictStatus;
         }
 
-        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
-            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+            var size = batchScope?.GetBatchSize() ?? 0L;
+            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >= MaximumAllowedMemory)
                 return false;
             if (numberOfDocs >= BatchSize)
                 return false;
 
-            return base.CanContinueBatch(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+            return base.CanContinueBatch(batchItemStatus, batchScope, numberOfDocs, sendingCurrentBatchStopwatch);
         }
 
         protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)
         {
-            if (batchItem.Document.Etag == 0) // got this document from resend
+            if (batchItem.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend) // got this document from resend
                 return currentLast;
 
             return ChangeVectorUtils.MergeVectors(
@@ -105,9 +107,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         protected abstract SubscriptionBatchItem ShouldSend(T item, out string reason);
     }
 
-    public abstract class DatabaseSubscriptionProcessor2<TItem> : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl, TItem>, IDatabaseSubscriptionProcessor
+    public abstract class DatabaseSubscriptionProcessorBase<TItem> : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl, TItem>, IDatabaseSubscriptionProcessor
     {
-        protected readonly Size MaximumAllowedMemory;
+        protected readonly long MaximumAllowedMemory;
 
         protected readonly DocumentDatabase Database;
         protected DocumentsOperationContext DocsContext;
@@ -118,10 +120,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         protected ScriptRunner.SingleRun Run;
         private ScriptRunner.ReturnRun? _returnRun;
 
-        protected DatabaseSubscriptionProcessor2(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection, database.Name)
+        protected DatabaseSubscriptionProcessorBase(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection, database.Name)
         {
             Database = database;
-            MaximumAllowedMemory = new Size(Database.Is32Bits ? 4 : 32, SizeUnit.Megabytes);
+            MaximumAllowedMemory = new Size(Database.Is32Bits ? 4 : 32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
         }
 
         public override void InitializeProcessor()

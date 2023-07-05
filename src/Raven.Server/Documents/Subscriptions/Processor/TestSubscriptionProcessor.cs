@@ -7,7 +7,6 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
-using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
 {
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
                 return false;
@@ -95,7 +94,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             result.CurrentBatch.Add(batchItem);
         }
 
-        protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+        protected override bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
         {
             if (sendingCurrentBatchStopwatch.Elapsed > _timeLimit)
                 return false;

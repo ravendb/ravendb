@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
@@ -12,7 +11,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
 using static Raven.Server.Documents.Subscriptions.SubscriptionFetcher;
@@ -46,12 +44,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return conflictStatus;
     }
 
-    protected override bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected override bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
-        if (batchItem.Status == SubscriptionBatchItemStatus.ActiveMigration)
+        if (batchItemStatus == SubscriptionBatchItemStatus.ActiveMigration)
             return false;
 
-        return base.CanContinueBatch(batchItem, size, numberOfDocs, sendingCurrentBatchStopwatch);
+        return base.CanContinueBatch(batchItemStatus, batchScope, numberOfDocs, sendingCurrentBatchStopwatch);
     }
 
     protected override SubscriptionBatchStatus SetBatchStatus(SubscriptionBatchResult result)
@@ -66,8 +64,8 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
     {
         if (batchItem.Status == SubscriptionBatchItemStatus.ActiveMigration)
         {
-            item.Data?.Dispose();
-            item.Data = null;
+            batchItem.Document.Dispose();
+            batchItem.Document.Data = null;
             result.Status = SubscriptionBatchStatus.ActiveMigration;
             return;
         }
@@ -77,9 +75,9 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
     protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem)
     {
-        if (batchItem.Document.Etag == 0) // got this document from resend
+        if (batchItem.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend) // got this document from resend
         {
-            if (batchItem.Document.Data == null)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Skip)
                 return currentLast;
 
             // shard might read only from resend 
@@ -99,11 +97,10 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
     {
         if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out var isActiveMigration))
         {
-            item.Data = null;
-            item.ChangeVector = string.Empty;
             return new SubscriptionBatchItem
             {
                 Document = item,
+                FetchingFrom = Fetcher.FetchingFrom,
                 Status = isActiveMigration ? SubscriptionBatchItemStatus.ActiveMigration : SubscriptionBatchItemStatus.Skip
             };
         }
@@ -139,6 +136,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
                 isActiveMigration = true;
             }
 
+            // current shard fetched an entry from resend list that belongs to another shard
             return true;
         }
 

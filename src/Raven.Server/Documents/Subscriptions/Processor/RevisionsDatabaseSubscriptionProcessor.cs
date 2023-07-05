@@ -11,7 +11,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
@@ -34,7 +33,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 Database.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(Collection).Disabled)
                 throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {Database.Name} does not have revisions configuration.");
 
-            Size size = default;
             var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
@@ -48,14 +46,12 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 using (item.Current)
                 using (item.Previous)
                 {
-                    SubscriptionBatchItem batchItem = GetBatchItem(item);
-
+                    var batchItem = GetBatchItem(item);
                     HandleBatchItem(batchScope, batchItem, result, item);
-                    size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
-                    if (CanContinueBatch(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
-                        break;
 
                     await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
+                    if (CanContinueBatch(batchItem.Status, batchScope, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                        break;
                 }
             }
 
@@ -67,7 +63,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
         {
-            if (batchItem.Document.Data != null)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
             {
                 BatchItems.Add(new RevisionRecord
                 {
@@ -84,6 +80,11 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
 
             result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
+
+            if (batchItem.Status == SubscriptionBatchItemStatus.Skip)
+            {
+                batchItem.Document.Dispose();
+            }
         }
 
         public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
@@ -112,7 +113,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             reason = null;
             var result = new SubscriptionBatchItem
             {
-                Document = item.Current.CloneWith(DocsContext, newData: null)
+                Document = item.Current.CloneWith(DocsContext, newData: null),
+                FetchingFrom = Fetcher.FetchingFrom
             };
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
@@ -161,7 +163,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 if (match == false)
                 {
                     reason = $"{item.Current.Id} filtered by criteria";
-                    result.Document.Data.Dispose();
+                    result.Document.Data?.Dispose();
                     result.Document.Data = null;
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;

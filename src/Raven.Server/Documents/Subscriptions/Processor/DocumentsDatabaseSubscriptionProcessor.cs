@@ -10,7 +10,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
 {
@@ -29,7 +28,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
-            Size size = default;
             var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
 
             BatchItems.Clear();
@@ -37,15 +35,12 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             foreach (var item in Fetcher.GetEnumerator())
             {
-                SubscriptionBatchItem batchItem = GetBatchItem(item);
-
+                var batchItem = GetBatchItem(item);
                 HandleBatchItem(batchScope, batchItem, result, item);
-                size += new Size(batchItem.Document.Data?.Size ?? 0, SizeUnit.Bytes);
-
-                if (CanContinueBatch(batchItem, size, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
-                    break;
 
                 await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
+                if (CanContinueBatch(batchItem.Status, batchScope, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
+                    break;
             }
 
             _token.ThrowIfCancellationRequested();
@@ -56,8 +51,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
         {
-            if (batchItem.Document.Data != null)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
             {
+                // batchItem.Document will be disposed after writing to stream
                 BatchItems.Add(new DocumentRecord { DocumentId = batchItem.Document.Id, ChangeVector = batchItem.Document.ChangeVector });
 
                 batchScope?.RecordDocumentInfo(batchItem.Document.Data.Size);
@@ -66,13 +62,13 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                 result.CurrentBatch.Add(batchItem);
             }
-            else
-            {
-                item.Data?.Dispose();
-                item.Data = null;
-            }
 
             result.LastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(ClusterContext, result.LastChangeVectorSentInThisBatch, batchItem);
+
+            if (batchItem.Status == SubscriptionBatchItemStatus.Skip)
+            {
+                batchItem.Document.Dispose();
+            }
         }
 
         public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
@@ -129,7 +125,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             var result = new SubscriptionBatchItem
             {
-                Document = item
+                Document = item,
+                FetchingFrom = Fetcher.FetchingFrom
             };
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
@@ -156,15 +153,23 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
                 if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector, out reason) == false)
                 {
-                    item.ChangeVector = string.Empty;
+                    result.Document.ChangeVector = string.Empty;
+                    current.Document?.Dispose();
+                    current.Tombstone?.Dispose();
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
-                result.Document.Id = current.Document.Id; // use proper casing
-                result.Document.Data = current.Document.Data;
-                result.Document.ChangeVector = current.Document.ChangeVector;
+
+                result.Document.Dispose();
+                result.Document = new Document()
+                {
+                    Data = current.Document.Data, 
+                    Id = current.Document.Id, // use proper casing
+                    LowerId = current.Document.LowerId, 
+                    ChangeVector = current.Document.ChangeVector
+                };
             }
 
             if (Patch == null)
@@ -182,12 +187,11 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 {
                     if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
                     {
-                        item.ChangeVector = string.Empty;
+                        result.Document.ChangeVector = string.Empty;
                         ItemsToRemoveFromResend.Add(item.Id);
                     }
 
                     reason = $"{item.Id} filtered out by criteria";
-                    result.Document.Data = null;
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
