@@ -255,7 +255,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _initialized = true;
         }
-        
+
+        public override void OnInitializeComplete()
+        {
+        }
+
 
         public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
         {

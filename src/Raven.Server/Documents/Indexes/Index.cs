@@ -892,8 +892,11 @@ namespace Raven.Server.Documents.Indexes
             }
 
             IndexPersistence.Initialize(environment);
+
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
             IndexFieldsPersistence.Initialize();
+
+            IndexPersistence.OnInitializeComplete();
         }
 
         protected virtual void OnInitialization()

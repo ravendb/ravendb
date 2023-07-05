@@ -39,6 +39,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         id = default;
         documentBoost = null;
         
+        // It is important to note that as soon as an accessor is created this instance is tied to the underlying property type.
+        // This optimization is not able to handle differences in types for the same property. Therefore, this instances cannot
+        // be reused for Map and Reduce documents at the same time. You need a new instance to do so. 
         IPropertyAccessor accessor;
         if (_isMultiMap == false)
             accessor = _propertyAccessor ??= PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess);

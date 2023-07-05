@@ -11,6 +11,7 @@ using GeoAPI.Operation.Buffer;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
+using Sparrow.Server;
 using static Voron.Data.CompactTrees.CompactTree;
 using Voron;
 
@@ -40,6 +41,10 @@ public unsafe struct IndexEntryReader
     public int Length => *(int*)_buffer;
 
     public Span<byte> Buffer => new (_buffer, _bufferLength);
+
+    public IndexEntryReader(ByteString buffer) : this(buffer.Ptr, buffer.Length)
+    {
+    }
 
     public IndexEntryReader(byte* buffer, int length)
     {

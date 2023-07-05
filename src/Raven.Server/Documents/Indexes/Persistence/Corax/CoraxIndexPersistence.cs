@@ -26,6 +26,11 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
+        _converter = CreateConverter(index);
+    }
+
+    private CoraxDocumentConverterBase CreateConverter(Index index)
+    {
         bool storeValue = false;
         switch (index.Type)
         {
@@ -33,39 +38,33 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 storeValue = true;
                 break;
             case IndexType.MapReduce:
-                _converter = new AnonymousCoraxDocumentConverter(index, true);
-                break;
+                return new AnonymousCoraxDocumentConverter(index, true);
             case IndexType.Map:
                 switch (_index.SourceType)
                 {
                     case IndexSourceType.Documents:
-                        _converter = new AnonymousCoraxDocumentConverter(index);
-                        break;
+                        return new AnonymousCoraxDocumentConverter(index);
                     case IndexSourceType.TimeSeries:
                     case IndexSourceType.Counters:
-                        _converter = new CountersAndTimeSeriesAnonymousCoraxDocumentConverter(index);
-                        break;
+                        return new CountersAndTimeSeriesAnonymousCoraxDocumentConverter(index);
                 }
                 break;
             case IndexType.JavaScriptMap:
                 switch (_index.SourceType)
                 {
                     case IndexSourceType.Documents:
-                        _converter = new CoraxJintDocumentConverter((MapIndex)index);
-                        break;
+                        return new CoraxJintDocumentConverter((MapIndex)index);
                     case IndexSourceType.TimeSeries:
-                        _converter = new CountersAndTimeSeriesJintCoraxDocumentConverter((MapTimeSeriesIndex)index);
-                        break;
+                        return new CountersAndTimeSeriesJintCoraxDocumentConverter((MapTimeSeriesIndex)index);
                     case IndexSourceType.Counters:
-                        _converter = new CountersAndTimeSeriesJintCoraxDocumentConverter((MapCountersIndex)index);
-                        break;
+                        return new CountersAndTimeSeriesJintCoraxDocumentConverter((MapCountersIndex)index);
                 }
                 break;
             case IndexType.JavaScriptMapReduce:
-                _converter = new CoraxJintDocumentConverter((MapReduceIndex)index, storeValue: true);
-                break;
+                return new CoraxJintDocumentConverter((MapReduceIndex)index, storeValue: true);
         }
-        _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
+
+        return new CoraxDocumentConverter(index, storeValue: storeValue);
     }
 
     public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null)
@@ -119,6 +118,10 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
+    }
+
+    public override void OnInitializeComplete()
+    {
         var contextPool = _index._contextPool;
 
         using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -129,12 +132,15 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 return;
         }
 
+        if (_index.SourceType != IndexSourceType.Documents)
+            return;
+
         var documentStorage = _index.DocumentDatabase.DocumentsStorage;
 
         using var _ = CultureHelper.EnsureInvariantCulture();
         using var __ = contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
         using var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index);
-        
+
         using (CurrentIndexingScope.Current = _index.CreateIndexingScope(indexContext, queryContext))
         {
             indexContext.PersistentContext.LongLivedTransactions = true;
@@ -143,8 +149,11 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
             using var tx = indexContext.OpenWriteTransaction();
 
-            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
-            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);
+            // We are creating a new converter because converters get tied through their accessors to the structure, and since on Map-Reduce indexes
+            // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
+            var converter = new AnonymousCoraxDocumentConverter(_index, storeValue: false); // CreateConverter(_index);
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
+            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);

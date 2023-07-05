@@ -27,7 +27,7 @@ public class CoraxProjections : RavenTestBase
     {
         using var store = GetDocumentStore(options);
         CreateSampleDb<MyMapReduceIndex>(store);
-
+WaitForUserToContinueTheTest(store);
         using var session = store.OpenAsyncSession();
         var results = await session
             .Query<MyMapReduceIndex.Result, MyMapReduceIndex>()
