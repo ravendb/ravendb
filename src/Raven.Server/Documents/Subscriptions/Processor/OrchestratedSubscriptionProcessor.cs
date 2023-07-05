@@ -82,17 +82,15 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
         {
             foreach (SubscriptionBatchBase<BlittableJsonReaderObject>.Item item in CurrentBatch.Items)
             {
-                SubscriptionBatchItem batchItem = GetBatchItem(item);
+                var batchItem = GetBatchItem(item);
                 if (batchItem.Status == SubscriptionBatchItemStatus.Skip)
-                {
                     continue;
-                }
 
                 HandleBatchItem(batchScope: null, batchItem, result, item);
-                if (CanContinueBatch(batchItem, size: default, result.CurrentBatch.Count, sendingCurrentBatchStopwatch) == false)
-                    break;
 
                 await SendHeartbeatIfNeededAsync(sendingCurrentBatchStopwatch);
+                if (CanContinueBatch(batchItem.Status, batchScope: null, numberOfDocs: result.CurrentBatch.Count, sendingCurrentBatchStopwatch: sendingCurrentBatchStopwatch) == false)
+                    break;
             }
 
             CurrentBatch.CloneIncludes(ClusterContext, _includes);

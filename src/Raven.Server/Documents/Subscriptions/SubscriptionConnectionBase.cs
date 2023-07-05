@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Subscriptions
                             using var markInUse = MarkInUse();
                             var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
-                            var status = await TrySendingBatchToClient<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
+                            var status = await TrySendingBatchToClientAsync<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
 
                             await HandleBatchStatusAsync<TState, TConnection>(state, status, sendingCurrentBatchStopwatch, markInUse, batchScope);
                         }
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Subscriptions
         /// Iterates on a batch in document collection, process it and send documents if found any match
         /// </summary>
         /// <returns>Whether succeeded finding any documents to send</returns>
-        private async Task<SubscriptionBatchStatus> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
+        private async Task<SubscriptionBatchStatus> TrySendingBatchToClientAsync<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>

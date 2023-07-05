@@ -8,7 +8,6 @@ using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions.Processor;
@@ -43,7 +42,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand, TItem> : I
         RemoteEndpoint = Connection.TcpConnection.TcpClient.Client.RemoteEndPoint;
     }
 
-    protected virtual bool CanContinueBatch(SubscriptionBatchItem batchItem, Size size, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
+    protected virtual bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
     {
         if (Connection.CancellationTokenSource.Token.IsCancellationRequested)
             return false;

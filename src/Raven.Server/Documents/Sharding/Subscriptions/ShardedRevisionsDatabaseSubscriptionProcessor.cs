@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.ServerWide.Sharding;
+﻿using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.TcpHandlers;
@@ -40,6 +39,7 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
             return new SubscriptionBatchItem
             {
                 Document = item.Current,
+                FetchingFrom = Fetcher.FetchingFrom,
                 Status = SubscriptionBatchItemStatus.Skip
             };
         }
