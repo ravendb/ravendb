@@ -45,3 +45,9 @@ window.Worker = class Worker {
     postMessage = () => null;
     terminate = () => null;
 }
+
+const studioSettings = require("common/settings/studioSettings");
+const mockJQueryPromise = () => $().promise();
+studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mockJQueryPromise, mockJQueryPromise);
+
+Storage.prototype.getObject = jest.fn(() => null);
