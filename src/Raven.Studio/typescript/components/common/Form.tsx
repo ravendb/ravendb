@@ -208,6 +208,14 @@ function FormInputGeneral<
         shouldUnregister,
     });
 
+    const handleValueChange = (value: string) => {
+        if (type === "number") {
+            onChange(value === "" ? null : Number(value));
+        } else {
+            onChange(value);
+        }
+    };
+
     return (
         <>
             <div className="d-flex flex-grow">
@@ -215,9 +223,7 @@ function FormInputGeneral<
                     name={name}
                     type={type}
                     onBlur={onBlur}
-                    onChange={(x) =>
-                        onChange(type === "number" ? Number(x.currentTarget.value) : x.currentTarget.value)
-                    }
+                    onChange={(x) => handleValueChange(x.currentTarget.value)}
                     value={value == null ? "" : value}
                     invalid={invalid}
                     {...rest}
@@ -269,6 +275,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                 toggleSelection={onChange}
                 invalid={invalid}
                 onBlur={onBlur}
+                color="primary"
                 {...rest}
             />
             {invalid && <div className="text-danger small">{error.message}</div>}
