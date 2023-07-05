@@ -28,10 +28,13 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
     private readonly string _database;
 
     private readonly Action _onDispose;
+    private readonly string _nodeTag;
     private readonly bool _throttleConnection;
-    private ClientWebSocket _client;
 
-    private readonly Task _task;
+    private ClientWebSocket _client => _lazyClient.Value;
+    private Lazy<ClientWebSocket> _lazyClient;
+
+    private Lazy<Task> _task;
     private readonly CancellationTokenSource _cts;
     private TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>> _tcs;
 
@@ -54,9 +57,10 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
         _tcs = new TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
         _cts = new CancellationTokenSource();
-        _client = CreateClientWebSocket(RequestExecutor);
+        _lazyClient = new Lazy<ClientWebSocket>(() => CreateClientWebSocket(RequestExecutor), LazyThreadSafetyMode.ExecutionAndPublication);
 
         _onDispose = onDispose;
+        _nodeTag = nodeTag;
         _throttleConnection = throttleConnection;
         ConnectionStatusChanged += OnConnectionStatusChanged;
 
@@ -72,8 +76,10 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                 .ConfigureAwait(false);
         });
 
-        _task = DoWork(nodeTag);
+        _task = new Lazy<Task>(() => DoWork(_nodeTag), LazyThreadSafetyMode.ExecutionAndPublication);
     }
+
+    private void EnsureRunning() => _ = _task.Value;
 
     protected abstract TDatabaseConnectionState CreateDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect);
 
@@ -125,6 +131,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
     protected Task<AbstractDatabaseChanges<TDatabaseConnectionState>> EnsureConnectedNowAsync()
     {
+        EnsureRunning();
         return _tcs.Task;
     }
 
@@ -141,7 +148,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
         _cts.Cancel();
 
-        _client?.Dispose();
+        if (_lazyClient.IsValueCreated)
+            _client?.Dispose();
 
         foreach (var state in States.ForceEnumerateInThreadSafeManner())
         {
@@ -151,7 +159,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
         try
         {
-            _task.Wait();
+            if (_task.IsValueCreated)
+                _task.Value.Wait();
         }
         catch
         {
@@ -175,6 +184,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
     protected TDatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value, string[] values = null)
     {
+        EnsureRunning();
+
         bool newValue = false;
         var counter = States.GetOrAdd(new DatabaseChangesOptions
         {
@@ -392,7 +403,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         using (_client)
         {
             Interlocked.Exchange(ref _immediateConnection, 0);
-            _client = CreateClientWebSocket(RequestExecutor);
+            _lazyClient = new Lazy<ClientWebSocket>(() => CreateClientWebSocket(RequestExecutor));
         }
 
         return true;
