@@ -153,12 +153,12 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task PutMyNodeInfoAsync(int timeout = 0)
+        public async Task PutMyNodeInfoAsync()
         {
             if (_serverStore.IsPassive())
                 return;
 
-            if (await _licenseLimitsSemaphore.WaitAsync(timeout) == false)
+            if (await _licenseLimitsSemaphore.WaitAsync(0) == false)
                 return;
 
             try
