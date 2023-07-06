@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
@@ -23,7 +20,7 @@ namespace SlowTests.Server.Documents.Revisions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task Revert()
         {
             var company = new Company { Name = "Company Name" };
@@ -70,7 +67,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task RevertRevisionsSharded(Options options)
         {
@@ -100,7 +97,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
                 var res = (RevertResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
-                
+
                 Assert.Equal(2, res.ScannedDocuments);
                 Assert.Equal(2, res.RevertedDocuments);
                 Assert.Equal(4, res.ScannedRevisions);
@@ -123,7 +120,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertNewDocumentToBin()
         {
             var company = new Company { Name = "Hibernating Rhinos" };
@@ -162,7 +159,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertRevisionOutsideTheWindow()
         {
             var company = new Company { Name = "Company Name" };
@@ -224,7 +221,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertToOldestIfRevisionLimitReached()
         {
             var last = DateTime.UtcNow;
@@ -272,7 +269,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task DontRevertOldDocument()
         {
             var company = new Company { Name = "Company Name" };
@@ -317,7 +314,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task DontRevertNewDocument()
         {
             var company = new Company { Name = "Company Name" };
@@ -353,7 +350,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertFromDeleted()
         {
             var company = new Company { Name = "Company Name" };
@@ -396,7 +393,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertToDeleted()
         {
             var company = new Company { Name = "Company Name" };
@@ -444,33 +441,25 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task DontRevertToConflicted()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DontRevertToConflicted(Options options)
         {
             // put at 8:30
             // conflicted at 8:50
             // resolved at 9:10
             // will revert to 9:00
 
-            using (var store1 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore())
+            var options1 = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var store1 = GetDocumentStore(options1))
+            using (var store2 = GetDocumentStore(options))
             {
                 DateTime last = default;
                 await RevisionsHelper.SetupRevisionsAsync(store1);
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order$foo/bar");
                     await session.SaveChangesAsync();
 
                     var company = new Company
@@ -508,7 +497,8 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -529,16 +519,17 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task RevertResolvedConflictByRemoteToOriginal()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertResolvedConflictByRemoteToOriginal(Options options)
         {
             // put was at 8:50
             // conflict at 9:10
             // resolved at 9:15
             // will revert to 9:00
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
@@ -566,14 +557,15 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
 
 
-                    await session.StoreAsync(new Person(), "marker");
+                    await session.StoreAsync(new Person(), "marker$foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocument(store1, "marker");
+                WaitForDocument(store1, "marker$foo/bar");
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -610,23 +602,24 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task RevertResolvedConflictByLocalToOriginal()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertResolvedConflictByLocalToOriginal(Options options)
         {
             // put was at 8:50
             // conflict at 9:10
             // resolved at 9:15
             // will revert to 9:00
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Person(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new Person(), "keep-conflicted-revision-insert-order$foo/bar");
                     await session.SaveChangesAsync();
 
                     var person = new Person
@@ -652,16 +645,16 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Person(), "marker");
+                    await session.StoreAsync(new Person(), "marker$foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocument(store1, "marker");
+                WaitForDocument(store1, "marker$foo/bar");
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
-                
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
@@ -676,16 +669,17 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task RevertResolvedConflictByRemoteToDeleted()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertResolvedConflictByRemoteToDeleted(Options options)
         {
             // deleted was at 8:50
             // conflict at 9:10
             // resolved at 9:15
             // will revert to 9:00
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
@@ -714,14 +708,15 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
 
 
-                    await session.StoreAsync(new Person(), "marker");
+                    await session.StoreAsync(new Person(), "marker$foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocument(store1, "marker");
+                WaitForDocument(store1, "marker$foo/bar");
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -762,16 +757,17 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task RevertResolvedConflictByLocalToDeleted()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertResolvedConflictByLocalToDeleted(Options options)
         {
             // deleted was at 8:50
             // conflict at 9:10
             // resolved at 9:15
             // will revert to 9:00
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
@@ -786,7 +782,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
 
 
-                    await session.StoreAsync(new Company(), "marker");
+                    await session.StoreAsync(new Company(), "marker$foo/bar");
                     await session.SaveChangesAsync();
                 }
 
@@ -809,7 +805,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocument(store1, "marker");
+                WaitForDocument(store1, "marker$foo/bar");
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -817,7 +813,8 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(4, companiesRevisions.Count);
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
