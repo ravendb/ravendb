@@ -13,12 +13,6 @@ public partial class IndexSearcher
         where TOuter : IQueryMatch
     {
         // TODO: We need to create this code using a template or using typed delegates (which either way would need templating for boilerplate code generation)
-
-        // We don't want an unknown size multiterm match to be subject to this optimization. When faced with one that is unknown just execute as
-        // it was written in the query. If we don't have statistics the confidence will be Low, so the optimization wont happen.
-        if (set1.Count < set2.Count && set1.Confidence >= QueryCountConfidence.Normal)
-            return And(set2, set1);
-
         // If any of the generic types is not known to be a struct (calling from interface) the code executed will
         // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
