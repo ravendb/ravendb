@@ -1043,11 +1043,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var periodicBackup in PeriodicBackups.Where(x => x.Configuration.Disabled))
-            {
-                var source = $"{periodicBackup.Configuration.BackupType} '{periodicBackup.Configuration.Name}'";
-                dict[source] = tombstoneCollections;
-            }
+
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, PeriodicBackups.Select(x => x.Configuration), tombstoneCollections);
 
             return dict;
         }

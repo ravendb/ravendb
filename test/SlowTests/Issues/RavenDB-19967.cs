@@ -35,7 +35,6 @@ namespace SlowTests.Issues
         {
         }
 
-
         [Fact]
         public async Task DismissTombstoneNotification()
         {
@@ -166,7 +165,7 @@ namespace SlowTests.Issues
 
                 var notificationDetails = srcDocumentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
-                Assert.Equal($"External Replication to ConnectionString-{Server.WebUrl} (DB: {destDocumentDatabase.Name})", notificationDetails.First().Source);
+                Assert.Equal($"External Replication 'External Replication to ConnectionString-{Server.WebUrl} (DB: {destDocumentDatabase.Name})'", notificationDetails.First().Source);
                 Assert.Equal("users", notificationDetails.First().Collection);
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
@@ -241,7 +240,7 @@ namespace SlowTests.Issues
                 var sinkNotificationDetails = sinkDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, sinkNotificationDetails.Count);
                 Assert.Equal("users", sinkNotificationDetails.First().Collection);
-                Assert.Equal($"Replication Sink for {taskName}", sinkNotificationDetails.First().Source);
+                Assert.Equal($"Replication Sink task 'Replication Sink for {taskName}'", sinkNotificationDetails.First().Source);
                 Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
 
                 // Assert 'Hub' BlockingTombstones notification and its details.
@@ -252,7 +251,7 @@ namespace SlowTests.Issues
                 var hubNotificationDetails = hubDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, hubNotificationDetails.Count);
                 Assert.Equal("users", hubNotificationDetails.First().Collection);
-                Assert.Equal($"Replication Hub ({nameof(PullReplicationMode.HubToSink)}) for {taskName}", hubNotificationDetails.First().Source);
+                Assert.Equal($"Replication Hub task '{taskName}'", hubNotificationDetails.First().Source);
                 Assert.Equal(hubTombstonesCount, hubNotificationDetails.First().NumberOfTombstones);
             }
         }
@@ -277,20 +276,14 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(true, EtlType.Raven)]
-        [InlineData(false, EtlType.Raven)]
-        [InlineData(true, EtlType.Sql)]
-        [InlineData(false, EtlType.Sql)]
-        [InlineData(true, EtlType.Olap)]
-        [InlineData(false, EtlType.Olap)]
-        [InlineData(true, EtlType.ElasticSearch)]
-        [InlineData(false, EtlType.ElasticSearch)]
-        [InlineData(true, EtlType.Queue)]
-        [InlineData(false, EtlType.Queue)]
-        public async Task TombstoneCleaningAfterEtlLoaderDisabled(bool useCustomTaskName, EtlType etlType)
+        [InlineData(EtlType.Raven)]
+        [InlineData(EtlType.Sql)]
+        [InlineData(EtlType.Olap)]
+        [InlineData(EtlType.ElasticSearch)]
+        [InlineData(EtlType.Queue)]
+        public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
         {
             string expectedSource = default;
-            var etlConfigurationName = useCustomTaskName ? _customTaskName : null;
 
             using (var store = GetDocumentStore())
             {
@@ -316,28 +309,33 @@ namespace SlowTests.Issues
                 {
                     case EtlType.Raven:
                         var ravenConnectionString = new RavenConnectionString { Name = store.Identifier };
-                        var ravenConfiguration = new RavenEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
+                        var ravenConfiguration = new RavenEtlConfiguration { Name = _customTaskName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
+                        expectedSource = $"RavenDB ETL task '{_customTaskName}'";
                         break;
                     case EtlType.Sql:
                         var sqlConnectionString = new SqlConnectionString { Name = store.Identifier, FactoryName = "System.Data.SqlClient", ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;" };
-                        var sqlConfiguration = new SqlEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = sqlConnectionString.Name, Transforms = { transforms }, SqlTables = { new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id" } } };
+                        var sqlConfiguration = new SqlEtlConfiguration { Name = _customTaskName, ConnectionStringName = sqlConnectionString.Name, Transforms = { transforms }, SqlTables = { new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id" } } };
                         await AddEtlDisableItAndSetTaskName(store, sqlConnectionString, sqlConfiguration, OngoingTaskType.SqlEtl);
+                        expectedSource = $"SQL ETL task '{_customTaskName}'";
                         break;
                     case EtlType.Olap:
                         var olapConnectionString = new OlapConnectionString { Name = store.Identifier };
-                        var olapConfiguration = new OlapEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = olapConnectionString.Name, Transforms = { transforms } };
+                        var olapConfiguration = new OlapEtlConfiguration { Name = _customTaskName, ConnectionStringName = olapConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, olapConnectionString, olapConfiguration, OngoingTaskType.OlapEtl);
+                        expectedSource = $"OLAP ETL task '{_customTaskName}'";
                         break;
                     case EtlType.ElasticSearch:
                         var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier };
-                        var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
+                        var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = _customTaskName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
+                        expectedSource = $"ElasticSearch ETL task '{_customTaskName}'";
                         break;
                     case EtlType.Queue:
                         var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
-                        var queueConfiguration = new QueueEtlConfiguration { Name = etlConfigurationName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms } };
+                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
+                        expectedSource = $"Queue ETL task '{_customTaskName}'";
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(etlType), etlType, "New EtlType values detected");
@@ -373,8 +371,6 @@ namespace SlowTests.Issues
 
                 var addResult = store.Maintenance.Send(new AddEtlOperation<T>(configuration));
                 await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
-
-                expectedSource = useCustomTaskName ? _customTaskName : configuration.GetDefaultTaskName();
             }
         }
 

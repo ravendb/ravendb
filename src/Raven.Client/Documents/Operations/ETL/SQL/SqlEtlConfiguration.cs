@@ -26,6 +26,8 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override EtlType EtlType => EtlType.Sql;
 
+        public override string BlockingSourceName => $"SQL ETL task '{Name}'";
+
         public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
             base.Validate(out errors, validateName, validateConnection);

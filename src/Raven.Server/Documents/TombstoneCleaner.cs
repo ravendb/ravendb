@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
@@ -122,48 +123,62 @@ namespace Raven.Server.Documents
         private void RaiseBlockingTombstonesNotificationIfNecessary(TombstonesState tombstoneCollections)
         {
             var detailsSet = new List<BlockingTombstoneDetails>();
-            var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var tombstonesCountsPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var subscription in _subscriptions)
+                foreach (var disabledSubscribers in _subscriptions
+                             .Select(x => x.GetDisabledSubscribersCollections(tombstoneCollections.Tombstones.Keys.ToHashSet())))
                 {
-                    var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections.Tombstones.Keys.ToHashSet());
-
-                    foreach (var source in disabledSubscribers.Keys)
-                    {
-                        HashSet<string> collectionNames = disabledSubscribers[source];
-
-                        foreach (var collectionName in collectionNames)
-                        {
-                            if (tombstonesPerCollection.TryGetValue(collectionName, out var tombstonesCount) == false)
-                            {
-                                tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, collectionName);
-                                tombstonesPerCollection[collectionName] = tombstonesCount;
-                            }
-
-                            if (tombstonesCount == 0) 
-                                continue;
-
-                            detailsSet.Add(new BlockingTombstoneDetails
-                            {
-                                Source = source,
-                                Collection = collectionName,
-                                NumberOfTombstones = tombstonesCount
-                            });
-                        }
-                    }
+                    FillDetailsSet(detailsSet, disabledSubscribers, tombstonesCountsPerCollection, context);
                 }
             }
-            
+
+            UpdateNotifications(detailsSet);
+        }
+
+        private void FillDetailsSet(
+            List<BlockingTombstoneDetails> detailsSet,
+            Dictionary<string, HashSet<string>> disabledSubscribers,
+            IDictionary<string, long> tombstonesCountsPerCollection,
+            DocumentsOperationContext context)
+        {
+            foreach ((string source, HashSet<string> collections) in disabledSubscribers)
+            {
+                detailsSet.AddRange(
+                    from collectionName in collections 
+                    let tombstonesCount = GetTombstonesCountForCollection(tombstonesCountsPerCollection, collectionName, context) 
+                    where tombstonesCount > 0 
+                    select new BlockingTombstoneDetails
+                    {
+                        Source = source, 
+                        Collection = collectionName, 
+                        NumberOfTombstones = tombstonesCount
+                    });
+            }
+        }
+
+        private long GetTombstonesCountForCollection(IDictionary<string, long> tombstonesCountsPerCollection, string collectionName, DocumentsOperationContext context)
+        {
+            if (tombstonesCountsPerCollection.TryGetValue(collectionName, out var tombstonesCount)) 
+                return tombstonesCount;
+
+            tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, collectionName);
+            tombstonesCountsPerCollection[collectionName] = tombstonesCount;
+
+            return tombstonesCount;
+        }
+
+        private void UpdateNotifications(List<BlockingTombstoneDetails> detailsSet)
+        {
             if (detailsSet.Count > 0)
                 _documentDatabase.NotificationCenter.TombstoneNotifications.Add(detailsSet);
             else
                 _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
         }
 
-        internal TombstonesState GetState()
+        internal TombstonesState GetState(bool addInfoForDebug = false)
         {
             var result = new TombstonesState();
 
@@ -201,7 +216,8 @@ namespace Raven.Server.Documents
 
                         foreach (var tombstone in subscriptionTombstones)
                         {
-                            result.AddPerSubscriptionInfo(subscription.TombstoneCleanerIdentifier, tombstoneType, collection: tombstone.Key, etag: tombstone.Value);
+                            if (addInfoForDebug)
+                                result.AddPerSubscriptionInfo(subscription.TombstoneCleanerIdentifier, tombstoneType, collection: tombstone.Key, etag: tombstone.Value);
 
                             if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
                             {
@@ -272,6 +288,15 @@ namespace Raven.Server.Documents
                     default:
                         throw new NotSupportedException($"Tombstone type '{type}' is not supported.");
                 }
+            }
+        }
+
+        internal static void AssignTombstonesToDisabledConfigs<T>(Dictionary<string, HashSet<string>> dict, IEnumerable<T> destinations, HashSet<string> tombstoneCollections)
+            where T : ITombstoneDeletionBlocker
+        {
+            foreach (var config in destinations.Where(config => config.Disabled))
+            {
+                dict[config.BlockingSourceName] = tombstoneCollections;
             }
         }
 

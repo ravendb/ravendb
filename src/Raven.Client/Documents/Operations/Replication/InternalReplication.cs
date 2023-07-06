@@ -42,6 +42,6 @@ namespace Raven.Client.Documents.Operations.Replication
             }
         }
 
-        public override string GetDefaultTaskName() => $"Internal Replication {FromString()}";
+        public override string BlockingSourceName => $"Internal Replication '{FromString()}'";
     }
 }

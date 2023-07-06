@@ -295,38 +295,62 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.ExternalReplications;
 
-                if (_externalReplications == null)
-                {
-                    _externalReplications = new List<ExternalReplication>();
-                    if (_record.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray bjra) && bjra != null)
-                    {
-                        foreach (BlittableJsonReaderObject element in bjra)
-                            _externalReplications.Add(JsonDeserializationCluster.ExternalReplication(element));
-                    }
-                }
+                if (_externalReplications != null) 
+                    return _externalReplications;
 
+                if (_record.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
+                    return new List<ExternalReplication>();
+                
+                _externalReplications = (from BlittableJsonReaderObject element in bjra
+                    select JsonDeserializationClient.ExternalReplication(element)).ToList();
+                
                 return _externalReplications;
             }
         }
 
-        public IEnumerable<PullReplicationDefinition> GetHubPullReplications()
-        {
-            if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null) 
-                return null;
+        private List<PullReplicationDefinition> _hubPullReplications;
 
-            return from BlittableJsonReaderObject element in bjra
-                select JsonDeserializationClient.PullReplicationDefinition(element);
+        public List<PullReplicationDefinition> HubPullReplications
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.HubPullReplications;
+
+                if (_hubPullReplications != null)
+                    return _hubPullReplications;
+                
+                if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
+                    return new List<PullReplicationDefinition>();
+
+                _hubPullReplications = (from BlittableJsonReaderObject element in bjra
+                    select JsonDeserializationClient.PullReplicationDefinition(element)).ToList();
+
+                return _hubPullReplications;
+            }
         }
 
-        public IEnumerable<PullReplicationDefinition> GetSinkPullReplications()
+        private List<PullReplicationAsSink> _sinkPullReplications;
+
+        public List<PullReplicationAsSink> SinkPullReplications
         {
-            if (_record.TryGet(nameof(DatabaseRecord.SinkPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
-                return null;
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SinkPullReplications;
 
-            return from BlittableJsonReaderObject element in bjra
-                select JsonDeserializationClient.PullReplicationDefinition(element);
+                if (_sinkPullReplications != null)
+                    return _sinkPullReplications;
+
+                if (_record.TryGet(nameof(DatabaseRecord.SinkPullReplications), out BlittableJsonReaderArray bjra) == false || bjra == null)
+                    return new List<PullReplicationAsSink>();
+
+                _sinkPullReplications = (from BlittableJsonReaderObject element in bjra
+                    select JsonDeserializationClient.PullReplicationAsSink(element)).ToList();
+
+                return _sinkPullReplications;
+            }
         }
-
 
         public PullReplicationDefinition GetHubPullReplicationByName(string name)
         {
@@ -341,8 +365,7 @@ namespace Raven.Server.ServerWide
 
             return null;
         }
-        
-        
+
         public PullReplicationDefinition GetHubPullReplicationById(in long key)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)

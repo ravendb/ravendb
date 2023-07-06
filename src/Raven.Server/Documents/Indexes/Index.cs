@@ -4154,6 +4154,8 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
+        public string BlockingSourceName => TombstoneCleanerIdentifier;
+
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
@@ -4174,8 +4176,9 @@ namespace Raven.Server.Documents.Indexes
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
-                dict[TombstoneCleanerIdentifier] = Collections;
+
+            if (Status is IndexRunningStatus.Disabled or IndexRunningStatus.Paused)
+                dict[BlockingSourceName] = Collections;
 
             return dict;
         }

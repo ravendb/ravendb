@@ -37,8 +37,10 @@ namespace Raven.Server.NotificationCenter
             var list = new List<BlockingTombstoneDetails>();
             using (_notificationsStorage.Read(id, out var value))
             {
-                value.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details);
-                details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails);
+                if (value == null ||
+                    value.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
+                    details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false) 
+                    return list;
 
                 foreach (BlittableJsonReaderObject detail in blockingTombstonesDetails)
                 {
@@ -48,8 +50,8 @@ namespace Raven.Server.NotificationCenter
 
                     list.Add(new BlockingTombstoneDetails
                     {
-                        Source = source, 
-                        Collection = collection, 
+                        Source = source,
+                        Collection = collection,
                         NumberOfTombstones = numOfTombstones
                     });
                 }

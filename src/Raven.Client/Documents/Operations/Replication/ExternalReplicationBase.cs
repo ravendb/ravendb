@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return MentorNode;
         }
 
-        public override string GetDefaultTaskName()
+        public virtual string GetDefaultTaskName()
         {
             return $"External Replication to {ConnectionStringName}";
         }
@@ -152,5 +152,7 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             return PinToMentorNode;
         }
+
+        public override string BlockingSourceName => $"External Replication '{Name}'";
     }
 }
