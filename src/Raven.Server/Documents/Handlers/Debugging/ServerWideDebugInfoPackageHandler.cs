@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 topology = ServerStore.GetClusterTopology(ctx);
 
             var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
-            var clusterOperationToken = CreateOperationToken();
+            var clusterOperationToken = CreateHttpRequestBoundOperationToken();
             var type = GetDebugInfoPackageContentType();
             var databases = GetStringValuesQueryString("database", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var debugInfoType = GetDebugInfoPackageContentType();
             var databases = GetStringValuesQueryString("database", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
-            var token = CreateOperationToken();
+            var token = CreateHttpRequestBoundOperationToken();
 
             await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
             {

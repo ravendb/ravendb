@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             var operationId = Database.Operations.GetNextOperationId();
-            var token = new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            var token = CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
 
             _ = Database.Operations.AddOperation(
                 Database,
@@ -393,8 +393,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(name);
-                
-                var token = new OperationCancelToken(Database.DatabaseShutdown);
+
+                var token = CreateBackgroundOperationToken();
                 var result = new IndexOptimizeResult(index.Name);
                 var operationId = Database.Operations.GetNextOperationId();
                 var t = Database.Operations.AddOperation(
