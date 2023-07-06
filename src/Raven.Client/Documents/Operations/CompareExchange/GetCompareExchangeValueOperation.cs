@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 SelectedNodeTag = selectedNodeTag;
             }
 
-            public GetCompareExchangeValueCommand(string key, bool materializeMetadata, DocumentConventions conventions)
+            private GetCompareExchangeValueCommand(string key, bool materializeMetadata, DocumentConventions conventions)
             {
                 _key = key;
                 _materializeMetadata = materializeMetadata;

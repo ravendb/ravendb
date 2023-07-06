@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
@@ -19,27 +18,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             response.TryGet(nameof(Successful), out bool successful);
             response.TryGet(nameof(Value), out BlittableJsonReaderObject raw);
 
-            T result;
-            object val = null;
-            raw?.TryGet(Constants.CompareExchange.ObjectFieldName, out val);
-
-            if (val == null)
-            {
-                return new CompareExchangeResult<T>
-                {
-                    Index = index,
-                    Value = default(T),
-                    Successful = successful
-                };
-            }
-            if (val is BlittableJsonReaderObject obj)
-            {
-                result = conventions.Serialization.DefaultConverter.FromBlittable<T>(obj, "cluster-value");
-            }
-            else
-            {
-                raw.TryGet(Constants.CompareExchange.ObjectFieldName, out result);
-            }
+            var result = CompareExchangeValueResultParser<T>.DeserializeObject(raw, conventions);
 
             return new CompareExchangeResult<T>
             {

@@ -8,8 +8,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Extensions;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -325,14 +323,8 @@ namespace Raven.Client.Documents.Session
                                 throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
-                            if (_originalValue != null && _originalValue.Value != null)
-                            {
-                                var type = typeof(T);
-                                if (type.IsPrimitive || type == typeof(string))
-                                    _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
-                                else
-                                    entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
-                            }
+                            if (_originalValue is { Value: not null })
+                                entity = CompareExchangeValueResultParser<T>.DeserializeObject(_originalValue.Value, conventions);
 
                             var value = new CompareExchangeValue<T>(_key, _index, entity, _originalValue?.Metadata);
                             _value = value;
