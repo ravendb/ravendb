@@ -33,7 +33,6 @@ namespace SlowTests.Issues
                 await Task.Delay(StreamWithTimeout.DefaultWriteTimeout + TimeSpan.FromSeconds(5));
                 bulk.Dispose();
 
-                //WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
@@ -58,9 +57,9 @@ namespace SlowTests.Issues
                 StreamWithTimeout.DefaultWriteTimeout = TimeSpan.FromSeconds(20);
                 var bulk = store.BulkInsert();
 
-                bulk.ForTestingPurposesOnly().startStore = () =>
+                bulk.ForTestingPurposesOnly().StartStore = () =>
                 {
-                    bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    Task.Run(() => bulk.Store(new User { Name = "Daniel" }, "users/1"));
                 };
 
                 await Task.Delay(StreamWithTimeout.DefaultWriteTimeout + TimeSpan.FromSeconds(5));
