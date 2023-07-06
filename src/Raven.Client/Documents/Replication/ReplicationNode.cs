@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -13,7 +14,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination
     /// </summary>
-    public abstract class ReplicationNode : IEquatable<ReplicationNode>
+    public abstract class ReplicationNode : IEquatable<ReplicationNode>, ITombstoneDeletionBlocker
     {
         /// <summary>
         /// The name of the connection string specified in the 
@@ -48,6 +49,8 @@ namespace Raven.Client.Documents.Replication
         /// Used to indicate whether external replication is disabled.
         /// </summary>
         public bool Disabled { get; set; }
+
+        public abstract string BlockingSourceName { get; } 
 
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
@@ -94,8 +97,5 @@ namespace Raven.Client.Documents.Replication
         }
 
         public abstract string FromString();
-        public abstract string GetDefaultTaskName();
     }
-
-   
 }

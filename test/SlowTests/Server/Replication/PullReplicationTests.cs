@@ -312,7 +312,7 @@ namespace SlowTests.Server.Replication
 
                 pull.Disabled = false;
                 await AddWatcherToReplicationTopology(sink, pull, hub.Urls);
-                
+
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "hub/3");
