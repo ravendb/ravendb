@@ -15,22 +15,16 @@ public struct BlittableWriterScope : IDisposable
         _reader = reader;
     }
 
-    public unsafe void Write(string path, int field, ref IndexEntryWriter writer)
+    public unsafe void Write(string path, int field, IndexWriter.IndexEntryBuilder writer)
     {
         if (_reader.HasParent == false)
         {
-            if (field == Constants.IndexWriter.DynamicField)
-                writer.WriteRawDynamic(path, new Span<byte>(_reader.BasePointer, _reader.Size));
-            else
-                writer.WriteRaw(field, new Span<byte>(_reader.BasePointer, _reader.Size));
+            writer.Store(field, path, new Span<byte>(_reader.BasePointer, _reader.Size));
         }
         else
         {
             using var clonedBlittable = _reader.CloneOnTheSameContext();
-            if (field == Constants.IndexWriter.DynamicField)
-                writer.WriteRawDynamic(path, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
-            else
-                writer.WriteRaw(field, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
+            writer.Store(field, path, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
         }
     }
 

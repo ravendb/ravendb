@@ -52,7 +52,8 @@ public class RawCoraxFlag : StorageTest
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
                 using (var scope = new BlittableWriterScope(item))
                 {
-                    scope.Write("Dynamic", Constants.IndexWriter.DynamicField, ref entry);
+                    Assert.Fail("implement me");
+                    //scope.Write("Dynamic", Constants.IndexWriter.DynamicField, ref entry);
                 }
 
                 using var _ = entry.Finish(out var output);                
@@ -117,7 +118,8 @@ public class RawCoraxFlag : StorageTest
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
                 using (var scope = new BlittableWriterScope(item))
                 {
-                    scope.Write(string.Empty, ContentId, ref entry);
+                    Assert.Fail("implement me");
+                 //   scope.Write(string.Empty, ContentId, ref entry);
                 }
 
                 using var _ = entry.Finish(out var output);                

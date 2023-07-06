@@ -92,39 +92,41 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                     if (CanAcceptObject(result) == false)
                         continue;
 
-                    using var __ = _converter.SetDocument(doc.LowerId, null, result, _indexContext, out var id, out var output, out _, out _);
-
-                    var reader = new IndexEntryReader(output);
-                    for (int i = 0; i < fields.Count; i++)
-                    {
-                        var field = fields.GetByFieldId(i);
-                        var analyzer = field.Analyzer ?? lowercaseAnalyzer;
-
-                        if (reader.GetFieldReaderFor(field.FieldId).Read(out _, out var value) == false)
-                            continue;
-
-                        if (value.Length < 3)
-                            continue;
-
-                        if (value.Length > wordsBuffer.Length)
-                        {
-                            wordsBuffer = new byte[value.Length * 2];
-                            tokenBuffer = new Token[value.Length * 2];
-                        }
-
-                        int items;
-                        {
-                            var wordsSpan = wordsBuffer.AsSpan();
-                            var tokenSpan = tokenBuffer.AsSpan();
-                            analyzer.Execute(value, ref wordsSpan, ref tokenSpan);
-                            items = tokenSpan.Length;
-                        }
-
-                        for (int j = 0; j < items; j++)
-                        {
-                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
-                        }
-                    }
+                    yield return ArraySegment<byte>.Empty;
+                    yield break;
+                    // using var __ = _converter.SetDocument(doc.LowerId, null, result, _indexContext,null, out var id, out var output, out _, out _);
+                    //
+                    // var reader = new IndexEntryReader(output);
+                    // for (int i = 0; i < fields.Count; i++)
+                    // {
+                    //     var field = fields.GetByFieldId(i);
+                    //     var analyzer = field.Analyzer ?? lowercaseAnalyzer;
+                    //
+                    //     if (reader.GetFieldReaderFor(field.FieldId).Read(out _, out var value) == false)
+                    //         continue;
+                    //
+                    //     if (value.Length < 3)
+                    //         continue;
+                    //
+                    //     if (value.Length > wordsBuffer.Length)
+                    //     {
+                    //         wordsBuffer = new byte[value.Length * 2];
+                    //         tokenBuffer = new Token[value.Length * 2];
+                    //     }
+                    //
+                    //     int items;
+                    //     {
+                    //         var wordsSpan = wordsBuffer.AsSpan();
+                    //         var tokenSpan = tokenBuffer.AsSpan();
+                    //         analyzer.Execute(value, ref wordsSpan, ref tokenSpan);
+                    //         items = tokenSpan.Length;
+                    //     }
+                    //
+                    //     for (int j = 0; j < items; j++)
+                    //     {
+                    //         yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
+                    //     }
+                    // }
                 }
             }
         }

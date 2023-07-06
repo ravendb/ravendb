@@ -30,16 +30,17 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
         using var knownFields = builder.Build();
         var indexEntryWriter = new IndexEntryWriter(allocator, knownFields);
 
-        var enumerableWriterScope = new EnumerableWriterScope(new(), new(), new(), new(), new(), allocator);
+        Assert.Fail("implement me");
+        //var enumerableWriterScope = new EnumerableWriterScope(new(), new(), new(), new(), new(), allocator);
 
-        for (int i = 0; i < 7500; i++)
-        {
-            enumerableWriterScope.Write(string.Empty, 1, "Nice Answer", ref indexEntryWriter);
-        }
+        // for (int i = 0; i < 7500; i++)
+        // {
+        //     enumerableWriterScope.Write(string.Empty, 1, "Nice Answer", ref indexEntryWriter);
+        // }
+        //
+        // enumerableWriterScope.Finish(string.Empty, 1, ref indexEntryWriter);
 
-        enumerableWriterScope.Finish(string.Empty, 1, ref indexEntryWriter);
-
-        scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
+        //scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
 
         indexEntryWriter.Finish(out var output);
 

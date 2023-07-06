@@ -50,7 +50,6 @@ namespace Corax
     public partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
-        private readonly Dictionary<long, ByteString> _bufferedIndexedEntries = new();
         private readonly Dictionary<ByteString, EntriesContainer> _indexedEntriesByKey = new(new ByteStringEqualityComparer());
         private readonly List<Slice> _entryKeysToRemove = new();
         private readonly IndexFieldsMapping _fieldsMapping;
@@ -438,6 +437,7 @@ namespace Corax
         private IndexWriter(IndexFieldsMapping fieldsMapping)
         {
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
+            _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
@@ -498,6 +498,201 @@ namespace Corax
             return idInTree;
         }
 
+        public class IndexEntryBuilder : IDisposable
+        {
+            private IndexWriter _parent;
+            private long _entryId;
+            private ByteStringContext _context;
+            public bool Active;
+            public bool IsEmpty => Fields > 0;
+            public int Fields;
+
+            public IndexEntryBuilder(IndexWriter parent)
+            {
+                _parent = parent;
+                _context = new ByteStringContext(SharedMultipleUseFlag.None);
+            }
+
+            public void Init(long entryId)
+            {
+                Active = true;
+                Fields = 0;
+                _entryId = entryId;
+                _context.Reset();
+            }
+
+            public void Dispose()
+            {
+                Active = false;
+            }
+
+            public void WriteNull(int fieldId, string path)
+            {
+                ExactInsert(GetField(fieldId, path), Constants.NullValueSlice);
+            }
+
+            private IndexedField GetField(int fieldId, string path)
+            {
+                Fields++;
+
+                var field = fieldId != Constants.IndexWriter.DynamicField ? _parent._knownFieldsTerms[fieldId] : _parent.GetDynamicIndexedField(_context, path);
+                return field;
+            }
+
+            void Insert(IndexedField field, ReadOnlySpan<byte> value)
+            {
+                if (field.Analyzer != null)
+                    AnalyzeInsert(field, value);
+                else
+                    ExactInsert(field, value);
+            }
+
+            void AnalyzeInsert(IndexedField field, ReadOnlySpan<byte> value)
+            {
+                var analyzer = field.Analyzer;
+                if (value.Length > _parent._encodingBufferHandler.Length)
+                {
+                    analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+                    if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
+                        _parent.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
+                }
+
+                Span<byte> wordsBuffer = _parent._encodingBufferHandler;
+                Span<Token> tokens = _parent._tokensBufferHandler;
+                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
+
+                for (int i = 0; i < tokens.Length; i++)
+                {
+                    ref var token = ref tokens[i];
+
+                    if (token.Offset + token.Length > _parent._encodingBufferHandler.Length)
+                        _parent.ThrowInvalidTokenFoundOnBuffer(field, value, wordsBuffer, tokens, token);
+
+                    var word = new Span<byte>(_parent._encodingBufferHandler, token.Offset, (int)token.Length);
+                    ExactInsert(field, word);
+                }
+            }
+
+            ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
+            {
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_context, value, out var slice);
+
+                // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
+                // dictionary we need to close the slice as we are disposing it afterwards. 
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
+                if (exists == false)
+                {
+                    term = new EntriesModifications(_context, value.Length);
+                    scope = null; // We don't want the fieldname (slice) to be returned.
+                }
+
+                term.Addition(_entryId);
+
+                if (field.HasSuggestions)
+                    _parent.AddSuggestions(field, slice);
+
+                scope?.Dispose();
+
+                return ref term;
+            }
+
+            private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
+            {
+                field.Spatial ??= new();
+                ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, _entryId, out var exists);
+                if (exists == false)
+                {
+                    terms = new List<(double, double)>();
+                }
+
+                terms.Add(coords);
+            }
+
+            internal void Clean()
+            {
+                _context.Dispose();
+            }
+
+            public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
+            {
+                var field = GetField(fieldId, path);
+                Insert(field, value);
+            }
+
+            public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
+            {
+                var field = GetField(fieldId, path);
+                Insert(field, value);
+            }
+
+            public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
+            {
+                var field = GetField(fieldId, path);
+                RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
+
+                var maxLen = Encoding.UTF8.GetMaxByteCount(path.Length);
+                using var _ = _context.Allocate(maxLen, out var buffer);
+                var len = Encoding.UTF8.GetBytes(entry.Geohash, buffer.ToSpan());
+                for (int i = 1; i <= entry.Geohash.Length; ++i)
+                {
+                    ExactInsert(field, buffer.ToReadOnlySpan()[..i]);
+                }
+            }
+
+            public void Store(BlittableJsonReaderObject storedValue)
+            {
+                var field = _parent._knownFieldsTerms[^1];
+                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.None);
+            }
+
+            public void Store(int fieldId, string name, ReadOnlySpan<byte> storedValue)
+            {
+                var field = GetField(fieldId, name);
+                RegisterTerm(field.Name, storedValue, StoredFieldType.Raw);
+            }
+
+
+            void RegisterTerm(Slice fieldName, ReadOnlySpan<byte> term, StoredFieldType type)
+            {
+                ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
+                var fieldsTree = _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, fieldsTree);
+
+                var termId = Container.Allocate(_parent._transaction.LowLevelTransaction, _parent._storedFieldsContainerId,
+                    term.Length, fieldRootPage, out Span<byte> space);
+                term.CopyTo(space);
+                entryTerms.Add(new RecordedTerm
+                {
+                    // why: entryTerms.Count << 8 
+                    // we put entries count here because we are sorting the entries afterward
+                    // this ensure that stored values are then read using the same order we have for writing them
+                    // which is important for storing arrays
+                    TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    Long = termId
+                });
+            }
+
+            public void Index()
+            {
+                
+            }
+        }
+
+        private readonly IndexEntryBuilder _builder;
+
+        public IndexEntryBuilder Index(string key)
+        {
+            return Index(Encoding.UTF8.GetBytes(key)); 
+        }
+
+        public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
+        {
+            if (_builder.Active)
+                throw new NotSupportedException("You *must* dispose the previous builder before calling it again");
+            _builder.Active = true;
+            return _builder;
+        }
+
         public long Index(string key, ReadOnlySpan<byte> data)
         {
             return Index(Encoding.UTF8.GetBytes(key), data);
@@ -509,9 +704,8 @@ namespace Corax
             var entryId = ++_lastEntryId;
             _entriesAllocator.Allocate(key.Length, out var keyStr);
             key.CopyTo(keyStr.ToSpan());
-            _entriesAllocator.Allocate(data.Length, out var dataStr);
-            data.CopyTo(dataStr.ToSpan());
-            _bufferedIndexedEntries[entryId] = dataStr;
+            
+            IndexEntry(entryId, data);
 
             ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedEntriesByKey, keyStr, out var exists);
             if (exists == false)
@@ -716,43 +910,55 @@ namespace Corax
             return Index(key, data);
         }
 
+        private IndexedField GetDynamicIndexedField(ByteStringContext context, string currentFieldName)
+        {
+            using var _ = Slice.From(context, currentFieldName, out var slice);
+            return GetDynamicIndexedField(context, slice);
+        }
+        
         private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName)
         {
-           using var _ = Slice.From(context, currentFieldName, out var slice);
-           if (_fieldsMapping.TryGetByFieldName(slice, out var indexFieldBinding))
-               return _knownFieldsTerms[indexFieldBinding.FieldId];
+            using var _ = Slice.From(context, currentFieldName, out var slice);
+            return GetDynamicIndexedField(context, slice);
+        }
 
-           _dynamicFieldsTerms ??= new(SliceComparer.Instance);
+        private IndexedField GetDynamicIndexedField(ByteStringContext context, Slice slice)
+        {
+            if (_fieldsMapping.TryGetByFieldName(slice, out var indexFieldBinding))
+                return _knownFieldsTerms[indexFieldBinding.FieldId];
+
+            _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
-            
+
             var clonedFieldName = slice.Clone(context);
-            
+
             if (_dynamicFieldsMapping is null || _persistedDynamicFieldsAnalyzers is null)
             {
                 CreateDynamicField(null, FieldIndexingMode.Normal);
                 return indexedField;
             }
-            
+
             var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(slice);
             if (_dynamicFieldsMapping?.TryGetByFieldName(slice, out var binding) is true)
             {
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, 
-                    binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer, 
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
+                    binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
                     binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore);
-                
+
                 if (persistedAnalyzer != null)
                 {
                     var originalIndexingMode = (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte();
                     if (binding.FieldIndexingMode != originalIndexingMode)
-                        throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{binding.FieldName}' was created with '{originalIndexingMode}' analyzer but now '{binding.FieldIndexingMode}' analyzer was specified. This is not supported");
+                        throw new InvalidDataException(
+                            $"Inconsistent dynamic field creation options were detected. Field '{binding.FieldName}' was created with '{originalIndexingMode}' analyzer but now '{binding.FieldIndexingMode}' analyzer was specified. This is not supported");
                 }
-                
+
                 if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer == null)
                 {
                     _persistedDynamicFieldsAnalyzers.Add(slice, (byte)binding.FieldIndexingMode);
                 }
-                
+
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
             else
@@ -774,10 +980,10 @@ namespace Corax
                     FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(slice.ToString()),
                     _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
-                
+
                 CreateDynamicField(analyzer, mode);
             }
-            
+
             return indexedField;
 
             void CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
@@ -995,7 +1201,7 @@ namespace Corax
                             }
                             else
                             {
-                                Insert(iterator.Sequence);
+                                 Insert(iterator.Sequence);
                             }
                         }
 
@@ -1274,20 +1480,21 @@ namespace Corax
         
         private void RemoveEntriesFromBatch(ref EntriesContainer entriesContainer)
         {
+            throw new NotImplementedException();
             // not bother with _returning_ the data, since this is part of a batch (will be cleaned in the end)
             // and we assume that this is rare, we want to use pointer bumping for
             // allocations as much as possible
-            if (entriesContainer.Items != null)
-            {
-                foreach (long item in entriesContainer.Items)
-                {
-                    _bufferedIndexedEntries.Remove(item);
-                }
-            }
-            else
-            {
-                _bufferedIndexedEntries.Remove(entriesContainer.SingleItem);
-            }
+            // if (entriesContainer.Items != null)
+            // {
+            //     foreach (long item in entriesContainer.Items)
+            //     {
+            //         _bufferedIndexedEntries.Remove(item);
+            //     }
+            // }
+            // else
+            // {
+            //     _bufferedIndexedEntries.Remove(entriesContainer.SingleItem);
+            // }
         }
         
         /// <summary>
@@ -1379,12 +1586,7 @@ namespace Corax
 
         public void Prepare()
         {
-            foreach (var (entryId, entry)  in _bufferedIndexedEntries)
-            {
-                ReadOnlySpan<byte> data = entry.ToReadOnlySpan();
-                
-                IndexEntry(entryId, data);
-            }
+           
         }
 
         public void Commit()
@@ -2109,6 +2311,7 @@ namespace Corax
             }
             
             _indexDebugDumper.Dispose();
+            _builder.Clean();
         }
     }
 }

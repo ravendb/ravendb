@@ -1,14 +1,14 @@
 using System;
 using Amazon.SimpleNotificationService.Model;
+using Corax;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 using Constants = Raven.Client.Constants;
-using Sparrow.Server;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -29,15 +29,14 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         _isMultiMap = index.IsMultiMap;
     }
 
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+    public override void SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id,
-        out ByteString output, out float? documentBoost, out int fields)
+        object doc, JsonOperationContext indexContext, IndexWriter.IndexEntryBuilder builder, object sourceDocument, out LazyStringValue id,
+          out int fields)
     {
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
         id = default;
-        documentBoost = null;
         
         // It is important to note that as soon as an accessor is created this instance is tied to the underlying property type.
         // This optimization is not able to handle differences in types for the same property. Therefore, this instances cannot
@@ -54,61 +53,49 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         var knownFields = GetKnownFieldsForWriter();
 
         // We prepare for the next entry.
-        ref var entryWriter = ref GetEntriesWriter();
+        if (boostedValue != null)
+            builder.Boost(boostedValue.Boost);
 
-        try
+        bool shouldSkip = _indexEmptyEntries == false;
+        foreach (var property in accessor.GetProperties(documentToProcess))
         {
-            if (boostedValue != null)
-                documentBoost = boostedValue.Boost;
+            var value = property.Value;
 
-            bool shouldSkip = _indexEmptyEntries == false;
-            foreach (var property in accessor.GetProperties(documentToProcess))
-            {
-                var value = property.Value;
-
-                if (_fields.TryGetValue(property.Key, out var field) == false)
-                    throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
+            if (_fields.TryGetValue(property.Key, out var field) == false)
+                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
                 
-                InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, scope, out var innerShouldSkip);
-                shouldSkip &= innerShouldSkip;
+            InsertRegularField(field, value, indexContext, builder, sourceDocument, scope, out var innerShouldSkip);
+            shouldSkip &= innerShouldSkip;
                 
                 
-                if (storedValue is not null && innerShouldSkip == false)
-                {
-                    //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
-                    var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
-
-                    if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
-                        storedValue[property.Key] = blittableValue;
-                }
-            }
-
-            if (shouldSkip && entryWriter.IsEmpty() && _indexEmptyEntries == false)
+            if (storedValue is not null && innerShouldSkip == false)
             {
-                fields = 0;
-                output = default;
-                return default;
+                //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
+                var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
+
+                if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
+                    storedValue[property.Key] = blittableValue;
             }
-            
-            if (storedValue is not null)
-            {
-                var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-                scope.Write(string.Empty, knownFields.Count - 1, bjo, ref entryWriter);
-            }
-            
-            id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
-            if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
-                scope.Write(string.Empty, documentSourceField.FieldId, sourceDocumentId.AsSpan(), ref entryWriter);
-            
-            scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
-            fields = entryWriter.CurrentFieldCount();
-            return entryWriter.Finish(out output, _indexImplicitNull);
         }
-        catch
+
+        if (shouldSkip && builder.IsEmpty && _indexEmptyEntries == false)
         {
-            ResetEntriesWriter();
-            throw;
+            fields = 0;
+            return;
         }
+            
+        if (storedValue is not null)
+        {
+            var bjo = indexContext.ReadObject(storedValue, "corax field as json");
+            builder.Store(bjo);
+        }
+            
+        id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
+        if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
+            builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
+
+        builder.Write(0, string.Empty, id.AsSpan());
+        fields = builder.Fields;
     }
 }

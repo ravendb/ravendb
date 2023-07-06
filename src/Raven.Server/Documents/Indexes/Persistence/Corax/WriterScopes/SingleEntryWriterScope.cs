@@ -16,68 +16,52 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _allocator = allocator;
         }
 
-
-        public void WriteNull(string path, int field, ref IndexEntryWriter entryWriter)
+        public void WriteNull(string path, int field, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            if (field == Constants.IndexWriter.DynamicField)
-                entryWriter.WriteNullDynamic(path);
-            else
-                entryWriter.WriteNull(field);
+            entryWriter.WriteNull(field, path);
         }
         
-        public void Write(string path, int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            if (field == Constants.IndexWriter.DynamicField)
-                entryWriter.WriteDynamic(path, value);
-            else
-                entryWriter.Write(field, value);
+            entryWriter.Write(field, path, value);
         }
         
-        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            if (field == Constants.IndexWriter.DynamicField)
-                entryWriter.WriteDynamic(path, value, longValue, doubleValue);
-            else
-                entryWriter.Write(field, value, longValue, doubleValue);
+            entryWriter.Write(field, path, value, longValue, doubleValue);
         }
 
-        public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            using (_allocator.Allocate(Encoding.UTF8.GetByteCount(value), out var buffer))
+            // cheaper to compute the max size, rather than do the exact encoding
+            int maxByteCount = Encoding.UTF8.GetMaxByteCount(value.Length);
+            using (_allocator.Allocate(maxByteCount, out var buffer))
             {
                 var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
                 buffer.Truncate(length);
-                if (field == Constants.IndexWriter.DynamicField)
-                    entryWriter.WriteDynamic(path, buffer.ToSpan());
-                else
-                    entryWriter.Write(field, buffer.ToSpan());
+                entryWriter.Write(field, path, buffer.ToSpan());
             }
         }
 
-        public void Write(string path, int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, long longValue, double doubleValue, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            using (_allocator.Allocate(Encoding.UTF8.GetByteCount(value), out var buffer))
+            int maxByteCount = Encoding.UTF8.GetMaxByteCount(value.Length);
+            using (_allocator.Allocate(maxByteCount, out var buffer))
             {
                 var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
                 buffer.Truncate(length);
-                if (field == Constants.IndexWriter.DynamicField)
-                    entryWriter.WriteDynamic(path, buffer.ToSpan(), longValue, doubleValue);
-                else
-                    entryWriter.Write(field, buffer.ToSpan(), longValue, doubleValue);
+                entryWriter.Write(field, path, buffer.ToSpan(), longValue, doubleValue);
             }
         }
 
-        public void Write(string path, int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, BlittableJsonReaderObject reader, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            new BlittableWriterScope(reader).Write(path, field, ref entryWriter);
+            new BlittableWriterScope(reader).Write(path, field, entryWriter);
         }
 
-        public void Write(string path, int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, CoraxSpatialPointEntry entry, IndexWriter.IndexEntryBuilder entryWriter)
         {
-            if (field == Constants.IndexWriter.DynamicField)
-                entryWriter.WriteSpatialDynamic(path, entry);
-            else
-                entryWriter.WriteSpatial(field, entry);
+            entryWriter.WriteSpatial(field, path, entry);
         }
     }
 }

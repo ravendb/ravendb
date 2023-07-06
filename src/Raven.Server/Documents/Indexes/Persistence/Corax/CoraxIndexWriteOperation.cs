@@ -5,6 +5,7 @@ using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -81,76 +82,60 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void UpdateDocument( 
+        public override void UpdateDocument(
             LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            
-            LazyStringValue lowerId;
-            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
-            ByteString data;
-            float? documentBoost = null;
+            using var builder = _indexWriter.Index(key.AsSpan());
+
             bool shouldSkip;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
+                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder, out _, out shouldSkip);
             }
-            
+
             if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
             {
                 UpdateDynamicFieldsBindings();
             }
-            
-            using(scope)
+
             using (Stats.AddStats.Start())
             {
-                if (data.Length == 0 || shouldSkip)
+                if (shouldSkip)
                 {
                     Delete(key, stats);
                     return;
                 }
 
-                if (documentBoost.HasValue)
-                    _indexWriter.Update(key.AsReadOnlySpan(), data.ToSpan(), documentBoost.Value);
-                else
-                    _indexWriter.Update(key.AsReadOnlySpan(), data.ToSpan());
+                builder.Index();
                 stats.RecordIndexingOutput();
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            
-            LazyStringValue lowerId;
-            ByteString data;
-            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
-            float? documentBoost;
+            using var builder = _indexWriter.Index(key.AsSpan());
+
             bool shouldSkip;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
+                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder, out _, out shouldSkip);
             }
-            
-            using (scope)
-            {
-                if (data.Length == 0 || shouldSkip)
-                    return;
 
-                using (Stats.AddStats.Start())
+            using (Stats.AddStats.Start())
+            {
+                if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
                 {
-                    if (documentBoost.HasValue)
-                        _indexWriter.Index(key.AsSpan(), data.ToSpan(), documentBoost.Value);
-                    else
-                        _indexWriter.Index(key.AsSpan(), data.ToSpan());
+                    UpdateDynamicFieldsBindings();
                 }
 
+                if (shouldSkip)
+                    return;
+
+                builder.Index();
                 stats.RecordIndexingOutput();
-            }
-            
-            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
             }
         }
 
