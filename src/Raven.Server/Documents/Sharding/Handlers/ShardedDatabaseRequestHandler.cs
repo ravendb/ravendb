@@ -124,9 +124,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return new OperationCancelToken(cancelAfter, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        public override OperationCancelToken CreateTimeLimitedOperationToken()
+        public override OperationCancelToken CreateTimeLimitedOperationToken(bool useRequestAbortedToken = true)
         {
-            return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+            if (useRequestAbortedToken) 
+                return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown);
+
         }
 
         public override OperationCancelToken CreateTimeLimitedQueryToken()

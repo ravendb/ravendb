@@ -9,6 +9,7 @@ using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(name);
 
-                var token = CreateOperationToken();
+                var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new IndexOptimizeResult(index.Name);
                 var operationId = Database.Operations.GetNextOperationId();
                 var t = Database.Operations.AddLocalOperation(

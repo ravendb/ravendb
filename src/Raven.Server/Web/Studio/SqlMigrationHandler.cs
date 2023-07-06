@@ -7,6 +7,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
@@ -57,8 +58,7 @@ namespace Raven.Server.Web.Studio
 
                     var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                     var schema = dbDriver.FindSchema();
-                    var token = CreateOperationToken();
-
+                    var token = new OperationCancelToken(Database.DatabaseShutdown);
                     var result = new MigrationResult(migrationRequest.Settings);
 
                     var collectionsCount = migrationRequest.Settings.Collections.Count;

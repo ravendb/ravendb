@@ -77,9 +77,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public override OperationCancelToken CreateTimeLimitedOperationToken()
+        public override OperationCancelToken CreateTimeLimitedOperationToken(bool useRequestAbortedToken = true)
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            if (useRequestAbortedToken)
+                return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
 
         public override OperationCancelToken CreateTimeLimitedQueryToken()
