@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -16,6 +17,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -887,26 +889,21 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
-        public async Task ExternalReplicationFailover()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenExternalReplication(RavenDatabaseMode.All, RavenDatabaseMode.All)]
+        public async Task ExternalReplicationFailover(Options source, Options destination)
         {
             var clusterSize = 3;
             var (_, srcLeader) = await CreateRaftCluster(clusterSize);
             var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
 
-            var dstDB = GetDatabaseName();
-            var srcDB = GetDatabaseName();
+            source = AdjustOptionsToClusterSize(source, srcLeader, clusterSize);
+            destination = AdjustOptionsToClusterSize(destination, dstLeader, clusterSize);
 
-            var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
-            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
-
-            using (var srcStore = new DocumentStore()
+            using (var src = GetDocumentStore(source))
+            using (var dst = GetDocumentStore(destination))
             {
-                Urls = new[] { srcLeader.WebUrl },
-                Database = srcDB,
-            }.Initialize())
-            {
-                using (var session = srcStore.OpenSession())
+                using (var session = src.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
                     session.Store(new User
@@ -917,58 +914,70 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 // add watcher with invalid url to test the failover on database topology discovery
-                var watcher = new ExternalReplication(dstDB, "connection")
+                var watcher = new ExternalReplication(dst.Database, "connection");
+                var r = await AddWatcherToReplicationTopology(src, watcher, new[] { "http://127.0.0.1:1234", dstNodes[0].WebUrl, dstNodes[1].WebUrl });
+               
+                using (var dstSession = src.OpenSession())
                 {
-                    MentorNode = "B"
-                };
-                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
-
-                using (var dstStore = new DocumentStore
-                {
-                    Urls = new[] { dstLeader.WebUrl },
-                    Database = watcher.Database,
-                }.Initialize())
-                {
-                    using (var dstSession = dstStore.OpenSession())
-                    {
-                        dstSession.Load<User>("Karmel");
-                        Assert.True(await WaitForDocumentInClusterAsync<User>(
-                            dstNodes,
-                            dstDB,
-                            "users/1",
-                            u => u.Name.Equals("Karmel"),
-                            TimeSpan.FromSeconds(60)));
-                    }
-
-                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
-                    var server = Servers.Single(s => s.WebUrl == responsibale);
-                    using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
-                    {
-                        Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
-                                  null,
-                            true));
-
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
-                            .DestinationUrl;
-
-                        // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
-                    }
-
-                    using (var session = srcStore.OpenSession())
-                    {
-                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
-                        session.Store(new User
-                        {
-                            Name = "Karmel2"
-                        }, "users/2");
-                        session.SaveChanges();
-                    }
-
-                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                    dstSession.Load<User>("Karmel");
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        dstNodes,
+                        dst.Database,
+                        "users/1",
+                        u => u.Name.Equals("Karmel"),
+                        TimeSpan.FromSeconds(60)));
                 }
+
+                var destinationUrl = await AssertWaitForNotNullAsync(async () =>
+                {
+                    var taskStatus = (OngoingTaskReplication)await GetExecutor(src.Maintenance).SendAsync(new GetOngoingTaskInfoOperation(r.TaskId, OngoingTaskType.Replication));
+                    if (taskStatus?.DestinationUrl == null)
+                    {
+                        taskStatus = (OngoingTaskReplication)await GetExecutor(src.Maintenance).ForNode(taskStatus.ResponsibleNode.NodeTag).SendAsync(new GetOngoingTaskInfoOperation(r.TaskId, OngoingTaskType.Replication));
+                    }
+
+                    return taskStatus?.DestinationUrl;
+                    
+                    MaintenanceOperationExecutor GetExecutor(MaintenanceOperationExecutor executor)
+                    {
+                        if (source.DatabaseMode == RavenDatabaseMode.Sharded)
+                        {
+                            return executor.ForShard(0);
+                        }
+
+                        return executor;
+                    }
+                });
+
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == destinationUrl));
+
+                using (var session = src.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel2"
+                    }, "users/2");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(dst, "users/2", 30_000));
             }
+        }
+
+        private Options AdjustOptionsToClusterSize(Options options, RavenServer leader, int clusterSize)
+        {
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                options = Sharding.GetOptionsForCluster(leader, clusterSize, clusterSize, clusterSize);
+            }
+            else
+            {
+                options.Server = leader;
+                options.ReplicationFactor = clusterSize;
+            }
+
+            return options;
         }
 
         [Fact]
