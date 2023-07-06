@@ -26,7 +26,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly CoraxDocumentConverterBase _converter;
     private readonly HashSet<string> _collections;
     private readonly int _take;
-    private IEnumerator<AnalyzedToken> _itemsEnumerable;
+    private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
 
     public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, int take = int.MaxValue)
     {
@@ -41,63 +41,41 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _collections = collections;
     }
 
-    private struct AnalyzedToken
-    {
-        public byte[] Storage;
-        public int Start;
-        public uint Length;
-    }
-
-
     private bool CanAcceptObject(object value)
     {
-        if (value is LazyStringValue lsv && lsv.Size > 3)
-            return true;
-
-        if (value is LazyCompressedStringValue lcsv && lcsv.UncompressedSize > 3)
-            return true;
-
-        if (value is string sv && sv.Length > 3)
-            return true;
-
-        if (value is Enum)
-            return true;
-
-        if (value is bool)
-            return true;
-
-        if (value is DateTime)
-            return true;
-
-        if (value is DateTimeOffset)
-            return true;
-
-        if (value is TimeSpan)
-            return true;
-
-        if (value is LazyNumberValue || value is double || value is decimal || value is float)
-            return true;
-
-        if (value is DateOnly)
-            return true;
-
-        if (value is TimeOnly)
-            return true;
-
-        return false;
+        return value switch
+        {
+            LazyStringValue { Size: > 3 } => true,
+            LazyCompressedStringValue { UncompressedSize: > 3 } => true,
+            string { Length: > 3 } => true,
+            Enum => true,
+            bool => true,
+            DateTime => true,
+            DateTimeOffset => true,
+            TimeSpan => true,
+            LazyNumberValue => true,
+            double => true,
+            decimal => true,
+            float => true,
+            int => true,
+            long => true,
+            DateOnly => true,
+            TimeOnly => true,
+            _ => false 
+        };
     }
 
-    private IEnumerable<AnalyzedToken> GetItems()
+    private IEnumerable<ArraySegment<byte>> GetItems()
     {
         var lowercaseAnalyzer = Analyzer.CreateLowercaseAnalyzer(_indexContext.Allocator);
         var scope = new IndexingStatsScope(new IndexingRunStats());
+        
+        var wordsBuffer = new byte[1024];
+        var tokenBuffer = new Token[1024];
+        
         foreach (var collection in _collections)
         {
             using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection, _take), collection, _indexContext, scope, _indexType);
-
-            var wordsBuffer = new byte[1024];
-            var tokenBuffer = new Token[1024];
-
             while (true)
             {
                 if (itemEnumerator.MoveNext(_queryContext.Documents, out var mapResults, out var _) == false)
@@ -144,12 +122,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                         for (int j = 0; j < items; j++)
                         {
-                            yield return new AnalyzedToken
-                            {
-                                Storage = wordsBuffer, 
-                                Length = tokenBuffer[j].Length, 
-                                Start = tokenBuffer[j].Offset
-                            };
+                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
                         }
                     }
                 }
@@ -188,7 +161,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         }
 
         var current = _itemsEnumerable.Current;
-        output = current.Storage.AsSpan(current.Start, (int)current.Length);
+        output = current.AsSpan();
         return true;
     }
 }
