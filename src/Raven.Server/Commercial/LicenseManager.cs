@@ -137,10 +137,7 @@ namespace Raven.Server.Commercial
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(firstRun: true);
 
-                _serverStore.Engine.CommandsVersionManager.OnClusterVersionChange += PutMyNodeInfoClusterVersionChange;
-
-                if (_serverStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion > 0)
-                    Task.Run(() => PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+                Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {
@@ -156,20 +153,12 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void PutMyNodeInfoClusterVersionChange(object sender, ClusterVersionChangeEventArgs args)
-        {
-            if (args.PreviousClusterVersion != 0)
-                return;
-
-            Task.Run(() => PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
-        }
-
-        public async Task PutMyNodeInfoAsync(int timeout = 0)
+        public async Task PutMyNodeInfoAsync()
         {
             if (_serverStore.IsPassive())
                 return;
 
-            if (await _licenseLimitsSemaphore.WaitAsync(timeout) == false)
+            if (await _licenseLimitsSemaphore.WaitAsync(0) == false)
                 return;
 
             try
@@ -953,7 +942,6 @@ namespace Raven.Server.Commercial
         public void Dispose()
         {
             _leaseLicenseTimer?.Dispose();
-            _serverStore.Engine.CommandsVersionManager.OnClusterVersionChange -= PutMyNodeInfoClusterVersionChange;
         }
 
         private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)

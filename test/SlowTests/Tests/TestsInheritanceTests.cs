@@ -9,6 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Web;
 using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
@@ -46,10 +49,28 @@ namespace SlowTests.Tests
         public void TestsShouldInheritFromRightBaseClasses()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
-                from test in GetAssemblyTypes(assembly)
-                where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
-                where test.IsSubclassOf(typeof(ParallelTestBase)) == false && test.IsSubclassOf(typeof(RavenTestDriver)) == false && test.Namespace.StartsWith("EmbeddedTests") == false
-                select test;
+                        from test in GetAssemblyTypes(assembly)
+                        where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
+                        where test.IsSubclassOf(typeof(ParallelTestBase)) == false && test.IsSubclassOf(typeof(RavenTestDriver)) == false && test.Namespace.StartsWith("EmbeddedTests") == false
+                        select test;
+
+            var array = types.ToArray();
+            if (array.Length == 0)
+                return;
+
+            var userMessage = string.Join(Environment.NewLine, array.Select(x => x.FullName));
+            throw new Exception(userMessage);
+        }
+
+        [NonLinuxFact]
+        public void HandlersShouldNotInheritStraightFromRequestHandler()
+        {
+            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+                        from handler in GetAssemblyTypes(assembly)
+                        where handler.IsAbstract == false
+                        where handler != typeof(DatabaseRequestHandler) && handler != typeof(ServerRequestHandler) && handler != typeof(ShardedDatabaseRequestHandler)
+                        where handler.IsSubclassOf(typeof(RequestHandler)) && handler.IsSubclassOf(typeof(ServerRequestHandler)) == false && handler.IsSubclassOf(typeof(DatabaseRequestHandler)) == false && handler.IsSubclassOf(typeof(ShardedDatabaseRequestHandler)) == false
+                        select handler;
 
             var array = types.ToArray();
             if (array.Length == 0)

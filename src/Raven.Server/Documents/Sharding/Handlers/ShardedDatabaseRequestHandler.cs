@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
 
-        public Task CheckForChanges(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && DatabaseContext.HasTopologyChanged(topologyEtag.Value))

@@ -24,7 +24,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
-    public sealed class DatabasesHandler : RequestHandler
+    public sealed class DatabasesHandler : ServerRequestHandler
     {
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Databases()

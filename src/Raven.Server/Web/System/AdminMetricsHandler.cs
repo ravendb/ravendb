@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminMetricsHandler : RequestHandler
+    public class AdminMetricsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/metrics", "GET", AuthorizationStatus.Operator)]
         public async Task GetRootStats()

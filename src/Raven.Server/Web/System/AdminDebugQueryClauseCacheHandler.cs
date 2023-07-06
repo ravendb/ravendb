@@ -11,7 +11,7 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminDebugQueryClauseCacheHandler : RequestHandler
+    public class AdminDebugQueryClauseCacheHandler : ServerRequestHandler
     {
         [RavenAction("/admin/indexes/lucene/query-clause-cache", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task QueryClauseCache()

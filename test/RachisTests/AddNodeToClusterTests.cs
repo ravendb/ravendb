@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -23,6 +24,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -33,6 +35,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static RachisTests.AddNodeToClusterTests;
 
 namespace RachisTests
 {
@@ -840,6 +843,74 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task ClientRequestExecutorTopologyWillUpdateWhenAddingNewNodeToCluster_RavenDB_20702()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
+
+            var executorB = ClusterRequestExecutor.Create(new string[] { leader.WebUrl }, null, DocumentConventions.Default);
+            
+            await WaitForValueAsync(() =>
+            {
+                foreach (var node in nodes)
+                {
+                    if (executorB?.TopologyNodes == null)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }, true);
+            
+            var serverD = GetNewServer();
+            var serverDUrl = serverD.ServerStore.GetNodeHttpServerUrl();
+            Servers.Add(serverD);
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null, DocumentConventions.DefaultForServer))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(serverDUrl, "D", watcher: true), ctx);
+                await serverD.ServerStore.Engine.WaitForTopology(Leader.TopologyModification.NonVoter);
+            }
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                //first request to D will not work since the request executor did not update its topology
+                var error = await Assert.ThrowsAnyAsync<RequestedNodeUnavailableException>(async () => await executorB.ExecuteAsync(new GetDatabasesCommand("D"), ctx));
+                Assert.Contains("Could not find requested node", error.Message);
+                //first request will update the topology
+                await executorB.ExecuteAsync(new GetDatabasesCommand("B"), ctx);
+                //second will request straight to D will already have it in the topology
+                await executorB.ExecuteAsync(new GetDatabasesCommand("D"), ctx);
+            }
+        }
+
+        internal class GetDatabasesCommand : RavenCommand
+        {
+            public GetDatabasesCommand(string nodeTag)
+            {
+                SelectedNodeTag = nodeTag;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases";
+                
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+            }
+        }
+        
         [Fact]
         public async Task AddNodeToClusterWithoutError()
         {
