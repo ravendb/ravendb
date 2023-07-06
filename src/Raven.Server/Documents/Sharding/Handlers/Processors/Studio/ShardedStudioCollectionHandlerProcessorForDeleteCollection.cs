@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Operations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
         {
             using (returnToContextPool)
             {
-                var token = RequestHandler.CreateTimeLimitedOperationToken();
+                var token = new OperationCancelToken(RequestHandler.DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, RequestHandler.DatabaseContext.DatabaseShutdown);
 
                 var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
 

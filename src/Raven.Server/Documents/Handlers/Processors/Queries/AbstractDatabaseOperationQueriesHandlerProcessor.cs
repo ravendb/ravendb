@@ -59,7 +59,7 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
         IDisposable returnContextToPool,
         OperationType operationType)
     {
-        var token = RequestHandler.CreateTimeLimitedQueryOperationToken();
+        var token =  new OperationCancelToken(RequestHandler.Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, RequestHandler.Database.DatabaseShutdown);
 
         var description = GetOperationDescription(query);
 

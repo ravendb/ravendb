@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             if (debugInfoType.HasFlag(DebugInfoPackageContentType.ServerWide))
                             {
-                            await WriteServerInfo(archive, context, localEndpointClient, token.Token);
+                                await WriteServerInfo(archive, context, localEndpointClient, token.Token);
                             }
 
                             if (debugInfoType.HasFlag(DebugInfoPackageContentType.Databases))
@@ -211,8 +211,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             if (debugInfoType.HasFlag(DebugInfoPackageContentType.LogFile))
                             {
-                            await WriteLogFile(archive, token.Token);
-                        }
+                                await WriteLogFile(archive, token.Token);
+                            }
                         }
                         catch (Exception e)
                         {

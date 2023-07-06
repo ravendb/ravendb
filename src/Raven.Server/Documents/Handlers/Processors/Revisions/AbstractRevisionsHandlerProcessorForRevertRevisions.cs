@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 configuration = JsonDeserializationServer.RevertRevisions(json);
             }
 
-            var token = RequestHandler.CreateTimeLimitedOperationToken();
+            var token = RequestHandler.CreateTimeLimitedOperationToken(useRequestAbortedToken: false);
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
             ScheduleRevertRevisions(operationId, configuration, token);

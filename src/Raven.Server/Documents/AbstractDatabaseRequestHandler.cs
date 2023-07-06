@@ -16,7 +16,7 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 
     public abstract char IdentityPartsSeparator { get; }
 
-    public abstract OperationCancelToken CreateTimeLimitedOperationToken();
+    public abstract OperationCancelToken CreateTimeLimitedOperationToken(bool useRequestAbortedToken = true);
 
     public abstract OperationCancelToken CreateTimeLimitedQueryToken();
 

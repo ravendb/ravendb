@@ -58,8 +58,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
                 try
                 {
-                    var cancelToken = RequestHandler.CreateOperationToken();
-
+                    var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                     ScheduleBackup(backupConfiguration, operationId, backupName, sw, startTime, cancelToken);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

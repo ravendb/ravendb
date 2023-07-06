@@ -12,7 +12,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -21,7 +20,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
@@ -336,7 +334,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                var token = CreateOperationToken();
+                var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var transformScript = migrationConfiguration.TransformScript;
 
                 _ = Database.Operations.AddLocalOperation(

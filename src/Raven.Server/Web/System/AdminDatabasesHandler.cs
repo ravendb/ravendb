@@ -568,7 +568,8 @@ namespace Raven.Server.Web.System
 
                 await ServerStore.EnsureNotPassiveAsync();
 
-                var cancelToken = CreateOperationToken();
+                var cancelToken =  new OperationCancelToken(ServerStore.ServerShutdown);
+
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
                 _ = ServerStore.Operations.AddLocalOperation(
@@ -1043,8 +1044,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
-
-                var token = CreateOperationToken();
+                var token = new OperationCancelToken(ServerStore.ServerShutdown);
                 var compactDatabaseTask = new CompactDatabaseTask(
                     ServerStore,
                     compactSettings.DatabaseName,
@@ -1224,7 +1224,9 @@ namespace Raven.Server.Web.System
             }
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
-            var token = CreateOperationToken();
+
+            var token = new OperationCancelToken(ServerStore.ServerShutdown);
+
             Task timeout = null;
             if (configuration.Timeout.HasValue)
             {
