@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
@@ -251,6 +252,22 @@ namespace FastTests
             }
 
             return new List<RavenServer> { _localServer ?? _globalServer ?? throw new ArgumentNullException(nameof(Server))};
+        }
+
+        public IEnumerable<RavenServer> GetServersInCluster(RavenServer server)
+        {
+            if (Servers.Count == 0)
+            {
+                yield return server;
+                yield break;
+            }
+
+            var topology = server.ServerStore.GetClusterTopology().TopologyId;
+            foreach (var s in Servers)
+            {
+                if (s.ServerStore.GetClusterTopology().TopologyId == topology)
+                    yield return s;
+            }
         }
 
         private static void CheckServerLeak()
@@ -571,10 +588,15 @@ namespace FastTests
 
         protected static string[] UseFiddler(string url)
         {
-            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                url = url.Replace("127.0.0.1", "localhost.fiddler");
+            return new[] { UseFiddlerUrl(url) };
+        }
 
-            return new[] { url };
+        protected string[] GetUrls(RavenServer serverToUse, bool disableTopologyUpdates = false)
+        {
+            if (disableTopologyUpdates)
+                return UseFiddler(serverToUse.WebUrl);
+
+            return GetServersInCluster(serverToUse).Select(s => UseFiddlerUrl(s.WebUrl)).ToArray();
         }
 
         protected static void OpenBrowser(string url)

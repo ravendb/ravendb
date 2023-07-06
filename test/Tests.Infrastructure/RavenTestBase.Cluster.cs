@@ -211,20 +211,21 @@ public partial class RavenTestBase
             return sb.ToString();
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(long index, TimeSpan? timeout = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
         {
-            var notDisposed = _parent.Servers.Count(s => s.ServerStore.Disposed == false);
-            var notPassive = _parent.Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
-
-            Assert.True(_parent.Servers.Count == notDisposed, $"Unequal not disposed nodes {_parent.Servers.Count} != {notDisposed}");
-            Assert.True(_parent.Servers.Count == notPassive, $"Unequal not passive nodes {_parent.Servers.Count} != {notPassive}");
-
-            await WaitForRaftIndexToBeAppliedInClusterAsync(index, timeout);
+            await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, nodes ?? _parent.Servers, timeout);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInClusterAsync(long index, TimeSpan? timeout = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterAsync(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
         {
-            await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, _parent.Servers, timeout);
+            var servers = nodes ?? _parent.Servers;
+            var notDisposed = servers.Count(s => s.ServerStore.Disposed == false);
+            var notPassive = servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
+
+            Assert.True(servers.Count == notDisposed, $"Unequal not disposed nodes {servers.Count} != {notDisposed}");
+            Assert.True(servers.Count == notPassive, $"Unequal not passive nodes {servers.Count} != {notPassive}");
+
+            await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, servers, timeout);
         }
 
         public async Task WaitForRaftIndexToBeAppliedOnClusterNodesAsync(long index, List<RavenServer> nodes, TimeSpan? timeout = null)

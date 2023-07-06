@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests;
@@ -78,6 +79,7 @@ public partial class RavenTestBase
         {
             var options = new Options
             {
+                DatabaseMode = RavenDatabaseMode.Sharded,
                 ModifyDatabaseRecord = r =>
                 {
                     r.Sharding = new ShardingConfiguration

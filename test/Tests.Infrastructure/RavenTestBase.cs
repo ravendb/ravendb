@@ -146,6 +146,7 @@ namespace FastTests
                 {
                     options ??= Options.Default;
                     var serverToUse = options.Server ?? Server;
+                    var servers = GetServersInCluster(serverToUse).ToList();
 
                     var name = GetDatabaseName(caller);
 
@@ -156,7 +157,7 @@ namespace FastTests
                     {
                         adminStore = new DocumentStore
                         {
-                            Urls = UseFiddler(serverToUse.WebUrl),
+                            Urls = GetUrls(serverToUse),
                             Database = name,
                             Certificate = options.AdminCertificate,
                             Conventions =
@@ -223,7 +224,6 @@ namespace FastTests
 
                     var store = new DocumentStore
                     {
-                        Urls = UseFiddler(serverToUse.WebUrl),
                         Database = name,
                         Certificate = options.ClientCertificate,
                         Conventions =
@@ -234,6 +234,7 @@ namespace FastTests
                     };
 
                     options.ModifyDocumentStore?.Invoke(store);
+                    store.Urls = GetUrls(serverToUse, store.Conventions.DisableTopologyUpdates);
 
                     store.Initialize();
 
@@ -241,14 +242,7 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-                        if (Servers.Contains(serverToUse))
-                        {
-                            Servers.ForEach(server => CheckIfDatabaseExists(server, name));
-                        }
-                        else
-                        {
-                            CheckIfDatabaseExists(serverToUse, name);
-                        }
+                        servers.ForEach(server => CheckIfDatabaseExists(server, name));
 
                         long raftCommand;
                         try
@@ -264,18 +258,14 @@ namespace FastTests
 
                         Assert.True(raftCommand > 0); //sanity check
 
-                        if (Servers.Contains(serverToUse))
+                        if (servers.Count > 1)
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout));
+                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(raftCommand, timeout, servers));
+                        }
 
-                            // skip 'wait for requests' on DocumentDatabase dispose
-                            Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name, sharded));
-                        }
-                        else
-                        {
-                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name, sharded);
-                        }
+                        // skip 'wait for requests' on DocumentDatabase dispose
+                        servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name, sharded));
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -288,7 +278,7 @@ namespace FastTests
 
                             if (sharded)
                             {
-                                if (Servers.Contains(serverToUse) || IsGlobalOrLocalServer(serverToUse))
+                                if (servers.Contains(serverToUse) || IsGlobalOrLocalServer(serverToUse))
                                 {
                                     // check that the database wasn't deleted
                                     var record = serverOperationStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
@@ -302,10 +292,10 @@ namespace FastTests
                             {
                                 result = DeleteDatabase(serverOperationStore, serverToUse, name, hardDelete);
                             }
-                            if (Servers.Contains(serverToUse) && result != null)
+                            if (servers.Count > 1 && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
-                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, timeout));
+                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(result.RaftCommandIndex, timeout, servers));
                             }
                         }
                         catch (Exception e)
@@ -1015,7 +1005,7 @@ namespace FastTests
                 }
             }
 
-            public RavenDatabaseMode DatabaseMode { get; private set; }
+            public RavenDatabaseMode DatabaseMode { get; internal set; }
 
             public RavenSearchEngineMode SearchEngineMode { get; internal set; }
 
