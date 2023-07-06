@@ -132,7 +132,8 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             CommandTimeout: this.commandTimeout() || null,
             QuoteTables: this.tableQuotation(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            SqlTables: this.sqlTables().map(x => x.toDto())
+            SqlTables: this.sqlTables().map(x => x.toDto()),
+            BlockingSourceName: this.blockingSourceName()
         
         } as Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
     }
