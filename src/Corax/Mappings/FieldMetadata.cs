@@ -42,7 +42,7 @@ public readonly struct FieldMetadata
         return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer);
     }
     
-    public bool Equals(FieldMetadata other)
+    public bool Equals(in FieldMetadata other)
     {
         return FieldId == other.FieldId && SliceComparer.CompareInline(FieldName, other.FieldName) == 0;
     }
