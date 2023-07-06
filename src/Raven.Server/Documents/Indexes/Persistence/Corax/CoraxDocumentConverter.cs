@@ -26,11 +26,10 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
 
     public override void SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext,  IndexWriter.IndexEntryBuilder builder, object sourceDocument, out LazyStringValue id,
-        out int fields)
+        object doc, JsonOperationContext indexContext,  IndexWriter.IndexEntryBuilder builder, object sourceDocument)
     {
         var document = (Document)doc;
-        id = document.LowerId ?? key;
+        var id = document.LowerId ?? key;
 
         var scope = new SingleEntryWriterScope(Allocator);
 
@@ -89,7 +88,5 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                 }
             }
         }
-
-        fields = builder.Fields;
     }
 }

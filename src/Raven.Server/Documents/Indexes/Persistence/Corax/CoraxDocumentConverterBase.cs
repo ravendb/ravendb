@@ -51,33 +51,22 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
-    public List<CoraxSpatialPointEntry> CoraxSpatialPointEntryListForEnumerableScope;
     private HashSet<IndexField> _complexFields;
 
     public abstract void SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
         IndexWriter.IndexEntryBuilder builder,
-        object sourceDocument, out LazyStringValue id,
-        out int fields);
+        object sourceDocument);
 
     public void SetDocument(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
-        IndexWriter.IndexEntryBuilder builder,
-        out LazyStringValue id,  out bool shouldSkip)
+        IndexWriter.IndexEntryBuilder builder)
     {
         using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
-        SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source, out id,  out var fields);
-        if (_fields.Count > 0)
-        {
-            shouldSkip = _indexEmptyEntries == false && fields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
-        }
-        else
-        {
-            shouldSkip = fields <= 0; // if we have no entries, we might have an index on the id only, so retain it
-        }
+        SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
     }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,

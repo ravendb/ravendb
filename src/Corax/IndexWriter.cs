@@ -671,25 +671,26 @@ namespace Corax
                     Long = termId
                 });
             }
-
-            public void Index()
-            {
-                
-            }
         }
 
         private readonly IndexEntryBuilder _builder;
 
-        public IndexEntryBuilder Index(string key)
+        public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
-            return Index(Encoding.UTF8.GetBytes(key)); 
+            RegisterForDeletionByKey(key);
+            return Index(key); 
         }
 
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
         {
             if (_builder.Active)
                 throw new NotSupportedException("You *must* dispose the previous builder before calling it again");
-            _builder.Active = true;
+
+            _numberOfModifications++;
+            var entryId = ++_lastEntryId;
+            RegisterEntryByKey(key, entryId);
+            
+            _builder.Init(entryId);
             return _builder;
         }
 
@@ -702,30 +703,31 @@ namespace Corax
         {
             _numberOfModifications++;
             var entryId = ++_lastEntryId;
-            _entriesAllocator.Allocate(key.Length, out var keyStr);
-            key.CopyTo(keyStr.ToSpan());
             
             IndexEntry(entryId, data);
+            
+            RegisterEntryByKey(key, entryId);
 
+            return EntryIdEncodings.Encode(entryId, 1, TermIdMask.Single);
+        }
+
+        private void RegisterEntryByKey(ReadOnlySpan<byte> key, long entryId)
+        {
+            _entriesAllocator.Allocate(key.Length, out var keyStr);
+            key.CopyTo(keyStr.ToSpan());
             ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedEntriesByKey, keyStr, out var exists);
             if (exists == false)
             {
                 container.SingleItem = entryId;
             }
-            else if(container.Items == null)
+            else if (container.Items == null)
             {
-                container.Items = new List<long>
-                {
-                    container.SingleItem, 
-                    entryId,
-                };
+                container.Items = new List<long> { container.SingleItem, entryId, };
             }
             else
             {
                 container.Items.Add(entryId);
             }
-            
-            return EntryIdEncodings.Encode(entryId, 1, TermIdMask.Single);
         }
 
         private unsafe void IndexEntry(long entryId, ReadOnlySpan<byte> data)
@@ -895,6 +897,12 @@ namespace Corax
         /// <returns>Encoded entryId</returns>
         public long Update(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data)
         {
+            RegisterForDeletionByKey(key);
+            return Index(key, data);
+        }
+
+        private void RegisterForDeletionByKey(ReadOnlySpan<byte> key)
+        {
             var scope = Slice.From(_transaction.Allocator, key, ByteStringType.Mutable, out var slice);
             if (_indexedEntriesByKey.Remove(slice.Content, out var existing))
             {
@@ -907,7 +915,6 @@ namespace Corax
             {
                 _entryKeysToRemove.Add(slice);
             }
-            return Index(key, data);
         }
 
         private IndexedField GetDynamicIndexedField(ByteStringContext context, string currentFieldName)

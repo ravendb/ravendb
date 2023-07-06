@@ -88,27 +88,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using var builder = _indexWriter.Index(key.AsSpan());
 
-            bool shouldSkip;
-            using (Stats.ConvertStats.Start())
-            {
-                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder, out _, out shouldSkip);
-            }
-
             if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
             {
                 UpdateDynamicFieldsBindings();
             }
-
             using (Stats.AddStats.Start())
             {
-                if (shouldSkip)
-                {
-                    Delete(key, stats);
-                    return;
-                }
-
-                builder.Index();
                 stats.RecordIndexingOutput();
+                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
+
+                if (builder.Fields != 0) 
+                    return;
+                Delete(key, stats);
             }
         }
 
@@ -118,23 +109,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using var builder = _indexWriter.Index(key.AsSpan());
 
-            bool shouldSkip;
-            using (Stats.ConvertStats.Start())
+            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
             {
-                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder, out _, out shouldSkip);
+                UpdateDynamicFieldsBindings();
             }
-
+            
             using (Stats.AddStats.Start())
             {
-                if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-                {
-                    UpdateDynamicFieldsBindings();
-                }
-
-                if (shouldSkip)
-                    return;
-
-                builder.Index();
+                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
                 stats.RecordIndexingOutput();
             }
         }

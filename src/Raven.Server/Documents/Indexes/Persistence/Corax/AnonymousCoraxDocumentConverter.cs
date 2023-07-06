@@ -31,12 +31,10 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
     public override void SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, IndexWriter.IndexEntryBuilder builder, object sourceDocument, out LazyStringValue id,
-          out int fields)
+        object doc, JsonOperationContext indexContext, IndexWriter.IndexEntryBuilder builder, object sourceDocument)
     {
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
-        id = default;
         
         // It is important to note that as soon as an accessor is created this instance is tied to the underlying property type.
         // This optimization is not able to handle differences in types for the same property. Therefore, this instances cannot
@@ -81,7 +79,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
         if (shouldSkip && builder.IsEmpty && _indexEmptyEntries == false)
         {
-            fields = 0;
             return;
         }
             
@@ -91,11 +88,10 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             builder.Store(bjo);
         }
             
-        id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
+        var id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
         if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
             builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
 
         builder.Write(0, string.Empty, id.AsSpan());
-        fields = builder.Fields;
     }
 }
