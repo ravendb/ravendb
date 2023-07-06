@@ -6,14 +6,11 @@ import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
 import genUtils = require("common/generalUtils");
 import moment = require("moment");
-import studioConfigurationDatabaseModel = require("models/database/settings/studioConfigurationDatabaseModel");
 
 class nodes extends setupStep {
 
     view = require("views/wizard/nodes.html");
 
-    static environments = studioConfigurationDatabaseModel.environments;
-    
     currentStep: number;
     
     remoteNodeIpOptions = ko.observableArray<string>(['0.0.0.0']);

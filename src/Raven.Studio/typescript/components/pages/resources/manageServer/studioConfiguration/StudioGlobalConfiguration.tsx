@@ -7,21 +7,18 @@ import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import {
     StudioGlobalConfigurationFormData,
-    allStudioEnvironments,
     studioGlobalConfigurationYupResolver,
 } from "./StudioGlobalConfigurationValidation";
-import StudioEnvironment = Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
-import { SelectOption } from "components/common/Select";
 import studioSettings = require("common/settings/studioSettings");
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
-import { DevTool } from "@hookform/devtools";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
+import { environmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
 
 export default function StudioGlobalConfiguration() {
-    const asyncGlobalSettings = useAsyncCallback(async () => {
+    const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
 
         return {
@@ -39,6 +36,7 @@ export default function StudioGlobalConfiguration() {
     });
 
     useDirtyFlag(formState.isDirty);
+
     const { reportEvent } = useEventsCollector();
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
@@ -69,8 +67,7 @@ export default function StudioGlobalConfiguration() {
     }
 
     return (
-        <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
-            <DevTool control={control} />
+        <Col lg="6" md="9" sm="12" className="content-margin">
             <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                 <ButtonWithSpinner
                     type="submit"
@@ -127,8 +124,3 @@ export default function StudioGlobalConfiguration() {
         </Col>
     );
 }
-
-const environmentOptions: SelectOption<StudioEnvironment>[] = allStudioEnvironments.map((x) => ({
-    value: x,
-    label: x,
-}));
