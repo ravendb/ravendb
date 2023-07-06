@@ -110,7 +110,8 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            ElasticIndexes: this.elasticIndexes().map(x => x.toDto())
+            ElasticIndexes: this.elasticIndexes().map(x => x.toDto()),
+            BlockingSourceName: this.blockingSourceName()
         };
         
     }

@@ -8,6 +8,7 @@ class ongoingTaskReplicationHubEditModel {
     taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
 
     disabled = ko.observable<boolean>();
+    blockingSourceName = ko.observable<string>();
     stateText: KnockoutComputed<string>;
 
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
@@ -94,7 +95,8 @@ class ongoingTaskReplicationHubEditModel {
             Disabled: this.disabled(),
             PreventDeletionsMode: this.preventDeletions() ? "PreventSinkToHubDeletions" : "None",
             WithFiltering: this.withFiltering(),
-            Certificates: undefined
+            Certificates: undefined,
+            BlockingSourceName: this.blockingSourceName()
         };
     }
     
