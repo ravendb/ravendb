@@ -26,3 +26,11 @@ export interface InputItem<T extends string | number = string> {
     count?: number;
     verticalSeparatorLine?: boolean;
 }
+
+export interface NonShardedViewProps {
+    db: database;
+}
+
+export interface ShardedViewProps extends NonShardedViewProps {
+    location: databaseLocationSpecifier;
+}

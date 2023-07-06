@@ -4,6 +4,7 @@ import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import { bridgeToReact } from "common/reactUtils";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import ClientDatabaseConfiguration from "components/pages/database/settings/clientConfiguration/ClientDatabaseConfiguration";
+import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
 
 export = getSettingsMenuItem;
 
@@ -49,12 +50,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
-            moduleId: require('viewmodels/database/settings/studioConfiguration'),
+            moduleId: bridgeToReact(StudioDatabaseConfiguration, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-database-studio-configuration',
-            dynamicHash: appUrls.studioConfiguration
+            dynamicHash: appUrls.studioConfiguration,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/revisions',

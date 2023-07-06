@@ -18,6 +18,9 @@ import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDa
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 import restartDatabaseCommand = require("commands/resources/restartDatabaseCommand");
+import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
+import StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
+import saveDatabaseStudioConfigurationCommand = require("commands/resources/saveDatabaseStudioConfigurationCommand");
 import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
@@ -71,6 +74,14 @@ export default class DatabasesService {
 
     async restartDatabase(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
         return new restartDatabaseCommand(db, location).execute();
+    }
+
+    async getDatabaseStudioConfiguration(db: database) {
+        return new getDatabaseStudioConfigurationCommand(db).execute();
+    }
+
+    async saveDatabaseStudioConfiguration(dto: StudioConfiguration, db: database) {
+        return new saveDatabaseStudioConfigurationCommand(dto, db).execute();
     }
 
     async getNextOperationId(db: database) {

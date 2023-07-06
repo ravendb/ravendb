@@ -4,14 +4,11 @@ import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
 import nodeInfo = require("models/wizard/nodeInfo");
 import serverSetup = require("models/wizard/serverSetup");
-import studioConfigurationDatabaseModel = require("models/database/settings/studioConfigurationDatabaseModel");
 
 class unsecured extends setupStep {
 
     view = require("views/wizard/unsecured.html");
 
-    static environments = studioConfigurationDatabaseModel.environments;
-    
     editedNode = ko.observable<nodeInfo>();
 
     remoteNodeIpOptions = ko.observableArray<string>(['0.0.0.0']);

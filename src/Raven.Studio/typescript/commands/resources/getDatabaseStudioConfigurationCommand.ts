@@ -4,8 +4,11 @@ import database = require("models/resources/database");
 
 class getDatabaseStudioConfigurationCommand extends commandBase {
     
-    constructor(private db: database) {
+    private readonly db: database;
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration> {
