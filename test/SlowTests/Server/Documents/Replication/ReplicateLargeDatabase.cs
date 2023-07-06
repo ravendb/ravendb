@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -17,7 +16,7 @@ namespace SlowTests.Server.Documents.Replication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task AutomaticResolveWithIdenticalContent()
         {
             DocumentStore store1;
@@ -34,14 +33,14 @@ namespace SlowTests.Server.Documents.Replication
             Assert.Empty(errors);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task AutomaticResolveWithIdenticalContentForSharding()
         {
             using (var store1 = Sharding.GetDocumentStore())
             using (var store2 = Sharding.GetDocumentStore())
             {
-                CallCreateSampleDatabaseEndpoint((DocumentStore)store1);
-                CallCreateSampleDatabaseEndpoint((DocumentStore)store2);
+                CallCreateSampleDatabaseEndpoint(store1);
+                CallCreateSampleDatabaseEndpoint(store2);
 
                 await SetupReplicationAsync(store1, store2);
 
