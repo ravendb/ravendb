@@ -486,39 +486,31 @@ namespace Corax
             Init();
         }
 
-        public long Index(string key, ReadOnlySpan<byte> data, float documentBoost)
-        {
-            return Index(Encoding.UTF8.GetBytes(key), data, documentBoost);
-        }
-
-        public long Index(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data, float documentBoost)
-        {
-            var idInTree = Index(key, data);
-            AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost);
-            return idInTree;
-        }
-
         public class IndexEntryBuilder : IDisposable
         {
-            private IndexWriter _parent;
+            private readonly IndexWriter _parent;
             private long _entryId;
-            private ByteStringContext _context;
             public bool Active;
             public bool IsEmpty => Fields > 0;
             public int Fields;
+            private bool _isUpdate;
 
             public IndexEntryBuilder(IndexWriter parent)
             {
                 _parent = parent;
-                _context = new ByteStringContext(SharedMultipleUseFlag.None);
             }
 
-            public void Init(long entryId)
+            public void Boost(float boost)
+            {
+                _parent.AppendDocumentBoost(_entryId, boost, _isUpdate);
+            }
+
+            public void Init(long entryId, bool isUpdate)
             {
                 Active = true;
                 Fields = 0;
+                _isUpdate = isUpdate;
                 _entryId = entryId;
-                _context.Reset();
             }
 
             public void Dispose()
@@ -535,7 +527,9 @@ namespace Corax
             {
                 Fields++;
 
-                var field = fieldId != Constants.IndexWriter.DynamicField ? _parent._knownFieldsTerms[fieldId] : _parent.GetDynamicIndexedField(_context, path);
+                var field = fieldId != Constants.IndexWriter.DynamicField
+                    ? _parent._knownFieldsTerms[fieldId]
+                    : _parent.GetDynamicIndexedField(_parent._entriesAllocator, path);
                 return field;
             }
 
@@ -575,14 +569,14 @@ namespace Corax
 
             ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
             {
-                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_context, value, out var slice);
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_context, value.Length);
+                    term = new EntriesModifications(_parent._entriesAllocator, value.Length);
                     scope = null; // We don't want the fieldname (slice) to be returned.
                 }
 
@@ -592,8 +586,23 @@ namespace Corax
                     _parent.AddSuggestions(field, slice);
 
                 scope?.Dispose();
-
+                
                 return ref term;
+            }
+            
+            void NumericInsert(IndexedField field, long lVal, double dVal)
+            {
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
+                if (fieldDoublesExist == false)
+                    doublesTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(double));
+                doublesTerms.Addition(_entryId);
+
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
+                if (fieldLongExist == false)
+                    longsTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(long));
+                longsTerms.Addition(_entryId);
             }
 
             private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -610,7 +619,6 @@ namespace Corax
 
             internal void Clean()
             {
-                _context.Dispose();
             }
 
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
@@ -622,7 +630,11 @@ namespace Corax
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
             {
                 var field = GetField(fieldId, path);
-                Insert(field, value);
+                ref var term = ref ExactInsert(field, value);
+                term.Long = longValue;
+                term.Double = dblValue;
+                NumericInsert(field, longValue, dblValue);
+                
             }
 
             public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
@@ -631,7 +643,7 @@ namespace Corax
                 RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
 
                 var maxLen = Encoding.UTF8.GetMaxByteCount(path.Length);
-                using var _ = _context.Allocate(maxLen, out var buffer);
+                using var _ = _parent._entriesAllocator.Allocate(maxLen, out var buffer);
                 var len = Encoding.UTF8.GetBytes(entry.Geohash, buffer.ToSpan());
                 for (int i = 1; i <= entry.Geohash.Length; ++i)
                 {
@@ -642,13 +654,13 @@ namespace Corax
             public void Store(BlittableJsonReaderObject storedValue)
             {
                 var field = _parent._knownFieldsTerms[^1];
-                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.None);
+                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
-            public void Store(int fieldId, string name, ReadOnlySpan<byte> storedValue)
+            public void Store(int fieldId, string name, BlittableJsonReaderObject storedValue)
             {
                 var field = GetField(fieldId, name);
-                RegisterTerm(field.Name, storedValue, StoredFieldType.Raw);
+                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
 
@@ -678,10 +690,20 @@ namespace Corax
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
             RegisterForDeletionByKey(key);
-            return Index(key); 
+            long entryId = InitBuilder(key);
+            _builder.Init(entryId, isUpdate: true);
+            return _builder;
+ 
         }
 
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
+        {
+            long entryId = InitBuilder(key);
+            _builder.Init(entryId, isUpdate: false);
+            return _builder;
+        }
+
+        private long InitBuilder(ReadOnlySpan<byte> key)
         {
             if (_builder.Active)
                 throw new NotSupportedException("You *must* dispose the previous builder before calling it again");
@@ -689,9 +711,7 @@ namespace Corax
             _numberOfModifications++;
             var entryId = ++_lastEntryId;
             RegisterEntryByKey(key, entryId);
-            
-            _builder.Init(entryId);
-            return _builder;
+            return entryId;
         }
 
         public long Index(string key, ReadOnlySpan<byte> data)

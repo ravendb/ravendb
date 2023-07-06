@@ -43,21 +43,14 @@ public class RawCoraxFlag : StorageTest
         {
             
             using var writer = new IndexWriter(Env, _analyzers);
-            var entry = new IndexEntryWriter(bsc, _analyzers);
             writer.UpdateDynamicFieldsMapping(IndexFieldsMappingBuilder.CreateForWriter(true)
                 .AddDynamicBinding(dynamicSlice,FieldIndexingMode.No, true)
                 .Build());
             foreach (var (id, item) in new[] {("1", blittable1), ("2", blittable2)})
-            {                
-                entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
-                using (var scope = new BlittableWriterScope(item))
-                {
-                    Assert.Fail("implement me");
-                    //scope.Write("Dynamic", Constants.IndexWriter.DynamicField, ref entry);
-                }
-
-                using var _ = entry.Finish(out var output);                
-                writer.Index(id,output.ToSpan());
+            {
+                using var builder = writer.Index(Encodings.Utf8.GetBytes(id));
+                builder.Write(IndexId, null, Encodings.Utf8.GetBytes(id));
+                builder.Store(Constants.IndexWriter.DynamicField, "Dynamic", item);
             }
 
             writer.PrepareAndCommit();
@@ -111,19 +104,12 @@ public class RawCoraxFlag : StorageTest
         {
             
             using var writer = new IndexWriter(Env, _analyzers);
-            var entry = new IndexEntryWriter(bsc, _analyzers);
 
             foreach (var (id, item) in new[] {("1", blittable1), ("2", blittable2)})
-            {                
-                entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
-                using (var scope = new BlittableWriterScope(item))
-                {
-                    Assert.Fail("implement me");
-                 //   scope.Write(string.Empty, ContentId, ref entry);
-                }
-
-                using var _ = entry.Finish(out var output);                
-                writer.Index(id, output.ToSpan());
+            {
+                using var builder = writer.Index(Encodings.Utf8.GetBytes(id));
+                builder.Write(IndexId, null, Encodings.Utf8.GetBytes(id));
+                builder.Store(item);
             }
 
             writer.PrepareAndCommit();

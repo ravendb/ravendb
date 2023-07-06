@@ -386,15 +386,16 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
 
             using var indexWriter = new IndexWriter(Env, knownFields);
-            var entryWriter = new IndexEntryWriter(bsc, knownFields);
 
             foreach (var entry in longList)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                if (entry.Boost.HasValue == false)
-                    indexWriter.Index(entry.Id,data.ToSpan());
-                else
-                    indexWriter.Index(entry.Id,data.ToSpan(), entry.Boost.Value);
+                using var builder = indexWriter.Index(Encoding.UTF8.GetBytes(entry.Id));
+                builder.Write(IndexId, null, Encoding.UTF8.GetBytes(entry.Id));
+                builder.Write(Content1, null, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
+                builder.Write(Content2, null, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
+
+                if (entry.Boost.HasValue)
+                    builder.Boost(entry.Boost.Value);
             }
 
             indexWriter.PrepareAndCommit();

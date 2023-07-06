@@ -152,24 +152,16 @@ public class DeleteTest : StorageTest
     private void IndexEntries(IndexFieldsMapping knownFields)
     {
         using var indexWriter = new IndexWriter(Env, knownFields);
-        var entryWriter = new IndexEntryWriter(_bsc, knownFields);
 
         foreach (var entry in _longList)
         {
-            using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id,data.ToSpan());
+            using var builder = indexWriter.Index(Encoding.UTF8.GetBytes(entry.Id));
+            builder.Write(IndexId, null, Encoding.UTF8.GetBytes(entry.Id));
+            builder.Write(ContentId, null, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
         }
 
         indexWriter.PrepareAndCommit();
         knownFields.Dispose();
-    }
-
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-        ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry, out ByteString output)
-    {
-        entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-        entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
-        return entryWriter.Finish(out output);
     }
 
     private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)

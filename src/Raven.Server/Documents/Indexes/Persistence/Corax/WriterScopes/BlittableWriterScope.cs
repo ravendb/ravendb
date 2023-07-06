@@ -19,12 +19,12 @@ public struct BlittableWriterScope : IDisposable
     {
         if (_reader.HasParent == false)
         {
-            writer.Store(field, path, new Span<byte>(_reader.BasePointer, _reader.Size));
+            writer.Store(field, path, _reader);
         }
         else
         {
             using var clonedBlittable = _reader.CloneOnTheSameContext();
-            writer.Store(field, path, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
+            writer.Store(field, path, clonedBlittable);
         }
     }
 
