@@ -20,6 +20,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -132,7 +133,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/revisions/config/enforce", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task EnforceConfigRevisions()
         {
-            var token = CreateTimeLimitedOperationToken();
+            var token = new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             var t = Database.Operations.AddOperation(
@@ -191,7 +192,7 @@ namespace Raven.Server.Documents.Handlers
             
             HashSet<string> collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
 
-            var token = CreateTimeLimitedOperationToken();
+            var token = new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             var t = Database.Operations.AddOperation(

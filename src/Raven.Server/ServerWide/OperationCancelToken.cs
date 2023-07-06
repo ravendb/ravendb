@@ -15,19 +15,19 @@ namespace Raven.Server.ServerWide
 
         public readonly CancellationToken Token;
 
-        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken shutdown, CancellationToken requestAborted)
+        public OperationCancelToken(TimeSpan cancelAfter, params CancellationToken[] tokens)
         {
             if (cancelAfter != Timeout.InfiniteTimeSpan && cancelAfter < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(cancelAfter));
 
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(shutdown, requestAborted);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(tokens);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
             _cts.CancelAfter(cancelAfter);
         }
 
-        public OperationCancelToken(CancellationToken shutdown, CancellationToken requestAborted)
-            : this(Timeout.InfiniteTimeSpan, shutdown, requestAborted)
+        public OperationCancelToken(params CancellationToken[] tokens)
+            : this(Timeout.InfiniteTimeSpan, tokens)
         {
         }
 

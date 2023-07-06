@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.Handlers
                 Operations.Operations.OperationType operationType)
         {
             var options = GetQueryOperationOptions();
-            var token = CreateTimeLimitedQueryOperationToken();
+            var token = new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
 
             var operationId = Database.Operations.GetNextOperationId();
 
