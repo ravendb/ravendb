@@ -18,6 +18,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
@@ -122,34 +123,44 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected OperationCancelToken CreateTimeLimitedOperationToken()
+        protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return CreateHttpRequestBoundTimeLimitedOperationToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan);
         }
 
-        protected OperationCancelToken CreateTimeLimitedQueryToken()
+        protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return CreateHttpRequestBoundTimeLimitedOperationToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan);
         }
 
-        protected OperationCancelToken CreateTimeLimitedCollectionOperationToken()
+        protected override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
-            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected OperationCancelToken CreateTimeLimitedQueryOperationToken()
-        {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
-        }
-
-        protected override OperationCancelToken CreateOperationToken()
+        protected override OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
             return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation()
         {
-            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForCollectionOperation()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationToken()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+        
+        protected override OperationCancelToken CreateBackgroundOperationToken()
+        {
+            return new OperationCancelToken(Database.DatabaseShutdown);
         }
 
         protected bool ShouldAddPagingPerformanceHint(long numberOfResults)

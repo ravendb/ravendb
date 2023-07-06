@@ -126,7 +126,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 ApplyBackwardCompatibility(options);
 
-                var token = CreateOperationToken();
+                var token = CreateHttpRequestBoundOperationToken();
 
                 var fileName = options.FileName;
                 if (string.IsNullOrEmpty(fileName))
@@ -239,7 +239,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
 
                 await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                using (var token = CreateOperationToken())
+                using (var token = CreateHttpRequestBoundOperationToken())
                 using (var source = new StreamSource(stream, context, Database))
                 {
                     var destination = new DatabaseDestination(Database);
@@ -561,7 +561,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                var token = new OperationCancelToken(Database.DatabaseShutdown);
+                var token = CreateBackgroundOperationToken();
                 var transformScript = migrationConfiguration.TransformScript;
 
                 var t = Database.Operations.AddOperation(Database, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
@@ -662,7 +662,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                var token = CreateOperationToken();
+                var token = CreateHttpRequestBoundOperationToken();
 
                 var result = new SmugglerResult();
                 await Database.Operations.AddOperation(Database, "Import to: " + Database.Name,
@@ -826,7 +826,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
-                var token = CreateOperationToken();
+                var token = CreateHttpRequestBoundOperationToken();
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var collection = GetStringQueryString("collection", false);

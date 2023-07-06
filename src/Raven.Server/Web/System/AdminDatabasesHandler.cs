@@ -599,7 +599,7 @@ namespace Raven.Server.Web.System
                     restoreType = RestoreType.Local;
                 }
                 var operationId = ServerStore.Operations.GetNextOperationId();
-                var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                var cancelToken = CreateBackgroundOperationToken();
                 RestoreBackupTaskBase restoreBackupTask;
                 switch (restoreType)
                 {
@@ -1090,7 +1090,7 @@ namespace Raven.Server.Web.System
 
                 var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
 
-                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var token = CreateBackgroundOperationToken();
                 var compactDatabaseTask = new CompactDatabaseTask(
                     ServerStore,
                     compactSettings.DatabaseName,
