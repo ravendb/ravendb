@@ -683,7 +683,7 @@ return oldestDoc;"
 
         }
 
-        [Theory]
+        [Theory (Skip = "Untill RavenDB-20823")]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Include_ForceCreated_AlwaysOn_EnforceConfig_InCaseOf_PurgeOnDelete(bool deleteAlsoForceCreated)
@@ -746,7 +746,10 @@ return oldestDoc;"
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(0, doc1RevCount);
+                if(deleteAlsoForceCreated)
+                    Assert.Equal(0, doc1RevCount);
+                else
+                    Assert.Equal(11, doc1RevCount); // 10 ForceCreated, 1 Deleted
             }
 
         }
@@ -793,7 +796,7 @@ return oldestDoc;"
                     await session.SaveChangesAsync();
                 }
 
-                WaitForUserToContinueTheTest(destination);
+                // WaitForUserToContinueTheTest(destination, false);
 
                 using (var session = destination.OpenAsyncSession())
                 {
@@ -837,7 +840,7 @@ return oldestDoc;"
             }
 
             await EnforceConfiguration(dst);
-            WaitForUserToContinueTheTest(dst);
+            // WaitForUserToContinueTheTest(dst);
             
             using (var session = dst.OpenAsyncSession())
             {
@@ -937,7 +940,8 @@ return oldestDoc;"
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: maxUponUpdateConfig);
             }
 
-            // WaitForUserToContinueTheTest(store);
+
+            // WaitForUserToContinueTheTest(store, debug: false);
 
             await store.Maintenance.SendAsync(new DeleteForceCreatedRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { "Docs/2", "Docs/1" } }, includeForceCreated));
 

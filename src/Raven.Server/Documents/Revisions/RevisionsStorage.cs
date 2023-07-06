@@ -658,23 +658,23 @@ namespace Raven.Server.Documents.Revisions
 
 
             IEnumerable<Document> revisionsToDelete;
-            if (documentDeleted && configuration.PurgeOnDelete) // doc is deleted or came from delete *and* configuration.PurgeOnDelete is true
-            {
-                revisionsToDelete = GetAllRevisions(context, table, prefixSlice,
-                    maxDeletesUponUpdate: null, false, result);
-            }
-            else if (configuration == ConflictConfiguration.Default
+
+            if (configuration == ConflictConfiguration.Default
                      || configuration == ZeroConfiguration) // conflict revisions config
             {
                 revisionsToDelete = GetRevisionsForConflict(context, table, prefixSlice,
-                    nonPersistentFlags, skipForceCreated, revisionsCount, result);
+                    nonPersistentFlags, skipForceCreated, revisionsCount, documentDeleted, result);
+            }
+            else if (documentDeleted && configuration.PurgeOnDelete) // doc is deleted or came from delete *and* configuration.PurgeOnDelete is true
+            {
+                revisionsToDelete = GetAllRevisions(context, table, prefixSlice,
+                    maxDeletesUponUpdate: null, false, result);
             }
             else
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, prefixSlice,
                     configuration, revisionsCount, result);
             }
-
 
             var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete);
 
@@ -927,25 +927,24 @@ namespace Raven.Server.Documents.Revisions
 
         private class ConflictedRevisionsDeletionState
         {
-            private readonly RevisionsCollectionConfiguration _config;
-            private readonly long _conflictCount;
-            private readonly long _regularCount;
+            private readonly RevisionsCollectionConfiguration _config; // conflict revisions config
+            private readonly long _conflictCount; // conflict revisions count before the delete
+            private readonly long _regularCount;  // not-conflict revisions count before the delete
 
-            private long _regularDeletedCount = 0;
-            private long _conflictDeletedCount = 0;
-            public long DeletedCount => _regularDeletedCount + _conflictDeletedCount;
-
+            private long _regularDeletedCount = 0; // count of not-conflict deleted revisions
+            private long _conflictDeletedCount = 0; // count of conflict deleted revisions
             private long _skippedForceCreated = 0;
-
+            public long DeletedCount => _regularDeletedCount + _conflictDeletedCount;
             public bool FinishedRegular { get; private set; }
             public bool FinishedConflicted { get; private set; }
 
             private readonly bool _skipForceCreated;
             private readonly DateTime _databaseTime;
+            private readonly long? _minimumConflictRevisionsToKeep;
 
-            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount, RevisionsCollectionConfiguration conflictConfig,
-                HandleConflictRevisionsFlags handlingFlags,
-                DateTime databaseTime)
+            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount, 
+                RevisionsCollectionConfiguration conflictConfig, HandleConflictRevisionsFlags handlingFlags,
+                DateTime databaseTime, bool documentDeleted)
             {
                 ValidateFlags(handlingFlags);
 
@@ -957,7 +956,21 @@ namespace Raven.Server.Documents.Revisions
                 _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated)==false;
 
                 FinishedRegular = handlingFlags.HasFlag(HandleConflictRevisionsFlags.Regular) == false || AllRegularAreDeleted();
-                FinishedConflicted = ConflictedReachedMinimumToKeep();
+
+                if (documentDeleted && _config.PurgeOnDelete)
+                {
+                    _minimumConflictRevisionsToKeep = 0L;
+                    FinishedConflicted = ConflictedReachedMinimumToKeep();
+                }
+                else if(_config.MinimumRevisionsToKeep.HasValue==false && _config.MinimumRevisionAgeToKeep.HasValue==false)
+                {
+                    FinishedConflicted = true;
+                }
+                else
+                {
+                    _minimumConflictRevisionsToKeep = _config.MinimumRevisionsToKeep;
+                    FinishedConflicted = ConflictedReachedMinimumToKeep();
+                }
             }
 
             void ValidateFlags(HandleConflictRevisionsFlags flags)
@@ -971,21 +984,37 @@ namespace Raven.Server.Documents.Revisions
             public bool ReachedMaximumRevisionsToDeleteUponDocumentUpdate() => 
                     _config.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue &&
                         _config.MaximumRevisionsToDeleteUponDocumentUpdate.Value <= DeletedCount;
-            
-            public bool ShouldDeleteConflicted(DateTime revisionLastModified)
+
+            public bool ShouldDelete(Document revision)
             {
+                if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
+                {
+                    if (ShouldDeleteConflicted(revision.LastModified, revision.Flags) == false)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (ShouldDeleteNonConflicted(revision.Flags) == false)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            private bool ShouldDeleteConflicted(DateTime revisionLastModified, DocumentFlags revisionFlags)
+            {
+
                 if (FinishedConflicted)
                     return false;
 
-                if (_config.MinimumRevisionAgeToKeep.HasValue)
+                if (ConflictedReachedAge(revisionLastModified))
                 {
-                    var revLastModify = revisionLastModified;
-                    var diff = _databaseTime - revLastModify;
-                    if (diff <= _config.MinimumRevisionAgeToKeep.Value) // reached not out of date
-                    {
-                        FinishedConflicted = true;
-                        return false;
-                    }
+                    FinishedConflicted = true;
+                    return false;
                 }
 
                 _conflictDeletedCount++;
@@ -993,14 +1022,14 @@ namespace Raven.Server.Documents.Revisions
                 return true;
             }
 
-            public bool ShouldDeleteNonConflicted(bool revisionIsForceCreated)
+            private bool ShouldDeleteNonConflicted( DocumentFlags revisionFlags)
             {
+
                 if (FinishedRegular)
                 {
                     return false;
                 }
-
-                if (revisionIsForceCreated && _skipForceCreated)
+                if (_skipForceCreated && revisionFlags.Contain(DocumentFlags.ForceCreated))
                 {
                     _skippedForceCreated++;
                     FinishedRegular |= AllRegularAreDeleted();
@@ -1013,7 +1042,21 @@ namespace Raven.Server.Documents.Revisions
             }
 
             private bool AllRegularAreDeleted() => _regularCount - (_regularDeletedCount + _skippedForceCreated) == 0;
-            private bool ConflictedReachedMinimumToKeep() => _config.MinimumRevisionsToKeep.HasValue && _conflictCount - _conflictDeletedCount <= _config.MinimumRevisionsToKeep.Value;
+
+            private bool ConflictedReachedMinimumToKeep() => _minimumConflictRevisionsToKeep.HasValue && _conflictCount - _conflictDeletedCount <= _minimumConflictRevisionsToKeep.Value;
+
+            private bool ConflictedReachedAge(DateTime revLastModify)
+            {
+                if (_config.MinimumRevisionAgeToKeep.HasValue)
+                {
+                    var diff = _databaseTime - revLastModify;
+                    if (diff <= _config.MinimumRevisionAgeToKeep.Value) // reached not out of date
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
         [Flags]
@@ -1027,10 +1070,10 @@ namespace Raven.Server.Documents.Revisions
 
         private IEnumerable<Document> GetRevisionsForConflict(
             DocumentsOperationContext context, Table table, Slice prefixSlice,
-            NonPersistentDocumentFlags nonPersistentFlags, bool skipForceCreated, long revisionCount,
+            NonPersistentDocumentFlags nonPersistentFlags, bool skipForceCreated, long revisionCount, bool documentDeleted,
             DeleteOldRevisionsResult result)
         {
-            HandleConflictRevisionsFlags handlingFlags = HandleConflictRevisionsFlags.Conflicted;
+            var handlingFlags = HandleConflictRevisionsFlags.Conflicted;
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
             {
                 handlingFlags |= HandleConflictRevisionsFlags.Regular;
@@ -1042,9 +1085,9 @@ namespace Raven.Server.Documents.Revisions
 
 
             var conflictRevisionsCount = GetConflictRevisionsCount(context, table, prefixSlice);
+
             var state = new ConflictedRevisionsDeletionState(revisionCount, conflictRevisionsCount, ConflictConfiguration.Default,
-                handlingFlags,
-                databaseTime);
+                handlingFlags, databaseTime, documentDeleted);
 
             result.HasMore = false;
             var skip = 0;
@@ -1068,24 +1111,11 @@ namespace Raven.Server.Documents.Revisions
                     var tvr = read.Result.Reader;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
-                    if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
+                    if (state.ShouldDelete(revision) == false)
                     {
-                        if (state.ShouldDeleteConflicted(revision.LastModified) == false)
-                        {
-                            revision.Dispose();
-                            skip++;
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        var revisionIsForceCreated = revision.Flags.Contain(DocumentFlags.ForceCreated);
-                        if (state.ShouldDeleteNonConflicted(revisionIsForceCreated) == false)
-                        {
-                            revision.Dispose();
-                            skip++;
-                            continue;
-                        }
+                        revision.Dispose();
+                        skip++;
+                        continue;
                     }
 
                     yield return revision;
@@ -1103,19 +1133,20 @@ namespace Raven.Server.Documents.Revisions
         private long GetConflictRevisionsCount(
             DocumentsOperationContext context, Table table, Slice prefixSlice)
         {
-            long count = 0;
+            long conflictCount = 0;
             foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
             {
                 var tvr = read.Result.Reader;
                 using (var revision = TableValueToRevision(context, ref tvr, DocumentFields.Default))
                 {
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
-                        count++;
+                        conflictCount++;
                 }
             }
         
-            return count;
+            return conflictCount;
         }
+
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
             long? maxDeletesUponUpdate, bool skipForceCreated, DeleteOldRevisionsResult result)
