@@ -1154,8 +1154,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                var sourceDbName = options.DatabaseMode == RavenDatabaseMode.Single ? source.Database : await Sharding.GetShardDatabaseNameForDocAsync(source, "FoObAr/0");
-                var sourceDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(sourceDbName);
+                var sourceDb = await GetDocumentDatabaseInstanceForAsync(source, options.DatabaseMode, "FoObAr/0");
                 sourceDb.Configuration.Replication.RetryMaxTimeout = new TimeSetting((long)TimeSpan.FromMinutes(15).TotalMilliseconds, TimeUnit.Minutes);
                 sourceDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = (o) =>
                 {

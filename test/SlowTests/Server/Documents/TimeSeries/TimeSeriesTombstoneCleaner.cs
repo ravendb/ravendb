@@ -61,9 +61,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -146,8 +144,7 @@ namespace SlowTests.Server.Documents.TimeSeries
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "user/322");
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -182,8 +179,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     tsCount1 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
                 }
 
-                var dbName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "user/322");
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
 
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
@@ -239,8 +235,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -433,8 +428,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     }
                 }
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, id);
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, id);
                 var cleaner = storage.TombstoneCleaner;
 
                 await SetupReplicationAsync(store1, store2);

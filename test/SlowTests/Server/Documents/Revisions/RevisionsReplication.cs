@@ -293,8 +293,8 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
+                var dbName = db.Name;
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -397,9 +397,7 @@ namespace SlowTests.Server.Documents.Revisions
 
         private async Task AssertRevisionBin(IDocumentStore store, RavenDatabaseMode mode)
         {
-            var dbName = mode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "foo/bar");
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-
+            var db = await GetDocumentDatabaseInstanceForAsync(store, mode, "foo/bar");
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
@@ -556,12 +554,9 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1-A");
-                var dbName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "users/1-A");
-
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
-                var database2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2);
-
+                var database = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1-A");
+                var database2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "users/1-A");
+               
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
@@ -910,8 +905,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 foreach (var store in new[] { store1, store2 })
                 {
-                    var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/1-A");
-                    var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                    var documentDatabase = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1-A");
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -965,9 +959,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 WaitForMarker(store1, store2, $"marker/{Guid.NewGuid()}$foo/bar");
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-
+                var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 EnforceConfigurationResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
