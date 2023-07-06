@@ -463,7 +463,7 @@ namespace Raven.Server.Web.System
                 try
                 {
                     var operationId = ServerStore.Operations.GetNextOperationId();
-                    var cancelToken = CreateOperationToken();
+                    var cancelToken = new OperationCancelToken(Database.DatabaseShutdown);
                     var backupParameters = new BackupParameters
                     {
                         RetentionPolicy = null,

@@ -331,7 +331,7 @@ namespace Raven.Server.Web.Studio
         {
             var collectionName = GetStringQueryString("name");
 
-            var token = CreateTimeLimitedCollectionOperationToken();
+            var token = new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
 
             var collectionRunner = new StudioCollectionRunner(Database, docsContext, excludeIds);
 
