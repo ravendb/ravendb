@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
@@ -20,7 +19,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task ReduceOutputShouldNotBeReplicated()
         {
             var date = new DateTime(2017, 2, 14);
@@ -63,7 +62,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
-                var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices"}));
+                var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices" }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 using (var session = store1.OpenAsyncSession())
                 {
