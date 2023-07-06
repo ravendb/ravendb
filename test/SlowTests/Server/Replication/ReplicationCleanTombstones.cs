@@ -18,7 +18,6 @@ using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -43,9 +42,7 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
-                    ? store1.Database
-                    : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar"));
+                var storage1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
 
                 using (var session = store1.OpenSession())
                 {
@@ -547,10 +544,8 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-                var databaseName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, id);
-                var databaseName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, id);
-                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName1);
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName2);
+                var storage1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, id);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, id);
 
                 using (var session = store1.OpenSession())
                 {
@@ -596,7 +591,7 @@ namespace SlowTests.Server.Replication
 
                 var val = await WaitForValueAsync(() =>
                 {
-                    var state = ReplicationLoader.GetExternalReplicationState(Server.ServerStore, databaseName1, results[0].TaskId);
+                    var state = ReplicationLoader.GetExternalReplicationState(Server.ServerStore, storage1.Name, results[0].TaskId);
                     return state.LastSentEtag;
                 }, 7);
 
@@ -627,10 +622,8 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-                var databaseName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, id);
-                var databaseName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, id);
-                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName1);
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName2);
+                var storage1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, id);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, id);
 
                 using (var session = store1.OpenSession())
                 {
@@ -690,9 +683,7 @@ namespace SlowTests.Server.Replication
         {
             using (var store = GetDocumentStore(options))
             {
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
-                    ? store.Database
-                    : await Sharding.GetShardDatabaseNameForDocAsync(store, "foo/bar"));
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "foo/bar");
                 await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
@@ -762,9 +753,7 @@ namespace SlowTests.Server.Replication
         {
             using (var store = GetDocumentStore(options))
             {
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
-                    ? store.Database
-                    : await Sharding.GetShardDatabaseNameForDocAsync(store, "foo/bar"));
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "foo/bar");
 
                 using (var session = store.OpenSession())
                 {
@@ -877,9 +866,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(1, stats.CountOfDocuments); // the marker
                     Assert.Equal(2, stats.CountOfTombstones);
 
-                    var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
-                        ? databaseName
-                        : await Sharding.GetShardDatabaseNameForDocAsync(store, id));
+                    var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, id); ;
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {

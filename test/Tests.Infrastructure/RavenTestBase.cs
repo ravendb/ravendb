@@ -74,6 +74,12 @@ namespace FastTests
             return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
+        protected virtual async ValueTask<DocumentDatabase> GetDocumentDatabaseInstanceForAsync(IDocumentStore store, RavenDatabaseMode mode, string id)
+        {
+            var database = mode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, id);
+            return await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+        }
+
         protected virtual async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null)
         {
             var dbRecord = record ?? await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
