@@ -256,12 +256,6 @@ namespace FastTests
 
         public IEnumerable<RavenServer> GetServersInCluster(RavenServer server)
         {
-            if (Servers.Count == 0)
-            {
-                yield return server;
-                yield break;
-            }
-
             var topology = server.ServerStore.GetClusterTopology().TopologyId;
             foreach (var s in Servers)
             {
@@ -593,7 +587,7 @@ namespace FastTests
 
         protected string[] GetUrls(RavenServer serverToUse, bool disableTopologyUpdates = false)
         {
-            if (disableTopologyUpdates)
+            if (disableTopologyUpdates || Servers.Count == 0 || Servers.Contains(serverToUse) == false)
                 return UseFiddler(serverToUse.WebUrl);
 
             return GetServersInCluster(serverToUse).Select(s => UseFiddlerUrl(s.WebUrl)).ToArray();

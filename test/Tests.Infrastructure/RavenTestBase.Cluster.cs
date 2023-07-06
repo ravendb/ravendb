@@ -211,12 +211,12 @@ public partial class RavenTestBase
             return sb.ToString();
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterAsync(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, nodes ?? _parent.Servers, timeout);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInClusterAsync(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(long index, TimeSpan? timeout = null, List<RavenServer> nodes = null)
         {
             var servers = nodes ?? _parent.Servers;
             var notDisposed = servers.Count(s => s.ServerStore.Disposed == false);

@@ -234,7 +234,10 @@ namespace FastTests
                     };
 
                     options.ModifyDocumentStore?.Invoke(store);
-                    store.Urls = GetUrls(serverToUse, store.Conventions.DisableTopologyUpdates);
+                    if (store.Urls.Length == 0)
+                    {
+                        store.Urls = GetUrls(serverToUse, store.Conventions.DisableTopologyUpdates);
+                    }
 
                     store.Initialize();
 
@@ -261,7 +264,7 @@ namespace FastTests
                         if (servers.Count > 1)
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(raftCommand, timeout, servers));
+                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout, servers));
                         }
 
                         // skip 'wait for requests' on DocumentDatabase dispose
@@ -295,7 +298,7 @@ namespace FastTests
                             if (servers.Count > 1 && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
-                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsyncWithoutValidation(result.RaftCommandIndex, timeout, servers));
+                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, timeout, servers));
                             }
                         }
                         catch (Exception e)
