@@ -1076,7 +1076,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class Visitor
+        private class Visitor
         {
             public string Id { get; set; }
             public Dictionary<int, int> DictionaryOfIntegers { get; set; }
@@ -1085,14 +1085,14 @@ namespace SlowTests.MailingList
             public Dictionary<int, int> DictionaryOfIntegersToExcept { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public Dictionary<DateTime, int> LoginCountByDate { get; set; }
             public List<decimal> ListOfDecimals { get; set; }
         }
 
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
             public Dictionary<DateTime, int> LoginCountByDate { get; set; }

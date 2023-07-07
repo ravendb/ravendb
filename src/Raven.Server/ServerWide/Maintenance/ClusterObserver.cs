@@ -606,13 +606,19 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (state != null)
             {
-                if (state.DatabaseTopology.Count != state.Current.Count) // we have a state change, do not remove anything
-                    return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-
-                foreach (var node in state.DatabaseTopology.AllNodes)
+                // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
-                    if (state.Current.TryGetValue(node, out var nodeReport) == false)
-                        continue;
+                    if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                }
+
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
+                {
+                    var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
+                    Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    if (hasState == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
                     if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
                         continue;

@@ -771,7 +771,7 @@ namespace SlowTests.Server.Replication
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
-        public class User
+        private class User
         {
             public string Id;
             public string Name;
