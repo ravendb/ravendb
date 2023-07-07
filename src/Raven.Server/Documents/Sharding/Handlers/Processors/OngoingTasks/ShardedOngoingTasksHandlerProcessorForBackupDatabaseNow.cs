@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? _)
         {
-            var token = new OperationCancelToken(RequestHandler.DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, RequestHandler.DatabaseContext.DatabaseShutdown);
+            var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
 
             var startTime = SystemTime.UtcNow;
             var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult, ShardedBackupProgress>(operationId,

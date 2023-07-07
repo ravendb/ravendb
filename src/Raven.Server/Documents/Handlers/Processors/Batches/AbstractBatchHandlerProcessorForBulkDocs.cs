@@ -43,7 +43,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
         using (var commandsReader = GetCommandsReader())
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var contentType = HttpContext.Request.ContentType;
             try

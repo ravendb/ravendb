@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             await ServerStore.Cluster.WaitForIndexNotification(index);
 
-            using (var cts = CreateOperationToken())
+            using (var cts = CreateHttpRequestBoundOperationToken())
             {
                 await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, cts.Token);
 
@@ -114,27 +114,44 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public override OperationCancelToken CreateOperationToken()
+        public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+            return CreateHttpRequestBoundTimeLimitedOperationToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan);
         }
 
-        public override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
+        {
+            return CreateHttpRequestBoundTimeLimitedOperationToken(DatabaseContext.Configuration.Databases.QueryTimeout.AsTimeSpan);
+        }
+
+        public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
             return new OperationCancelToken(cancelAfter, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        public override OperationCancelToken CreateTimeLimitedOperationToken(bool useRequestAbortedToken = true)
+        public override OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
-            if (useRequestAbortedToken) 
-                return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
-            return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown);
-
+            return new OperationCancelToken(DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        public override OperationCancelToken CreateTimeLimitedQueryToken()
+        public override OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation()
         {
-            return new OperationCancelToken(DatabaseContext.Configuration.Databases.QueryTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(DatabaseContext.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown);
+        }
+
+        public override OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForCollectionOperation()
+        {
+            return new OperationCancelToken(DatabaseContext.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown);
+        }
+
+        public override OperationCancelToken CreateTimeLimitedBackgroundOperationToken()
+        {
+            return new OperationCancelToken(DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, DatabaseContext.DatabaseShutdown);
+        }
+
+        public override OperationCancelToken CreateBackgroundOperationToken()
+        {
+            return new OperationCancelToken(DatabaseContext.DatabaseShutdown);
         }
 
         public override string DatabaseName => DatabaseContext.DatabaseName;

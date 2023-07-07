@@ -32,8 +32,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             }
 
             var operationId = RequestHandler.Database.Operations.GetNextOperationId();
-            var token = new OperationCancelToken(RequestHandler.Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan,
-                RequestHandler.Database.DatabaseShutdown);
+            var token = RequestHandler.CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
 
             _ = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,

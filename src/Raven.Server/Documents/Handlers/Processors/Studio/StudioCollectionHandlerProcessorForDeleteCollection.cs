@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             DocumentsOperationContext docsContext, IDisposable returnToContextPool, OperationType operationType, string collectionName, long operationId,
             HashSet<string> excludeIds)
         {
-            var token = new OperationCancelToken(RequestHandler.Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, RequestHandler.Database.DatabaseShutdown);
+            var token = RequestHandler.CreateTimeLimitedBackgroundOperationTokenForCollectionOperation();
 
             var collectionRunner = new StudioCollectionRunner(RequestHandler.Database, docsContext, excludeIds);
 

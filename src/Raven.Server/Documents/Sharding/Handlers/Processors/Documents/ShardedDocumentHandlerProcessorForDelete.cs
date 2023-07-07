@@ -21,7 +21,7 @@ internal class ShardedDocumentHandlerProcessorForDelete : AbstractDocumentHandle
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand(command, HttpContext.Response);
 

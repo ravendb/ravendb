@@ -20,7 +20,7 @@ internal class ShardedDocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand<PatchResult>(command, HttpContext.Response);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 
         protected override async Task GetNoContentStatusAsync()
         {
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new GetShardedDatabaseHealthCheckOperation(RequestHandler.HttpContext.Request), token.Token);
             }

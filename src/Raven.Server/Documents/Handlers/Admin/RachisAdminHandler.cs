@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 if (nodeTag == ServerStore.Engine.Tag)
                 {
-                    using (var token = CreateOperationToken())
+                    using (var token = CreateHttpRequestBoundOperationToken())
                     {
                         // cannot remove the leader, let's change the leader
                         ServerStore.Engine.CurrentLeader?.StepDown();

@@ -9,7 +9,7 @@ public class ShardedBulkInsertHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/bulk_insert", "POST")]
     public async Task BulkInsert()
     {
-        var operationCancelToken = CreateOperationToken();
+        var operationCancelToken = CreateHttpRequestBoundOperationToken();
         var id = GetLongQueryString("id");
         var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 

@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
             var sw = Stopwatch.StartNew();
             long numberOfResults, totalDocumentsSizeInBytes;
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 (numberOfResults, totalDocumentsSizeInBytes) = await GetCollectionDocumentsAndWriteAsync(context, name, start, pageSize, token.Token);
             }

@@ -500,7 +500,7 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
 
             if (operationId.HasValue == false)
@@ -555,7 +555,7 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
 
             if (operationId.HasValue == false)
@@ -619,7 +619,7 @@ namespace Raven.Server.Web.System
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
 
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
 
             if (operationId.HasValue == false)
@@ -740,7 +740,7 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
 
             if (operationId.HasValue == false)
@@ -770,7 +770,7 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
 
             if (operationId.HasValue == false)

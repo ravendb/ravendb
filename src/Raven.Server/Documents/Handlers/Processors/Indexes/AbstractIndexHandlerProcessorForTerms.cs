@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 
         public override async ValueTask ExecuteAsync()
         {
-            using (var token = RequestHandler.CreateTimeLimitedOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var field = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");

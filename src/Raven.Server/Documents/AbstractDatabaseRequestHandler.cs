@@ -16,9 +16,15 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 
     public abstract char IdentityPartsSeparator { get; }
 
-    public abstract OperationCancelToken CreateTimeLimitedOperationToken(bool useRequestAbortedToken = true);
+    public abstract OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken();
 
-    public abstract OperationCancelToken CreateTimeLimitedQueryToken();
+    public abstract OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
+
+    public abstract OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
+
+    public abstract OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForCollectionOperation();
+
+    public abstract OperationCancelToken CreateTimeLimitedBackgroundOperationToken();
 
     public JsonContextPoolBase<TOperationContext> ContextPool;
 

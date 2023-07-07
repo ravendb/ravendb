@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         }
         protected override async ValueTask<BucketInfo> GetBucketInfo(TransactionOperationContext context, int bucket)
         {
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var shardNumber = ShardHelper.GetShardNumberFor(RequestHandler.DatabaseContext.DatabaseRecord.Sharding, bucket);
                 var cmd = new GetBucketInfoCommand(bucket);

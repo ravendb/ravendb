@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 }
             }
 
-            var token = RequestHandler.CreateOperationToken();
+            var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
             var result = new SmugglerResult();
             BlittableJsonReaderObject blittableJson = null;

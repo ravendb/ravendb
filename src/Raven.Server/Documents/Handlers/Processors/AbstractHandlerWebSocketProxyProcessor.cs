@@ -30,7 +30,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
     public override async ValueTask ExecuteAsync()
     {
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             if (IsCurrentNode(out var nodeTag))
             {

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         public override async ValueTask ExecuteAsync()
         {
             using(ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var changeVectors = RequestHandler.GetStringValuesQueryString("changeVector", required: false);
                 var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;

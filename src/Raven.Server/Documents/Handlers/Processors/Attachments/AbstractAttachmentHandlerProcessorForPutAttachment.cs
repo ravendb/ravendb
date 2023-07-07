@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         public override async ValueTask ExecuteAsync()
         {
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

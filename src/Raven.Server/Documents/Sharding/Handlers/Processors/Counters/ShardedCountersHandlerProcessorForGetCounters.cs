@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(op, shardNumber, token.Token);
             }

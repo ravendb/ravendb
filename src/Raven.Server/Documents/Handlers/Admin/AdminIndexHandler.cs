@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(name);
 
-                var token = new OperationCancelToken(Database.DatabaseShutdown);
+                var token = CreateBackgroundOperationToken();
                 var result = new IndexOptimizeResult(index.Name);
                 var operationId = Database.Operations.GetNextOperationId();
                 var t = Database.Operations.AddLocalOperation(

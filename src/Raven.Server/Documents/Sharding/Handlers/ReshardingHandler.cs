@@ -45,10 +45,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             var opDesc = new ReshardingOperationDetails
             {
                 FromBucket = fromBucket,
-                ToBucket = toBucket,   
+                ToBucket = toBucket,
                 ToShard = toShard
             };
-            var token = new OperationCancelToken(ServerStore.ServerShutdown);
+            var token = CreateBackgroundOperationToken();
             _ = ServerStore.Operations.AddLocalOperation(operationId, OperationType.Resharding, $"Move to shard {toShard} buckets [{fromBucket}-{toBucket}]", opDesc, async action =>
             {
                 var result = new ReshardingResult();

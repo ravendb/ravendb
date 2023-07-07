@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
         protected override async ValueTask<Dictionary<LazyStringValue, FieldType>> GetFieldsAsync(TransactionOperationContext context, string collection, string prefix)
         {
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 var op = new ShardedGetCollectionFieldsOperation(context, HttpContext, collection, prefix, etag);

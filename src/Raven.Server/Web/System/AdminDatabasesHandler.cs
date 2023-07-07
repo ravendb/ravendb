@@ -568,7 +568,7 @@ namespace Raven.Server.Web.System
 
                 await ServerStore.EnsureNotPassiveAsync();
 
-                var cancelToken =  new OperationCancelToken(ServerStore.ServerShutdown);
+                var cancelToken =  CreateBackgroundOperationToken();
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
@@ -604,7 +604,7 @@ namespace Raven.Server.Web.System
             if (database == null)
                 DatabaseDoesNotExistException.Throw(databaseName);
 
-            using (var token = CreateOperationToken())
+            using (var token = CreateHttpRequestBoundOperationToken())
             {
                 await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate(), token.Token);
             }
@@ -1044,7 +1044,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
-                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var token = CreateBackgroundOperationToken();
                 var compactDatabaseTask = new CompactDatabaseTask(
                     ServerStore,
                     compactSettings.DatabaseName,
@@ -1225,7 +1225,7 @@ namespace Raven.Server.Web.System
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
 
-            var token = new OperationCancelToken(ServerStore.ServerShutdown);
+            var token = new OperationCancelToken(database.DatabaseShutdown);
 
             Task timeout = null;
             if (configuration.Timeout.HasValue)

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             using (OpenReadTransaction(context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 await GetAndWriteTimeSeriesAsync(context, documentId, name, from, to, offset, token.Token);
             }

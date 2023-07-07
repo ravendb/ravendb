@@ -58,7 +58,7 @@ namespace Raven.Server.Web.Studio
 
                     var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                     var schema = dbDriver.FindSchema();
-                    var token = new OperationCancelToken(Database.DatabaseShutdown);
+                    var token = CreateBackgroundOperationToken();
                     var result = new MigrationResult(migrationRequest.Settings);
 
                     var collectionsCount = migrationRequest.Settings.Collections.Count;

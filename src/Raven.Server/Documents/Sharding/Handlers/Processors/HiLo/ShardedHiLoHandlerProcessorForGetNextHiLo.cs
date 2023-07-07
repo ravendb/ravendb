@@ -19,7 +19,7 @@ internal class ShardedHiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerPr
 
     public override async ValueTask ExecuteAsync()
     {
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var tag = GetTag();
             var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
