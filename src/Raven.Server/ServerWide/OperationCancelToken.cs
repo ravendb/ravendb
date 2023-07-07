@@ -6,7 +6,7 @@ namespace Raven.Server.ServerWide
 {
     public class OperationCancelToken : IDisposable
     {
-        public static OperationCancelToken None = new OperationCancelToken(CancellationToken.None, CancellationToken.None);
+        public static readonly OperationCancelToken None = new(CancellationToken.None);
 
         private readonly CancellationTokenSource _cts;
         private bool _disposed;
@@ -15,19 +15,48 @@ namespace Raven.Server.ServerWide
 
         public readonly CancellationToken Token;
 
-        public OperationCancelToken(TimeSpan cancelAfter, params CancellationToken[] tokens)
+        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token)
         {
-            if (cancelAfter != Timeout.InfiniteTimeSpan && cancelAfter < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(cancelAfter));
+            ValidateCancelAfter(cancelAfter);
 
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(tokens);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
             _cts.CancelAfter(cancelAfter);
         }
 
-        public OperationCancelToken(params CancellationToken[] tokens)
-            : this(Timeout.InfiniteTimeSpan, tokens)
+        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token1, CancellationToken token2)
+        {
+            ValidateCancelAfter(cancelAfter);
+
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
+            _cancelAfter = cancelAfter;
+            Token = _cts.Token;
+            _cts.CancelAfter(cancelAfter);
+        }
+
+        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token1, CancellationToken token2, CancellationToken token3)
+        {
+            ValidateCancelAfter(cancelAfter);
+
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token1, token2, token3);
+            _cancelAfter = cancelAfter;
+            Token = _cts.Token;
+            _cts.CancelAfter(cancelAfter);
+        }
+
+        public OperationCancelToken(CancellationToken token)
+            : this(Timeout.InfiniteTimeSpan, token)
+        {
+        }
+
+        public OperationCancelToken(CancellationToken token1, CancellationToken token2)
+            : this(Timeout.InfiniteTimeSpan, token1, token2)
+        {
+        }
+
+        public OperationCancelToken(CancellationToken token1, CancellationToken token2, CancellationToken token3)
+            : this(Timeout.InfiniteTimeSpan, token1, token2, token3)
         {
         }
 
@@ -92,6 +121,12 @@ namespace Raven.Server.ServerWide
             }
 
             _cts?.Dispose();
+        }
+
+        private static void ValidateCancelAfter(TimeSpan cancelAfter)
+        {
+            if (cancelAfter != Timeout.InfiniteTimeSpan && cancelAfter < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(cancelAfter));
         }
     }
 }
