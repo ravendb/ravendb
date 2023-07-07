@@ -175,6 +175,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
             _indexWriter.SetRAMBufferSizeMB(1024);
+
+            _indexWriter.ReaderTermsIndexDivisor = _index.Configuration.ReaderTermsIndexDivisor;
         }
 
         private void DisposeIndexWriter()

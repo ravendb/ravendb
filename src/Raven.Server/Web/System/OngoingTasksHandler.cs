@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +7,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -42,8 +43,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
- using Sparrow.Logging;
- using Sparrow.Server.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
@@ -229,7 +229,7 @@ namespace Raven.Server.Web.System
                 }
                 else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = connectionsState.IsSubscriptionActive()? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                    connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -353,11 +353,13 @@ namespace Raven.Server.Web.System
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
                     var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
+                    var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
                     ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+                    SecurityClearanceValidator.AssertSecurityClearance(configuration, feature?.Status);
 
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
@@ -448,11 +450,13 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
                 var backupName = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
+                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
                 BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
+                SecurityClearanceValidator.AssertSecurityClearance(backupConfiguration, feature?.Status);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
@@ -522,7 +526,7 @@ namespace Raven.Server.Web.System
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
-                    
+
                     LogTaskToAudit(BackupDatabaseOnceTag, operationId, json);
                 }
                 catch (Exception e)
@@ -728,7 +732,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.Olap:
                     var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
                     if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
@@ -737,7 +741,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.ElasticSearch:
                     var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
@@ -768,7 +772,19 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery());
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid),
+                PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
+                {
+                    var connectionStringType = ConnectionString.GetConnectionStringType(readerObject);
+                    switch (connectionStringType)
+                    {
+                        case ConnectionStringType.Olap:
+                            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                            SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject), feature?.Status);
+                            break;
+                    }
+                });
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
@@ -923,7 +939,7 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.OlapEtls != null)
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
@@ -956,13 +972,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.ElasticSearchEtls != null)
             {
                 foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
                 {
                     databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(elasticSearchEtl);
 
@@ -984,13 +1000,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.QueueEtls != null)
             {
                 foreach (var queueEtl in databaseRecord.QueueEtls)
                 {
                     databaseRecord.QueueConnectionStrings.TryGetValue(queueEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, queueEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(queueEtl);
 
@@ -1169,7 +1185,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             await WriteResult(context, new OngoingTaskOlapEtlDetails
                             {
                                 TaskId = olapEtl.TaskId,
@@ -1187,7 +1203,7 @@ namespace Raven.Server.Web.System
                             });
                             break;
 
-                        
+
                         case OngoingTaskType.RavenEtl:
 
                             var ravenEtl = name != null ?
@@ -1219,7 +1235,7 @@ namespace Raven.Server.Web.System
                                 Error = ravenEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.ElasticSearchEtl:
 
                             var elasticSearchEtl = name != null ?
@@ -1248,7 +1264,7 @@ namespace Raven.Server.Web.System
                                 Error = queueEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.QueueEtl:
 
                             var queueEtl = name != null ?
@@ -1326,7 +1342,7 @@ namespace Raven.Server.Web.System
                                 },
                                 TaskConnectionStatus = connectionStatus
                             };
-                            
+
                             await WriteResult(context, subscriptionStateInfo);
                             break;
 

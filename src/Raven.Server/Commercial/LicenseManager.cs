@@ -137,7 +137,7 @@ namespace Raven.Server.Commercial
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(firstRun: true);
 
-                Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+                Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {

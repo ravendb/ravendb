@@ -53,16 +53,30 @@
 }
 
 .admin-logs {
+    .dropdown-menu {
+        background-color: @panel-bg;
+    }
     .columns-list-container {
-        width: 600px;
+        max-width: 600px;
         
         &#settingsContainer {
             height: auto;
         }
     }
 
+    .dropdown-extended {
+        width: 600px;
+        padding: @gutter-sm;
+    }
+
     .full-width {
         width: 100%;
+    }
+
+    .bootstrap-datetimepicker-widget {
+        &::before, &::after {
+            display: none;
+        }
     }
 
     #adminLogsPath {

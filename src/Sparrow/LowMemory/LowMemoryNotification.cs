@@ -45,7 +45,7 @@ namespace Sparrow.LowMemory
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
         private DateTime _lastLoggedLowMemory = DateTime.MinValue;
-        private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(3);
 
         private readonly TimeSpan _lohCompactionInterval = TimeSpan.FromMinutes(15);
         private DateTime _lastLohCompactionRequest = DateTime.MinValue;
@@ -58,7 +58,9 @@ namespace Sparrow.LowMemory
                 try
                 {
                     var now = DateTime.UtcNow;
-                    if (isLowMemory && _logger.IsOperationsEnabled && now - _lastLoggedLowMemory > _logLowMemoryInterval)
+                    
+                    if (((isLowMemory && _logger.IsOperationsEnabled) || _logger.IsInfoEnabled)
+                        && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
@@ -398,7 +400,7 @@ namespace Sparrow.LowMemory
                         memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
                 }
                 LowMemoryState = false;
-                RunLowMemoryHandlers(false, memoryInfo);
+                RunLowMemoryHandlers(false, memoryInfo, isLowMemory);
                 timeout = memoryInfo.AvailableMemory < LowMemoryThreshold * 2 ? 1000 : 5000;
             }
 

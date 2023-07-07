@@ -231,5 +231,95 @@ namespace FastTests.Sparrow
                 }
             }
         }
+
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        public unsafe void RavenDB_159751()
+        {
+            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            {
+                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+                using (var innerPager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
+                {
+                    using (var cryptoPager = new CryptoPager(innerPager))
+                    {
+                        using (var tx = new TempPagerTransaction(isWriteTransaction: true))
+                        {
+                            var overflowSize = 4 * Constants.Storage.PageSize + 100;
+
+                            cryptoPager.EnsureContinuous(26, 5);
+                            var pagePointer = cryptoPager.AcquirePagePointerForNewPage(tx, 26, 5);
+
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 26;
+                            header->Flags = PageFlags.Overflow;
+                            header->OverflowSize = overflowSize;
+
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out var usages));
+                            Assert.Equal(1, usages);
+
+                            cryptoPager.TryReleasePage(tx, 26);
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out usages));
+                            Assert.Equal(1, usages);
+
+                            cryptoPager.AcquirePagePointer(tx, 26);
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out usages));
+                            Assert.Equal(2, usages);
+                        }
+
+
+                        using (var tx = new TempPagerTransaction())
+                        {
+                            var pagePointer = cryptoPager.AcquirePagePointer(tx, 26);
+
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out var usages));
+                            Assert.Equal(1, usages);
+
+                            cryptoPager.AcquirePagePointer(tx, 26);
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out usages));
+                            Assert.Equal(2, usages);
+
+                            cryptoPager.TryReleasePage(tx, 26);
+
+                            Assert.True(PageExistsInCache(tx, cryptoPager, 26, out usages));
+                            Assert.Equal(1, usages);
+
+                            cryptoPager.TryReleasePage(tx, 26);
+
+                            Assert.False(PageExistsInCache(tx, cryptoPager, 26, out usages));
+                            Assert.Equal(0, usages);
+                        }
+
+                        bool PageExistsInCache(TempPagerTransaction tx, CryptoPager pager, long page, out int usages)
+                        {
+                            if (tx.CryptoPagerTransactionState.TryGetValue(pager, out var state) == false)
+                            {
+                                usages = 0;
+                                return false;
+                            }
+
+                            if (state.TryGetValue(page, out var buffer) == false)
+                            {
+                                usages = 0;
+                                return false;
+                            }
+
+                            usages = buffer.Usages;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -57,11 +57,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
-        private static readonly LuceneCleaner _luceneCleaner;
+        //private static readonly LuceneCleaner _luceneCleaner;
 
         static LuceneIndexReadOperation()
         {
-            _luceneCleaner = new LuceneCleaner();
+            //https://issues.hibernatingrhinos.com/issue/RavenDB-20565/AccessViolationException-for-a-query-with-order-by
+            //_luceneCleaner = new LuceneCleaner();
         }
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)

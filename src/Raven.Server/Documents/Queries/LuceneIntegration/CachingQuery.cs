@@ -118,6 +118,12 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         private readonly Raven.Server.Documents.Indexes.Index _index;
         private readonly string _query;
 
+        public override float Boost 
+        { 
+            get => _inner.Boost; 
+            set => _inner.Boost = value;
+        }
+
         public CachingQuery(Query inner, Raven.Server.Documents.Indexes.Index index, string query)
         {
             _inner = inner;

@@ -23,7 +23,7 @@ namespace Sparrow.Server.Platform.Posix
         public ulong TotalRam => totalram;
         public ulong TotalSwap => totalswap;
     }
-    
+
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct sysinfo_t_32bit
     {
@@ -90,5 +90,32 @@ namespace Sparrow.Server.Platform.Posix
         public UInt32 stx_dev_major;        // Major ID
         public UInt32 stx_dev_minor;        // Minor ID
         private unsafe fixed UInt64 __spare2[14];
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+#pragma warning disable CS8981
+    public struct statfs
+#pragma warning restore CS8981
+    {
+        public uint f_type;
+        public uint f_bsize;
+        public ulong f_blocks;
+        public ulong f_bfree;
+        public ulong f_bavail;
+        public ulong f_files;
+        public ulong f_ffree;
+        public fsid_t f_fsid;
+        public uint f_namelen;
+        public uint f_frsize;
+        public uint f_flags;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 5)]
+        public uint[] f_spare1;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct fsid_t
+    {
+        public int val1;
+        public int val2;
     }
 }

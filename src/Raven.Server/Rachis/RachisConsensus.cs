@@ -569,7 +569,7 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(ClusterOperationContext context, ClusterChanges changes);
 
-        public async Task WaitForState(RachisState rachisState, CancellationToken token)
+        public async Task<bool> WaitForState(RachisState rachisState, CancellationToken token)
         {
             while (token.IsCancellationRequested == false)
             {
@@ -577,10 +577,12 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task.WithCancellation(token);
 
                 if (CurrentState == rachisState)
-                    return;
+                    return true;
 
                 await task;
             }
+
+            return false;
         }
 
         public async Task WaitForLeaderChange(CancellationToken cts)
@@ -598,7 +600,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForLeaveState(RachisState rachisState, CancellationToken cts)
+        public async Task<bool> WaitForLeaveState(RachisState rachisState, CancellationToken cts)
         {
             while (cts.IsCancellationRequested == false)
             {
@@ -606,10 +608,12 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState != rachisState)
-                    return;
+                    return true;
 
                 await task;
             }
+
+            return false;
         }
 
         public Task GetTopologyChanged()

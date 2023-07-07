@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -270,8 +271,38 @@ namespace Raven.Server.Documents.Handlers
                 var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
                     includeCompareExchangeValues?.Results);
 
-                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
-                    documents.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+                if (ShouldAddPagingPerformanceHint(numberOfResults))
+                {
+                    var details = CreatePerformanceHintDetails();
+
+                    AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), details, numberOfResults, documents.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+                }
+            }
+
+            string CreatePerformanceHintDetails()
+            {
+                var sb = new StringBuilder();
+                var addedIdsCount = 0;
+                var first = true;
+
+                while (sb.Length < 1024 && addedIdsCount < ids.Count)
+                {
+                    if (first == false)
+                        sb.Append(", ");
+                    else
+                        first = false;
+                    
+                    sb.Append($"{ids[addedIdsCount++]}");
+                }
+
+                var idsLeftCount = ids.Count - addedIdsCount;
+
+                if (idsLeftCount > 0)
+                {
+                    sb.Append($" ... (and {idsLeftCount} more)");
+                }
+
+                return sb.ToString();
             }
         }
 

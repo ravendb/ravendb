@@ -269,7 +269,7 @@ namespace TypingsGenerator
             // alerts
             scripter.AddType(typeof(EtlErrorsDetails));
             scripter.AddType(typeof(SlowSqlDetails));
-            scripter.AddType(typeof(SlowWritesDetails));
+            scripter.AddType(typeof(SlowIoDetails));
 
             // indexes
             scripter.AddType(typeof(IndexDefinition));

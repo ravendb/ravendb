@@ -80,6 +80,9 @@ class editDocument extends viewModelBase {
     changeVectorHtml: KnockoutComputed<string>;
     changeVectorFormatted: KnockoutComputed<string>;
     
+    savedInClusterTransaction: KnockoutComputed<boolean>;
+    atomicGuardUrl: KnockoutComputed<string>;
+    
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
@@ -496,6 +499,20 @@ class editDocument extends viewModelBase {
 
         this.changeVectorHtml = ko.pureComputed(() => {
             return `<div><strong>Change Vector</strong></div>${this.changeVectorFormatted()}`;
+        });
+        
+        this.savedInClusterTransaction = ko.pureComputed(() => {
+            const vectors = this.changeVector().find(x => x.shortFormat.startsWith("TRXN:"));
+            return !!vectors;
+        });
+        
+        this.atomicGuardUrl = ko.pureComputed(() => {
+            const id = this.document().getId();
+            if (!id) {
+                return null;
+            }
+           
+            return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.activeDatabase());
         });
 
         this.isConflictDocument = ko.computed(() => {
