@@ -601,7 +601,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
                 totalResults.Value = 0;
 
-                var hasOrderByDistance = query.Metadata.OrderBy is [{OrderingType: OrderByFieldType.Distance}, ..];
+                var hasOrderByDistance = query.Metadata.OrderBy is [{OrderingType: OrderByFieldType.Distance}, ..] && _index.Configuration.CoraxIncludeSpatialDistance;
                 if (builderParameters.HasBoost || hasOrderByDistance)
                 {
                     sortingData = new()

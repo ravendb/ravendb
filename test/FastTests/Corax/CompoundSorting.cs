@@ -111,9 +111,9 @@ public class CompoundSorting : RavenTestBase
         Assert.Equal(new[]{"2", "1", "3"}, queryStrAscFloatDesc);
     }
 
-    private IDocumentStore GetDatabaseWithDocuments(out string indexName)
+    private IDocumentStore GetDatabaseWithDocuments(out string indexName, bool includeScoresAndDistances = false)
     { 
-        var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances));
         var index = new SortingIndex();
         index.Execute(store);
         indexName = index.IndexName;
@@ -163,7 +163,7 @@ public class CompoundSorting : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void GetIndexScoreAsMetadataCompound()
     {
-        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var store = GetDatabaseWithDocuments(out var indexName, includeScoresAndDistances: true);
         using var session = store.OpenSession();
         var queryResults = session.Advanced
             .DocumentQuery<Dto, SortingIndex>()
@@ -182,7 +182,7 @@ public class CompoundSorting : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void GetIndexScoreAsMetadataSingle()
     {
-        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var store = GetDatabaseWithDocuments(out var indexName, includeScoresAndDistances: true);
         using var session = store.OpenSession();
         var queryResults = session.Advanced
             .DocumentQuery<Dto, SortingIndex>()
@@ -200,7 +200,7 @@ public class CompoundSorting : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void CompoundAndNonCompoundShouldReturnExactlyTheSameScore()
     {
-        using var store = GetDatabaseWithDocuments(out var indexName);
+        using var store = GetDatabaseWithDocuments(out var indexName, includeScoresAndDistances: true);
         using var session = store.OpenSession();
         var singleCmp = session.Advanced
             .DocumentQuery<Dto, SortingIndex>()

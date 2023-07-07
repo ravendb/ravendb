@@ -38,7 +38,10 @@ class configurationItem {
         "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
         "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
         "Query.RegexTimeoutInMs",
-        "Indexing.Lucene.ReaderTermsIndexDivisor"
+        "Indexing.Lucene.ReaderTermsIndexDivisor",
+        "Indexing.Corax.IncludeDocumentScore",
+        "Indexing.Corax.IncludeSpatialDistance"
+
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
