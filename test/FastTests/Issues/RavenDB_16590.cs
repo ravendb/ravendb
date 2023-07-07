@@ -82,6 +82,9 @@ namespace FastTests.Issues
                 "Query.RegexTimeoutInMs",
                 "Indexing.Lucene.ReaderTermsIndexDivisor",
                 "Indexing.Corax.DocumentsLimitForCompressionDictionaryCreation",
+                "Indexing.Corax.IncludeDocumentScore",
+                "Indexing.Corax.IncludeSpatialDistance",
+                
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
@@ -97,7 +100,7 @@ namespace FastTests.Issues
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();
 
-            Assert.Equal(perIndexSettings, sortedStudioList);
+             Assert.Equal(perIndexSettings, sortedStudioList);
         }
     }
 }

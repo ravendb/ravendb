@@ -792,13 +792,27 @@ namespace FastTests
                 _frozen = options._frozen;
             }
 
-            public static Options ForSearchEngine(RavenSearchEngineMode mode)
+            public static Options ForSearchEngine(RavenSearchEngineMode mode, bool includeScoresAndDistances = false)
             {
-                var config = new RavenTestParameters() { SearchEngine = mode };
-                return ForSearchEngine(config);
+                var config = new RavenTestParameters() {SearchEngine = mode};
+                var options = ForSearchEngine(config);
+                return includeScoresAndDistances
+                    ? IncludeDistancesAndScores(options)
+                    : options;
             }
 
-            public static Options ForSearchEngine(RavenTestParameters config)
+            private static Options IncludeDistancesAndScores(Options options)
+            {
+                options.ModifyDatabaseRecord += record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeSpatialDistance)] = true.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = true.ToString();
+                };
+
+                return options;
+            }
+
+        public static Options ForSearchEngine(RavenTestParameters config)
             {
                 return new Options()
                 {
