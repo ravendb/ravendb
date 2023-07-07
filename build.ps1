@@ -15,7 +15,17 @@ param(
     [switch]$NoBundling,
     [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
+    [string]$BuildOptions = "",
+    [string]$ArtifactNameSuffix = "",
     [switch]$Help)
+
+if ([string]::IsNullOrEmpty($BuildOptions) -eq $False) {
+  $env:RAVEN_BuildOptions = $BuildOptions
+}
+
+if ([string]::IsNullOrEmpty($ArtifactNameSuffix) -eq $False) {
+  $env:RAVEN_ArtifactNameSuffix = $ArtifactNameSuffix
+}
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

@@ -17,7 +17,6 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -740,7 +739,9 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(cts.Token);
+
                 _isRunningQueriesWriteLockTaken.Value = true;
             }
             catch (OperationCanceledException)
@@ -1771,6 +1772,10 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
                         }
+                        catch (Exception e) when (e.IsOutOfMemory())
+                        {
+                            HandleOutOfMemoryException(null, storageEnvironment, e);
+                        }
                         catch (OperationCanceledException)
                         {
                             return;
@@ -1821,8 +1826,8 @@ namespace Raven.Server.Documents.Indexes
                         Size totalSizeOfJournals = Size.Zero;
                         foreach (var journalSize in _environment.Journal.Files.Select(i => i.JournalSize))
                             totalSizeOfJournals += journalSize;
-                        
-                        
+
+
                         if (totalSizeOfJournals >= Configuration.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex)
                             FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
 
@@ -2168,7 +2173,7 @@ namespace Raven.Server.Documents.Indexes
                     exception = new OutOfMemoryException("The paging file is too small for this operation to complete, consider increasing the size of the page file", exception);
                 }
 
-                scope.AddMemoryError(exception);
+                scope?.AddMemoryError(exception);
                 var outOfMemoryErrors = Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
@@ -2371,7 +2376,6 @@ namespace Raven.Server.Documents.Indexes
                             tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
 
                             tx.Commit();
-                            SlowWriteNotification.Notify(commitStats, DocumentDatabase);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }
@@ -2402,11 +2406,11 @@ namespace Raven.Server.Documents.Indexes
         {
             if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler == null || CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty)
                 return;
-            
-            MismatchedReferencesLoadWarning warning = new (Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
+
+            MismatchedReferencesLoadWarning warning = new(Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
 
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(warning);
-                
+
             CurrentIndexingScope.Current.MismatchedReferencesWarningHandler = null;
         }
 
@@ -2952,7 +2956,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (calculateLastBatchStats)
                         stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
-                    
+
                     stats.LastQueryingTime = _lastQueryingTime;
 
                     if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
@@ -4161,6 +4165,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
+                dict[Name] = Collections;
+
+            return dict;
+        }
+
         internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
@@ -4633,7 +4646,7 @@ namespace Raven.Server.Documents.Indexes
                         break;
                 }
             }
-            
+
             stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations);
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
@@ -5081,7 +5094,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(new CancellationTokenSource(timeout).Token);
+                    using (var cts = new CancellationTokenSource(timeout))
+                        _lock = _parent._currentlyRunningQueriesLock.ReaderLock(cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -5100,7 +5114,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(new CancellationTokenSource(timeout).Token);
+                    using (var cts = new CancellationTokenSource(timeout))
+                        _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(cts.Token);
                 }
                 catch (OperationCanceledException)
                 {

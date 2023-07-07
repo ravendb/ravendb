@@ -469,7 +469,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool OrderByTicksAutomaticallyWhenDatesAreInvolved { get; set; }
-        
+
+        [Description("EXPERT: Controls how many terms we'll keep in the cache for each field. Higher values reduce the memory usage at the expense of increased search time for each term.")]
+        [DefaultValue(1)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Lucene.ReaderTermsIndexDivisor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int ReaderTermsIndexDivisor { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

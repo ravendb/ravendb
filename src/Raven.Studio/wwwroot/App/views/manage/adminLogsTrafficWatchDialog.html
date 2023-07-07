@@ -88,6 +88,36 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="form-group" data-bind="visible: $root.usingHttps, if: $root.usingHttps">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow margin-left">
+                                <div class="toggle toggle-primary margin-top">
+                                    <input id="filterCertificateThumbprints" class="styled" type="checkbox" data-bind="checked: filterCertificateThumbprints">
+                                    <label for="filterCertificateThumbprints">
+                                        Filter by Certificate Thumbprints
+                                    </label>
+                                </div>
+                                <div class="toggle-margin" data-bind="collapse: filterCertificateThumbprints">
+                                    <!-- ko foreach: certificateThumbprints -->
+                                        <div>
+                                            <code data-bind="text: $data" class="margin-right"></code>
+                                            <button class="btn btn-sm btn-danger" title="Delete certificate thumbprint" data-bind="click: $parent.removeCertificateThumbprint">
+                                                <i class="icon-trash"></i>
+                                            </button>
+                                        </div>
+                                    <!-- /ko -->
+                                    
+                                    <div class="form-group" data-bind="validationElement: certificateThumbprints">
+                                        <input type="text" class="form-control flex-grow" data-bind="value: certificateThumbprintInput" /> 
+                                        <button data-bind="click: addCertificateThumbprint" class="btn" title="Add certificate thumbprint to watch list">
+                                            <i class="icon-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="margin-bottom margin-top-lg">
                             <div class="form-group">
                                 <label class="control-label">Minimum Request Size</label>

@@ -38,6 +38,11 @@ namespace Raven.Server.Utils
                                         errorCode == expectedDiskFullError1_Win || errorCode == expectedDiskFullError2_Win;
         }
 
+        public static bool IsMediaWriteProtected(this IOException ioe)
+        {
+            return ioe?.Message.Contains("The media is write protected") ?? false;
+        }
+
         public static bool IsRavenDiskFullException(this Exception e)
         {
             return e is DiskFullException;
@@ -48,6 +53,12 @@ namespace Raven.Server.Utils
             return e is Win32Exception win32Exception && win32Exception.NativeErrorCode == ERROR_COMMITMENT_LIMIT;
         }
 
+        public static void ThrowMediaIsWriteProtected(Exception inner)
+        {
+            throw new IOException($"{inner.Message}. {Sparrow.Server.Platform.PalHelper.ErrorMediaIsWriteProtectedHintMessage}", inner);
+                
+        }
+        
         public static void ThrowDiskFullException(string path) // Can be the folder path of the fole absolute path
         {
             var folderPath = Path.GetDirectoryName(path); // file Absolute Path

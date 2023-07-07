@@ -86,56 +86,72 @@ namespace Voron.Platform.Win32
                     new Win32Exception(lastWin32ErrorCode));
             }
 
-            _fileInfo = new FileInfo(file.FullPath);
-            var drive = _fileInfo.Directory.Root.Name.TrimEnd('\\');
-
             try
             {
-                if (PhysicalDrivePerMountCache.TryGetValue(drive, out UniquePhysicalDriveId) == false)
-                    UniquePhysicalDriveId = GetPhysicalDriveId(drive);
+                _fileInfo = new FileInfo(file.FullPath);
+                var drive = _fileInfo.Directory.Root.Name.TrimEnd('\\');
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
-            }
-            catch (Exception ex)
-            {
-                UniquePhysicalDriveId = 0;
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
-            }
-
-            var streamAccessType = _access == Win32NativeFileAccess.GenericRead
-                ? FileAccess.Read
-                : FileAccess.ReadWrite;
-            _fileStream = SafeFileStream.Create(_handle, streamAccessType);
-
-            _totalAllocationSize = _fileInfo.Length;
-
-            if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
-                (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
-                (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
-            {
-                var fileLength = _fileStream.Length;
-                if (fileLength == 0 && initialFileSize.HasValue)
-                    fileLength = initialFileSize.Value;
-
-                if (_fileStream.Length == 0 || (fileLength % AllocationGranularity != 0))
+                try
                 {
-                    fileLength = NearestSizeToAllocationGranularity(fileLength);
+                    if (PhysicalDrivePerMountCache.TryGetValue(drive, out UniquePhysicalDriveId) == false)
+                        UniquePhysicalDriveId = GetPhysicalDriveId(drive);
 
-                    Win32NativeFileMethods.SetFileLength(_handle, fileLength, file.FullPath);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
+                }
+                catch (Exception ex)
+                {
+                    UniquePhysicalDriveId = 0;
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
                 }
 
-                _totalAllocationSize = fileLength;
+                var streamAccessType = _access == Win32NativeFileAccess.GenericRead
+                    ? FileAccess.Read
+                    : FileAccess.ReadWrite;
+                _fileStream = SafeFileStream.Create(_handle, streamAccessType);
+
+                _totalAllocationSize = _fileInfo.Length;
+
+                if ((access & Win32NativeFileAccess.GenericWrite) == Win32NativeFileAccess.GenericWrite ||
+                    (access & Win32NativeFileAccess.GenericAll) == Win32NativeFileAccess.GenericAll ||
+                    (access & Win32NativeFileAccess.FILE_GENERIC_WRITE) == Win32NativeFileAccess.FILE_GENERIC_WRITE)
+                {
+                    var fileLength = _fileStream.Length;
+                    if (fileLength == 0 && initialFileSize.HasValue)
+                        fileLength = initialFileSize.Value;
+
+                    if (_fileStream.Length == 0 || (fileLength % AllocationGranularity != 0))
+                    {
+                        fileLength = NearestSizeToAllocationGranularity(fileLength);
+
+                        Win32NativeFileMethods.SetFileLength(_handle, fileLength, file.FullPath);
+                    }
+
+                    _totalAllocationSize = fileLength;
+                }
+
+                NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+
+                var pager = CreatePagerState();
+                if (fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary))
+                    pager.DiscardDataOnDisk();
+
+                SetPagerState(pager);
             }
+            catch
+            {
+                try
+                {
+                    Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
-            var pager = CreatePagerState();
-            if (fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary))
-                pager.DiscardDataOnDisk();
-
-            SetPagerState(pager);
+                throw;
+            }
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)

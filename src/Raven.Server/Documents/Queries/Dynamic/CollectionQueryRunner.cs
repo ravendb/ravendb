@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
-                var totalResults = new Reference<int>();
+                var totalResults = new Reference<long>();
                 var skippedResults = new Reference<long>();
                 var scannedResults = new Reference<int>();
                 IEnumerator<Document> enumerator;
@@ -254,8 +254,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
-                resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
-                resultToFill.LongTotalResults = resultToFill.TotalResults;
+                resultToFill.LongTotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+                resultToFill.TotalResults = (int)resultToFill.LongTotalResults;
                 resultToFill.SkippedResults = Convert.ToInt32(skippedResults.Value);
                 resultToFill.ScannedResults = scannedResults.Value;
 

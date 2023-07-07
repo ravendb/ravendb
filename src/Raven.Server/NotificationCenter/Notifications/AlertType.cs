@@ -80,6 +80,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         
         MicrosoftLogsConfigurationLoadError,
         
-        MismatchedReferenceLoad
+        MismatchedReferenceLoad,
+
+        BlockingTombstones
     }
 }

@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.16</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>6.0.19</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -150,25 +150,25 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.106.18" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.49" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.103.48" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.107.12" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.88" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.107.3" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.6.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.6.0" />    
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.6.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.6.0" />
-    <PackageReference Include="Confluent.Kafka" Version="2.1.0" />
+    <PackageReference Include="Confluent.Kafka" Version="2.1.1" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2022.3.1">
+    <PackageReference Include="JetBrains.Annotations" Version="2023.2.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.30-ravendb" />
-    <PackageReference Include="Google.Api.Gax.Rest" Version="4.3.1" />
-    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.4.0" />
+    <PackageReference Include="Google.Api.Gax.Rest" Version="4.4.0" />
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.6.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="2.1.0" />
+    <PackageReference Include="librdkafka.redist" Version="2.1.1" />
     <PackageReference Include="Lucene.Net" Version="3.0.54007" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54007" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.2" />
@@ -180,7 +180,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="MySql.Data" Version="8.0.32.1" />
-    <PackageReference Include="MySqlConnector" Version="2.2.5" />
+    <PackageReference Include="MySqlConnector" Version="2.2.6" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="NEST" Version="7.17.5" />
     <PackageReference Include="Npgsql" Version="5.0.16" />
@@ -238,5 +238,8 @@
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RAVEN_BuildOptions)' != ''">
+    <DefineConstants>$(DefineConstants);$(RAVEN_BuildOptions)</DefineConstants>
   </PropertyGroup>
 </Project>

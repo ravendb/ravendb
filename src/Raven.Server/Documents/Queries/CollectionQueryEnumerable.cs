@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Queries
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
-        private readonly Reference<int> _totalResults, _scannedResults;
+        private readonly Reference<long> _totalResults;
+        private readonly Reference<int> _scannedResults;
         private readonly Reference<long> _skippedResults;
         private readonly CancellationToken _token;
         private readonly string _collection;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Queries
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-            IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
+            IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults,
             Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
@@ -119,7 +120,7 @@ namespace Raven.Server.Documents.Queries
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
-            private readonly Reference<int> _totalResults;
+            private readonly Reference<long> _totalResults;
             private readonly Reference<int> _scannedResults;
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
@@ -150,7 +151,7 @@ namespace Raven.Server.Documents.Queries
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-                IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
+                IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults, 
                 Reference<int> scannedResults, string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;

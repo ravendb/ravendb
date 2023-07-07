@@ -109,13 +109,16 @@ public partial class RavenTestBase
         public string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
         {
             certificates = _parent.Certificates.SetupServerAuthentication();
-            var dbName = _parent.GetDatabaseName(caller);
             _parent.Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
+            return SetupEncryptedDatabaseOnNonAuthenticatedServer(out masterKey, caller);
+        }
+
+        public string SetupEncryptedDatabaseOnNonAuthenticatedServer(out byte[] masterKey, [CallerMemberName] string caller = null)
+        {
+            var dbName = _parent.GetDatabaseName(caller);
             string base64Key = CreateMasterKey(out masterKey);
-
             EnsureServerMasterKeyIsSetup(_parent.Server);
-
             _parent.Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             return dbName;
         }

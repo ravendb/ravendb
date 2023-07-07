@@ -1790,14 +1790,18 @@ class query extends viewModelBase {
             includeLimit: this.criteria().ignoreIndexQueryLimit() ? "true" : undefined
         }
         
-        let payload: { Query: string };
+        let payload: { Query: string, QueryParameters: string };
+        const [queryParameters, rqlWithoutParameters] = queryCommand.extractQueryParameters(this.criteria().queryText());
+        
         if (this.criteria().showFields()) {
             payload = {
-                Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria().queryText())
+                Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rqlWithoutParameters),
+                QueryParameters: queryParameters
             };
         } else {
             payload = {
-                Query: this.criteria().queryText()
+                Query: rqlWithoutParameters,
+                QueryParameters: queryParameters
             };
         }
         $("input[name=ExportOptions]").val(JSON.stringify(payload));

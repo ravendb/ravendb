@@ -218,6 +218,10 @@ namespace Raven.Server.Indexing
             {
                 ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
             }
+            catch (IOException e) when (e.IsMediaWriteProtected())
+            {
+                ExceptionHelper.ThrowMediaIsWriteProtected(e);
+            }
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -231,6 +235,10 @@ namespace Raven.Server.Indexing
             catch (IOException e) when(e.IsOutOfDiskSpaceException())
             {
                 ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
+            }
+            catch (IOException e) when (e.IsMediaWriteProtected())
+            {
+                ExceptionHelper.ThrowMediaIsWriteProtected(e);
             }
         }
 

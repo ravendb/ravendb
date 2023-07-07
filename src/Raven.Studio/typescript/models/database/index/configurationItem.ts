@@ -37,7 +37,8 @@ class configurationItem {
         "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
         "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
         "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
-        "Query.RegexTimeoutInMs"
+        "Query.RegexTimeoutInMs",
+        "Indexing.Lucene.ReaderTermsIndexDivisor"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

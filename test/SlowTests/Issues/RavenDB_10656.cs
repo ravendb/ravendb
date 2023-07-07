@@ -143,5 +143,10 @@ namespace SlowTests.Issues
                 ["Users"] = 0
             };
         }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

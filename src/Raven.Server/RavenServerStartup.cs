@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Commercial;
@@ -29,6 +30,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -299,6 +301,8 @@ namespace Raven.Server
             (string CustomInfo, TrafficWatchChangeType Type) twTuple =
                 ((string, TrafficWatchChangeType)?)contextItem ?? ("N/A", TrafficWatchChangeType.None);
 
+            var timings = context.Items[nameof(QueryTimings)];
+
             var twn = new TrafficWatchHttpChange
             {
                 TimeStamp = DateTime.UtcNow,
@@ -310,6 +314,7 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
+                QueryTimings = timings != null ? (QueryTimings)timings : null,
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
                 CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
@@ -364,9 +369,8 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is LowMemoryException ||
+            if (exception.IsOutOfMemory() ||
                 exception is HighDirtyMemoryException ||
-                exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException ||
                 exception is VoronErrorException ||
                 exception is QuotaException ||

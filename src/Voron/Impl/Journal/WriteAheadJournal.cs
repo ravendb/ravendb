@@ -26,7 +26,6 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -468,7 +467,6 @@ namespace Voron.Impl.Journal
             isMoreThanMaxFileSize = false;
         }
 
-
         public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
@@ -507,6 +505,66 @@ namespace Voron.Impl.Journal
             }
 
             return null;
+        }
+
+        public T? ReadPageHeaderForDebug<T>(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates) where T : unmanaged
+        {
+            // read transactions have to read from journal snapshots
+            if (tx.Flags == TransactionFlags.Read)
+            {
+                // read log snapshots from the back to get the most recent version of a page
+                for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
+                {
+                    if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
+                    {
+                        var page = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(tx, value.ScratchNumber, value.ScratchPage, scratchPagerStates[value.ScratchNumber]);
+                        return page;
+                    }
+                }
+
+                return null;
+            }
+
+            // write transactions can read directly from journals that they got when they started up
+            var files = tx.JournalFiles;
+            for (var i = files.Count - 1; i >= 0; i--)
+            {
+                PagePosition value;
+                if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                {
+                    // ReSharper disable once RedundantArgumentDefaultValue
+                    var page = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(tx, value.ScratchNumber, value.ScratchPage, pagerState: null);
+                    return page;
+                }
+            }
+
+            return null;
+        }
+
+        public bool PageExists(LowLevelTransaction tx, long pageNumber)
+        {
+            // read transactions have to read from journal snapshots
+            if (tx.Flags == TransactionFlags.Read)
+            {
+                // read log snapshots from the back to get the most recent version of a page
+                for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
+                {
+                    if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out _))
+                        return true;
+                }
+
+                return false;
+            }
+
+            // write transactions can read directly from journals that they got when they started up
+            var files = tx.JournalFiles;
+            for (var i = files.Count - 1; i >= 0; i--)
+            {
+                if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out _))
+                    return true;
+            }
+
+            return false;
         }
 
         public void Dispose()
@@ -1654,7 +1712,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx, out string journalFilePath, out TimeSpan writeToJournalDuration)
+        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx)
         {
             lock (_writeLock)
             {
@@ -1696,15 +1754,13 @@ namespace Voron.Impl.Journal
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                     sp.Restart();
-                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, out writeToJournalDuration);
+                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
                     sp.Stop();
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
-
-                    journalFilePath = CurrentFile.JournalWriter.FileName.FullPath;
 
                     if (CurrentFile.Available4Kbs == 0)
                     {

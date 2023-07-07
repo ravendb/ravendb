@@ -105,5 +105,10 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 ["DailyInvoices"] = 0
             };
         }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

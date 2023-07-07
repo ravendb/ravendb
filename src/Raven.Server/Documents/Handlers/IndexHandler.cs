@@ -1064,7 +1064,7 @@ namespace Raven.Server.Documents.Handlers
                     else
                     {
                         var listOfIds = ids.Select(x => x.ToString());
-                        var _ = new Reference<int>
+                        var _ = new Reference<long>
                         {
                             Value = 0
                         };

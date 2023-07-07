@@ -24,7 +24,8 @@ internal class TrafficWatchToLog : IDynamicJson
     private long _minimumDurationInMs;
     private List<string> _httpMethods;
     private List<TrafficWatchChangeType> _changeTypes;
-    
+    private List<string> _certificateThumbprints;
+
     public bool LogToFile => _trafficWatchMode == TrafficWatchMode.ToLogFile && Logger.IsOperationsEnabled;
 
     private TrafficWatchToLog() { }
@@ -43,25 +44,25 @@ internal class TrafficWatchToLog : IDynamicJson
         
         if (trafficWatchData is TrafficWatchHttpChange twhc)
         {
-            if (_databases != null)
-                if (_databases.Count > 0 &&
-                    _databases.Contains(twhc.DatabaseName) == false)
-                    return;
+            if (_databases is { Count: > 0 } &&
+                _databases.Contains(twhc.DatabaseName) == false)
+                return;
 
-            if (_httpMethods != null)
-                if (_httpMethods.Count > 0 &&
-                    _httpMethods.Contains(twhc.HttpMethod) == false)
-                    return;
+            if (_httpMethods is { Count: > 0 } &&
+                _httpMethods.Contains(twhc.HttpMethod) == false)
+                return;
 
-            if (_changeTypes != null)
-                if (_changeTypes.Count > 0 &&
-                    _changeTypes.Contains(twhc.Type) == false)
-                    return;
+            if (_changeTypes is { Count: > 0 } &&
+                _changeTypes.Contains(twhc.Type) == false)
+                return;
 
-            if (_statusCodes != null)
-                if (_statusCodes.Count > 0 &&
-                    _statusCodes.Contains(twhc.ResponseStatusCode) == false)
-                    return;
+            if (_statusCodes is { Count: > 0 } &&
+                _statusCodes.Contains(twhc.ResponseStatusCode) == false)
+                return;
+
+            if(_certificateThumbprints is { Count: > 0 } &&
+               _certificateThumbprints.Contains(twhc.CertificateThumbprint) == false)
+                return;
 
             if (_minimumResponseSizeInBytes > twhc.ResponseSizeInBytes)
                 return;
@@ -74,7 +75,8 @@ internal class TrafficWatchToLog : IDynamicJson
 
             var requestSize = new Size(twhc.RequestSizeInBytes, SizeUnit.Bytes);
             var responseSize = new Size(twhc.ResponseSizeInBytes, SizeUnit.Bytes);
-            var customInfo = twhc.CustomInfo?.ReplaceLineEndings(string.Empty) ?? "N/A";
+            var customInfo = twhc.CustomInfo?.ReplaceLineEndings(" ") ?? "N/A";
+            var queryTimings = twhc.QueryTimings;
 
             stringBuilder
                 .Append("HTTP, ")
@@ -91,6 +93,22 @@ internal class TrafficWatchToLog : IDynamicJson
                 .Append(twhc.Type).Append(", ")
                 .Append(twhc.ElapsedMilliseconds).Append("ms, ")
                 .Append("custom info: ").Append(customInfo);
+
+            if (queryTimings != null)
+            {
+                bool isFirst = true;
+                stringBuilder.Append(", ")
+                    .Append("query timings: ").Append(queryTimings.DurationInMs).Append("ms - ");
+                foreach (var key in queryTimings.Timings.Keys)
+                {
+                    if (isFirst == false)
+                        stringBuilder.Append(", ");
+                    stringBuilder.Append(key).Append(": ")
+                        .Append(queryTimings.Timings[key].DurationInMs).Append("ms");
+
+                    isFirst = false;
+                }
+            }
         }
         else if (trafficWatchData is TrafficWatchTcpChange twtc)
         {
@@ -118,6 +136,7 @@ internal class TrafficWatchToLog : IDynamicJson
         _minimumDurationInMs = configuration.MinimumDuration.GetValue(TimeUnit.Milliseconds);
         _httpMethods = configuration.HttpMethods;
         _changeTypes = configuration.ChangeTypes;
+        _certificateThumbprints = configuration.CertificateThumbprints;
     }
 
     public void UpdateConfiguration(PutTrafficWatchConfigurationOperation.Parameters configuration)
@@ -130,6 +149,7 @@ internal class TrafficWatchToLog : IDynamicJson
         _minimumDurationInMs = configuration.MinimumDurationInMs;
         _httpMethods = configuration.HttpMethods;
         _changeTypes = configuration.ChangeTypes;
+        _certificateThumbprints = configuration.CertificateThumbprints;
     }
 
     public DynamicJsonValue ToJson()
@@ -143,7 +163,8 @@ internal class TrafficWatchToLog : IDynamicJson
             [nameof(PutTrafficWatchConfigurationOperation.Parameters.MinimumRequestSizeInBytes)] = Instance._minimumRequestSizeInBytes,
             [nameof(PutTrafficWatchConfigurationOperation.Parameters.MinimumDurationInMs)] = Instance._minimumDurationInMs,
             [nameof(PutTrafficWatchConfigurationOperation.Parameters.HttpMethods)] = Instance._httpMethods == null ? null : new DynamicJsonArray(Instance._httpMethods),
-            [nameof(PutTrafficWatchConfigurationOperation.Parameters.ChangeTypes)] = Instance._changeTypes == null ? null : new DynamicJsonArray(Instance._changeTypes.Cast<object>())
+            [nameof(PutTrafficWatchConfigurationOperation.Parameters.ChangeTypes)] = Instance._changeTypes == null ? null : new DynamicJsonArray(Instance._changeTypes.Cast<object>()),
+            [nameof(PutTrafficWatchConfigurationOperation.Parameters.CertificateThumbprints)] = Instance._certificateThumbprints == null ? null : new DynamicJsonArray(Instance._certificateThumbprints)
         };
     }
 }

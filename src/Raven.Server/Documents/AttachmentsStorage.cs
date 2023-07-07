@@ -8,8 +8,8 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    ThrowMissingAttachment(attachment.Name);
+                    ThrowMissingAttachment(GetDocIdAndAttachmentName(context, attachment.Key));
 
                 attachment.Stream = stream;
 
@@ -425,30 +425,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RevisionAttachments(DocumentsOperationContext context, Slice lowerId, Slice changeVector)
+        public void RevisionAttachments(DocumentsOperationContext context, BlittableJsonReaderObject document, Slice lowerId, Slice changeVector)
         {
-            using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            var currentAttachments = GetAttachmentsFromDocumentMetadata(document);
+
+            foreach (var bjro in currentAttachments)
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var currentAttachments = new List<(LazyStringValue name, LazyStringValue contentType, Slice base64Hash)>();
-                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    var tableValueHolder = sr.Value;
-                    var name = TableValueToId(context, (int)AttachmentsTable.Name, ref tableValueHolder.Reader);
-                    var contentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tableValueHolder.Reader);
-
-                    var ptr = tableValueHolder.Reader.Read((int)AttachmentsTable.Hash, out int size);
-                    Slice.From(context.Allocator, ptr, size, out Slice base64Hash);
-
-                    currentAttachments.Add((name, contentType, base64Hash));
-                }
-                foreach (var attachment in currentAttachments)
-                {
-                    PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
-                    attachment.name.Dispose();
-                    attachment.contentType.Dispose();
-                    attachment.base64Hash.Release(context.Allocator);
-                }
+                var attachment = JsonDeserializationClient.AttachmentName(bjro);
+                PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
             }
         }
         public void PutAttachmentRevert(DocumentsOperationContext context, LazyStringValue id, BlittableJsonReaderObject document, out bool hasAttachments)
@@ -483,8 +467,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector,
-            (LazyStringValue Name, LazyStringValue ContentType, Slice Base64Hash) attachment)
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector, AttachmentName attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
@@ -492,7 +475,8 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName, out Slice namePtr))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.Base64Hash,
+            using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
+            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, hashSlice,
                 lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
@@ -500,7 +484,7 @@ namespace Raven.Server.Documents
                 tvb.Add(Bits.SwapBytes(attachmentEtag));
                 tvb.Add(namePtr);
                 tvb.Add(contentTypePtr);
-                tvb.Add(attachment.Base64Hash);
+                tvb.Add(hashSlice);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVector.Content.Ptr, changeVector.Size);
                 table.Set(tvb);
@@ -948,9 +932,9 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static void ThrowMissingAttachment(string attachmentName)
+        private static void ThrowMissingAttachment((LazyStringValue DocId, LazyStringValue AttachmentName) details)
         {
-            throw new FileNotFoundException($"Attachment's stream '{attachmentName}' was not found. This should never happen.");
+            throw new FileNotFoundException($"Attachment's stream for file '{details.AttachmentName}' in document '{details.DocId}' was not found. This should never happen.");
         }
 
         private static void ThrowConcurrentException(string documentId, string name, string expectedChangeVector, string oldChangeVector)
@@ -1326,11 +1310,11 @@ namespace Raven.Server.Documents
             return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment);
         }
 
-        public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(JsonOperationContext context,
-            LazyStringValue attachmentTombstoneId)
+        public static (LazyStringValue DocId, LazyStringValue AttachmentName) GetDocIdAndAttachmentName(JsonOperationContext context,
+            LazyStringValue attachmentKey)
         {
-            var p = attachmentTombstoneId.Buffer;
-            var size = attachmentTombstoneId.Size;
+            var p = attachmentKey.Buffer;
+            var size = attachmentKey.Size;
 
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)

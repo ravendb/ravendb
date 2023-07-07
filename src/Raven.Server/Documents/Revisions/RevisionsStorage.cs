@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Revisions
                 if (flags.Contain(DocumentFlags.HasAttachments) &&
                     flags.Contain(DocumentFlags.Revision) == false)
                 {
-                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, document, lowerId, changeVectorSlice);
                 }
 
                 document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);

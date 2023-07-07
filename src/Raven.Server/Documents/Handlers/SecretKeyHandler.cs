@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
                             if (url == null)
                                 throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
 
-                            if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                            if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false && Server.AllowEncryptedDatabasesOverHttp == false)
                                 throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
 
                             await SendKeyToNodeAsync(name, base64, ctx, ServerStore, node, url).ConfigureAwait(false);

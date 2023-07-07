@@ -650,20 +650,20 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_allowedPathsValidator != null)
                 {
-                if (_allowedPathsValidator.ShouldAllow(item) == false)
-                {
-                    throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
-                                                        ", which is not allowed, according to the allowed paths policy. Replication aborted");
-                }
+                    if (_allowedPathsValidator.ShouldAllow(item) == false)
+                    {
+                        throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
+                                                            ", which is not allowed, according to the allowed paths policy. Replication aborted");
+                    }
 
-                switch (item)
-                {
-                    case AttachmentReplicationItem a:
-                        expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
-                        expectedAttachmentStreams.Add(a.Key);
-                        break;
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem a:
+                            expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
+                            expectedAttachmentStreams.Add(a.Key);
+                            break;
+                    }
                 }
-            }
 
                 if (_preventIncomingSinkDeletions)
                 {
@@ -675,18 +675,6 @@ namespace Raven.Server.Documents.Replication
                                 $"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
                                 $" Replication of item '{infoHelper.GetItemInformation(item)}' has been aborted for sink connection: '{this.ConnectionInfo.ToString()}'.");
                         }
-                    }
-                }
-            }
-
-            if (dataForReplicationCommand.ReplicatedAttachmentStreams != null)
-            {
-                foreach (var kvp in dataForReplicationCommand.ReplicatedAttachmentStreams)
-                {
-                    if (expectedAttachmentStreams == null || expectedAttachmentStreams.Contains(kvp.Key))
-                    {
-                        throw new InvalidOperationException("Attempted to attachment with hash: " + kvp.Key +
-                                                            ", but without a matching attachment key.");
                     }
                 }
             }
@@ -1457,7 +1445,7 @@ namespace Raven.Server.Documents.Replication
                                 using var newVer = doc.Data.Clone(context);
                                 // now we save it again, and a side effect of that is syncing all the attachments
                                 context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newVer, lastModifiedTicks,
-                                    flags: doc.Flags);
+                                    flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
                             }
                         }
                     }

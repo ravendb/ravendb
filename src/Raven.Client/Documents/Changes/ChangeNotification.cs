@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -412,6 +413,7 @@ namespace Raven.Client.Documents.Changes
         public long RequestSizeInBytes { get; set; }
         public long ResponseSizeInBytes { get; set; }
         public TrafficWatchChangeType Type { get; set; }
+        public QueryTimings QueryTimings { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -425,6 +427,10 @@ namespace Raven.Client.Documents.Changes
             json[nameof(RequestSizeInBytes)] = RequestSizeInBytes;
             json[nameof(ResponseSizeInBytes)] = ResponseSizeInBytes;
             json[nameof(Type)] = Type;
+            
+            if(QueryTimings != null)
+                json[nameof(QueryTimings)] = QueryTimings;
+
             return json;
         }
     }

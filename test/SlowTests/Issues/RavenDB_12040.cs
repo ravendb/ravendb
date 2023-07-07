@@ -1,7 +1,10 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Server;
+using Sparrow.Server.Meters;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,17 +19,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Should_limit_number_of_stored_slow_io_hints()
         {
+            var now = DateTime.UtcNow;
+
             using (var store = GetDocumentStore())
             {
                 const int limitExceededCount = 10;
 
                 var database = await GetDatabase(store.Database);
 
-                for (int i = 0; i < SlowWritesDetails.MaxNumberOfWrites + limitExceededCount; i++)
+                for (int i = 0; i < SlowIoDetails.MaxNumberOfWrites + limitExceededCount; i++)
                 {
                     database.NotificationCenter
                         .SlowWrites
-                        .Add($"C:\\Raven\\Indexes\\MyIndex\\{i}.journal", 1, 10);
+                        .Add(new IoChange
+                        {
+                            FileName = $"C:\\Raven\\Indexes\\MyIndex\\{i}.journal",
+                            MeterItem = new IoMeterBuffer.MeterItem 
+                            { 
+                                Type = IoMetrics.MeterType.JournalWrite,
+                                Start = now, 
+                                End = now + TimeSpan.FromSeconds(10)
+                            }
+                        });
 
                     if (i < limitExceededCount)
                         Thread.Sleep(1);
@@ -35,13 +49,13 @@ namespace SlowTests.Issues
                 database.NotificationCenter.SlowWrites.UpdateNotificationInStorage(null);
 
                 var details = database.NotificationCenter.SlowWrites
-                    .GetSlowWritesDetails();
+                    .GetSlowIoDetails();
 
-                Assert.Equal(SlowWritesDetails.MaxNumberOfWrites, details.Writes.Count);
+                Assert.Equal(SlowIoDetails.MaxNumberOfWrites, details.Writes.Count);
 
-                for (int i = limitExceededCount; i < SlowWritesDetails.MaxNumberOfWrites + limitExceededCount; i++)
+                for (int i = limitExceededCount; i < SlowIoDetails.MaxNumberOfWrites + limitExceededCount; i++)
                 {
-                    Assert.Contains($"C:\\Raven\\Indexes\\MyIndex\\{i}.journal", details.Writes.Keys);
+                    Assert.Contains($"{nameof(IoMetrics.MeterType.JournalWrite)}/C:\\Raven\\Indexes\\MyIndex\\{i}.journal", details.Writes.Keys);
                 }
             }
         }

@@ -91,6 +91,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private static int _connectionStatsId;
         private int _connectionStatsIdForConnection;
         private static int _batchStatsId;
+        private Task<SubscriptionConnectionClientMessage> _lastReplyFromClientTask;
 
         private SubscriptionConnectionStatsAggregator _lastConnectionStats; // inProgress connection data
         public SubscriptionConnectionStatsAggregator GetPerformanceStats()
@@ -665,7 +666,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_processor = SubscriptionProcessor.Create(this))
             {
-                var replyFromClientTask = GetReplyFromClientAsync();
+                var replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
 
                 _processor.AddScript(SetupFilterAndProjectionScript());
 
@@ -795,7 +796,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         break;
                     }
 
-                    replyFromClientTask = GetReplyFromClientAsync();
+                    replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
 
@@ -1192,6 +1193,20 @@ namespace Raven.Server.Documents.TcpHandlers
                     CancellationTokenSource.Dispose();
                 }
                 catch (Exception)
+                {
+                    // ignored
+                }
+
+                try
+                {
+                    if (_lastReplyFromClientTask is { IsCompleted: false })
+                    {
+                        // it's supposed this task will fail here since we disposed all resources used by connection
+                        // but we must wait for it before we release _copiedBuffer
+                        _lastReplyFromClientTask.Wait();
+                    }
+                }
+                catch
                 {
                     // ignored
                 }
