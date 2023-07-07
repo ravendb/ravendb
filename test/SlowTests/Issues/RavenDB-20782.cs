@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Highlighting;
+using SlowTests.Tests.Linq;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ public class RavenDB_20782 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CustomHighlightingViaDocumentQueryAsync(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -40,7 +41,7 @@ public class RavenDB_20782 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
     public void CustomHighlightingViaDocumentQuery(Options options)
     {
         using var store = GetDocumentStore(options);

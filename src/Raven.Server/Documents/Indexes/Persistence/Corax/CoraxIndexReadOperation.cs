@@ -164,10 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         if (numberOfPreTags != numberOfPostTags)
                             throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
 
-                        var fieldName =
-                            query.Metadata.IsDynamic
-                                ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
-                                : highlighting.Field.Value;
+                        var fieldName = highlighting.Field.Value;
 
                         if (highlightingTerms.TryGetValue(fieldName, out var termIndex) == false)
                         {
@@ -175,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             termIndex = new()
                             {
                                 FieldName = highlighting.Field.Value,
-                                DynamicFieldName = AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value),
+                                DynamicFieldName = AutoIndexField.GetSearchAutoIndexFieldName(highlighting.Field.Value),
                                 GroupKey = options.GroupKey
                             };
                             highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName : termIndex.FieldName, termIndex);
@@ -1078,9 +1075,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (numberOfPreTags != numberOfPostTags)
                     throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
 
-                var fieldName =
-                    query.Metadata.IsDynamic
-                        ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
+                var fieldName = query.Metadata.IsDynamic
+                        ? AutoIndexField.GetSearchAutoIndexFieldName(highlighting.Field.Value)
                         : highlighting.Field.Value;
 
                 if (highlightingTerms.TryGetValue(fieldName, out var termIndex) == false)
@@ -1088,7 +1084,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // the case when we have to create MapReduce highlighter
                     termIndex = new();
                     termIndex.FieldName = highlighting.Field.Value;
-                    termIndex.DynamicFieldName = AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value);
+                    termIndex.DynamicFieldName = AutoIndexField.GetSearchAutoIndexFieldName(highlighting.Field.Value);
                     termIndex.GroupKey = options.GroupKey;
                     highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName : termIndex.FieldName, termIndex);
                 }
