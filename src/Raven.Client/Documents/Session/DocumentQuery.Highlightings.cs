@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings)
         {
-            Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, null, out highlightings);
+            Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, options, out highlightings);
             return this;
         }
     }
