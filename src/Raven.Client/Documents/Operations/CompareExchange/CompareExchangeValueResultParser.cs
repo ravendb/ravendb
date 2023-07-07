@@ -82,8 +82,6 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (item.TryGet(nameof(CompareExchangeValue<T>.Value), out BlittableJsonReaderObject raw) == false)
                 throw new InvalidDataException("Response is invalid. Value is missing.");
 
-
-
             if (raw == null)
                 return new CompareExchangeValue<T>(key, index, default);
 
