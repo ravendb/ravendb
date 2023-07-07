@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         protected override async ValueTask<DynamicJsonValue> GetStatsAsync(TransactionOperationContext context, bool detailed)
         {
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 if (detailed)
                 {

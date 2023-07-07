@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             var returnFullResults = RequestHandler.GetBoolValueQueryString("full", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using(var token = RequestHandler.CreateOperationToken())
+            using(var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 await GetTimeSeriesRangesAndWriteAsync(context, documentId, names, fromList, toList, start, pageSize, includeDoc, includeTags, returnFullResults, token.Token);
             }

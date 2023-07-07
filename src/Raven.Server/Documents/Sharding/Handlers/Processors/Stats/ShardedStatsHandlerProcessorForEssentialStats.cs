@@ -22,7 +22,7 @@ internal class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHand
 
     protected override async ValueTask<EssentialDatabaseStatistics> GetEssentialDatabaseStatisticsAsync(TransactionOperationContext context)
     {
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new GetShardedEssentialStatisticsOperation(RequestHandler.HttpContext.Request), token.Token);
 

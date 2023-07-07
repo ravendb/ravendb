@@ -33,7 +33,7 @@ internal abstract class AbstractShardedEtlHandlerProcessorForTest<TTestEtlScript
 
     protected override async ValueTask HandleRemoteNodeAsync(TransactionOperationContext context, TTestEtlScript testScript, BlittableJsonReaderObject testScriptJson)
     {
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             if (string.IsNullOrEmpty(testScript.DocumentId))
             {

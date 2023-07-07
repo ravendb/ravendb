@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var type = AttachmentType.Document;
                 string changeVector = null;

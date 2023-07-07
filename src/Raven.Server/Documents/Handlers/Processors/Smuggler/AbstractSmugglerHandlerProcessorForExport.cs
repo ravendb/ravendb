@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/octet-stream";
                 ApplyBackwardCompatibility(options);
 
-                var token = RequestHandler.CreateOperationToken();
+                var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
                 await ExportAsync(context, returnContextToPool, operationId, options, startDocumentEtag, startRaftIndex, token);
             }

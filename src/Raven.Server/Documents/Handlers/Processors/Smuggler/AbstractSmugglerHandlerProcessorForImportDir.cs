@@ -48,7 +48,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
         var tasks = new Task[Math.Max(1, maxTasks)];
 
         var finalResult = new SmugglerResult();
-        var token = RequestHandler.CreateOperationToken();
+        var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
         for (int i = 0; i < tasks.Length; i++)
         {

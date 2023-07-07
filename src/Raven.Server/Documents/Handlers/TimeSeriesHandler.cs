@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
                 Results = new List<TimeSeriesDetails>()
             };
 
-            using (var token = CreateOperationToken())
+            using (var token = CreateHttpRequestBoundOperationToken())
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {

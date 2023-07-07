@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = GetTimeTracker())
-            using (var token = RequestHandler.CreateTimeLimitedQueryToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using(AllocateContext(out TOperationContext context))
             {
                 IndexQueryServerSide query;

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
 
-                using (var token = CreateOperationToken())
+                using (var token = CreateHttpRequestBoundOperationToken())
                 {
                     var result = await Database.Operations.AddLocalOperation(
                         operationId,

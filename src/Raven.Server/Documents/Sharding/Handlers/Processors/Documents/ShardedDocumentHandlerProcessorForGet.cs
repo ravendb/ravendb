@@ -29,7 +29,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler) : base(method, requestHandler)
     {
-        _operationCancelToken = requestHandler.CreateOperationToken();
+        _operationCancelToken = requestHandler.CreateHttpRequestBoundOperationToken();
     }
 
     protected override bool SupportsShowingRequestInTrafficWatch => false;

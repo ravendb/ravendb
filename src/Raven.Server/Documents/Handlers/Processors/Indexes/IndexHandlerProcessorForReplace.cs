@@ -31,7 +31,7 @@ internal class IndexHandlerProcessorForReplace : AbstractIndexHandlerProcessorFo
         if (newIndex == null)
             throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
 
-        using (var token = RequestHandler.CreateOperationToken(TimeSpan.FromMinutes(15)))
+        using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan.FromMinutes(15)))
         {
             RequestHandler.Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
         }

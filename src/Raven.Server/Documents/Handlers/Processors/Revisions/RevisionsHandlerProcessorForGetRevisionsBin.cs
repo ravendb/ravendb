@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 long count;
                 long totalDocumentsSizeInBytes;
 
-                using (var token = RequestHandler.CreateOperationToken())
+                using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

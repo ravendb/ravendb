@@ -36,7 +36,7 @@ internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandl
 
             var proxyCommand = new ProxyCommand<TResult>(command, RequestHandler.HttpContext.Response);
 
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
                 await HandleRemoteNodeAsync(proxyCommand, token);
         }
     }
@@ -68,7 +68,7 @@ internal abstract class AbstractServerHandlerProxyReadProcessor<TResult> : Abstr
                 var command = await CreateCommandForNodeAsync(nodeTag, context);
                 var proxyCommand = new ProxyCommand<TResult>(command, RequestHandler.HttpContext.Response);
 
-                using (var token = RequestHandler.CreateOperationToken())
+                using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
                     await HandleRemoteNodeAsync(proxyCommand, context, token);
             }
         }

@@ -36,7 +36,7 @@ namespace Raven.Server.Web.Studio.Processors
             (int fromBucket, int toBucket, int range) = GetParameters();
             
             using(ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var bucketsResults = await GetBucketsResults(context, fromBucket, toBucket, range,token.Token);
 

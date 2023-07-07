@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             }
 
             long count;
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var op = new GetRevisionsCountOperation.GetRevisionsCountCommand(docId);
                 count = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(op, shardNumber, token.Token);

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
 
             var result = await ServerStore.SendToLeaderAsync(command);
 
-            using (var token = CreateOperationToken())
+            using (var token = CreateHttpRequestBoundOperationToken())
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, token.Token);
 
             NoContentStatus();

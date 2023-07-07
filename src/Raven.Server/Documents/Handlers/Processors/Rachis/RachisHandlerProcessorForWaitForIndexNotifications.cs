@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Rachis
 
         protected override async ValueTask WaitForCommandsAsync(TransactionOperationContext _, WaitForIndexNotificationRequest commands)
         {
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 foreach (var index in commands.RaftCommandIndexes)
                 {

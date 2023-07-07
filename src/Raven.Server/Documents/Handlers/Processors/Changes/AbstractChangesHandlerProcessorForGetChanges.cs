@@ -36,7 +36,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 
             var connection = CreateChangesClientConnection(webSocket, throttleConnection, fromStudio);
             
-            using (var token = RequestHandler.CreateOperationToken(connection.DisposeToken))
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken(connection.DisposeToken))
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 try
@@ -151,7 +151,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                                 reader.TryGet("Param", out string commandParameter);
                                 reader.TryGet("Params", out BlittableJsonReaderArray commandParameters);
 
-                                using (var commandToken = RequestHandler.CreateOperationToken(TimeSpan.FromSeconds(30)))
+                                using (var commandToken = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan.FromSeconds(30)))
                                     await connection.HandleCommandAsync(command, commandParameter, commandParameters, commandToken.Token);
 
                                 if (reader.TryGet("CommandId", out int commandId))

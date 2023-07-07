@@ -21,7 +21,7 @@ internal class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerP
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand<string>(command, HttpContext.Response);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);

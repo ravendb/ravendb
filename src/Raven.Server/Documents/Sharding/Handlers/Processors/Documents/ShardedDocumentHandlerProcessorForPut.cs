@@ -21,7 +21,7 @@ internal class ShardedDocumentHandlerProcessorForPut : AbstractDocumentHandlerPr
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand<PutResult>(command, HttpContext.Response);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);

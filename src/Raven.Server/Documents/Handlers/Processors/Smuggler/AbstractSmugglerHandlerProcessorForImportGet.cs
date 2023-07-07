@@ -35,7 +35,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
         await using (var file = await GetImportStream())
         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var result = await DoImport(context, stream, options, result: null, onProgress: null, operationId.Value, token);
             await WriteSmugglerResultAsync(context, result, RequestHandler.ResponseBodyStream());

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         public override async ValueTask ExecuteAsync()
         {
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
                     RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),

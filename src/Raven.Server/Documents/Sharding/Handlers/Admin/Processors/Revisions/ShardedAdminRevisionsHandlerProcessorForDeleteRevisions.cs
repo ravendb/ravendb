@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
                 cmds[shard] = new DeleteRevisionsOperation.DeleteRevisionsCommand(DocumentConventions.Default, context,
                     new DeleteRevisionsOperation.Parameters() {DocumentIds = ids.Ids.ToArray()});
             }
-            using(var token = RequestHandler.CreateOperationToken())
+            using(var token = RequestHandler.CreateHttpRequestBoundOperationToken())
                 await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);
         }
         

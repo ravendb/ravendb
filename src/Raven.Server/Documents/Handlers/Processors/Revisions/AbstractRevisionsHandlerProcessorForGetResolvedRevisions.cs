@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             var date = Convert.ToDateTime(since).ToUniversalTime();
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 await GetResolvedRevisionsAndWriteAsync(context, since: date, take, token.Token);
             }

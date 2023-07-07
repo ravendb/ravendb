@@ -96,7 +96,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         {
             try
             {
-                using (var token = RequestHandler.CreateTimeLimitedQueryToken())
+                using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                 using (AllocateContextForQueryOperation(out var queryContext, out var context))
                 {
                     var addSpatialProperties = RequestHandler.GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;

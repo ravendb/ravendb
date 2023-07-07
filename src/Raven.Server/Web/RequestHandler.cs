@@ -27,15 +27,12 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -92,7 +89,7 @@ namespace Raven.Server.Web
         }
 
         public abstract Task CheckForChanges(RequestHandlerContext context);
-        
+
         internal Stream TryGetRequestFromStream(string itemName)
         {
             if (HttpContext.Request.HasFormContentType == false)
@@ -817,19 +814,24 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-        public virtual OperationCancelToken CreateOperationToken()
+        public virtual OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
 
-        public virtual OperationCancelToken CreateOperationToken(CancellationToken token)
+        public virtual OperationCancelToken CreateHttpRequestBoundOperationToken(CancellationToken token)
         {
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted, token);
         }
 
-        public virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        public virtual OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
+        }
+
+        public virtual OperationCancelToken CreateBackgroundOperationToken()
+        {
+            return new OperationCancelToken(ServerStore.ServerShutdown);
         }
 
         public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
@@ -905,7 +907,7 @@ namespace Raven.Server.Web
             {
                 case ConnectionStringType.Raven:
                     return JsonDeserializationClient.RavenConnectionString(configuration).ToAuditJson();
-                
+
                 case ConnectionStringType.ElasticSearch:
                     return JsonDeserializationClient.ElasticSearchConnectionString(configuration).ToAuditJson();
 

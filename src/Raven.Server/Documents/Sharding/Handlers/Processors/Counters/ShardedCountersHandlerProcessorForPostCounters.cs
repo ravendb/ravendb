@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
                 
             }
 
-            using (var token = RequestHandler.CreateOperationToken())
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
                     new ShardedCounterBatchOperation(RequestHandler.HttpContext.Request, commandsPerShard), token.Token);

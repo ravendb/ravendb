@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 var fetchDocsOp = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, idsByShards, includePaths: null, includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: false);
 
                 ShardedReadResult<GetShardedDocumentsResult> result;
-                using (var token = RequestHandler.CreateOperationToken())
+                using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
                     result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(idsByShards.Keys.ToArray(), fetchDocsOp, token.Token);
 
                 var includesDocId = $"TimeSeriesRangeIncludes/{docId}";

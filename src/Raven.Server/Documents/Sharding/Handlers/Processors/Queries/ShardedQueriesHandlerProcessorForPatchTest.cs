@@ -26,7 +26,7 @@ internal class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandl
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand<PatchByQueryTestCommand.Response>(command, HttpContext.Response);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);

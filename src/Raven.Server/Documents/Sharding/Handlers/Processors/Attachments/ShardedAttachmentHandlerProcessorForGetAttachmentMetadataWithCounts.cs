@@ -21,7 +21,7 @@ internal class ShardedAttachmentHandlerProcessorForGetAttachmentMetadataWithCoun
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
 
-        using (var token = RequestHandler.CreateOperationToken())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var proxyCommand = new ProxyCommand<GetAttachmentMetadataWithCountsCommand.Response>(command, HttpContext.Response);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
