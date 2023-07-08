@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -66,7 +67,7 @@ namespace SlowTests.Server.Replication
                     return dbRecord?.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0;
                 }, true);
 
-                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = leader.WebUrl, Database = store.Database }));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -97,7 +98,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Indexes.WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
+                    await Indexes.WaitForIndexingAsync(store, store.Database, nodeTag: src.ServerStore.NodeTag);
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
@@ -105,12 +106,12 @@ namespace SlowTests.Server.Replication
                 var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await WaitAndAssertForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
-                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
-
-                using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
-                using (var secondSession = store.OpenAsyncSession(new SessionOptions { RequestExecutor = re }))
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = leader.WebUrl, Database = store.Database }));
+                Assert.Equal(2, store.GetRequestExecutor().Topology.Nodes.Count);
+                
+                using (var secondSession = store.OpenAsyncSession())
                 {
-                    Indexes.WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
+                    await Indexes.WaitForIndexingAsync(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
                     var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
                     Assert.Equal(0, secondNodeDocs.Length);
                 }
@@ -126,7 +127,9 @@ namespace SlowTests.Server.Replication
 
             using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
             {
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() }));
+                var r = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() }));
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(r.RaftCommandIndex.Value, nodes);
+                
                 var firstNodeTag = await AssertWaitForNotNullAsync(async () =>
                     (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.FirstOrDefault());
                 var firstNode = nodes.First(n => n.ServerStore.NodeTag == firstNodeTag);
@@ -136,6 +139,7 @@ namespace SlowTests.Server.Replication
                 using (var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(firstNode.WebUrl, store.Database, null, store.Conventions))
                 using (var session = store.OpenAsyncSession(new SessionOptions { RequestExecutor = re }))
                 {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
                     //Add first revision with first node tag
                     await session.StoreAsync(entity);
                     await session.SaveChangesAsync();
@@ -162,7 +166,6 @@ namespace SlowTests.Server.Replication
                     session.Delete(entity.Id);
                     await session.SaveChangesAsync();
                 }
-
                 await Backup.RunBackupInClusterAsync(store, backupTaskId, isFullBackup: false);
             }
 
@@ -177,7 +180,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Indexes.WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
+                    await Indexes.WaitForIndexingAsync(store, store.Database, nodeTag: src.ServerStore.NodeTag);
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
@@ -185,12 +188,12 @@ namespace SlowTests.Server.Replication
                 var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await WaitAndAssertForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
-                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = leader.WebUrl, Database = store.Database }));
 
                 using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
                 using (var secondSession = store.OpenAsyncSession(new SessionOptions { RequestExecutor = re }))
                 {
-                    Indexes.WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
+                    await Indexes.WaitForIndexingAsync(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
                     var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
                     Assert.Equal(0, secondNodeDocs.Length);
                 }
