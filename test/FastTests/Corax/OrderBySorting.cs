@@ -88,24 +88,16 @@ namespace FastTests.Corax
 
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
-                var entryWriter = new IndexEntryWriter(bsc, knownFields);
                 foreach (var entry in longList)
                 {
-                    using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
-                    {
-                        indexWriter.Index(entry.Id,data.ToSpan());
-                    }
+                    using var builder = indexWriter.Index(entry.Id);
+                    builder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
+                    builder.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, Convert.ToDouble(entry.Content));
                 }
                 indexWriter.PrepareAndCommit();
             }
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry, out ByteString output)
-        {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, Convert.ToDouble(entry.Content));
-            return entryWriter.Finish(out output);
-        }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)
         {

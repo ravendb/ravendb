@@ -494,6 +494,7 @@ namespace Corax
             public bool IsEmpty => Fields > 0;
             public int Fields;
             private bool _isUpdate;
+            public long EntryId => _entryId;
 
             public IndexEntryBuilder(IndexWriter parent)
             {
@@ -621,12 +622,30 @@ namespace Corax
             {
             }
 
+            public void Write(int fieldId, ReadOnlySpan<byte> value) => Write(fieldId, null, value);
+
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
             {
                 var field = GetField(fieldId, path);
-                Insert(field, value);
+                if (value.Length > 0)
+                {
+                    if (field.ShouldStore)
+                    {
+                        RegisterTerm(field.Name, value, StoredFieldType.None);
+                    }
+                    Insert(field, value);
+                }
+                else
+                {
+                    if (field.ShouldStore)
+                    {
+                        RegisterTerm(field.Name, Constants.EmptyStringSlice, StoredFieldType.None);
+                    }
+                    ExactInsert(field, Constants.EmptyStringSlice);
+                }
             }
 
+            public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue) => Write(fieldId, null, value, longValue, dblValue);
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
             {
                 var field = GetField(fieldId, path);
@@ -642,7 +661,7 @@ namespace Corax
                 var field = GetField(fieldId, path);
                 RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
 
-                var maxLen = Encoding.UTF8.GetMaxByteCount(path.Length);
+                var maxLen = Encoding.UTF8.GetMaxByteCount(entry.Geohash.Length);
                 using var _ = _parent._entriesAllocator.Allocate(maxLen, out var buffer);
                 var len = Encoding.UTF8.GetBytes(entry.Geohash, buffer.ToSpan());
                 for (int i = 1; i <= entry.Geohash.Length; ++i)
@@ -696,6 +715,8 @@ namespace Corax
  
         }
 
+        public IndexEntryBuilder Index(string key) => Index(Encoding.UTF8.GetBytes(key));
+        
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
         {
             long entryId = InitBuilder(key);
@@ -714,23 +735,6 @@ namespace Corax
             return entryId;
         }
 
-        public long Index(string key, ReadOnlySpan<byte> data)
-        {
-            return Index(Encoding.UTF8.GetBytes(key), data);
-        }
-        /// <returns>Encoded id (with freq/container_type)</returns>
-        public long Index(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data)
-        {
-            _numberOfModifications++;
-            var entryId = ++_lastEntryId;
-            
-            IndexEntry(entryId, data);
-            
-            RegisterEntryByKey(key, entryId);
-
-            return EntryIdEncodings.Encode(entryId, 1, TermIdMask.Single);
-        }
-
         private void RegisterEntryByKey(ReadOnlySpan<byte> key, long entryId)
         {
             _entriesAllocator.Allocate(key.Length, out var keyStr);
@@ -747,130 +751,6 @@ namespace Corax
             else
             {
                 container.Items.Add(entryId);
-            }
-        }
-
-        private unsafe void IndexEntry(long entryId, ReadOnlySpan<byte> data)
-        {
-            var context = _transaction.Allocator;
-            fixed (byte* newEntryDataPtr = data)
-            {
-                var entryReader = new IndexEntryReader(newEntryDataPtr, data.Length);
-
-                foreach (var binding in _fieldsMapping)
-                {
-                    var fieldReader = entryReader.GetFieldReaderFor(binding.FieldId);
-                    if (binding.ShouldStore)
-                    {
-                        StoreField(entryId, ref fieldReader, binding.FieldName);
-                    }
-                    
-                    if (binding.FieldIndexingMode is FieldIndexingMode.No)
-                        continue;
-
-                    var indexer = new TermIndexer(this, context, fieldReader, _knownFieldsTerms[binding.FieldId], entryId);
-                    indexer.InsertToken();
-                }
-
-                var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
-                while (it.MoveNext())
-                {
-                    var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
-
-                    var indexedField = GetDynamicIndexedField(context, it.CurrentFieldName);
-                    if (indexedField.ShouldStore)
-                    {
-                        StoreField(entryId, ref fieldReader, indexedField.Name);
-                    }
-                    if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
-                        continue;
-
-
-                    var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
-                    indexer.InsertToken();
-                }
-            }
-        }
-
-        private void StoreField(long entryId, ref IndexEntryReader.FieldReader fieldReader, Slice name)
-        {
-            var fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            long fieldRootPage = _fieldsCache.GetFieldRootPage(name, fieldsTree);
-            ref var entryTerms = ref GetEntryTerms(entryId);
-
-            if (fieldReader.Type.HasFlag(IndexEntryFieldType.List))
-            {
-                if (fieldReader.TryReadMany(out var it))
-                {
-                    while (it.ReadNext())
-                    {
-                        if (it.IsNull)
-                        {
-                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
-                        }
-                        else if (it.IsEmptyString)
-                        {
-                            RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
-                        }
-                        else
-                        {
-                            RegisterTerm(it.Sequence, ref entryTerms, fieldReader.Type);
-                        }
-                    }
-                }
-            }
-            else if (fieldReader.Read(out var type, out Span<byte> v))
-            {
-                switch (type)
-                {
-                    case IndexEntryFieldType.Null:
-                        RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Null);
-                        break;
-                    case IndexEntryFieldType.Empty:
-                        RegisterNullOrEmpty(ref entryTerms, StoredFieldType.Empty);
-                        break;
-                    default:
-                        RegisterTerm(v, ref entryTerms, fieldReader.Type);
-                        break;
-                }
-            }
-
-            void RegisterTerm(ReadOnlySpan<byte> term, ref NativeList<RecordedTerm> entryTerms, IndexEntryFieldType type)
-            {
-                var termId = Container.Allocate(_transaction.LowLevelTransaction, _storedFieldsContainerId,
-                    term.Length, fieldRootPage, out Span<byte> space);
-                term.CopyTo(space);
-                var storedFieldType = StoredFieldType.Term;
-                if (type.HasFlag(IndexEntryFieldType.Raw))
-                {
-                    storedFieldType = StoredFieldType.Raw;
-                }
-                if (type.HasFlag(IndexEntryFieldType.List))
-                {
-                    storedFieldType |= StoredFieldType.List;
-                }
-                if (type.HasFlag(IndexEntryFieldType.Tuple))
-                {
-                    storedFieldType |= StoredFieldType.Tuple;
-                }
-                entryTerms.Add(new RecordedTerm
-                {
-                    // why: entryTerms.Count << 8 
-                    // we put entries count here because we are sorting the entries afterward
-                    // this ensure that stored values are then read using the same order we have for writing them
-                    // which is important for storing arrays
-                    TermContainerId = entryTerms.Count << 8 | (int)storedFieldType | 0b110, // marker for stored field
-                    Long = termId
-                });
-            }
-
-            void RegisterNullOrEmpty(ref NativeList<RecordedTerm> entryTerms, StoredFieldType type)
-            {
-                entryTerms.Add(new RecordedTerm
-                {
-                    TermContainerId = entryTerms.Count << 8 |  (int)type | 0b110, // marker stored field entry
-                    Long = fieldRootPage
-                });
             }
         }
 
@@ -905,20 +785,6 @@ namespace Corax
         private void RemoveDocumentBoost(long entryId)
         {
             _documentBoost.Delete(entryId);
-        }
-        
-        public long Update(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data, float documentBoost)
-        {
-            var idInTree = Update(key,  data);
-            AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost, true);
-            return idInTree;
-        }
-
-        /// <returns>Encoded entryId</returns>
-        public long Update(ReadOnlySpan<byte> key, ReadOnlySpan<byte> data)
-        {
-            RegisterForDeletionByKey(key);
-            return Index(key, data);
         }
 
         private void RegisterForDeletionByKey(ReadOnlySpan<byte> key)

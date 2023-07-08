@@ -118,41 +118,31 @@ namespace Voron.Benchmark.Corax
             using (var writer = new IndexWriter(env, fields))
             {
                 {
-                    var entryWriter = new IndexEntryWriter(bsc, fields);
-                    entryWriter.Write(0, Encoding.UTF8.GetBytes("Arava"));
-                    entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+                    using var entryWriter = writer.Index("Arava");
+                    entryWriter.Write(0, "Arava"u8);
+                    entryWriter.Write(1, "Eini"u8);
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
-                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    using (var _ = entryWriter.Finish(out var entry))
-                    {
-                        writer.Index("Arava", entry.ToSpan());
-                    };
+                    entryWriter.Write(3, "Dog"u8);
                 }
 
                 {
-                    var entryWriter = new IndexEntryWriter(bsc, fields);
-                    entryWriter.Write(0, Encoding.UTF8.GetBytes("Phoebe"));
-                    entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+                    using var entryWriter = writer.Index("Phoebe");
+                    entryWriter.Write(0, "Phoebe"u8);
+                    entryWriter.Write(1, "Eini"u8);
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
-                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    using (var _ = entryWriter.Finish(out var entry))
-                    {
-                        writer.Index("Phoebe", entry.ToSpan());
-                    }
+                    entryWriter.Write(3, "Dog"u8);
+                  
                 }
 
                 for (int i = 0; i < 10_000; i++)
                 {
-                    var entryWriter = new IndexEntryWriter(bsc, fields);
+                    using var entryWriter = writer.Index("Dog #" + i);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));
                     entryWriter.Write(1, Encoding.UTF8.GetBytes("families/" + (i % 1024)));
                     var age = i % 15;
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
-                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    using (var _ = entryWriter.Finish(out var entry))
-                    {
-                        writer.Index("Dog #" + i,  entry.ToSpan());
-                    }
+                    entryWriter.Write(3, "Dog"u8);
+                  
                 }
 
                 writer.PrepareAndCommit();

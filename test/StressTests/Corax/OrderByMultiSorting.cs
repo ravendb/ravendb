@@ -197,27 +197,24 @@ namespace StressTests.Corax
 
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
-                var entryWriter = new IndexEntryWriter(bsc, knownFields);
 
                 foreach (var entry in longList)
                 {
-                    using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
-                    {
-                        indexWriter.Index(entry.Id,data.ToSpan());
-                    }
+                    CreateEntry(indexWriter, entry);
                 }
                 indexWriter.PrepareAndCommit();
             }
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long, long> entry, out ByteString output)
+        private static void CreateEntry(IndexWriter indexWriter, IndexSingleNumericalEntry<long, long> entry)
         {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
-            entryWriter.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
-            return entryWriter.Finish(out output);
+            using var builder = indexWriter.Index(entry.Id);
+            builder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
+            builder.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
+            builder.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
+
         }
+
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)
         {

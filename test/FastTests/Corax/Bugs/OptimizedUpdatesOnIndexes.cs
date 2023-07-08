@@ -27,13 +27,13 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         long oldId; 
         using (var indexWriter = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(Allocator, fields);
-            entry.Write(0, "cars/1"u8);
-            entry.Write(1, "Lightning"u8);
-            entry.Write(2, "12"u8);
-            entry.Finish(out var entrySpan);
-
-            oldId = indexWriter.Update("cars/1"u8, entrySpan.ToSpan());
+            using (var entry = indexWriter.Update("cars/1"u8))
+            {
+                entry.Write(0, "cars/1"u8);
+                entry.Write(1, "Lightning"u8);
+                entry.Write(2, "12"u8);
+                oldId = entry.EntryId;
+            }
             
             indexWriter.PrepareAndCommit();
         }
@@ -50,13 +50,13 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         long newId;
         using (var indexWriter = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(Allocator, fields);
-            entry.Write(0, Encoding.UTF8.GetBytes("cars/1"));
-            entry.Write(1, Encoding.UTF8.GetBytes("Lightning"));
-            entry.Write(2, Encoding.UTF8.GetBytes("13"));
-            entry.Finish(out var entrySpan);
-
-            newId = indexWriter.Update("cars/1"u8, entrySpan.ToSpan());
+            using (var entry = indexWriter.Update("cars/1"u8))
+            {
+                entry.Write(0, Encoding.UTF8.GetBytes("cars/1"));
+                entry.Write(1, Encoding.UTF8.GetBytes("Lightning"));
+                entry.Write(2, Encoding.UTF8.GetBytes("13"));
+                newId = entry.EntryId;
+            }
             
             indexWriter.PrepareAndCommit();
         }

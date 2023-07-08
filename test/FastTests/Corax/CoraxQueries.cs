@@ -273,26 +273,20 @@ namespace FastTests.Corax
             _textualItemFieldMetadata = binding.Metadata;
             
             using var indexWriter = new IndexWriter(Env, _knownFields);
-            var entryWriter = new IndexEntryWriter(bsc, _knownFields);
 
             foreach (var entry in _entries)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id,data.ToSpan());
+                var entryBuilder = indexWriter.Index(entry.Id);
+                entryBuilder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
+                entryBuilder.Write(LongValueId, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
+                entryBuilder.Write(DoubleValueId, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
+                entryBuilder.Write(TextualValueId, Encodings.Utf8.GetBytes(entry.TextualValue));
+
             }
 
             indexWriter.PrepareAndCommit();
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, Entry entry, out ByteString output)
-        {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(LongValueId, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
-            entryWriter.Write(DoubleValueId, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
-            entryWriter.Write(TextualValueId, Encodings.Utf8.GetBytes(entry.TextualValue));
-            return entryWriter.Finish(out output);
-        }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {

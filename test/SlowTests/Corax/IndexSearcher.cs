@@ -95,21 +95,6 @@ public class IndexSearcherTest : StorageTest
         public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
     }
 
-    private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-        ref IndexEntryWriter entryWriter, IndexEntry value, out ByteString output)
-    {
-        Span<byte> PrepareString(string value)
-        {
-            if (value == null)
-                return Span<byte>.Empty;
-            return Encoding.UTF8.GetBytes(value);
-        }
-
-        entryWriter.Write(IdIndex, PrepareString(value.Id));
-        entryWriter.Write(ContentIndex, new StringArrayIterator(value.Content));
-
-        return entryWriter.Finish(out output);
-    }
 
     public const int IdIndex = 0,
         ContentIndex = 1;
@@ -128,15 +113,40 @@ public class IndexSearcherTest : StorageTest
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
     {
         using var indexWriter = new IndexWriter(Env, mapping);
-        var entryWriter = new IndexEntryWriter(bsc, mapping);
 
         foreach (var entry in list)
         {
-            using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id,data.ToSpan());
+            CreateEntry(indexWriter, entry);
         }
 
         indexWriter.PrepareAndCommit();
         mapping.Dispose();
+        
+      
+    }
+
+    private static void CreateEntry(IndexWriter indexWriter, IndexEntry entry)
+    {
+        using var builder = indexWriter.Index(entry.Id);
+        builder.Write(IdIndex, PrepareString(entry.Id));
+        var it = new StringArrayIterator(entry.Content);
+        for (int i = 0; i < it.Length; i++)
+        {
+            if (it.IsNull(i))
+            {
+                builder.WriteNull(ContentIndex, null);
+            }
+            else
+            {
+                builder.Write(ContentIndex, it[i]);
+            }
+        }
+
+        Span<byte> PrepareString(string value)
+        {
+            if (value == null)
+                return Span<byte>.Empty;
+            return Encoding.UTF8.GetBytes(value);
+        }
     }
 }

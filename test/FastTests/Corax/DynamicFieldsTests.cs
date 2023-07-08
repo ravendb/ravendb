@@ -62,41 +62,28 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice)
             .Build();
 
-        IndexEntryWriter writer = new(bsc, knownFields);
-        writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
-        writer.Write(1, new IndexEntryWriterTest.StringArrayIterator(new[] { "AAA", "BF", "CE" }));
-        writer.WriteDynamic("Name_123", Encoding.UTF8.GetBytes("Oren"));
-        writer.WriteDynamic("Name_433", Encoding.UTF8.GetBytes("Eini"));
-        writer.WriteDynamic("Scope_0", Encoding.UTF8.GetBytes(""));
-        writer.WriteNullDynamic("Scope_1");
-        writer.WriteDynamic("Items_UK", new IndexEntryWriterTest.StringArrayIterator(new[] { "AAA", "GBP", "CE" }));
-
-        writer.WriteDynamic("Age_0", Encoding.UTF8.GetBytes("30.31"), 30, 30.31);
-        writer.WriteDynamic("Age_1", Encoding.UTF8.GetBytes("10"), 10, 10);
-
-        using ByteStringContext<ByteStringMemoryCache>.InternalScope __ = writer.Finish(out ByteString element);
-
-        IndexEntryReader reader = new(element.Ptr, element.Length);
-        reader.GetFieldReaderFor(0).Read(out long longValue);
-        Assert.Equal(1, longValue);
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Name_123")).Read(out Span<byte> value);
-        Assert.Equal("Oren", Encoding.UTF8.GetString(value));
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Name_433")).Read(out value);
-        Assert.Equal("Eini", Encoding.UTF8.GetString(value));
-
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out long lv);
-        Assert.Equal(30, lv);
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out double dl);
-        Assert.Equal(30.31, dl);
-        
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  lv);
-        Assert.Equal(10, lv);
-        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  dl);
-        Assert.Equal(10, dl);
-        
         using (var indexer = new IndexWriter(Env, knownFields))
         {
-            indexer.Index("elements/1",element.ToSpan());
+            using (var writer = indexer.Index("elements/1"))
+            {
+                writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
+                foreach (string term in new[] { "AAA", "BF", "CE" })
+                {
+                    writer.Write(1,Encoding.UTF8.GetBytes(term));
+                }
+                writer.Write(Constants.IndexWriter.DynamicField,"Name_123", Encoding.UTF8.GetBytes("Oren"));
+                writer.Write(Constants.IndexWriter.DynamicField,"Name_433", Encoding.UTF8.GetBytes("Eini"));
+                writer.Write(Constants.IndexWriter.DynamicField,"Scope_0", Encoding.UTF8.GetBytes(""));
+                writer.WriteNull(Constants.IndexWriter.DynamicField, "Scope_1");
+                foreach (string term in new[] { "AAA", "GBP", "CE" })
+                {
+                    writer.Write(Constants.IndexWriter.DynamicField, "Items_UK", Encoding.UTF8.GetBytes(term));
+                }
+
+                writer.Write(Constants.IndexWriter.DynamicField, "Age_0", Encoding.UTF8.GetBytes("30.31"), 30, 30.31);
+                writer.Write(Constants.IndexWriter.DynamicField,"Age_1", Encoding.UTF8.GetBytes("10"), 10, 10);
+            }
+
             indexer.PrepareAndCommit();
         }
 
@@ -152,12 +139,12 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Nick", "Ayende"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Oren"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Nick", "Ayende"u8);
+            }
             writer.PrepareAndCommit();
         }
 
@@ -192,13 +179,14 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Nick", "Ayende"u8);
-            entry.WriteDynamic("Name", "Eini Oren"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Oren"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Nick", "Ayende"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini Oren"u8);
+            }
+            
             writer.PrepareAndCommit();
         }
 
@@ -234,12 +222,12 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Name", "Oren"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Oren"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
+            }
             writer.PrepareAndCommit();
         }
 
@@ -274,35 +262,37 @@ public unsafe class DynamicFieldsTests : StorageTest
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Rank", "U"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index("users/1", preparedItem.ToSpan());
+            using (var entry = writer.Index("users/1"))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Oren"u8);
+                entry.Write(Constants.IndexWriter.DynamicField, "Rank", "U"u8);
+            }
+
             writer.PrepareAndCommit();
         }
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Name", "Oren"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Oren"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
+            }
             writer.PrepareAndCommit();
         }
 
 
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Eini"u8);
-            entry.WriteDynamic("Name", "Eini"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Eini"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
+            }
+           
             writer.PrepareAndCommit();
         }
 
@@ -330,13 +320,14 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
-        {           
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, Encodings.Utf8.GetBytes(IdString));
-            var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
-            entry.WriteSpatialDynamic("Coordinates_Home", spatialEntry);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index(IdString,preparedItem.ToSpan());
+        {
+            using (var builder = writer.Index(IdString))
+            {
+                builder.Write(0, Encodings.Utf8.GetBytes(IdString));
+                var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
+                builder.WriteSpatial(Constants.IndexWriter.DynamicField,"Coordinates_Home", spatialEntry);
+
+            }
             writer.PrepareAndCommit();
         }
 
@@ -443,23 +434,24 @@ public unsafe class DynamicFieldsTests : StorageTest
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Rank", "U"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index("users/1", preparedItem.ToSpan());
+            using (var entryBuilder = writer.Index("users/1"))
+            {
+                entryBuilder.Write(0, "users/1"u8);
+                entryBuilder.Write(1, "Oren"u8);
+                entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
+            }
             writer.PrepareAndCommit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Name", "Maciej"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entryBuilder = writer.Update("users/1"u8))
+            {
+                entryBuilder.Write(0, "users/1"u8);
+                entryBuilder.Write(1, "Oren"u8);
+                entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
+            }
+          
             writer.PrepareAndCommit();
         }
 
@@ -499,23 +491,25 @@ public unsafe class DynamicFieldsTests : StorageTest
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Rank", "U"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index("users/1", preparedItem.ToSpan());
+            using (var entryBuilder = writer.Update("users/1"u8))
+            {
+                entryBuilder.Write(0, "users/1"u8);
+                entryBuilder.Write(1, "Oren"u8);
+                entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
+
+            }
             writer.PrepareAndCommit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Oren"u8);
-            entry.WriteDynamic("Name", "Maciej"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entryBuilder = writer.Update("users/1"u8))
+            {
+                entryBuilder.Write(0, "users/1"u8);
+                entryBuilder.Write(1, "Oren"u8);
+                entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
+
+            }
             writer.PrepareAndCommit();
         }
 
@@ -528,12 +522,12 @@ public unsafe class DynamicFieldsTests : StorageTest
      
         using (var writer = new IndexWriter(Env, fields))
         {
-            var entry = new IndexEntryWriter(bsc, fields);
-            entry.Write(0, "users/1"u8);
-            entry.Write(1, "Eini"u8);
-            entry.WriteDynamic("Name", "Eini"u8);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Update("users/1"u8, preparedItem.ToSpan());
+            using (var entry = writer.Update("users/1"u8))
+            {
+                entry.Write(0, "users/1"u8);
+                entry.Write(1, "Eini"u8);
+                entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
+            }
             writer.PrepareAndCommit();
         }
         

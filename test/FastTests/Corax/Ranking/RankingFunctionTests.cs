@@ -179,14 +179,12 @@ public class RankingFunctionTests : StorageTest
     private void IndexEntries(IEnumerable<EntryData> entries)
     {
         using var indexWriter = new IndexWriter(Env, _mapping);
-        using var entry = new IndexEntryWriter(_context, _mapping);
         
         foreach (var dto in entries)
         {
-            entry.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
-            entry.Write(ContentIndex, dto.ContentAsSpan);
-            using var _ = entry.Finish(out var data);
-            var entryId = indexWriter.Index(dto.Id.ToString(), data.ToSpan());
+            using var builder = indexWriter.Index(dto.Id.ToString());
+            builder.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
+            builder.Write(ContentIndex, dto.ContentAsSpan);
         }
 
         indexWriter.PrepareAndCommit();

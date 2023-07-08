@@ -34,34 +34,31 @@ namespace FastTests.Corax
             var fields = CreateKnownFields(_bsc);
             using (var writer = new IndexWriter(Env, fields))
             {
-                using var builder = new IndexEntryWriter(_bsc, fields);
-                builder.Write(0, "users/1"u8);
-                builder.Write(1, "dancing queen"u8);
-                using var _ = builder.Finish(out var o);
-
-                writer.Index("users/1"u8, o.ToSpan());
-
+                using (var builder = writer.Index("users/1"u8))
+                {
+                    builder.Write(0, "users/1"u8);
+                    builder.Write(1, "dancing queen"u8);
+                }
+                
                 writer.PrepareAndCommit();
             }
 
             using (var writer = new IndexWriter(Env, fields))
             {
                 {
-                    using var builder = new IndexEntryWriter(_bsc, fields);
-                    builder.Write(0, "users/1"u8);
-                    builder.Write(1, "fernando"u8);
-                    using var _ = builder.Finish(out var o);
-
-                    
-                    writer.Update("users/1"u8, o.ToSpan());
+                    using (var builder = writer.Update("users/1"u8))
+                    {
+                        builder.Write(0, "users/1"u8);
+                        builder.Write(1, "fernando"u8);
+                    }
                 }
 
                 {
-                    using var builder = new IndexEntryWriter(_bsc, fields);
-                    builder.Write(0, "users/1"u8);
-                    builder.Write(1, "eagles"u8);
-                    using var _ = builder.Finish(out var o);
-                    writer.Update("users/1"u8, o.ToSpan());
+                    using (var builder = writer.Update("users/1"u8))
+                    {
+                        builder.Write(0, "users/1"u8);
+                        builder.Write(1, "eagles"u8);
+                    }
                 }
 
                 writer.PrepareAndCommit();

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Corax;
 using Corax.Mappings;
@@ -35,12 +36,13 @@ public class FacetIndexingRepro : StorageTest
         CompactTree idTree = fieldsTree.CompactTreeFor(id);
 
         using var iw = new IndexWriter(wtx, fields);
-        using var entryWriter = new IndexEntryWriter(bsc, fields);
         string entryKey = "users/00000001";
-        entryWriter.Write(0, Encoding.UTF8.GetBytes(entryKey));
-        entryWriter.Finish(out var s);
-        var entryIdEncoded = iw.Index(entryKey,s.ToSpan());
-        var entryId = EntryIdEncodings.Decode(entryIdEncoded).EntryId;
+        long entryId;
+        using (var builder = iw.Index("entryKey"))
+        {
+            builder.Write(0, Encoding.UTF8.GetBytes(entryKey));
+            entryId = builder.EntryId;
+        }
         iw.PrepareAndCommit();
         
         {
@@ -102,7 +104,7 @@ public class FacetIndexingRepro : StorageTest
     };
 
     [Fact]
-    public void ShouldNotCorrupt()
+    public unsafe void ShouldNotCorrupt()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-corrupt-log.bin");
         using var br = new BinaryReader(stream);
@@ -147,7 +149,17 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(id,buffer);
+                using var indexEntryBuilder = iw.Index(id);
+                fixed (byte* b = buffer)
+                {
+                    var reader = new IndexEntryReader(b, buffer.Length);
+                    for (int i = 0; i < reader.Length; i++)
+                    {
+                        var fieldReader = reader.GetFieldReaderFor(i);
+                        fieldReader.Read(out Span<byte> s);
+                        indexEntryBuilder.Write(i, s);
+                    }
+                }
                 items++;
             }
 
@@ -193,7 +205,7 @@ public class FacetIndexingRepro : StorageTest
     }
     
     [Fact]
-    public void CanSuccessfullyIndexData()
+    public unsafe void CanSuccessfullyIndexData()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-log.bin");
         using var br = new BinaryReader(stream);
@@ -244,7 +256,17 @@ public class FacetIndexingRepro : StorageTest
 
                 int len = br.Read7BitEncodedInt();
                 var buffer = br.ReadBytes(len);
-                iw.Index(id, buffer);
+                using var indexEntryBuilder = iw.Index(id);
+                fixed (byte* b = buffer)
+                {
+                    var reader = new IndexEntryReader(b, buffer.Length);
+                    for (int i = 0; i < reader.Length; i++)
+                    {
+                        var fieldReader = reader.GetFieldReaderFor(i);
+                        fieldReader.Read(out Span<byte> s);
+                        indexEntryBuilder.Write(i, s);
+                    }
+                }
 
             }
         }

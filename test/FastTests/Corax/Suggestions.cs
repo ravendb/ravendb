@@ -169,9 +169,12 @@ namespace FastTests.Corax
             return builder.Build();
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexEntryValues value, out ByteString output)
+      
+        private static void CreateEntry(IndexWriter indexWriter, IndexEntryValues entry)
         {
+            using var builder = indexWriter.Index(entry.Id);
+            builder.Write(IndexId, PrepareString(entry.Id));
+            builder.Write(ContentId, PrepareString(entry.Content));
             Span<byte> PrepareString(string value)
             {
                 if (value == null)
@@ -179,20 +182,15 @@ namespace FastTests.Corax
                 return Encoding.UTF8.GetBytes(value);
             }
 
-            entryWriter.Write(IndexId, PrepareString(value.Id));
-            entryWriter.Write(ContentId, PrepareString(value.Content));
-            return entryWriter.Finish(out output);
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntryValues> list, IndexFieldsMapping mapping)
         {
             using var indexWriter = new IndexWriter(Env, mapping);
-            var entryWriter = new IndexEntryWriter(bsc, mapping);
 
             foreach (var entry in list)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id,data.ToSpan());
+                CreateEntry(indexWriter, entry);
             }
 
             indexWriter.PrepareAndCommit();

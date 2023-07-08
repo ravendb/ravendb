@@ -9,8 +9,10 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;
+using FastTests.Corax;
 using FastTests.Voron;
 using Raven.Client.Documents.Linq;
+using SlowTests.Issues;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -47,31 +49,29 @@ public class IndexSearcherTest : StorageTest
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
     {
         using var indexWriter = new IndexWriter(Env, mapping);
-        var entryWriter = new IndexEntryWriter(bsc, mapping);
 
         foreach (var entry in list)
         {
-            using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(entry.Id,data.ToSpan());
+            CreateEntry(indexWriter, entry);
         }
 
         indexWriter.PrepareAndCommit();
         mapping.Dispose();
     }
 
-    private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-        ref IndexEntryWriter entryWriter, IndexSingleEntry value, out ByteString output)
+  
+    private static void CreateEntry(IndexWriter indexWriter, IndexSingleEntry entry)
     {
+        using var builder = indexWriter.Index(entry.Id);
+        builder.Write(IdIndex, PrepareString(entry.Id));
+        builder.Write(ContentIndex, PrepareString(entry.Content));
+
         Span<byte> PrepareString(string value)
         {
             if (value == null)
                 return Span<byte>.Empty;
             return Encoding.UTF8.GetBytes(value);
         }
-
-        entryWriter.Write(IdIndex, PrepareString(value.Id));
-        entryWriter.Write(ContentIndex, PrepareString(value.Content));
-        return entryWriter.Finish(out output);
     }
     
     public IndexSearcherTest(ITestOutputHelper output) : base(output)

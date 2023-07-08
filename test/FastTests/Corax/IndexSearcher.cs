@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -1993,22 +1994,7 @@ namespace FastTests.Corax
             public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexEntry value, out ByteString output)
-        {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, new StringArrayIterator(value.Content));
-
-            return entryWriter.Finish(out output);
-        }
-
+  
         public const int IdIndex = 0,
             ContentIndex = 1;
 
@@ -2026,12 +2012,17 @@ namespace FastTests.Corax
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
         {
             using var indexWriter = new IndexWriter(Env, mapping);
-            var entryWriter = new IndexEntryWriter(bsc, mapping);
 
             foreach (var entry in list)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                entry.IndexEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(indexWriter.Index(entry.Id,data.ToSpan()));
+                using var builder = indexWriter.Index(entry.Id);
+                builder.Write(IdIndex, PrepareString(entry.Id));
+                foreach (string s in entry.Content)
+                {
+                    builder.Write(ContentIndex, Encoding.UTF8.GetBytes(s));
+                }
+
+                entry.IndexEntryId = builder.EntryId;
             }
             indexWriter.PrepareAndCommit();
             mapping.Dispose();
@@ -2040,12 +2031,13 @@ namespace FastTests.Corax
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
         {
             using var indexWriter = new IndexWriter(Env, mapping);
-            var entryWriter = new IndexEntryWriter(bsc, mapping);
 
             foreach (var entry in list)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id, data.ToSpan());
+                using var builder = indexWriter.Index(entry.Id);
+                builder.Write(IdIndex, PrepareString(entry.Id));
+                builder.Write(ContentIndex, PrepareString(entry.Content));
+
             }
 
             indexWriter.PrepareAndCommit();
@@ -2062,44 +2054,21 @@ namespace FastTests.Corax
 
                 foreach (var entry in list)
                 {
-                    var data = CreateIndexEntryDouble(ref entryWriter, entry, out var buffer);
-                    indexWriter.Index(entry.Id, buffer.ToSpan());
+                    entryWriter.Write(IdIndex, PrepareString(entry.Id));
+                    entryWriter.Write(ContentIndex, PrepareString(entry.Content.ToString(CultureInfo.InvariantCulture)), Convert.ToInt64(entry.Content), entry.Content);
                 }
 
                 indexWriter.PrepareAndCommit();
             }
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntryDouble(
-            ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value, out ByteString output)
+        Span<byte> PrepareString(string value)
         {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, PrepareString(value.Content.ToString()), Convert.ToInt64(value.Content), value.Content);
-            return entryWriter.Finish(out output);
+            if (value == null)
+                return Span<byte>.Empty;
+            return Encoding.UTF8.GetBytes(value);
         }
 
-        
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleEntry value, out ByteString output)
-        {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, PrepareString(value.Content));
-            return entryWriter.Finish(out output);
-        }
         
         private class IndexSingleEntryDouble
         {

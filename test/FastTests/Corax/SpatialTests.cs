@@ -59,13 +59,14 @@ public class SpatialTests : StorageTest
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, _fieldsMapping))
-        {           
-            var entry = new IndexEntryWriter(bsc, _fieldsMapping);
-            entry.Write(IdIndex, Encodings.Utf8.GetBytes(IdString));
-            var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
-            entry.WriteSpatial(CoordinatesIndex, spatialEntry);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index(IdString,preparedItem.ToSpan());
+        {
+            using (var entry = writer.Index(IdString))
+            {
+                entry.Write(IdIndex, Encodings.Utf8.GetBytes(IdString));
+                var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
+                entry.WriteSpatial(CoordinatesIndex, null, spatialEntry);
+            }
+
             writer.PrepareAndCommit();
         }
 
