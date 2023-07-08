@@ -1774,6 +1774,15 @@ namespace Raven.Server.Rachis
             term = reader.ReadLittleEndianInt64();
         }
 
+        public void GetLastCommitIndex(out long index, out long term)
+        {
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                GetLastCommitIndex(context, out index, out term);
+            }
+        }
+
         public unsafe void SetLastCommitIndex(ClusterOperationContext context, long index, long term)
         {
             Debug.Assert(context.Transaction != null);

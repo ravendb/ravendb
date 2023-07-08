@@ -168,6 +168,7 @@ namespace FastTests
                             Certificate = options.AdminCertificate,
                             Conventions =
                             {
+                                DisableTopologyCache = true,
                                 DisposeCertificate = false
                             }
                         };
@@ -270,7 +271,7 @@ namespace FastTests
                         if (servers.Count > 1)
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout, servers));
+                            AsyncHelpers.RunSync(() => Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout, servers));
                         }
 
                         // skip 'wait for requests' on DocumentDatabase dispose
