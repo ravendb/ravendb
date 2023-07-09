@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             if (Logger.IsInfoEnabled)
                 Logger.Info(reason, batchItem.Exception);
 
-            if (batchItem.Exception != null)
+            if (batchItem.Status  == SubscriptionBatchItemStatus.Exception)
             {
                 if (batchItem.Document.Data != null)
                     Fetcher.MarkDocumentSent();

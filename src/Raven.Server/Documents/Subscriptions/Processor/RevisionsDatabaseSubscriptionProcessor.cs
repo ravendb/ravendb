@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, (Document Previous, Document Current) item)
         {
-            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send || batchItem.Status == SubscriptionBatchItemStatus.Exception)
             {
                 BatchItems.Add(new RevisionRecord
                 {
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             {
                 reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
                 result.Exception = ex;
-                result.Status = SubscriptionBatchItemStatus.Skip;
+                result.Status = SubscriptionBatchItemStatus.Exception;
                 return result;
             }
         }

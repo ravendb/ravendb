@@ -4,5 +4,6 @@ public enum SubscriptionBatchItemStatus
 {
     Send,
     Skip,
-    ActiveMigration
+    ActiveMigration,
+    Exception
 }

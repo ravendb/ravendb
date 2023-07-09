@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -879,6 +880,38 @@ namespace SlowTests.Sharding.Cluster
         private static async Task<bool> AddOrUpdateUserAsync(IAsyncDocumentSession session, string id, bool update)
         {
             var current = await session.LoadAsync<User>(id);
+            if (update && current == null)
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel,
+                    DevelopmentHelper.Severity.Normal,
+                    "Remove this if clause, after this is done: https://issues.hibernatingrhinos.com/issue/RavenDB-20818");
+
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds <= 30_000)
+                {
+                    using var s = session.Advanced.DocumentStore.OpenAsyncSession();
+                    Console.WriteLine($"current == null (id: {id})");
+                    current = await s.LoadAsync<User>(id);
+                    Thread.Sleep(1000);
+
+                    if (current != null)
+                    {
+                        Assert.True(current.Age != 0);
+
+                        if (current.Age > 0)
+                            current.Age++;
+                        else
+                            current.Age--;
+
+                        current.Age *= -1;
+                        await s.SaveChangesAsync();
+                        return false;
+                    }
+                }
+
+                Assert.False(current == null, $"Expected to update '{id}' but could not load it in '{sp.ElapsedMilliseconds}' ms.");
+            }
+
             if (current == null)
             {
                 Assert.False(update, $"Expected to update '{id}' but could not load it.");
