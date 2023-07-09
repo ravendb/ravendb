@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -30,6 +31,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Raven.Server.Web.System.Processors.Studio;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -932,6 +934,57 @@ namespace RachisTests
                 var logs = ctx.ReadObject(server2.ServerStore.Engine.InMemoryDebug.ToJson(), "watcher-logs").ToString();
                 Assert.False(logs.Contains("Exception"), logs);
             }
+        }
+
+        [Fact]
+        public async Task AddingNodeToClusterUpdatesClusterRequestExecutorTopology_RavenDB_20702()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
+            
+            await WaitForValueAsync(() =>
+            {
+                foreach (var node in nodes)
+                {
+                    if (node.ServerStore.ClusterRequestExecutor?.TopologyNodes == null)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }, true);
+
+            //check all nodes updated their in-memory topology
+            Assert.NotNull(nodes[0].ServerStore.ClusterRequestExecutor?.TopologyNodes);
+            Assert.NotNull(nodes[1].ServerStore.ClusterRequestExecutor?.TopologyNodes);
+            Assert.NotNull(nodes[2].ServerStore.ClusterRequestExecutor?.TopologyNodes);
+
+            var top = nodes[0].ServerStore.ClusterRequestExecutor.TopologyNodes;
+            Assert.True(top.Count == 3, $"node {nodes[0].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
+            top = nodes[1].ServerStore.ClusterRequestExecutor.TopologyNodes;
+            Assert.True(top.Count == 3, $"node {nodes[1].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
+            top = nodes[2].ServerStore.ClusterRequestExecutor.TopologyNodes;
+            Assert.True(top.Count == 3, $"node {nodes[2].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
+            
+            var serverD = GetNewServer();
+            var serverDUrl = serverD.ServerStore.GetNodeHttpServerUrl();
+            Servers.Add(serverD);
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null, DocumentConventions.DefaultForServer))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(serverDUrl, "D", watcher: true), ctx);
+                await serverD.ServerStore.Engine.WaitForTopology(Leader.TopologyModification.NonVoter);
+            }
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                if (nodes[1].ServerStore.ClusterRequestExecutor?.TopologyNodes?.Count != 4)
+                {
+                    return false;
+                }
+
+                return true;
+            }, true);
         }
 
         [Fact]
