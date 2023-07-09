@@ -966,9 +966,17 @@ namespace Raven.Server.Documents.Revisions
 
             void ValidateFlags(HandleConflictRevisionsFlags flags)
             {
+                if (flags == HandleConflictRevisionsFlags.None)
+                {
+                    throw new InvalidOperationException($"Cannot delete conflict revisions without deleting.");
+                }
+                if (flags.HasFlag(HandleConflictRevisionsFlags.Conflicted) == false)
+                {
+                    throw new InvalidOperationException($"Cannot delete conflict revisions without deleting conflict revisions.");
+                }
                 if (flags.HasFlag(HandleConflictRevisionsFlags.Regular) == false && flags.HasFlag(HandleConflictRevisionsFlags.ForceCreated))
                 {
-                    throw new InvalidOperationException($"Cannot delete force-created revisions without deleting also regular revisions");
+                    throw new InvalidOperationException($"Cannot delete force-created revisions without deleting also regular revisions.");
                 }
             }
 
@@ -1053,9 +1061,10 @@ namespace Raven.Server.Documents.Revisions
         [Flags]
         private enum HandleConflictRevisionsFlags
         {
-            Conflicted = 0,
+            None = 0,
+            Conflicted = 1,
             Regular = 1 << 1,
-            ForceCreated = 1 << 3
+            ForceCreated = 1 << 2
         }
 
 

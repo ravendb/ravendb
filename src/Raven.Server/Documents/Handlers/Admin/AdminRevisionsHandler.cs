@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");
                 var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                using (var token = CreateTimeLimitedOperationToken())
+                using (var token = CreateHttpRequestBoundTimeLimitedOperationToken())
                 {
                     var ids = parameters.DocumentIds;
                     DeleteRevisionsCommand cmd;
