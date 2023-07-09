@@ -251,17 +251,13 @@ public class FacetIndexingRepro : StorageTest
                     continue;
                 }
 
-                int len = br.Read7BitEncodedInt();
-                var buffer = br.ReadBytes(len);
                 using var indexEntryBuilder = iw.Index(id);
-                fixed (byte* b = buffer)
                 {
-                    var reader = new IndexEntryReader(b, buffer.Length);
                     for (int i = 0; i < indexFieldsMapping.Count; i++)
                     {
-                        var fieldReader = reader.GetFieldReaderFor(i);
-                        fieldReader.Read(out Span<byte> s);
-                        indexEntryBuilder.Write(i, s);
+                        var len = br.Read7BitEncodedInt();
+                        var b = br.ReadBytes(len);
+                        indexEntryBuilder.Write(i, b);
                     }
                 }
 
@@ -272,3 +268,4 @@ public class FacetIndexingRepro : StorageTest
     {
     }
 }
+
