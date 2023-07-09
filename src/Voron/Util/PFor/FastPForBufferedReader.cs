@@ -21,7 +21,15 @@ public unsafe struct FastPForBufferedReader : IDisposable
     public FastPForBufferedReader(ByteStringContext allocator, byte* p, int len)
     {
         _allocator = allocator;
-        Decoder = len > 0 ? new FastPForDecoder(_allocator, p, len) : default;
+        if (len > 0)
+        {
+            Decoder = new FastPForDecoder(_allocator);
+            Decoder.Init(p, len);
+        }
+        else
+        {
+            Decoder = default;
+        }
         _buffer = null;
         _usedBuffer = 0;
         _bufferIdx = 0;

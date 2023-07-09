@@ -41,7 +41,8 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
             }
 
             var output = new long[Bits.PowerOf2(array.Length)];
-            using var decoder = new FastPForDecoder(bsc, buffer, size);
+            using var decoder = new FastPForDecoder(bsc);
+            decoder.Init(buffer, size);
             fixed (long* o = output)
             {
                 int read = decoder.Read(o, output.Length);

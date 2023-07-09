@@ -211,7 +211,8 @@ namespace Corax.Queries
             {
                 // AndWith has to start from the start.
                 _ = VariableSizeEncoding.Read<int>(term._containerItem.Address, out var offset); // discard count here
-                var reader = new FastPForDecoder(term._ctx,term._containerItem.Address + offset, term._containerItem.Length - offset);
+                using var reader = new FastPForDecoder(term._ctx);
+                reader.Init(term._containerItem.Address + offset, term._containerItem.Length - offset);
                 var decodedMatches = stackalloc long[1024];
                 int bufferIndex = 0;
                 int matchedIndex = 0;

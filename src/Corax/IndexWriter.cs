@@ -479,6 +479,8 @@ namespace Corax
 
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
+
+            _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
@@ -924,6 +926,7 @@ namespace Corax
         private readonly HashSet<long> _entriesAlreadyAdded;
         private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly IndexOperationsDumper _indexDebugDumper;
+        private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
         private FastPForEncoder _pForEncoder;
         private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
@@ -1199,6 +1202,7 @@ namespace Corax
 
         private void ResetWriter()
         {
+            _pforDecoder.Dispose();
             _indexedEntries.Clear();
             _entryKeysToRemove.Clear();
             _deletedEntries.Clear();
@@ -1219,6 +1223,8 @@ namespace Corax
             }
             
             _entriesAllocator.Reset();
+            
+            _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
 
         public void TryDeleteEntryByField(string field, string term)
@@ -1266,11 +1272,11 @@ namespace Corax
                 // combine with existing value
                 _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
                 
-                var decoder = new FastPForDecoder(_entriesAllocator, smallSet.Address + pos, smallSet.Length - pos);
+                _pforDecoder.Init(smallSet.Address + pos, smallSet.Length - pos);
                 var output = stackalloc long[1024];
                 while (true)
                 {
-                    var read = decoder.Read(output, 1024);
+                    var read = _pforDecoder.Read(output, 1024);
                     if (read == 0) 
                         break;
                     EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(output, 1024), read);
@@ -1281,7 +1287,6 @@ namespace Corax
                     }
                     _numberOfModifications -= read;
                 }
-                decoder.Dispose();
             }
             else
             {
@@ -1637,12 +1642,12 @@ namespace Corax
             var buffer = stackalloc long[1024];
             var bufferAsSpan = new Span<long>(buffer, 1024);
             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
-            var reader = new FastPForDecoder(_entriesAllocator,item.Address + offset, item.Length - offset);
+            _pforDecoder.Init(item.Address + offset, item.Length - offset);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
             while (true)
             {
-                var read = reader.Read(buffer, 1024);
+                var read = _pforDecoder.Read(buffer, 1024);
                 if (read == 0)
                     break;
 
@@ -2014,6 +2019,7 @@ namespace Corax
         
         public void Dispose()
         {
+            _pforDecoder.Dispose();
             _entriesAllocator.Dispose();
             _jsonOperationContext?.Dispose();
             if (_ownsTransaction)

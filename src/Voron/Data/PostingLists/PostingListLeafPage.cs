@@ -283,7 +283,8 @@ public readonly unsafe struct PostingListLeafPage
         return new Iterator(allocator, _page.DataPointer, Header->SizeUsed);
     }
 
-    public static void Merge(ByteStringContext allocator,
+    public static void Merge(
+        ByteStringContext allocator, ref FastPForDecoder fastPForDecoder,
         PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
         var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
@@ -297,16 +298,14 @@ public readonly unsafe struct PostingListLeafPage
 
         if (first->SizeUsed > 0)
         {
-            var firstDecoder = new FastPForDecoder(allocator, (byte*)first + PageHeader.SizeOf, first->SizeUsed);
-            mergedList.Count += firstDecoder.Read(mergedList.RawItems, mergedList.Capacity);
-            firstDecoder.Dispose();
+            fastPForDecoder.Init((byte*)first + PageHeader.SizeOf, first->SizeUsed);
+            mergedList.Count += fastPForDecoder.Read(mergedList.RawItems, mergedList.Capacity);
         }
 
         if (second->SizeUsed > 0)
         {
-            var secondDecoder = new FastPForDecoder(allocator, (byte*)second + PageHeader.SizeOf, second->SizeUsed);
-            mergedList.Count += secondDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
-            secondDecoder.Dispose();
+            fastPForDecoder.Init((byte*)second + PageHeader.SizeOf, second->SizeUsed);
+            mergedList.Count += fastPForDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
         }
 
         var encoder = new FastPForEncoder(allocator);
