@@ -102,44 +102,6 @@ public class SpatialTests : StorageTest
         }
     }
 
-    [Theory]
-    [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
-    public unsafe void WriteAndReadSpatialList(int size, double[] lat, double[] lon)
-    {
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-
-        var entryBuilder = new IndexEntryWriter(bsc, _fieldsMapping);
-        entryBuilder.Write(IdIndex, Encodings.Utf8.GetBytes("item/1"));
-        Span<CoraxSpatialPointEntry> _points = new CoraxSpatialPointEntry[size];
-        for (int i = 0; i < size; ++i)
-            _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-        entryBuilder.WriteSpatial(CoordinatesIndex, _points);
-        using var _ = entryBuilder.Finish(out var buffer);
-        var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
-
-        Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.SpatialPointList));
-        var iterator = reader.ReadManySpatialPoint(CoordinatesIndex);
-        List<CoraxSpatialPointEntry> entriesInIndex = new();
-        
-        while (iterator.ReadNext())
-        {
-            entriesInIndex.Add(iterator.CoraxSpatialPointEntry);
-        }        
-        
-        Assert.Equal(size, entriesInIndex.Count);
-
-        for (int i = 0; i < size; ++i)
-        {
-            var entry = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-
-            var entryFromBuilder = entriesInIndex.Single(p => p.Geohash == entry.Geohash);
-            Assert.Equal(entry.Latitude, entryFromBuilder.Latitude);
-            Assert.Equal(entry.Longitude, entryFromBuilder.Longitude);
-            entriesInIndex.Remove(entry);
-        }
-        
-        Assert.Empty(entriesInIndex);
-    }
 
     public override void Dispose()
     {

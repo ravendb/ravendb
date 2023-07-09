@@ -12,6 +12,7 @@ using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
+using SharpCompress.Common;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -2017,9 +2018,12 @@ namespace FastTests.Corax
             {
                 using var builder = indexWriter.Index(entry.Id);
                 builder.Write(IdIndex, PrepareString(entry.Id));
-                foreach (string s in entry.Content)
+                if (entry.Content != null)
                 {
-                    builder.Write(ContentIndex, Encoding.UTF8.GetBytes(s));
+                    foreach (string s in entry.Content)
+                    {
+                        builder.Write(ContentIndex, Encoding.UTF8.GetBytes(s));
+                    }
                 }
 
                 entry.IndexEntryId = builder.EntryId;
@@ -2050,10 +2054,10 @@ namespace FastTests.Corax
 
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
-                var entryWriter = new IndexEntryWriter(bsc, knownFields);
 
                 foreach (var entry in list)
                 {
+                    using var entryWriter = indexWriter.Index(entry.Id);
                     entryWriter.Write(IdIndex, PrepareString(entry.Id));
                     entryWriter.Write(ContentIndex, PrepareString(entry.Content.ToString(CultureInfo.InvariantCulture)), Convert.ToInt64(entry.Content), entry.Content);
                 }

@@ -28,7 +28,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
             .AddBinding(0, "id()")
             .AddBinding(1, "Badges");
         using var knownFields = builder.Build();
-        var indexEntryWriter = new IndexEntryWriter(allocator, knownFields);
+        //var indexEntryWriter = new IndexEntryWriter(allocator, knownFields);
 
         Assert.Fail("implement me");
         //var enumerableWriterScope = new EnumerableWriterScope(new(), new(), new(), new(), new(), allocator);
@@ -42,9 +42,9 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
 
         //scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
 
-        indexEntryWriter.Finish(out var output);
-
-        new IndexEntryReader(output.Ptr, output.Length).GetFieldReaderFor(0).Read(out var id);
+        // indexEntryWriter.Finish(out var output);
+        //
+        // new IndexEntryReader(output.Ptr, output.Length).GetFieldReaderFor(0).Read(out var id);
     }
 
     private static JArray ReadDocFromResource(string file)

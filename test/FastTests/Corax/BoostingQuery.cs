@@ -401,15 +401,6 @@ namespace FastTests.Corax
             indexWriter.PrepareAndCommit();
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long, long> entry, out ByteString output)
-        {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
-            entryWriter.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
-            return entryWriter.Finish(out output);
-        }
-
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)
         {
             Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
