@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _converter = converter;
             var knownFields = _converter.GetKnownFieldsForWriter();
             _indexingScope = CurrentIndexingScope.Current;
+            _indexingScope.OnNewDynamicField += UpdateDynamicFieldsBindings;
             _allocator = writeTransaction.Allocator;
             try
             {
@@ -88,10 +89,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using var builder = _indexWriter.Index(key.AsSpan());
 
-            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
-            }
             using (Stats.AddStats.Start())
             {
                 stats.RecordIndexingOutput();
@@ -109,11 +106,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using var builder = _indexWriter.Index(key.AsSpan());
 
-            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
-            }
-            
             using (Stats.AddStats.Start())
             {
                 _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
@@ -121,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        private void UpdateDynamicFieldsBindings()
+        public void UpdateDynamicFieldsBindings()
         {
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {

@@ -452,13 +452,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
             {
-                scope.CreatedFieldsCount++;
+                scope.DynamicFields[name] = field;
+                scope.IncrementDynamicFields();
             }
             else if (existing.Indexing != field.Indexing)
             {
                 throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{existing.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             }
-            scope.DynamicFields[name] = field;
 
 
             var result = new List<CoraxDynamicItem>();
@@ -497,7 +497,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.CreateFieldConverter == null)
                 scope.CreateFieldConverter = new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
-            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount++);
+            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount);
+            scope.IncrementDynamicFields();
             var result = new List<AbstractField>();
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
             return result;

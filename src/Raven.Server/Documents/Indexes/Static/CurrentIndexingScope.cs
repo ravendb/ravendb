@@ -41,7 +41,16 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
-        public int CreatedFieldsCount;
+        public event Action OnNewDynamicField;
+        
+        public void IncrementDynamicFields()
+        {
+            _createdFieldsCount++;
+            OnNewDynamicField?.Invoke();
+        }
+
+        private int _createdFieldsCount;
+        public int CreatedFieldsCount => _createdFieldsCount;
 
         static CurrentIndexingScope()
         {

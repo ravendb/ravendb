@@ -250,11 +250,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.Enumerable:
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
-                foreach (var item in iterator)
+                using (builder.AsList())
                 {
-                    InsertRegularField(field, item, indexContext, builder, sourceDocument, scope, out var _, nestedArray);
+                    foreach (var item in iterator)
+                    {
+                        InsertRegularField(field, item, indexContext, builder, sourceDocument, scope, out var _, nestedArray);
+                    }
                 }
-                
+
                 break;
 
             case ValueType.DynamicJsonObject:

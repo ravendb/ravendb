@@ -134,8 +134,8 @@ WaitForUserToContinueTheTest(store);
                 .Customize(x => x.Projection(projectionBehavior))
                 .Select(i => i.Name)
                 .SingleAsync();
-
-
+                
+            WaitForUserToContinueTheTest(store);
             var expected = (options.SearchEngineMode, projectionBehavior) switch
             {
                 (_, ProjectionBehavior.FromDocument) => "Jan",

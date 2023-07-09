@@ -494,6 +494,7 @@ namespace Corax
             public bool IsEmpty => Fields > 0;
             public int Fields;
             private bool _isUpdate;
+            private bool __buildingList;
             public long EntryId => _entryId;
 
             public IndexEntryBuilder(IndexWriter parent)
@@ -521,7 +522,13 @@ namespace Corax
 
             public void WriteNull(int fieldId, string path)
             {
-                ExactInsert(GetField(fieldId, path), Constants.NullValueSlice);
+                var field = GetField(fieldId, path);
+                if (field.ShouldStore)
+                {
+                    RegisterEmptyOrNull(field.Name, StoredFieldType.Null);    
+                }
+                ExactInsert(field, Constants.NullValueSlice);
+                
             }
 
             private IndexedField GetField(int fieldId, string path)
@@ -631,7 +638,7 @@ namespace Corax
                 {
                     if (field.ShouldStore)
                     {
-                        RegisterTerm(field.Name, value, StoredFieldType.None);
+                        RegisterTerm(field.Name, value, StoredFieldType.Term);
                     }
                     Insert(field, value);
                 }
@@ -639,7 +646,7 @@ namespace Corax
                 {
                     if (field.ShouldStore)
                     {
-                        RegisterTerm(field.Name, Constants.EmptyStringSlice, StoredFieldType.None);
+                        RegisterEmptyOrNull(field.Name, StoredFieldType.Empty);
                     }
                     ExactInsert(field, Constants.EmptyStringSlice);
                 }
@@ -649,6 +656,12 @@ namespace Corax
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
             {
                 var field = GetField(fieldId, path);
+
+                if (field.ShouldStore)
+                {
+                    RegisterTerm(field.Name, value, StoredFieldType.Tuple | StoredFieldType.Term);
+                }
+                
                 ref var term = ref ExactInsert(field, value);
                 term.Long = longValue;
                 term.Double = dblValue;
@@ -685,6 +698,10 @@ namespace Corax
 
             void RegisterTerm(Slice fieldName, ReadOnlySpan<byte> term, StoredFieldType type)
             {
+                if (__buildingList)
+                {
+                    type |= StoredFieldType.List;
+                }
                 ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
                 var fieldsTree = _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, fieldsTree);
@@ -701,6 +718,46 @@ namespace Corax
                     TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
                     Long = termId
                 });
+            }
+            
+            void RegisterEmptyOrNull(Slice fieldName,StoredFieldType type)
+            {
+                ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
+                var fieldsTree = _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, fieldsTree);
+
+                entryTerms.Add(new RecordedTerm
+                {
+                    // why: entryTerms.Count << 8 
+                    // we put entries count here because we are sorting the entries afterward
+                    // this ensure that stored values are then read using the same order we have for writing them
+                    // which is important for storing arrays
+                    TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    Long = fieldRootPage
+                });
+            }
+
+            public AsListDisposable AsList()
+            {
+                return new AsListDisposable(this);
+            }
+
+            public readonly struct AsListDisposable : IDisposable
+            {
+                private readonly IndexEntryBuilder _parent;
+                private readonly bool _prevValue;
+
+                public AsListDisposable(IndexEntryBuilder parent)
+                {
+                    _parent = parent;
+                    _prevValue = _parent.__buildingList;
+                    _parent.__buildingList = true;
+                }
+
+                public void Dispose()
+                {
+                    _parent.__buildingList = _prevValue;
+                }
             }
         }
 

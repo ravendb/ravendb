@@ -236,7 +236,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
             indexingScope.DynamicFields ??= new();
             indexingScope.DynamicFields[propertyAsString] = field;
-            indexingScope.CreatedFieldsCount++;
+            indexingScope.IncrementDynamicFields();
         }
 
         return field;
@@ -334,10 +334,10 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
         }
 
-        if (scope.DynamicFields.TryGetValue(field.Name, out _) == false)
+        if (scope.DynamicFields.ContainsKey(field.Name) == false)
         {
             scope.DynamicFields[field.Name] = field;
-            scope.CreatedFieldsCount++;
+            scope.IncrementDynamicFields();
         }
 
         return value;

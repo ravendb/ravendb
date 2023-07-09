@@ -2018,9 +2018,14 @@ namespace FastTests.Corax
             {
                 using var builder = indexWriter.Index(entry.Id);
                 builder.Write(IdIndex, PrepareString(entry.Id));
-                if (entry.Content != null)
+
+                foreach (string s in entry.Content)
                 {
-                    foreach (string s in entry.Content)
+                    if (s == null)
+                    {
+                        builder.WriteNull(ContentIndex, null);
+                    }
+                    else
                     {
                         builder.Write(ContentIndex, Encoding.UTF8.GetBytes(s));
                     }

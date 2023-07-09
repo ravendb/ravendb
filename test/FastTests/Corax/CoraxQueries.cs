@@ -276,7 +276,7 @@ namespace FastTests.Corax
 
             foreach (var entry in _entries)
             {
-                var entryBuilder = indexWriter.Index(entry.Id);
+                using var entryBuilder = indexWriter.Index(entry.Id);
                 entryBuilder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
                 entryBuilder.Write(LongValueId, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
                 entryBuilder.Write(DoubleValueId, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
