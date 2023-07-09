@@ -2508,16 +2508,18 @@ namespace Raven.Client.Util
         {
             private readonly DocumentConventions _conventions;
             private readonly string _parameterName;
+            private readonly Type _originalQueryType;
 
-            public IdentityPropertySupport(DocumentConventions conventions, string parameterName = null)
+            public IdentityPropertySupport(DocumentConventions conventions, string parameterName = null, Type originalQueryType = null)
             {
                 _conventions = conventions;
                 _parameterName = parameterName;
+                _originalQueryType = originalQueryType;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, _parameterName, out var innerExpression) == false)
+                if (CanConvert(context.Node, _conventions, _parameterName, _originalQueryType, out var innerExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2535,7 +2537,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, out Expression innerExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, Type originalQueryType, out Expression innerExpression)
             {
                 innerExpression = null;
 
@@ -2543,7 +2545,7 @@ namespace Raven.Client.Util
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
 
-                if (member.Expression is ParameterExpression parameter)
+                if (member.Expression is ParameterExpression parameter && (originalQueryType == null || originalQueryType.IsEquivalentTo(parameter.Type)))
                 {
                     innerExpression = parameter;
                     return true;
@@ -2554,6 +2556,9 @@ namespace Raven.Client.Util
 
                 innerExpression = innerMember;
 
+                if (originalQueryType != null && innerExpression?.Type.IsEquivalentTo(originalQueryType) == false)
+                    return false;
+                
                 var p = GetParameter(innerMember)?.Name;
                 return p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName);
             }

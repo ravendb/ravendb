@@ -3344,7 +3344,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 Array.Resize(ref extensions, newSize);
                 if (_typedParameterSupport != null)
                     extensions[newSize - 2] = _typedParameterSupport;
-                extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name);
+                extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name, _originalQueryType);
             }
 
             return expression.CompileToJavascript(new JavascriptCompilationOptions(ScriptVersion.ECMAScript2017, extensions)
