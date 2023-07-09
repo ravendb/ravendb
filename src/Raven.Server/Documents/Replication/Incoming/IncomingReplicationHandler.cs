@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 break;
 
                             case CounterReplicationItem counter:
-                                var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector,
+                                var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, incomingChangeVector,
                                     counter.Values);
                                 if (changed && _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
                                 {

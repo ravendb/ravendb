@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
@@ -20,10 +19,11 @@ namespace SlowTests.Server.Documents.Counters
         {
         }
 
-        [Fact]
-        public async Task IndexCleanCounterTombstones()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IndexCleanCounterTombstones(Options options)
         {
-            using (var store = GetDocumentStore(new Options()))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -42,12 +42,12 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexingOperation());
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "companies/1");
+
+                await store.Maintenance.ForDatabase(storage.Name).SendAsync(new StopIndexingOperation());
 
                 var countersIndex = new MyCounterIndex();
                 await store.ExecuteIndexAsync(countersIndex);
-
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -68,7 +68,7 @@ namespace SlowTests.Server.Documents.Counters
                 }
                 Assert.True(c > 0);
 
-                await store.Maintenance.SendAsync(new StartIndexingOperation());
+                await store.Maintenance.ForDatabase(storage.Name).SendAsync(new StartIndexingOperation());
 
                 Indexes.WaitForIndexing(store);
 
@@ -86,31 +86,36 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task IndexCleanCounterTombstones2()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IndexCleanCounterTombstones2(Options options)
         {
-            using (var store = GetDocumentStore(new Options()))
+            using (var store = GetDocumentStore(options))
             {
+                var suffix = "foo/bar";
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 10; i++)
                     {
                         var user = new User();
-                        session.Store(user, $"users/{i}");
+                        session.Store(user, $"users/{i}${suffix}");
                         session.CountersFor(user).Increment("HeartRate", 180 + i);
                     }
 
                     session.SaveChanges();
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexingOperation());
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, suffix);
+
+                await store.Maintenance.ForDatabase(storage.Name).SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 10; i++)
                     {
                         var user = new User();
-                        session.Store(user, $"users/{i}");
+                        session.Store(user, $"users/{i}${suffix}");
 
                         session.CountersFor(user).Delete("HeartRate");
                     }
@@ -121,7 +126,6 @@ namespace SlowTests.Server.Documents.Counters
                 var countersIndex = new AverageHeartRate();
                 await countersIndex.ExecuteAsync(store);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -141,7 +145,7 @@ namespace SlowTests.Server.Documents.Counters
                 }
                 Assert.True(c > 0);
 
-                await store.Maintenance.SendAsync(new StartIndexingOperation());
+                await store.Maintenance.ForDatabase(storage.Name).SendAsync(new StartIndexingOperation());
 
                 Indexes.WaitForIndexing(store);
 
@@ -160,11 +164,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ReplicationCleanCounterTombstones()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationCleanCounterTombstones(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -192,7 +197,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -221,7 +226,7 @@ namespace SlowTests.Server.Documents.Counters
                     count1 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
@@ -235,10 +240,11 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task IncrementalBackupCleanCounterTombstones()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IncrementalBackupCleanCounterTombstones(Options options)
         {
-            using (var store = GetDocumentStore(new Options()))
+            using (var store = GetDocumentStore(options))
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
@@ -268,7 +274,7 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -304,15 +310,16 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task CleanCounterTombstonesInTheClusterWithOnlyFullBackup()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CleanCounterTombstonesInTheClusterWithOnlyFullBackup(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
-            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+            await CreateDatabaseInClusterForMode(database, 3, cluster, options.DatabaseMode);
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 CreateDatabase = false,
                 Server = cluster.Leader,
@@ -345,7 +352,7 @@ namespace SlowTests.Server.Documents.Counters
                     Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, database, options.DatabaseMode), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
 
                 using (var session = store.OpenSession())
                 {
@@ -363,11 +370,11 @@ namespace SlowTests.Server.Documents.Counters
                     Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, database, options.DatabaseMode), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
 
                 foreach (var server in cluster.Nodes)
                 {
-                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322", server: server);
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -381,7 +388,7 @@ namespace SlowTests.Server.Documents.Counters
                     var c = 0L;
                     foreach (var server in cluster.Nodes)
                     {
-                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322", server: server);
                         await storage.TombstoneCleaner.ExecuteCleanup();
                         using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
@@ -395,11 +402,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_RegularReplication()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_RegularReplication(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -426,7 +434,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -439,11 +447,10 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(1, cv);
                 }
 
@@ -455,7 +462,7 @@ namespace SlowTests.Server.Documents.Counters
                 }
                 Assert.Equal(0, count1);
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 long count2 = 0;
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -476,11 +483,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ConflictReplication()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ConflictReplication(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -523,14 +531,13 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -538,7 +545,7 @@ namespace SlowTests.Server.Documents.Counters
                     Assert.Equal(1, c2);
                 }
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -551,22 +558,20 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(1, cv);
                 }
 
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(1, cv);
                 }
 
@@ -589,11 +594,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCounterDelete()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCounterDelete(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -624,7 +630,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -634,7 +640,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -645,22 +651,20 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(1023, cv);
                 }
 
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(1023, cv);
                 }
 
@@ -683,11 +687,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDeleteReplication2()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDeleteReplication2(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -721,7 +726,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -731,7 +736,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -754,11 +759,10 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(512, cv);
                 }
 
@@ -781,11 +785,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete2()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete2(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -819,7 +824,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -829,7 +834,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -852,11 +857,10 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(512, cv);
                 }
 
@@ -879,11 +883,12 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete3()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete3(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -925,7 +930,7 @@ namespace SlowTests.Server.Documents.Counters
                 await SetupReplicationAsync(store2, store1);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -935,7 +940,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "user/322");
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -946,11 +951,10 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(4, cv);
                 }
 
@@ -959,11 +963,10 @@ namespace SlowTests.Server.Documents.Counters
 
                 // ensures that we don't delete the counter but we do clean the counter tombstones table
 
-                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(4, cv);
                 }
 
@@ -986,10 +989,11 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
-        [Fact]
-        public async Task ShouldCleanCounterTombstonesWhenBatchSizeSmallerThanCountersToDelete()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldCleanCounterTombstonesWhenBatchSizeSmallerThanCountersToDelete(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1018,7 +1022,7 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
@@ -1029,11 +1033,10 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup(1024);
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                     Assert.Equal(976, cv);
                 }
 

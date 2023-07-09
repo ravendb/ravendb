@@ -459,6 +459,14 @@ namespace Tests.Infrastructure
             }, true, timeout: timeout, interval: 333);
         }
 
+        protected async Task<bool> WaitForChangeVectorInClusterForModeAsync(List<RavenServer> nodes, string database, RavenDatabaseMode mode, int replicationFactor = 3, int timeout = 15000)
+        {
+            if (mode == RavenDatabaseMode.Single)
+                return await WaitForChangeVectorInClusterAsync(nodes, database, timeout);
+
+            return await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(nodes, database, replicationFactor, timeout);
+        }
+
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
         {
             var nodes = session.RequestExecutor.TopologyNodes;
@@ -901,7 +909,7 @@ namespace Tests.Infrastructure
             Assert.True(await WaitForNotHavingPromotables(clusterNodes));
 
             var votersCount = watcherCluster ? 0 : numberOfNodes - 1;
-            if(votersCount > 0)
+            if (votersCount > 0)
                 await ActionWithLeader(async (leader1) =>
                 {
                     var sw = Stopwatch.StartNew();
@@ -1087,6 +1095,14 @@ namespace Tests.Infrastructure
         public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
         {
             return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
+        }
+
+        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInClusterForMode(string databaseName, int replicationFactor, (List<RavenServer> Nodes, RavenServer Leader) tuple, RavenDatabaseMode mode, int shards = 3, X509Certificate2 certificate = null)
+        {
+            if (mode == RavenDatabaseMode.Single)
+                return CreateDatabaseInCluster(databaseName, replicationFactor, tuple.Leader.WebUrl, certificate);
+
+            return ShardingCluster.CreateShardedDatabaseInCluster(databaseName, replicationFactor, tuple, shards, certificate);
         }
 
         public void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
