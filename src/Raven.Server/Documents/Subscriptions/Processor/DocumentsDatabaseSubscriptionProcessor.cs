@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
         {
-            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send || batchItem.Status == SubscriptionBatchItemStatus.Exception)
             {
                 // batchItem.Document will be disposed after writing to stream
                 BatchItems.Add(new DocumentRecord { DocumentId = batchItem.Document.Id, ChangeVector = batchItem.Document.ChangeVector });
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
         {
             reason = null;
-
+            var id = item.Id;
             var result = new SubscriptionBatchItem
             {
                 Document = item,
@@ -135,14 +135,14 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{item.Id} is already merged";
+                    reason = $"{id} is already merged";
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
-                if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, item.Id, Active))
+                if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, id, Active))
                 {
-                    reason = $"{item.Id} exists in an active batch";
+                    reason = $"{id} exists in an active batch";
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
@@ -150,8 +150,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
-                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
-                if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector, out reason) == false)
+                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, id, throwOnConflict: false);
+                if (ShouldFetchFromResend(DocsContext, id, current, item.ChangeVector, out reason) == false)
                 {
                     result.Document.ChangeVector = string.Empty;
                     current.Document?.Dispose();
@@ -181,17 +181,17 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref result.Document.Data);
+                var match = Patch.MatchCriteria(Run, DocsContext, result.Document, ProjectionMetadataModifier.Instance, ref result.Document.Data);
 
                 if (match == false)
                 {
                     if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
                     {
                         result.Document.ChangeVector = string.Empty;
-                        ItemsToRemoveFromResend.Add(item.Id);
+                        ItemsToRemoveFromResend.Add(id);
                     }
 
-                    reason = $"{item.Id} filtered out by criteria";
+                    reason = $"{id} filtered out by criteria";
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
@@ -201,9 +201,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
             catch (Exception ex)
             {
-                reason = $"Criteria script threw exception for document id {item.Id}";
+                reason = $"Criteria script threw exception for document id {id}";
                 result.Exception = ex;
-                result.Status = SubscriptionBatchItemStatus.Skip;
+                result.Status = SubscriptionBatchItemStatus.Exception;
                 return result;
             }
         }
