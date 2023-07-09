@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Mappings;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -22,33 +23,52 @@ public class RavenDB_19283 : StorageTest
     [Fact]
     public unsafe void CanReadAndWriteLargeEntries()
     {
-        Assert.Fail("Fix me");
-        // using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        //
-        // using var _ = StorageEnvironment.GetStaticContext(out var ctx);
-        // Slice.From(ctx, "Items", ByteStringType.Immutable, out Slice itemsSlice);
-        // Slice.From(ctx, "id()", ByteStringType.Immutable, out Slice idSlice);
-        //
-        // // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-        //
-        // using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
-        //     .AddBinding(0, idSlice)
-        //     .AddBinding(1, itemsSlice);
-        // using var knownFields = builder.Build();
-        //
-        // var options = new[] { "one", "two", "three" };
-        //
-        // var writer = new IndexEntryWriter(bsc, knownFields);
-        // var tags = Enumerable.Range(0, 10000).Select(x => options[x % options.Length]);
-        // writer.Write(1, new IndexEntryWriterTest.StringArrayIterator(tags.ToArray()));
-        // writer.Write(0, Encoding.UTF8.GetBytes("users/1"));
-        // using var ___ = writer.Finish(out var element);
-        //
-        // var reader = new IndexEntryReader(element.Ptr, element.Length);
-        // reader.GetFieldReaderFor(0).Read(out Span<byte> id);
-        // var it = reader.GetFieldReaderFor(1).ReadMany();
-        // while (it.ReadNext())
-        // {
-        // }
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        
+        using var _ = StorageEnvironment.GetStaticContext(out var ctx);
+        Slice.From(ctx, "Items", ByteStringType.Immutable, out Slice itemsSlice);
+        Slice.From(ctx, "id()", ByteStringType.Immutable, out Slice idSlice);
+        
+        // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
+        
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, idSlice)
+            .AddBinding(1, itemsSlice, shouldStore:true);
+        using var knownFields = builder.Build();
+
+        long entryId;
+        using (var indexWriter = new IndexWriter(Env, knownFields))
+        {
+            var options = new[] { "one", "two", "three" };
+            using (var writer = indexWriter.Index("users/1"))
+            {
+                writer.Write(0, Encoding.UTF8.GetBytes("users/1"));
+                var tags = Enumerable.Range(0, 10000).Select(x => options[x % options.Length]);
+
+                entryId = writer.EntryId;
+                
+                using (writer.AsList())
+                {
+                    foreach (string tag in tags)
+                    {
+                        writer.Write(1, Encoding.UTF8.GetBytes(tag));
+                    }
+                }
+            }
+            indexWriter.PrepareAndCommit();
+        }
+
+        using (var indexSearcher = new IndexSearcher(Env, knownFields))
+        {
+            Page p = default;
+            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(itemsSlice);
+            long i = 0;
+            while (reader.FindNextStored(fieldRootPage))
+            {
+                i++;
+            }
+            Assert.Equal(10000, i);
+        }
     }
 }

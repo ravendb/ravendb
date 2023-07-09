@@ -1,16 +1,20 @@
 ﻿using System.IO;
 using Corax;
 using Corax.Mappings;
+using CsvHelper;
+using FastTests.Voron;
 using Newtonsoft.Json.Linq;
+using Parquet.Meta;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 
-public class IndexEntryReaderBigDoc : NoDisposalNeeded
+public class IndexEntryReaderBigDoc : StorageTest
 {
     private readonly ITestOutputHelper _testOutputHelper;
 
@@ -26,30 +30,43 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
         var scope = new SingleEntryWriterScope(allocator);
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
-            .AddBinding(1, "Badges");
+            .AddBinding(1, "Badges", shouldStore: true);
         using var knownFields = builder.Build();
-        //var indexEntryWriter = new IndexEntryWriter(allocator, knownFields);
+        
+        
+        long entryId;
+        using (var indexWriter = new IndexWriter(Env, knownFields))
+        {
+            var options = new[] { "one", "two", "three" };
+            using (var writer = indexWriter.Index("users/1"))
+            {
+                writer.Write(0, "users/1"u8);
 
-        Assert.Fail("implement me");
-        //var enumerableWriterScope = new EnumerableWriterScope(new(), new(), new(), new(), new(), allocator);
-
-        // for (int i = 0; i < 7500; i++)
-        // {
-        //     enumerableWriterScope.Write(string.Empty, 1, "Nice Answer", ref indexEntryWriter);
-        // }
-        //
-        // enumerableWriterScope.Finish(string.Empty, 1, ref indexEntryWriter);
-
-        //scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
-
-        // indexEntryWriter.Finish(out var output);
-        //
-        // new IndexEntryReader(output.Ptr, output.Length).GetFieldReaderFor(0).Read(out var id);
-    }
-
-    private static JArray ReadDocFromResource(string file)
-    {
-        var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
-        return JArray.Parse(reader.ReadToEnd());
+                entryId = writer.EntryId;
+                
+                using (writer.AsList())
+                {
+                    for (int i = 0; i < 7500; i++)
+                    {
+                        writer.Write(1, "Nice Answer"u8);
+                    }
+                    
+                }
+            }
+            indexWriter.PrepareAndCommit();
+        }
+        
+        using (var indexSearcher = new IndexSearcher(Env, knownFields))
+        {
+            Page p = default;
+            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage("Badges");
+            long i = 0;
+            while (reader.FindNextStored(fieldRootPage))
+            {
+                i++;
+            }
+            Assert.Equal(7500, i);
+        }
     }
 }

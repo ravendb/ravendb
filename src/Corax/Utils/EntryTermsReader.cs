@@ -121,7 +121,6 @@ public unsafe struct EntryTermsReader
     
     public bool FindNextSpatial(long fieldRootPage)
     {
-        Reset();
         while (MoveNextSpatial())
         {
             if (FieldRootPage == fieldRootPage)

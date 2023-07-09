@@ -28,24 +28,39 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void WriteEmptyAsSimpleInDynamicField()
     {
-        Assert.Fail("fix me");
-        // const string fieldName = "Scope_0";
-        // using ByteStringContext bsc = new(SharedMultipleUseFlag.None);
-        //
-        // using var _ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        // Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
-        // Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
-        //
-        // using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
-        // using var knownFields = builder.Build();
-        // IndexEntryWriter writer = new(bsc, knownFields);
-        //
-        // writer.WriteDynamic(fieldName, Encoding.UTF8.GetBytes(""));
-        // using var __ = writer.Finish(out ByteString element);
-        // IndexEntryReader reader = new(element.Ptr, element.Length);
-        //
-        // var fieldReader = reader.GetFieldReaderFor(Encoding.UTF8.GetBytes(fieldName));
-        // Assert.Equal(IndexEntryFieldType.Empty, fieldReader.Type);
+        const string fieldName = "Scope_0";
+        using ByteStringContext bsc = new(SharedMultipleUseFlag.None);
+        
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
+        builder.AddBinding(0, "Id");
+        using var knownFields = builder.Build();
+        long entryId;
+        using (var indexWriter = new IndexWriter(Env, knownFields))
+        {
+            indexWriter.UpdateDynamicFieldsMapping(IndexFieldsMappingBuilder.CreateForWriter(true)
+                .AddBinding(Constants.IndexWriter.DynamicField, fieldName, shouldStore:true)
+                .Build()
+            );
+            using (var writer = indexWriter.Index("users/1"))
+            {
+                writer.Write(Constants.IndexWriter.DynamicField, fieldName, Encoding.UTF8.GetBytes(""));
+                writer.Write(0, "users/1"u8);
+                entryId = writer.EntryId;
+            }
+            indexWriter.PrepareAndCommit();
+        }
+        
+        using (var indexSearcher = new IndexSearcher(Env, knownFields))
+        {
+            Page p = default;
+            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(fieldName);
+            Assert.True(reader.FindNext(fieldRootPage));
+            Assert.Equal(Constants.EmptyStringSlice.AsSpan().ToArray(), reader.Current.Decoded().ToArray());
+            reader.Reset();
+            Assert.True(reader.FindNextStored(fieldRootPage));
+            Assert.Equal(Array.Empty<byte>(), reader.StoredField.Value.ToSpan().ToArray());
+        }
     }
 
     [Fact]
@@ -379,45 +394,50 @@ public unsafe class DynamicFieldsTests : StorageTest
 
     [Theory]
     [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
-    public unsafe void WriteAndReadSpatialListDynamically(int size, double[] lat, double[] lon)
+    public void WriteAndReadSpatialListDynamically(int size, double[] lat, double[] lon)
     {
-        Assert.Fail("fix me");
-        // using IndexFieldsMapping fields = PrepareSpatial();
-        // using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        //
-        // var entryBuilder = new IndexEntryWriter(bsc, fields);
-        // entryBuilder.Write(0, Encodings.Utf8.GetBytes("item/1"));
-        // Span<CoraxSpatialPointEntry> _points = new CoraxSpatialPointEntry[size];
-        // for (int i = 0; i < size; ++i)
-        //     _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-        // entryBuilder.WriteSpatialDynamic("CoordinatesIndex", _points);
-        // using var _ = entryBuilder.Finish(out var buffer);
-        //
-        // var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
-        //
-        // var fieldReader = reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("CoordinatesIndex"));
-        //
-        // Assert.True(fieldReader.TryReadManySpatialPoint(out SpatialPointFieldIterator iterator));
-        // List<CoraxSpatialPointEntry> entriesInIndex = new();
-        //
-        // while (iterator.ReadNext())
-        // {
-        //     entriesInIndex.Add(iterator.CoraxSpatialPointEntry);
-        // }        
-        //
-        // Assert.Equal(size, entriesInIndex.Count);
-        //
-        // for (int i = 0; i < size; ++i)
-        // {
-        //     var entry = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-        //
-        //     var entryFromBuilder = entriesInIndex.Single(p => p.Geohash == entry.Geohash);
-        //     Assert.Equal(entry.Latitude, entryFromBuilder.Latitude);
-        //     Assert.Equal(entry.Longitude, entryFromBuilder.Longitude);
-        //     entriesInIndex.Remove(entry);
-        // }
-        //
-        // Assert.Empty(entriesInIndex);
+        using IndexFieldsMapping fields = PrepareSpatial();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        
+        long entryId;
+        using (var indexWriter = new IndexWriter(Env, fields))
+        {
+            using (var writer = indexWriter.Index("items/1"))
+            {
+                writer.Write(0, Encodings.Utf8.GetBytes("item/1"));
+                using (writer.AsList())
+                {
+                    for (int i = 0; i < size; ++i)
+                    {
+                        var p = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
+                        writer.WriteSpatial(Constants.IndexWriter.DynamicField, "CoordinatesIndex", p);
+                    }
+                }
+                entryId = writer.EntryId;
+            }
+            indexWriter.PrepareAndCommit();
+        }
+
+        using (var indexSearcher = new IndexSearcher(Env, fields))
+        {
+            Page p = default;
+            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage("CoordinatesIndex");
+            long i = 0;
+            var l = new List<(double lat, double lng)>();
+            for (int index = 0; index < size; index++)
+            {
+                l.Add((lat[index], lon[index]));
+            }
+            while (reader.FindNextSpatial(fieldRootPage))
+            {
+                i++;
+                l.Remove((reader.Latitude, reader.Longitude));
+            }
+            Assert.Equal(size, i);
+            Assert.Empty(l);
+        }
+        
     }
     
      
