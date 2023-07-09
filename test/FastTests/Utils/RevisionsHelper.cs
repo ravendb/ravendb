@@ -12,7 +12,7 @@ namespace FastTests.Utils
 {
     public class RevisionsHelper
     {
-        public static async Task SetupConflictedRevisions(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsCollectionConfiguration configuration)
+        public static async Task SetupConflictedRevisionsAsync(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsCollectionConfiguration configuration)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));

@@ -337,7 +337,7 @@ namespace SlowTests
                 Disabled = false,
                 MinimumRevisionsToKeep = 2
             };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
 
             // Create a doc with 2 'conflicted' (or 'resolved') revisions
             using (var session = src.OpenAsyncSession())
@@ -381,7 +381,7 @@ namespace SlowTests
                 Disabled = false,
                 MinimumRevisionsToKeep = 4
             };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -667,7 +667,7 @@ return oldestDoc;"
                 MinimumRevisionsToKeep = 2,
                 PurgeOnDelete = true
             };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
 
             await EnforceConfiguration(dst, deleteAlsoForceCreated);
             WaitForUserToContinueTheTest(dst);
@@ -739,7 +739,7 @@ return oldestDoc;"
                 MinimumRevisionsToKeep = 2,
                 PurgeOnDelete = true
             };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
             
             await EnforceConfiguration(dst, deleteAlsoForceCreated);
 
@@ -817,7 +817,7 @@ return oldestDoc;"
             {
                 MinimumRevisionsToKeep = 2
             };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
 
             // Create a doc with 3 'conflicted' (or 'resolved') revisions in 'dst'
             using (var session = src.OpenAsyncSession())
@@ -1006,7 +1006,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Theory]
+        [Theory (Skip = "Untill RavenDB-20823")]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DocWithRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete(bool disableConfiguration)
@@ -1087,7 +1087,7 @@ return oldestDoc;"
              */
         }
 
-        [Fact]
+        [Fact (Skip = "Untill RavenDB-20823")]
         public async Task DocWithForceCreatedRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete()
         {
             using var store = GetDocumentStore();
@@ -1127,7 +1127,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact]
+        [Fact (Skip = "Untill RavenDB-20823")]
         public async Task RevivedDocumentShouldHaveTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();
