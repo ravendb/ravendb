@@ -110,10 +110,10 @@ namespace Raven.Server.Smuggler.Documents
                     LastRaftIndex = rawRecord.EtagForBackup;
                 }
 
-                if (options.IgnoreCorruptedDocumentsErrors)
+                if (options.SkipCorruptedData)
                 {
-                    _database.DocumentsStorage.OnCorruptedDocumentHandler = OnCorruptedDocument;
                     _result = result;
+                    _result.HandleCorruptedData();
                 }
             }
 
@@ -180,7 +180,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetDocumentsFromCollections(_context, state);
 
-                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, long.MaxValue);
+                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, long.MaxValue, DocumentFields.All, _result.OnCorruptedDataHandler);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -229,7 +229,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetRevisionsFromCollections(_context, state);
 
-                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue);
+                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue, DocumentFields.All, _result.OnCorruptedDataHandler);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -599,12 +599,6 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return _type;
-        }
-
-        private void OnCorruptedDocument(object sender, InvalidOperationException e)
-        {
-            _result.Documents.ErroredCount++;
-            _result.AddError(e.Message);
         }
     }
 }

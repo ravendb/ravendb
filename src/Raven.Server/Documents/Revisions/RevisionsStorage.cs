@@ -2377,9 +2377,9 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
 
             foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, 0))
             {
