@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            using var builder = _indexWriter.Index(key.AsSpan());
+            using var builder = _indexWriter.Update(key.AsSpan());
 
             using (Stats.AddStats.Start())
             {

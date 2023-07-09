@@ -153,7 +153,7 @@ public class FacetIndexingRepro : StorageTest
                 fixed (byte* b = buffer)
                 {
                     var reader = new IndexEntryReader(b, buffer.Length);
-                    for (int i = 0; i < reader.Length; i++)
+                    for (int i = 0; i < fieldsCount; i++)
                     {
                         var fieldReader = reader.GetFieldReaderFor(i);
                         fieldReader.Read(out Span<byte> s);
@@ -260,7 +260,7 @@ public class FacetIndexingRepro : StorageTest
                 fixed (byte* b = buffer)
                 {
                     var reader = new IndexEntryReader(b, buffer.Length);
-                    for (int i = 0; i < reader.Length; i++)
+                    for (int i = 0; i < indexFieldsMapping.Count; i++)
                     {
                         var fieldReader = reader.GetFieldReaderFor(i);
                         fieldReader.Read(out Span<byte> s);
