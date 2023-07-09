@@ -72,10 +72,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             if (_indexWriter != null)
             {
-                using (stats.For(IndexingOperation.Corax.Prepare))
-                {
-                    _indexWriter.Prepare();
-                }
                 using (stats.For(IndexingOperation.Corax.Commit))
                 {
                     _indexWriter.Commit();
@@ -152,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             
             using (Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(key.ToString(CultureInfo.InvariantCulture));
+                _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
         
         /// <summary>

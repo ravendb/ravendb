@@ -50,7 +50,7 @@ namespace Corax
     public partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
-        private readonly Dictionary<ByteString, EntriesContainer> _indexedEntriesByKey = new(new ByteStringEqualityComparer());
+        private readonly HashSet<ByteString> _indexedEntries = new(new ByteStringEqualityComparer());
         private readonly List<Slice> _entryKeysToRemove = new();
         private readonly IndexFieldsMapping _fieldsMapping;
         private FixedSizeTree _documentBoost;
@@ -58,13 +58,7 @@ namespace Corax
         private Tree _persistedDynamicFieldsAnalyzers;
         private long _numberOfTermModifications;
 
-        private struct EntriesContainer
-        {
-            public long SingleItem;
-            public List<long> Items;
-        }
-        
-        private readonly bool _ownsTransaction;
+        private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
 
@@ -408,6 +402,14 @@ namespace Corax
                 FieldIndexingMode = fieldIndexingMode;
             }
 
+            public void Clear()
+            {
+                Suggestions?.Clear();
+                Doubles?.Clear();
+                Spatial?.Clear();
+                Longs?.Clear();
+                Textual?.Clear();
+            }
         }
 
         private bool _hasSuggestions;
@@ -603,13 +605,13 @@ namespace Corax
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(double));
+                    doublesTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(double));
                 doublesTerms.Addition(_entryId);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
                 if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(long));
+                    longsTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(long));
                 longsTerms.Addition(_entryId);
             }
 
@@ -765,7 +767,7 @@ namespace Corax
 
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
-            RegisterForDeletionByKey(key);
+            TryDeleteEntry(key);
             long entryId = InitBuilder(key);
             _builder.Init(entryId, isUpdate: true);
             return _builder;
@@ -796,19 +798,7 @@ namespace Corax
         {
             _entriesAllocator.Allocate(key.Length, out var keyStr);
             key.CopyTo(keyStr.ToSpan());
-            ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedEntriesByKey, keyStr, out var exists);
-            if (exists == false)
-            {
-                container.SingleItem = entryId;
-            }
-            else if (container.Items == null)
-            {
-                container.Items = new List<long> { container.SingleItem, entryId, };
-            }
-            else
-            {
-                container.Items.Add(entryId);
-            }
+            _indexedEntries.Add(keyStr);
         }
 
         //Document Boost should add priority to some documents but also should not be the main component of boosting.
@@ -842,22 +832,6 @@ namespace Corax
         private void RemoveDocumentBoost(long entryId)
         {
             _documentBoost.Delete(entryId);
-        }
-
-        private void RegisterForDeletionByKey(ReadOnlySpan<byte> key)
-        {
-            var scope = Slice.From(_transaction.Allocator, key, ByteStringType.Mutable, out var slice);
-            if (_indexedEntriesByKey.Remove(slice.Content, out var existing))
-            {
-                // if this is already in the index batch, we know that it was already marked for deletion
-                // from persistent storage, so we can just remove it from the batch and be done with it
-                RemoveEntriesFromBatch(ref existing);
-                scope.Dispose();
-            }
-            else
-            {
-                _entryKeysToRemove.Add(slice);
-            }
         }
 
         private IndexedField GetDynamicIndexedField(ByteStringContext context, string currentFieldName)
@@ -988,17 +962,15 @@ namespace Corax
             _hasSuggestions = true;
             field.Suggestions ??= new Dictionary<Slice, int>();
             
-            var keys = SuggestionsKeys.Generate(_transaction.Allocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
+            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
             int keySizes = keys.Length / keysCount;
-
-            var bsc = _transaction.Allocator;
 
             var suggestionsToAdd = field.Suggestions;
 
             int idx = 0;
             while (idx < keysCount)
             {
-                var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
+                var key = new Slice(_entriesAllocator.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
                 if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
@@ -1014,16 +986,15 @@ namespace Corax
             field.Suggestions ??= new Dictionary<Slice, int>();
 
 
-            var keys = SuggestionsKeys.Generate(_transaction.Allocator, Constants.Suggestions.DefaultNGramSize, sequence, out int keysCount);
+            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, sequence, out int keysCount);
             int keySizes = keys.Length / keysCount;
 
-            var bsc = _transaction.Allocator;
             var suggestionsToAdd = field.Suggestions;
 
             int idx = 0;
             while (idx < keysCount)
             {
-                var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
+                var key = new Slice(_entriesAllocator.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
                 if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
@@ -1185,13 +1156,13 @@ namespace Corax
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Doubles, dVal, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(double));
+                    doublesTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(double));
                 doublesTerms.Addition(_entryId);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Longs, lVal, out bool fieldLongExist);
                 if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(_parent._transaction.Allocator, sizeof(long));
+                    longsTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(long));
                 longsTerms.Addition(_entryId);
             }
 
@@ -1333,14 +1304,14 @@ namespace Corax
                 }
                 
                 var ptr = reader.Current.DecodedPtr(out var len);
-                var scope = Slice.From(llt.Allocator, ptr, len, out Slice termSlice);
+                var scope = Slice.From(_entriesAllocator, ptr, len, out Slice termSlice);
                 if(field.HasSuggestions)
                     RemoveSuggestions(field, new ReadOnlySpan<byte>(ptr, len));
                 
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(llt.Allocator, len);
+                    term = new EntriesModifications(_entriesAllocator, len);
                     scope = default; // We dont want to reclaim the term name
                 }
 
@@ -1357,7 +1328,7 @@ namespace Corax
                 term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(llt.Allocator, sizeof(long));
+                    term = new EntriesModifications(_entriesAllocator, sizeof(long));
                 }
 
                 term.Removal(entryToDelete);
@@ -1365,7 +1336,7 @@ namespace Corax
                 term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(llt.Allocator, sizeof(long));
+                    term = new EntriesModifications(_entriesAllocator, sizeof(long));
                 }
 
                 term.Removal(entryToDelete);
@@ -1388,7 +1359,7 @@ namespace Corax
                         {
                             if(it.CurrentKey.EndsWith("-D"u8) || it.CurrentKey.EndsWith("-L"u8))
                                 continue; // numeric postfix values
-                            var dynamicIndexedField = GetDynamicIndexedField(_transaction.Allocator, it.CurrentKey.AsSpan());
+                            var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
                             pageToField.Add(state->RootPage, dynamicIndexedField);
                         }
                         else
@@ -1401,51 +1372,85 @@ namespace Corax
 
             return pageToField;
         }
-        
+
         public void TryDeleteEntry(string term)
         {
-            var scope = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-
-            if (_indexedEntriesByKey.Remove(termSlice.Content, out var existing))
-            {
-                // if this is already in the index batch, we know that it was already marked for deletion
-                // from persistent storage, so we can just remove it from the batch and be done with it
-                RemoveEntriesFromBatch(ref existing);
-                scope.Dispose();
-                return;
-            }
-            
-            _entryKeysToRemove.Add(termSlice);
+            var scope = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+            TryDeleteEntry(termSlice);
         }
         
+        public void TryDeleteEntry(ReadOnlySpan<byte> term)
+        {
+            Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+
+            TryDeleteEntry(termSlice); 
+        }
+
+        private void TryDeleteEntry(Slice termSlice)
+        {
+            if (_indexedEntries.Contains(termSlice.Content) == false)
+            {
+                _entryKeysToRemove.Add(termSlice);
+                return;
+            }
+
+            // calling ResetWriter will reset the _entriesAllocator, so we need to clone it to the side
+            var cloned = _transaction.Allocator.Clone(termSlice.Content);
+
+            // We cannot actually handles modifications to the same entry in the same batch, so we cheat
+            // we do a side channel flush at this point, then reset the state of the writer back to its initial level
+            bool prevValue = _ownsTransaction;
+            _ownsTransaction = false;
+            try
+            {
+                Commit();
+                ResetWriter();
+                // after the reset, mark this to be deleted in the next commit
+                
+                Slice.From(_entriesAllocator, cloned.ToReadOnlySpan(), ByteStringType.Immutable, out var freshTermSlice);
+                _transaction.Allocator.Release(ref cloned);
+                _entryKeysToRemove.Add(freshTermSlice);
+            }
+            finally
+            {
+                _ownsTransaction = prevValue;
+            }
+        }
+
+        private void ResetWriter()
+        {
+            _indexedEntries.Clear();
+            _entryKeysToRemove.Clear();
+            _deletedEntries.Clear();
+            _entriesAlreadyAdded.Clear();
+            _additionsForTerm.Clear();
+            _removalsForTerm.Clear();
+
+            for (int i = 0; i < _knownFieldsTerms.Length; i++)
+            {
+                _knownFieldsTerms[i].Clear();
+            }
+            if (_dynamicFieldsTerms != null)
+            {
+                foreach (var (_, field)  in _dynamicFieldsTerms)
+                {
+                    field.Clear();
+                }
+            }
+            
+            _entriesAllocator.Reset();
+        }
+
         public void TryDeleteEntryByField(string field, string term)
         {
-            using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-            using var __ = Slice.From(_transaction.Allocator, field, ByteStringType.Immutable, out var fieldSlice);
+            using var _ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+            using var __ = Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice);
             if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out long idInTree) == false) 
                 return;
 
             RecordDeletion(idInTree);
         }
-        
-        private void RemoveEntriesFromBatch(ref EntriesContainer entriesContainer)
-        {
-            throw new NotImplementedException();
-            // not bother with _returning_ the data, since this is part of a batch (will be cleaned in the end)
-            // and we assume that this is rare, we want to use pointer bumping for
-            // allocations as much as possible
-            // if (entriesContainer.Items != null)
-            // {
-            //     foreach (long item in entriesContainer.Items)
-            //     {
-            //         _bufferedIndexedEntries.Remove(item);
-            //     }
-            // }
-            // else
-            // {
-            //     _bufferedIndexedEntries.Remove(entriesContainer.SingleItem);
-            // }
-        }
+  
         
         /// <summary>
         /// Record term for deletion from Index.
@@ -1481,7 +1486,7 @@ namespace Corax
                 // combine with existing value
                 _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
                 
-                var decoder = new FastPForDecoder(_transaction.Allocator, smallSet.Address + pos, smallSet.Length - pos);
+                var decoder = new FastPForDecoder(_entriesAllocator, smallSet.Address + pos, smallSet.Length - pos);
                 var output = stackalloc long[1024];
                 while (true)
                 {
@@ -1522,7 +1527,7 @@ namespace Corax
             var fieldTree = fieldsTree.CompactTreeFor(fieldName);
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
-            using var __ = CreateNormalizedTerm(_transaction.Allocator, term, out var termSlice);
+            using var __ = CreateNormalizedTerm(_entriesAllocator, term, out var termSlice);
 
             var termValue = termSlice.AsReadOnlySpan();
             return fieldTree.TryGetValue(termValue, out idInTree);
@@ -1530,19 +1535,13 @@ namespace Corax
 
         public void PrepareAndCommit()
         {
-            Prepare();
             Commit();
-        }
-
-        public void Prepare()
-        {
-           
         }
 
         public void Commit()
         {
             _indexDebugDumper.Commit();
-            using var _ = _transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
+            using var _ = _entriesAllocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
             
             ProcessDeletes(fieldsTree);
@@ -1552,7 +1551,7 @@ namespace Corax
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
             _indexMetadata.Add(Constants.IndexWriter.LastEntryIdSlice, _lastEntryId);
-            _pForEncoder = new FastPForEncoder(_transaction.LowLevelTransaction.Allocator);
+            _pForEncoder = new FastPForEncoder(_entriesAllocator);
 
             Slice[] keys = Array.Empty<Slice>();
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
@@ -1593,7 +1592,7 @@ namespace Corax
                 {
                     IndexedField indexedField = _knownFieldsTerms[fieldId];
                     if (indexedField.Suggestions == null) continue;
-                    Slice.From(_transaction.Allocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
+                    Slice.From(_entriesAllocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
                     var tree = _transaction.CompactTreeFor(treeName);
                     foreach (var (key, counter) in indexedField.Suggestions)
                     {
@@ -1617,7 +1616,7 @@ namespace Corax
 
         private void WriteIndexEntries()
         {
-            var writer = new EntryTermsWriter(_transaction.Allocator);
+            using var writer = new EntryTermsWriter(_entriesAllocator);
             foreach (var (entry, terms) in _termsPerEntryId)
             {
                 int size = writer.Encode(terms);
@@ -1625,7 +1624,6 @@ namespace Corax
                 writer.Write(space);
                 _entryIdToLocation.Add(entry, entryTermsId);
             }
-            writer.Dispose();
         }
 
         private unsafe void InsertSpatialField(Tree entriesToSpatialTree, Tree fieldsTree, IndexedField indexedField)
@@ -1692,7 +1690,7 @@ namespace Corax
             fieldTree.InitializeStateForTryGetNextValue();
             long totalLengthOfTerm = 0;
 
-            var newAdditions = new NativeIntegersList(_transaction.Allocator);
+            var newAdditions = new NativeIntegersList(_entriesAllocator);
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
@@ -1810,7 +1808,7 @@ namespace Corax
             ref var entryTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_termsPerEntryId, entry, out var exists);
             if (exists == false)
             {
-                entryTerms = new NativeList<RecordedTerm>(_transaction.Allocator);
+                entryTerms = new NativeList<RecordedTerm>(_entriesAllocator);
             }
             return ref entryTerms;
         }
@@ -1860,7 +1858,7 @@ namespace Corax
             var buffer = stackalloc long[1024];
             var bufferAsSpan = new Span<long>(buffer, 1024);
             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
-            var reader = new FastPForDecoder(_transaction.Allocator,item.Address + offset, item.Length - offset);
+            var reader = new FastPForDecoder(_entriesAllocator,item.Address + offset, item.Length - offset);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
             while (true)
