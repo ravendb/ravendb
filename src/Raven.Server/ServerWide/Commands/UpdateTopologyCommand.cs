@@ -35,7 +35,6 @@ namespace Raven.Server.ServerWide.Commands
                 if (record.IsSharded)
                 {
                     record.Sharding.Orchestrator.Topology.Update(Topology);
-                    SetLeaderStampForTopology(record.Sharding.Orchestrator.Topology, etag);
                     return;
                 }
 

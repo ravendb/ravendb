@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -52,8 +54,7 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
-        private long _lastTopologyChangeEtag = 0;
-
+        
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
@@ -121,6 +122,20 @@ namespace Raven.Server.Documents.Sharding
             {
                 ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
             }
+            else
+            {
+                foreach (var (shardNumber, topology) in record.Sharding.Shards)
+                {
+                    Debug.Assert(record.Sharding.Shards.ContainsKey(shardNumber));
+                    if (CheckForTopologyChangesAndRaiseNotification(topology, _record.Sharding.Shards[shardNumber]))
+                    {
+                        var t = ShardExecutor.GetRequestExecutorAt(shardNumber).UpdateTopologyAsync(
+                            new RequestExecutor.UpdateTopologyParameters(
+                                    new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.Server.WebUrl })
+                            { DebugTag = "shard-topology-update" });
+                    }
+                }
+            }
 
             if (EnumerableExtension.ElementsEqual(record.Sharding.Orchestrator.Topology.Members, _record.Sharding.Orchestrator.Topology.Members) == false)
             {
@@ -130,25 +145,32 @@ namespace Raven.Server.Documents.Sharding
             Indexes.Update(record, index);
 
             SubscriptionsStorage.Update(record);
+            
+            CheckForTopologyChangesAndRaiseNotification(record.Sharding.Orchestrator.Topology, _record.Sharding.Orchestrator.Topology);
 
-            var topologyChange = record.Sharding.Orchestrator.Topology.Stamp?.Index ?? 0;
-            if (topologyChange > _lastTopologyChangeEtag)
+            Interlocked.Exchange(ref _record, record);
+        }
+
+        private bool CheckForTopologyChangesAndRaiseNotification(DatabaseTopology topology, DatabaseTopology oldTopology)
+        {
+            var topologyIndex = topology.Stamp?.Index ?? 0;
+            var oldTopologyIndex = oldTopology.Stamp?.Index ?? 0;
+            if (topologyIndex > oldTopologyIndex)
             {
                 var clusterTopology = ServerStore.GetClusterTopology();
                 var url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag);
                 if (url != null)
                 {
-                    _lastTopologyChangeEtag = topologyChange;
-
                     Changes.RaiseNotifications(new TopologyChange
                     {
                         Url = url,
                         Database = DatabaseName
                     });
+                    return true;
                 }
             }
 
-            Interlocked.Exchange(ref _record, record);
+            return false;
         }
 
         private void OnUrlChange(DatabaseRecord record, long index)

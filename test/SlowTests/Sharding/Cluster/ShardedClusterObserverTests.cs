@@ -1,31 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Azure;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -253,6 +245,61 @@ namespace SlowTests.Sharding.Cluster
                     return shards.Sum(s => s.Value.Members.Count);
                 }, 6);
             }
+        }
+        
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task AddingNewNodeToShardShouldUpdateShardRequestExecutorTopology_RavenDB_20702()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                DatabaseRecord record = GetDatabaseRecord(store);
+                var orchestratorNodeTag = record.Sharding.Orchestrator.Topology.Members.Single();
+
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, "users/1");
+                var originalNode = GetDatabaseRecord(store).Sharding.Shards[shardNumber].Members.Single();
+                var newNode = (new string[] { "A", "B", "C" }).First(x => x != originalNode);
+
+                var topologyNodes = await GetExecutorTopologyNodeForShard(orchestratorNodeTag, shardNumber, store.Database, cluster.Nodes);
+                Assert.Equal(1, topologyNodes.Count);
+                Assert.Equal(originalNode, topologyNodes[0]);
+
+                //add new node to the shard
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database, shardNumber: shardNumber, node: newNode));
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    record = GetDatabaseRecord(store);
+                    return record.Sharding.Shards[shardNumber].Members.Count;
+                }, 2);
+                
+                //check the shard executor's topology changed in the orchestrator node
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    topologyNodes = await GetExecutorTopologyNodeForShard(orchestratorNodeTag, shardNumber, store.Database, cluster.Nodes);
+                    return topologyNodes.Contains(newNode);
+                }, true, 30_000);
+                
+                Assert.Equal(2, topologyNodes.Count);
+                Assert.True(topologyNodes.Contains(originalNode));
+            }
+        }
+
+        private async Task<List<string>> GetExecutorTopologyNodeForShard(string orchestrator, int shard, string database, List<RavenServer> nodes)
+        {
+            var orchestratorNode = nodes.Single(x => x.ServerStore.NodeTag == orchestrator);
+            orchestratorNode.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(database, out var orchTask);
+            var orchestratorDatabaseContext = await orchTask;
+            return orchestratorDatabaseContext.ShardExecutor.GetRequestExecutorAt(shard).TopologyNodes.Select(x => x.ClusterTag).ToList();
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
