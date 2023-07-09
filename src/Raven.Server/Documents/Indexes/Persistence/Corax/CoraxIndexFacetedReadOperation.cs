@@ -19,7 +19,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Impl;
-using IndexEntryReader = Corax.IndexEntryReader;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

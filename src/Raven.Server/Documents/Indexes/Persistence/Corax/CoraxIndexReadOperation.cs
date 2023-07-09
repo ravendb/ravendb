@@ -1313,7 +1313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
             int docsToLoad = CoraxBufferSize(IndexSearcher, pageSize, query);
-            using var coraxEntryReader = new CoraxIndexedEntriesReader(documentsContext, IndexSearcher, _fieldMappings);
+            using var coraxEntryReader = new CoraxIndexedEntriesReader(documentsContext, IndexSearcher);
             int read;
             long i = Skip();
             Page page = default;

@@ -111,7 +111,7 @@ public class FacetIndexingRepro : StorageTest
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
-        var fieldsCount = br.Read7BitEncodedInt();
+        var fieldsCount = br.ReadInt32();
         for (int i = 0; i < fieldsCount; i++)
         {
             var name = br.ReadString();
@@ -147,22 +147,19 @@ public class FacetIndexingRepro : StorageTest
                     continue;
                 }
 
-                int len = br.Read7BitEncodedInt();
-                var buffer = br.ReadBytes(len);
                 using var indexEntryBuilder = iw.Index(id);
-                fixed (byte* b = buffer)
                 {
-                    var reader = new IndexEntryReader(b, buffer.Length);
                     for (int i = 0; i < fieldsCount; i++)
                     {
-                        var fieldReader = reader.GetFieldReaderFor(i);
-                        fieldReader.Read(out Span<byte> s);
-                        indexEntryBuilder.Write(i, s);
+                       int len = br.Read7BitEncodedInt();
+                       var s = br.ReadBytes(len);
+                       indexEntryBuilder.Write(i, s);
                     }
                 }
                 items++;
             }
 
+            
             using (var rtx = Env.ReadTransaction())
                 QueryAll(rtx);
             
