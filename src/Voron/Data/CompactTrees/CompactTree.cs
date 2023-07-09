@@ -405,12 +405,11 @@ public sealed partial class CompactTree : IPrepareForCommit
         _inner.InitializeCursorState();
     }
 
-    public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyLookup lookup, out CompactKeyCacheScope cacheScope)
+    public bool TryGetNextValue(CompactKey key, out long termContainerId, out long value,out CompactKeyLookup lookup)
     {
-        cacheScope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-
-        lookup = new CompactKeyLookup(cacheScope.Key);
-        lookup.Key.EncodedWithCurrent(out _);
+        key.ChangeDictionary(DictionaryId);
+        key.EncodedWithCurrent(out _);
+        lookup = new CompactKeyLookup(key);
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;

@@ -1036,12 +1036,14 @@ namespace Corax
             // now run over the keys in sorted fashion in optimal manner
             var primaryKeyTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName);
             primaryKeyTree.InitializeStateForTryGetNextValue();
+            using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
+            
             for (int i = 0; i < _entryKeysToRemove.Count; i++)
             {
-                if (primaryKeyTree.TryGetNextValue(_entryKeysToRemove[i].AsSpan(), out var _, out var postingListId, out _, out var scope))
+                compactKeyCacheScope.Key.Set(_entryKeysToRemove[i].AsSpan());
+                if (primaryKeyTree.TryGetNextValue(compactKeyCacheScope.Key, out var _, out var postingListId, out _))
                 {
                     RecordDeletion(postingListId);
-                    scope.Dispose();
                 }
             }
             
@@ -1468,6 +1470,7 @@ namespace Corax
             fieldTree.InitializeStateForTryGetNextValue();
             long totalLengthOfTerm = 0;
 
+            using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
             var newAdditions = new NativeIntegersList(_entriesAllocator);
             for (var index = 0; index < termsCount; index++)
             {
@@ -1486,9 +1489,9 @@ namespace Corax
                 }
 
                 long termId;
-                ReadOnlySpan<byte> termsSpan = term.AsSpan();
 
-                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var keyLookup, out var scope);
+                compactKeyCacheScope.Key.Set(term.AsSpan());
+                bool found = fieldTree.TryGetNextValue(compactKeyCacheScope.Key, out var termContainerId, out var existingIdInTree, out var keyLookup);
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
                 {
@@ -1573,8 +1576,6 @@ namespace Corax
                     Debug.Assert(termContainerId > 0);
                     InsertEntriesForTerm(entriesToTerms, termContainerId);
                 }
-
-                scope.Dispose();
             }
             newAdditions.Dispose();
             

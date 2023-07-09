@@ -21,18 +21,6 @@ public readonly struct CompactKeyCacheScope : IDisposable
         Key.ChangeDictionary(dictionaryId);
     }
 
-    public CompactKeyCacheScope(LowLevelTransaction tx, CompactKey key)
-    {
-        Key = tx.AcquireCompactKey();
-        Key.Set(key);
-    }
-
-    public CompactKeyCacheScope(LowLevelTransaction tx, int keyLengthInBits, ReadOnlySpan<byte> encodedKey, long dictionaryId)
-    {
-        Key = tx.AcquireCompactKey();
-        Key.Set(keyLengthInBits, encodedKey, dictionaryId);
-    }
-
     public void Dispose()
     {
         Key?.Dispose();
