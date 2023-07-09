@@ -31,7 +31,7 @@ class exportDatabaseModel {
 
     includeAllCollections = ko.observable(true);
     includedCollections = ko.observableArray<string>([]);
-    ignoreCorruptedDocumentsErrors = ko.observable(false);
+    skipCorruptedData = ko.observable(false);
 
     transformScript = ko.observable<string>();
 
@@ -184,7 +184,7 @@ class exportDatabaseModel {
             SkipRevisionCreation: undefined,
             AuthorizationStatus: undefined,
             CompressionAlgorithm: this.compressionAlgorithm(),
-            IgnoreCorruptedDocumentsErrors: this.ignoreCorruptedDocumentsErrors()
+            SkipCorruptedData: this.skipCorruptedData()
         };
     }
     

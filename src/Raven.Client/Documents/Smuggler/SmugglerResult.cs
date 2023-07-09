@@ -16,7 +16,9 @@ namespace Raven.Client.Documents.Smuggler
         private List<string> _messages;
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
-
+        private DatabaseItemType _itemTypeInProgress;
+        public EventHandler<InvalidOperationException> OnCorruptedDataHandler;
+        
         public SmugglerResult()
         {
             _sw = Stopwatch.StartNew();
@@ -84,6 +86,40 @@ namespace Raven.Client.Documents.Smuggler
         public void AddError(string message)
         {
             AddMessage("ERROR", message);
+        }
+
+        public void StartProcessingForType(DatabaseItemType type)
+        {
+            _itemTypeInProgress = type;
+            AddInfo($"Started processing {_itemTypeInProgress}.");
+        }
+
+        public void StopProcessingActualType(Counts counts)
+        {
+            AddInfo($"Finished processing {_itemTypeInProgress}. {counts}");
+            _itemTypeInProgress = DatabaseItemType.None;
+        }
+
+        public void HandleCorruptedData()
+        {
+            OnCorruptedDataHandler = OnCorruptedData;
+        }
+
+        private void OnCorruptedData(object sender, InvalidOperationException e)
+        {
+            switch (_itemTypeInProgress)
+            {
+                case DatabaseItemType.Documents:
+                    Documents.ErroredCount++;
+                    break;
+                case DatabaseItemType.RevisionDocuments:
+                    RevisionDocuments.ErroredCount++;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException($"Handling corrupted data of such DatabaseItemType '{nameof(_itemTypeInProgress)}' is not provided for.", e);
+            }
+
+            AddError(e.Message);
         }
 
         internal void AddMessage(string message)

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -30,7 +31,6 @@ using Voron;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
-using Address = Raven.Tests.Core.Utils.Entities.Address;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 
@@ -2044,10 +2044,12 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
-        public async Task CanExportAndImportDocumentIfCompressionDictionaryMissed()
+        public async Task CanExportAndImportIfCompressionDictionaryMissed()
         {
-            const int expectedNumberOfNonCorruptedDocuments = 1024;
-            const int expectedNumberOfDocuments = expectedNumberOfNonCorruptedDocuments + 1;
+            const int documentsWithoutRevisions = 1024;
+            const int documentsWithRevisions = 512;
+            const int expectedNumberOfCorruptedRevisions = 7;
+            const int expectedNumberOfDocuments = documentsWithoutRevisions + documentsWithRevisions + expectedNumberOfCorruptedRevisions;
 
             var file = GetTempFileName();
 
@@ -2064,26 +2066,46 @@ namespace SlowTests.Smuggler
                 using (var destStore = GetDocumentStore(new Options { Server = server }))
                 {
                     var database = await GetDatabase(server, sourceStore.Database);
+                    
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        using (var session = sourceStore.OpenAsyncSession())
+                        await using (var session = sourceStore.BulkInsert())
                         {
-                            for (int i = 0; i < expectedNumberOfDocuments; i++)
+                            for (int i = 0; i < documentsWithoutRevisions; i++)
                             {
                                 var user = new User { Name = $"User{i}" };
-
                                 await session.StoreAsync(user, $"users/{i}");
                             }
-
-                            await session.SaveChangesAsync();
                         }
 
+                        // Let's create a revision configuration for all subsequent documents
+                        var revisionConfiguration = new RevisionsConfiguration
+                        {
+                            Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
+                            Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                            {
+                                ["Users"] = new() { Disabled = false, MinimumRevisionsToKeep = 10 }
+                            }
+                        };
+                        await RevisionsHelper.SetupRevisions(server.ServerStore, database.Name, revisionConfiguration);
+
+                        // Now, let's add the documents under the conditions of the configured revisions
+                        await using (var session = sourceStore.BulkInsert())
+                        {
+                            for (int i = documentsWithoutRevisions; i < documentsWithoutRevisions + documentsWithRevisions + expectedNumberOfCorruptedRevisions; i++)
+                            {
+                                var user = new User { Name = $"User{i}" };
+                                await session.StoreAsync(user, $"users/{i}");
+                            }
+                        }
+
+                        // We need to ensure everything is working as expected and that the Compression Dictionaries are created
                         List<ZstdLib.CompressionDictionary> inStorageDictionaries;
                         using (var tx = context.Environment.ReadTransaction())
                             inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
-                        
-                        Assert.True(inStorageDictionaries.Count == 1);
+                        Assert.Equal(2, inStorageDictionaries.Count);
 
+                        // We want to intentionally corrupt the data by deleting all Compression Dictionaries, both on Storage... 
                         using (var tx = context.Environment.WriteTransaction())
                         {
                             var tree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
@@ -2101,34 +2123,51 @@ namespace SlowTests.Smuggler
                             tx.Commit();
                         }
 
+                        // ... and in memory
                         using (var tx = context.Environment.ReadTransaction())
                         {
                             inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
                             Assert.True(inStorageDictionaries.Count == 0);
                         }
 
-                        context.Environment.CompressionDictionariesHolder.CompressionDictionaries.Clear();
+                        context.Environment.CompressionDictionariesHolder.ForTestingPurposesOnly().ClearCompressionDictionaries();
                     }
 
-                    var operation = await sourceStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IgnoreCorruptedDocumentsErrors = true }, file);
+                    // The export attempt should finish successfully; all error data should be consolidated in the result
+                    var operation = await sourceStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { SkipCorruptedData = true }, file);
                     var result = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15)) as SmugglerResult;
-                    var stats = sourceStore.Maintenance.Send(new GetStatisticsOperation());
+                    var sourceStats = sourceStore.Maintenance.Send(new GetStatisticsOperation());
 
-                    Assert.True(result?.Documents.ReadCount == expectedNumberOfDocuments, 
-                        $"Documents.ReadCount of smuggler export result is {result?.Documents.ReadCount} documents, but should be {expectedNumberOfDocuments}");
+                    // Documents assert
+                    Assert.True(result?.Documents.ReadCount == documentsWithoutRevisions, 
+                        $"Documents.ReadCount of smuggler export result is {result?.Documents.ReadCount} documents, but should be {documentsWithoutRevisions}");
 
-                    Assert.True(result.Documents.ErroredCount == expectedNumberOfDocuments - expectedNumberOfNonCorruptedDocuments,
-                        $"Documents.ErroredCount of smuggler export result is {result.Documents.ErroredCount} documents, but should be {expectedNumberOfDocuments - expectedNumberOfNonCorruptedDocuments}");
+                    Assert.True(result.Documents.ErroredCount == documentsWithRevisions + expectedNumberOfCorruptedRevisions,
+                        $"Documents.ErroredCount of smuggler export result is {result.Documents.ErroredCount} documents, but should be {documentsWithRevisions + expectedNumberOfCorruptedRevisions}");
 
-                    Assert.True(stats.CountOfDocuments == expectedNumberOfDocuments, 
-                        $"The source database contains {stats.CountOfDocuments} documents, but should be {expectedNumberOfDocuments}");
+                    Assert.True(sourceStats.CountOfDocuments == expectedNumberOfDocuments, 
+                        $"The source database contains {sourceStats.CountOfDocuments} documents, but should be {expectedNumberOfDocuments}");
 
+                    // Revisions assert
+                    Assert.True(result.RevisionDocuments.ReadCount == documentsWithRevisions,
+                        $"RevisionDocuments.ReadCount of smuggler export result is {result?.Documents.ReadCount} revisions, but should be {documentsWithRevisions}");
+
+                    Assert.True(result.RevisionDocuments.ErroredCount == expectedNumberOfCorruptedRevisions,
+                        $"RevisionDocuments.ErroredCount of smuggler export result is {result.Documents.ErroredCount} revisions, but should be {expectedNumberOfCorruptedRevisions}");
+
+                    Assert.True(sourceStats.CountOfRevisionDocuments == documentsWithRevisions + expectedNumberOfCorruptedRevisions,
+                        $"The source database contains {sourceStats.CountOfRevisionDocuments} documents, but should be {documentsWithRevisions + expectedNumberOfCorruptedRevisions}");
+
+                    // The export file should be operational and allow the import of all uncorrupted data
                     operation = await destStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    stats = destStore.Maintenance.Send(new GetStatisticsOperation());
-                    Assert.True(stats.CountOfDocuments == expectedNumberOfNonCorruptedDocuments, 
-                        $"The destination database contains {stats.CountOfDocuments} documents, but expected {expectedNumberOfNonCorruptedDocuments}");
+                    var destStats = destStore.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.True(destStats.CountOfDocuments == sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments, 
+                        $"The destination database contains {destStats.CountOfDocuments} documents, but expected {sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments}");
+
+                    Assert.True(destStats.CountOfRevisionDocuments == result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2,
+                        $"The destination database contains {destStats.CountOfRevisionDocuments} revisions, but expected {result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2}");
                 }
             }
             finally
