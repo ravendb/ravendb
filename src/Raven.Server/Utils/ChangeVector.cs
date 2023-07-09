@@ -168,6 +168,24 @@ public class ChangeVector
         return context.GetChangeVector(versionMerge, orderMerge);
     }
 
+    public static ChangeVector MergeChangeVectors(ChangeVector cv1, ChangeVector cv2, IChangeVectorOperationContext context)
+    {
+        if (cv1.IsNullOrEmpty)
+            return cv2;
+
+        if (cv2.IsNullOrEmpty)
+            return cv1;
+
+        if (cv1.IsSingle && cv2.IsSingle || cv1.IsSingle == false && cv2.IsSingle == false)
+            return Merge(cv1, cv2, context);
+
+        // we are keeping the existing order without merging it with the version of the single change vector
+        var mergedOrder = cv2.IsSingle ? cv1.Order : cv2.Order;
+        var mergedVersion = Merge(cv1.Version, cv2.Version, context);
+        return context.GetChangeVector(mergedVersion, mergedOrder);
+    }
+
+
     public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
     {
         if (changeVector == null)

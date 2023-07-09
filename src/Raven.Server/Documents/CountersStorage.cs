@@ -789,12 +789,12 @@ namespace Raven.Server.Documents
         {
             public BlittableJsonReaderObject Data;
             public DbIdsHolder DbIdsHolder;
-            public string ChangeVector;
+            public ChangeVector ChangeVector;
             public bool Modified;
             public ByteStringContext.InternalScope KeyScope;
         }
 
-        public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, string changeVector,
+        public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, ChangeVector changeVector,
             BlittableJsonReaderObject sourceData)
         {
             if (context.Transaction == null)
@@ -1008,7 +1008,7 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        var changeVectorToSave = ChangeVectorUtils.MergeVectors(putCountersData.ChangeVector, changeVector);
+                        var changeVectorToSave = ChangeVector.MergeChangeVectors(putCountersData.ChangeVector, changeVector, context);
 
                         using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                         {
@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents
             return tx.OpenTable(tableSchema, tableName);
         }
 
-        private void CreateCounterTombstone(DocumentsOperationContext context, Slice documentKeyPrefix, Slice counterNameSlice, CollectionName collectionName, string remoteChangeVector = null)
+        private void CreateCounterTombstone(DocumentsOperationContext context, Slice documentKeyPrefix, Slice counterNameSlice, CollectionName collectionName, ChangeVector remoteChangeVector = null)
         {
             var table = GetOrCreateCounterTombstonesTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -1865,10 +1865,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string ExtractCounterTombstoneChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        private static ChangeVector ExtractCounterTombstoneChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var changeVectorPtr = reader.Read((int)CounterTombstonesTable.ChangeVector, out int changeVectorSize);
-            return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
+            return context.GetChangeVector(Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize));
         }
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
