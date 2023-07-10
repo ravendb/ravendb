@@ -40,36 +40,48 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
         public void Write(int fieldId, ReadOnlySpan<byte> value)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, null, b));
         }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, string path, string value)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, null, b));
         }
 
         public void Write(int fieldId, string path, string value, long longValue, double dblValue)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
+            if (value.Length == 0)
+                return;
             _allocator.From(value, out var b);
             _terms.Add((fieldId, path, b));
         }
@@ -183,7 +195,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                     
                         for (int j = 0; j < items; j++)
                         {
-                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
+                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[j].Offset, (int)tokenBuffer[j].Length);
                         }
                     }
                 }
