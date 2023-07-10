@@ -46,6 +46,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
     private HashSet<IndexField> _complexFields;
+    public bool IgnoreComplexObjectsDuringIndex;
 
     protected abstract void SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
@@ -336,6 +337,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private void AssertOrAdjustIndexingOptionForComplexObject(IndexField field)
     {
+        if (IgnoreComplexObjectsDuringIndex)
+            return;
+        
         Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
 
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&

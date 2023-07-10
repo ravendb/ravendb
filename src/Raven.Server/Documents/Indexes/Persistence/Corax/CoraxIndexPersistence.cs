@@ -151,7 +151,8 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
             // We are creating a new converter because converters get tied through their accessors to the structure, and since on Map-Reduce indexes
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
-            var converter = new AnonymousCoraxDocumentConverter(_index, storeValue: false); // CreateConverter(_index);
+            var converter = CreateConverter(_index);
+            converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
             var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
             var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);
 

@@ -17,9 +17,9 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private class Builder : IndexWriter.IIndexEntryBuilder
     {
         private readonly ByteStringContext _allocator;
-        private readonly List<ByteString> _terms;
+        private readonly List<(int FieldId, string FieldName, ByteString Value)> _terms;
 
-        public Builder(ByteStringContext allocator,List<ByteString> terms)
+        public Builder(ByteStringContext allocator,List<(int FieldId, string FieldName, ByteString)> terms)
         {
             _allocator = allocator;
             _terms = terms;
@@ -35,43 +35,43 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         public void WriteNull(int fieldId, string path)
         {
             _allocator.From(global::Corax.Constants.NullValueSlice.AsSpan(), out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, ReadOnlySpan<byte> value)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, null, b));
         }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, string path, string value)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, null, b));
         }
 
         public void Write(int fieldId, string path, string value, long longValue, double dblValue)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, path, b));
         }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
             _allocator.From(value, out var b);
-            _terms.Add(b);
+            _terms.Add((fieldId, path, b));
         }
 
         public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
@@ -108,8 +108,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly HashSet<string> _collections;
     private readonly int _take;
     private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
-    private readonly List<ByteString> _terms;
-    private Builder _builder;
+    private readonly List<(int FieldId, string FieldName, ByteString Value)> _terms;
+    private readonly Builder _builder;
 
     public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, int take = int.MaxValue)
     {
@@ -122,7 +122,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _documentStorage = storage;
         _queryContext = queryContext;
         _collections = collections;
-        _terms = new List<ByteString>();
+        _terms = new List<(int FieldId, string FieldName, ByteString Value)>();
         _builder = new Builder(indexContext.Allocator, _terms);
     }
 
@@ -155,10 +155,14 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                     
                     for (int i = 0; i < _terms.Count; i++)
                     {
-                        var field = fields.GetByFieldId(i);
+                        var (fieldId, fieldName, value) = _terms[i];
+
+                        if (fields.TryGetByFieldId(fieldId, out var field) == false &&
+                            fields.TryGetByFieldName(fieldName, out field) == false)
+                            continue;
+                        
                         var analyzer = field.Analyzer ?? lowercaseAnalyzer;
 
-                        var value = _terms[i];
                         
                         if (value.Length < 3)
                             continue;

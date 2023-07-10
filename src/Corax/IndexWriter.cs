@@ -513,7 +513,7 @@ namespace Corax
             private readonly IndexWriter _parent;
             private long _entryId;
             public bool Active;
-            public bool IsEmpty => Fields > 0;
+            public bool IsEmpty => Fields == 0;
             public int Fields;
             private bool _isUpdate;
             private int _buildingList;
@@ -720,12 +720,20 @@ namespace Corax
             public void Store(BlittableJsonReaderObject storedValue)
             {
                 var field = _parent._knownFieldsTerms[^1];
+                if (storedValue.HasParent)
+                {
+                    storedValue = storedValue.CloneOnTheSameContext();
+                }
                 RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
             public void Store(int fieldId, string name, BlittableJsonReaderObject storedValue)
             {
                 var field = GetField(fieldId, name);
+                if (storedValue.HasParent)
+                {
+                    storedValue = storedValue.CloneOnTheSameContext();
+                }
                 RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
