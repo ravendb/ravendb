@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Smuggler
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
         private DatabaseItemType _itemTypeInProgress;
-        public EventHandler<InvalidOperationException> OnCorruptedDataHandler;
         
         public SmugglerResult()
         {
@@ -100,12 +99,7 @@ namespace Raven.Client.Documents.Smuggler
             _itemTypeInProgress = DatabaseItemType.None;
         }
 
-        public void HandleCorruptedData()
-        {
-            OnCorruptedDataHandler = OnCorruptedData;
-        }
-
-        private void OnCorruptedData(object sender, InvalidOperationException e)
+        public void OnCorruptedData(object sender, InvalidOperationException e)
         {
             switch (_itemTypeInProgress)
             {
