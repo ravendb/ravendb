@@ -191,9 +191,7 @@ function ConnectedClients(props: ConnectedClientsProps) {
                         </div>
                         <div className="p-2">
                             <div className="small-label">Client URI</div>
-                            <a href={connection.ClientUri} className="no-decor">
-                                {connection.ClientUri}
-                            </a>
+                            <span>{connection.ClientUri}</span>
                         </div>
                         <div>
                             <Button
