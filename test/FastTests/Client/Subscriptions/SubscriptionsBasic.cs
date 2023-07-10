@@ -1114,7 +1114,7 @@ namespace FastTests.Client.Subscriptions
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20336")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -1123,8 +1123,8 @@ namespace FastTests.Client.Subscriptions
             using (var session = store.OpenAsyncSession())
             {
                 var b = new B { SomeProp = someProp };
-                await session.StoreAsync(b);
-                await session.StoreAsync(new A { BId = b.Id });
+                await session.StoreAsync(b, "b1$a/1");
+                await session.StoreAsync(new A { BId = b.Id }, "a/1");
                 await session.SaveChangesAsync();
             }
 
