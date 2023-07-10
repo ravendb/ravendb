@@ -234,7 +234,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -247,7 +247,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -283,7 +283,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options
@@ -295,7 +295,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -351,7 +351,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options
@@ -364,7 +364,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -413,7 +413,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -426,7 +426,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -473,7 +473,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -486,7 +486,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -530,7 +530,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -543,7 +543,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -604,7 +604,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -647,7 +647,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -660,7 +660,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -713,7 +713,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -726,7 +726,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store3 = GetDocumentStore(new Options(options)
@@ -739,7 +739,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -783,7 +783,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -796,7 +796,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -893,7 +893,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -906,7 +906,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -962,7 +962,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -975,7 +975,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             {
@@ -1091,7 +1091,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(options))
@@ -1141,7 +1141,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(options))
@@ -1203,7 +1203,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store2 = GetDocumentStore(new Options(options)
@@ -1269,7 +1269,7 @@ namespace SlowTests.Server.Replication
                         ResolveToLatest = false,
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
-                    modifyRecord(record);
+                    modifyRecord?.Invoke(record);
                 }
             }))
             using (var store3 = GetDocumentStore(options))
