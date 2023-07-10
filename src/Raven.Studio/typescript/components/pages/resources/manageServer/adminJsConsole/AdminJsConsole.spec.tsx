@@ -9,7 +9,7 @@ describe("AdminJsConsole", function () {
     it("can render", async () => {
         const { screen } = rtlRender(<JSConsole />);
 
-        expect(await screen.findByText("Admin JS Console")).toBeInTheDocument();
+        expect((await screen.findAllByText("Admin JS Console")).length).toBeGreaterThan(1);
         expect(await screen.findAllByText("Press Shift+F11 to enter full screen mode")).toHaveLength(2);
     });
 });
