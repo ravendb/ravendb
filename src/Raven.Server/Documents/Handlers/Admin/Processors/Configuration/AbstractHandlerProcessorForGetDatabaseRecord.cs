@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -43,7 +44,7 @@ internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHan
                 if (dbDoc == null)
                 {
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    RequestHandler.HttpContext.Response.Headers["Database-Missing"] = name;
+                    RequestHandler.HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
                         context.Write(writer,

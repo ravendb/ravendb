@@ -82,6 +82,8 @@ namespace Raven.Client
             public const string AttachmentHash = "Attachment-Hash";
 
             public const string AttachmentSize = "Attachment-Size";
+
+            internal const string DatabaseMissing = "Database-Missing";
         }
 
         public class Platform

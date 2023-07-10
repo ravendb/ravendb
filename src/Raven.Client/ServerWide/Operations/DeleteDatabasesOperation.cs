@@ -12,7 +12,23 @@ namespace Raven.Client.ServerWide.Operations
     public class DeleteDatabasesOperation : IServerOperation<DeleteDatabaseResult>
     {
         private readonly Parameters _parameters;
+        
+        public DeleteDatabasesOperation(string databaseName, bool hardDelete) : this(databaseName, hardDelete, fromNode: null, timeToWaitForConfirmation: TimeSpan.FromSeconds(15))
+        {
+            
+        }
 
+        public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode) : this(databaseName, hardDelete, fromNode: fromNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(15))
+        {
+           
+        }
+
+        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode, TimeSpan? timeToWaitForConfirmation = null) : 
+            this(ClientShardHelper.ToShardName(databaseName, shardNumber), hardDelete, fromNode: fromNode, timeToWaitForConfirmation: timeToWaitForConfirmation)
+        {
+            
+        }
+        
         public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode = null, TimeSpan? timeToWaitForConfirmation = null)
         {
             if (databaseName == null)
@@ -29,23 +45,6 @@ namespace Raven.Client.ServerWide.Operations
                 _parameters.FromNodes = new[] { fromNode };
         }
 
-        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode, TimeSpan? timeToWaitForConfirmation = null)
-        {
-            if (databaseName == null)
-                throw new ArgumentNullException(nameof(databaseName));
-
-            if (fromNode == null)
-                throw new ArgumentException(nameof(fromNode));
-            
-            _parameters = new Parameters
-            {
-                DatabaseNames = new[] { ClientShardHelper.ToShardName(databaseName, shardNumber) },
-                HardDelete = hardDelete,
-                TimeToWaitForConfirmation = timeToWaitForConfirmation,
-                FromNodes = new [] {fromNode}
-            };
-        }
-        
         public DeleteDatabasesOperation(Parameters parameters)
         {
             if (parameters == null)
