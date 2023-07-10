@@ -241,6 +241,7 @@ namespace Raven.Server.Routing
 
             reqCtx.RavenServer = _ravenServer;
             reqCtx.RouteMatch = tryMatch.Match;
+            reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
             var handler = tuple.Item1 ?? await tuple.Item2;

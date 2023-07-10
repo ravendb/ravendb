@@ -156,7 +156,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CheckForChanges = false)]
         public async Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
