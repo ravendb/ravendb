@@ -91,6 +91,7 @@ namespace Raven.Server.Documents
             internal Action AfterDatabaseInitialize;
             internal bool PreventedRehabOfIdleDatabase = false;
             internal ManualResetEvent DeleteDatabaseWhileItBeingDeleted = null;
+            internal Action BeforeActualDelete = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
             internal bool ShouldFetchIdleStateImmediately = false;
@@ -402,6 +403,8 @@ namespace Raven.Server.Documents
                     throw;
                 }
 
+                ForTestingPurposes?.BeforeActualDelete?.Invoke();
+
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
                     RavenConfiguration configuration;
@@ -454,9 +457,10 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
-        private void NotifyLeaderAboutRemoval(string dbName, string databaseId)
+        private void NotifyLeaderAboutRemoval(string dbName, string databaseId, string requestId = null)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, RaftIdGenerator.NewId())
+            requestId ??= RaftIdGenerator.NewId();
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, requestId)
             {
                 NodeTag = _serverStore.NodeTag
             };
@@ -493,7 +497,7 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        NotifyLeaderAboutRemoval(dbName, databaseId);
+                        NotifyLeaderAboutRemoval(dbName, databaseId, requestId);
                     }
                     catch (Exception e)
                     {

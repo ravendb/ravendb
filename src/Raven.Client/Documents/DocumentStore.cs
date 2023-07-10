@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -197,7 +198,7 @@ namespace Raven.Client.Documents
 
             RequestExecutor CreateRequestExecutorForSingleNode()
             {
-                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
+                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls.Single(), database, Certificate, Conventions);
                 RegisterEvents(forSingleNode);
 
                 RequestExecutorCreated?.Invoke(this, forSingleNode);

@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
@@ -61,7 +62,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcess
             if (items.Count == 0 && name != null)
             {
                 await RequestHandler.NoContent(HttpStatusCode.NotFound);
-                HttpContext.Response.Headers["Database-Missing"] = name;
+                HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
                 return;
             }
 

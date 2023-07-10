@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -127,7 +128,7 @@ namespace Raven.Server.Web.System
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             context.Write(writer,
@@ -149,11 +150,11 @@ namespace Raven.Server.Web.System
                     }
 
                     if (rawRecord.DeletionInProgress.Count > 0 &&
-                        rawRecord.Topologies.Sum(t => t.Topology.Count) == rawRecord.DeletionInProgress.Count)
+                        rawRecord.Topologies.Sum(t => t.Topology.Count) == 0)
                     {
                         // The database at deletion progress from all nodes
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer, new DynamicJsonValue

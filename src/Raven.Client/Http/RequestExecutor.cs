@@ -941,7 +941,7 @@ namespace Raven.Client.Http
                     {
                         if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
                         {
-                            if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
+                            if (response.Headers.TryGetValues(Constants.Headers.DatabaseMissing, out var databaseMissing))
                             {
                                 var name = databaseMissing.FirstOrDefault();
                                 if (name != null)
