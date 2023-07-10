@@ -134,6 +134,8 @@ namespace Raven.Client.Http
 
         protected bool _disableClientConfigurationUpdates;
 
+        protected string _topologyHeaderName = Constants.Headers.TopologyEtag;
+
         private bool _usePrivateUrls;
 
         public TimeSpan? DefaultTimeout
@@ -1161,7 +1163,7 @@ namespace Raven.Client.Http
             }
 
             if (_disableTopologyUpdates == false)
-                request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
+                request.Headers.TryAddWithoutValidation(_topologyHeaderName, $"\"{TopologyEtag.ToInvariantString()}\"");
 
             if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
                 request.Headers.Add(Constants.Headers.ClientVersion, _localClientVersion ?? ClientVersion);

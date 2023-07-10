@@ -12,6 +12,7 @@ namespace Raven.Server.Web
         public RavenServer RavenServer;
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
+        public bool CheckForChanges = true;
         public ShardedDatabaseContext DatabaseContext;
 
         public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;

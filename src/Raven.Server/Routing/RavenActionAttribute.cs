@@ -9,6 +9,8 @@ namespace Raven.Server.Routing
 
         public bool DisableOnCpuCreditsExhaustion { get; set; }
 
+        public bool CheckForChanges { get; set; }
+
         public CorsMode CorsMode { get; set; }
 
         public string Path { get; }
@@ -31,6 +33,7 @@ namespace Raven.Server.Routing
             AuthorizationStatus requireAuth,
             bool isDebugInformationEndpoint = false,
             bool isPosixSpecificEndpoint = false,
+            bool checkForChanges = true,
             CorsMode corsMode = CorsMode.None)
         {
             if (requireAuth == AuthorizationStatus.ValidUser)
@@ -42,6 +45,7 @@ namespace Raven.Server.Routing
             RequiredAuthorization = requireAuth;
             IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
             CorsMode = corsMode;
+            CheckForChanges = checkForChanges;
         }
 
         public RavenActionAttribute(
@@ -51,6 +55,7 @@ namespace Raven.Server.Routing
             EndpointType endpointType,
             bool isDebugInformationEndpoint = false,
             bool isPosixSpecificEndpoint = false,
+            bool checkForChanges = true,
             CorsMode corsMode = CorsMode.None)
         {
             if (requireAuth != AuthorizationStatus.ValidUser)
@@ -63,6 +68,7 @@ namespace Raven.Server.Routing
             RequiredAuthorization = requireAuth;
             IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
             CorsMode = corsMode;
+            CheckForChanges = checkForChanges;
         }
     }
 
