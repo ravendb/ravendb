@@ -62,7 +62,8 @@ namespace Raven.Server.Routing
             Path = path;
             SkipUsagesCount = skipUsagesCount;
             SkipLastRequestTimeUpdate = skipLastRequestTimeUpdate;
-            CorsMode = corsMode;            CheckForChanges = checkForChanges;
+            CorsMode = corsMode;
+            CheckForChanges = checkForChanges;
         }
 
         public RouteType TypeOfRoute => _typeOfRoute;
