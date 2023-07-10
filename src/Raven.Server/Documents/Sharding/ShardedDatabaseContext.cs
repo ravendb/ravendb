@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Sharding
                     Debug.Assert(record.Sharding.Shards.ContainsKey(shardNumber));
                     if (CheckForTopologyChangesAndRaiseNotification(topology, _record.Sharding.Shards[shardNumber]))
                     {
-                        var t = ShardExecutor.GetRequestExecutorAt(shardNumber).UpdateTopologyAsync(
+                        _ = ShardExecutor.GetRequestExecutorAt(shardNumber).UpdateTopologyAsync(
                             new RequestExecutor.UpdateTopologyParameters(
                                     new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.Server.WebUrl })
                             { DebugTag = "shard-topology-update" });
