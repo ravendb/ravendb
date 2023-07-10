@@ -7,7 +7,10 @@ namespace Raven.Server.Web
     {
         public override Task CheckForChanges(RequestHandlerContext context)
         {
-            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
+            if (context.CheckForChanges == false)
+                return Task.CompletedTask;
+
+            var topologyEtag = GetLongFromHeaders(Constants.Headers.ClusterTopologyEtag);
             if (topologyEtag.HasValue && Server.ServerStore.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
 

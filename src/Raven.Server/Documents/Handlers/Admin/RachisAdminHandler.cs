@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true, CheckForChanges = false)]
         public async Task GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

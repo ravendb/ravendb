@@ -45,6 +45,8 @@ namespace Raven.Client
 
             public const string TopologyEtag = "Topology-Etag";
 
+            public const string ClusterTopologyEtag = "Cluster-Topology-Etag";
+
             public const string ClientConfigurationEtag = "Client-Configuration-Etag";
 
             public const string LastKnownClusterTransactionIndex = "Known-Raft-Index";
