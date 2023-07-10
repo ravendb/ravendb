@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.Replication
                     if (resolvedToLatest)
                     {
                         // delete duplicates
-                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null,
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
                             updateDocument: false,
                             attachment.Hash, attachment.ContentType, usePartialKey: false);
                     }
@@ -531,9 +531,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         // rename duplicates
                         var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
-                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName,
-                            changeVector: null,
-                            attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false);
+                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null, attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false, extractCollectionName: false);
                     }
                 }
             }
