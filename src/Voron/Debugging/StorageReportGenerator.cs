@@ -480,10 +480,9 @@ namespace Voron.Debugging
             {
                 pageDensities = GetLookupPageDensities(lookup.Llt, lookup.AllPages());
             }
-
-            var lookupPageHeader = lookup.Llt.GetPageHeaderForDebug<ContainerPageHeader>(lookup.State.TermsContainerId);
-
-            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages + lookupPageHeader.NumberOfPages + lookupPageHeader.NumberOfOverflowPages;
+            
+            // CompactTree also has a ContainerId, but that is accounted for _separately_, using the EntriesTerms
+            long pageCount = lookup.State.BranchPages + lookup.State.LeafPages;
 
             double density = pageDensities?.Average() ?? -1;
 
@@ -493,9 +492,9 @@ namespace Voron.Debugging
                 Name = lookup.Name.ToString(),
                 BranchPages = lookup.State.BranchPages,
                 NumberOfEntries = lookup.State.NumberOfEntries,
-                LeafPages = lookup.State.LeafPages + lookupPageHeader.NumberOfPages,
+                LeafPages = lookup.State.LeafPages,
                 PageCount = pageCount,
-                OverflowPages = lookupPageHeader.NumberOfOverflowPages,
+                OverflowPages = 0,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
