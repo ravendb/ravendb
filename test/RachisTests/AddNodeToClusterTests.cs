@@ -976,7 +976,7 @@ namespace RachisTests
                 await serverD.ServerStore.Engine.WaitForTopology(Leader.TopologyModification.NonVoter);
             }
 
-            await AssertWaitForValueAsync(async () =>
+            var res = WaitForValue(() =>
             {
                 if (nodes[1].ServerStore.ClusterRequestExecutor?.TopologyNodes?.Count != 4)
                 {
@@ -985,6 +985,7 @@ namespace RachisTests
 
                 return true;
             }, true);
+            Assert.True(res);
         }
 
         [Fact]
