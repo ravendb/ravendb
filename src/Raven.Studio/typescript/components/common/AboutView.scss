@@ -1,11 +1,153 @@
 ﻿@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.hub-btn {
+    border-radius: 0.625rem !important;
+    padding: 0.4rem 1.75rem 0.4rem 0.9rem !important;
+    border: none !important;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+
+    &:before {
+        content: "";
+        position: absolute;
+        inset: -0.15rem;
+        z-index: -1;
+        border-radius: 0.75rem;
+        background: linear-gradient(-45deg, colors.$color-2, rgba(colors.$color-2, 0));
+        background-size: 200% 200%;
+        animation: gradient 7.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    &:after {
+        content: "";
+        display: block;
+        background-image: url("../../../wwwroot/Content/img/info-hub.svg");
+        position: absolute;
+        width: 35px;
+        height: 33px;
+        right: -#{sizes.$gutter-xs};
+        top: -#{sizes.$gutter-xs};
+        background-repeat: no-repeat;
+    }
+}
+
+.about-view-title-badge {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+}
 
 .about-view-dropdown .popover {
-    width: 500px;
+    width: 540px;
     max-width: 90vw;
     font-size: bs5variables.$font-size-sm;
     border: none;
     color: bs5variables.$text-color-var;
-    box-shadow: bs5variables.$box-shadow, 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2);
     border-radius: bs5variables.$border-radius-lg;
+}
+
+.about-view-accordion {
+    .description {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .tab-icon {
+        top: 3px;
+        font-size: 1.5rem;
+    }
+    .accordion-button {
+        border-radius: sizes.$gutter-xs !important;
+        background: var(--panel-bg-1);
+        display: flex;
+        align-items: baseline;
+        &:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        &:not(.collapsed) {
+            background: transparent;
+            box-shadow: none;
+            .description {
+                display: none;
+            }
+        }
+    }
+    .accordion-item {
+        background: var(--panel-bg-1);
+        border: none;
+        &:not(:first-of-type) {
+            margin-top: sizes.$gutter-xs;
+        }
+        $shadow-classes: (
+            info: 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2),
+            success: 0 0 100px 0 inset rgba(var(--bs-success-rgb), 0.2),
+            warning: 0 0 100px 0 inset rgba(var(--bs-warning-rgb), 0.2),
+        );
+        @each $class, $shadow in $shadow-classes {
+            &.box-shadow-#{$class} {
+                box-shadow: $shadow;
+            }
+        }
+        .accordion-pill {
+            font-size: 0.625rem;
+            font-weight: 700;
+        }
+        .accordion-body {
+            padding: sizes.$gutter-xs sizes.$gutter sizes.$gutter sizes.$gutter;
+        }
+    }
+    .license-name {
+        margin-bottom: sizes.$gutter-xs;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        &.community {
+            &:before {
+                background-color: colors.$color-3-3;
+            }
+        }
+        &.professional {
+            &:before {
+                background-color: colors.$color-4-2;
+            }
+        }
+        &.enterprise {
+            &:before {
+                background-color: colors.$color-5;
+            }
+        }
+        &:before {
+            content: "";
+            display: block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+    }
+    .licensing-cols {
+        background: var(--panel-bg-2);
+        padding: sizes.$gutter-sm sizes.$gutter sizes.$gutter sizes.$gutter;
+        margin: sizes.$gutter;
+        border-radius: sizes.$gutter-sm;
+        .icon-cancel {
+            color: var(--bs-danger);
+        }
+        .icon-tick {
+            color: var(--bs-success);
+        }
+    }
 }
