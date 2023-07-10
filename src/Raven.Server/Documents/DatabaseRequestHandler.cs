@@ -18,7 +18,6 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
@@ -39,6 +38,9 @@ namespace Raven.Server.Documents
 
         public override Task CheckForChanges(RequestHandlerContext context)
         {
+            if (context.CheckForChanges == false)
+                return Task.CompletedTask;
+
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";

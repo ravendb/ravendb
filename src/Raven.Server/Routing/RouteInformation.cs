@@ -29,6 +29,7 @@ namespace Raven.Server.Routing
         public readonly CorsMode CorsMode;
 
         public bool DisableOnCpuCreditsExhaustion;
+        public bool CheckForChanges = true;
 
         private HandleRequest _request;
         private RouteType _typeOfRoute;
@@ -50,7 +51,8 @@ namespace Raven.Server.Routing
             bool skipLastRequestTimeUpdate,
             CorsMode corsMode,
             bool isDebugInformationEndpoint = false,
-            bool disableOnCpuCreditsExhaustion = false)
+            bool disableOnCpuCreditsExhaustion = false,
+            bool checkForChanges = true)
         {
             DisableOnCpuCreditsExhaustion = disableOnCpuCreditsExhaustion;
             AuthorizationStatus = authorizationStatus;
@@ -60,7 +62,7 @@ namespace Raven.Server.Routing
             Path = path;
             SkipUsagesCount = skipUsagesCount;
             SkipLastRequestTimeUpdate = skipLastRequestTimeUpdate;
-            CorsMode = corsMode;
+            CorsMode = corsMode;            CheckForChanges = checkForChanges;
         }
 
         public RouteType TypeOfRoute => _typeOfRoute;
@@ -118,7 +120,7 @@ namespace Raven.Server.Routing
                         hasChanges = true;
                     }
 
-                    if (hasChanges == false && 
+                    if (hasChanges == false &&
                         context.HttpContext.Request.Query.TryGetValue("nodeTag", out var nodeTag) &&
                         string.IsNullOrEmpty(nodeTag) == false)
                     {
