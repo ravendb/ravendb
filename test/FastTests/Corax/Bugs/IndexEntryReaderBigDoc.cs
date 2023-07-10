@@ -1,11 +1,6 @@
-﻿using System.IO;
-using Corax;
+﻿using Corax;
 using Corax.Mappings;
-using CsvHelper;
 using FastTests.Voron;
-using Newtonsoft.Json.Linq;
-using Parquet.Meta;
-using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
@@ -27,7 +22,6 @@ public class IndexEntryReaderBigDoc : StorageTest
     public unsafe void CanCreateAndReadBigDocument()
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        var scope = new SingleEntryWriterScope(allocator);
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
             .AddBinding(1, "Badges", shouldStore: true);
@@ -44,14 +38,14 @@ public class IndexEntryReaderBigDoc : StorageTest
 
                 entryId = writer.EntryId;
                 
-                using (writer.AsList())
+                writer.IncrementList();
                 {
                     for (int i = 0; i < 7500; i++)
                     {
                         writer.Write(1, "Nice Answer"u8);
                     }
-                    
                 }
+                writer.DecrementList();
             }
             indexWriter.PrepareAndCommit();
         }

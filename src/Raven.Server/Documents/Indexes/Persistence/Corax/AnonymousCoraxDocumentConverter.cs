@@ -2,8 +2,6 @@ using System;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq.Indexing;
-using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -29,9 +27,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         _isMultiMap = index.IsMultiMap;
     }
 
-    public override void SetDocumentFields(
-        LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, IndexWriter.IndexEntryBuilder builder, object sourceDocument)
+    protected override void SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+        object sourceDocument)
     {
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
@@ -45,7 +42,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         else
             accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
-        var scope = new SingleEntryWriterScope(Allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
         var knownFields = GetKnownFieldsForWriter();
@@ -63,7 +59,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
                 
-            InsertRegularField(field, value, indexContext, builder, sourceDocument, scope, out var innerShouldSkip);
+            InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
             shouldSkip &= innerShouldSkip;
                 
                 

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using Corax;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -24,14 +23,11 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
     {
     }
 
-    public override void SetDocumentFields(
-        LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext,  IndexWriter.IndexEntryBuilder builder, object sourceDocument)
+    protected override void SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+        object sourceDocument)
     {
         var document = (Document)doc;
         var id = document.LowerId ?? key;
-
-        var scope = new SingleEntryWriterScope(Allocator);
 
         foreach (var indexField in _fields.Values)
         {
@@ -61,18 +57,18 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                         throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                 }
 
-                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, scope, out var _);
+                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, out var _);
             }
             else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
             {
-                InsertRegularField(indexField, value, indexContext, builder, sourceDocument, scope, out var _);
+                InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out var _);
             }
         }
 
         if (key != null)
         {
             Debug.Assert(document.LowerId == null || (key == document.LowerId));
-            scope.Write(string.Empty, 0, id.AsSpan(), builder);
+            builder.Write( 0, string.Empty, id.AsSpan());
         }
             
         if (_storeValue)
@@ -84,7 +80,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                     fixed (byte* bPtr = blittableBuffer)
                         document.Data.CopyTo(bPtr);
 
-                    scope.Write(string.Empty, GetKnownFieldsForWriter().Count - 1, blittableBuffer, builder);
+                    builder.Write( GetKnownFieldsForWriter().Count - 1,string.Empty, blittableBuffer);
                 }
             }
         }

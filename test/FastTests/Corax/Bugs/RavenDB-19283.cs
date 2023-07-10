@@ -47,13 +47,14 @@ public class RavenDB_19283 : StorageTest
 
                 entryId = writer.EntryId;
                 
-                using (writer.AsList())
+                writer.IncrementList();
                 {
                     foreach (string tag in tags)
                     {
                         writer.Write(1, Encoding.UTF8.GetBytes(tag));
                     }
                 }
+                writer.DecrementList();
             }
             indexWriter.PrepareAndCommit();
         }

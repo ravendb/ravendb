@@ -405,7 +405,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             using (var writer = indexWriter.Index("items/1"))
             {
                 writer.Write(0, Encodings.Utf8.GetBytes("item/1"));
-                using (writer.AsList())
+                writer.IncrementList();
                 {
                     for (int i = 0; i < size; ++i)
                     {
@@ -413,6 +413,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                         writer.WriteSpatial(Constants.IndexWriter.DynamicField, "CoordinatesIndex", p);
                     }
                 }
+                writer.DecrementList();
                 entryId = writer.EntryId;
             }
             indexWriter.PrepareAndCommit();

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using Corax;
 using Corax.Pipeline;
 using Corax.Utils;
-using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -18,6 +14,91 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 {
+    private class Builder : IndexWriter.IIndexEntryBuilder
+    {
+        private readonly ByteStringContext _allocator;
+        private readonly List<ByteString> _terms;
+
+        public Builder(ByteStringContext allocator,List<ByteString> terms)
+        {
+            _allocator = allocator;
+            _terms = terms;
+        }
+
+        public bool IsEmpty => true;
+
+        public void Boost(float boost)
+        {
+            
+        }
+
+        public void WriteNull(int fieldId, string path)
+        {
+            _allocator.From(global::Corax.Constants.NullValueSlice.AsSpan(), out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, ReadOnlySpan<byte> value)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, string path, string value)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, string path, string value, long longValue, double dblValue)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
+        {
+            _allocator.From(value, out var b);
+            _terms.Add(b);
+        }
+
+        public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
+        {
+            // nothing to do here
+        }
+
+        public void Store(BlittableJsonReaderObject storedValue)
+        {
+            // nothing to do
+        }
+
+        public void Store(int fieldId, string name, BlittableJsonReaderObject storedValue)
+        {
+            // nothing to do
+        }
+
+        public void IncrementList()
+        {
+            
+        }
+
+        public void DecrementList()
+        {
+        }
+    }
+
     private readonly DocumentsStorage _documentStorage;
     private readonly QueryOperationContext _queryContext;
     private readonly TransactionOperationContext _indexContext;
@@ -27,6 +108,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly HashSet<string> _collections;
     private readonly int _take;
     private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
+    private readonly List<ByteString> _terms;
+    private Builder _builder;
 
     public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, int take = int.MaxValue)
     {
@@ -39,30 +122,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _documentStorage = storage;
         _queryContext = queryContext;
         _collections = collections;
-    }
-
-    private bool CanAcceptObject(object value)
-    {
-        return value switch
-        {
-            LazyStringValue { Size: > 3 } => true,
-            LazyCompressedStringValue { UncompressedSize: > 3 } => true,
-            string { Length: > 3 } => true,
-            Enum => true,
-            bool => true,
-            DateTime => true,
-            DateTimeOffset => true,
-            TimeSpan => true,
-            LazyNumberValue => true,
-            double => true,
-            decimal => true,
-            float => true,
-            int => true,
-            long => true,
-            DateOnly => true,
-            TimeOnly => true,
-            _ => false 
-        };
+        _terms = new List<ByteString>();
+        _builder = new Builder(indexContext.Allocator, _terms);
     }
 
     private IEnumerable<ArraySegment<byte>> GetItems()
@@ -89,44 +150,38 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                 foreach (var result in mapResults)
                 {
-                    if (CanAcceptObject(result) == false)
-                        continue;
+                    _terms.Clear();
+                    _converter.SetDocument(doc.LowerId, null, result, _indexContext,_builder);
+                    
+                    for (int i = 0; i < _terms.Count; i++)
+                    {
+                        var field = fields.GetByFieldId(i);
+                        var analyzer = field.Analyzer ?? lowercaseAnalyzer;
 
-                    yield return ArraySegment<byte>.Empty;
-                    yield break;
-                    // using var __ = _converter.SetDocument(doc.LowerId, null, result, _indexContext,null, out var id, out var output, out _, out _);
-                    //
-                    // var reader = new IndexEntryReader(output);
-                    // for (int i = 0; i < fields.Count; i++)
-                    // {
-                    //     var field = fields.GetByFieldId(i);
-                    //     var analyzer = field.Analyzer ?? lowercaseAnalyzer;
-                    //
-                    //     if (reader.GetFieldReaderFor(field.FieldId).Read(out _, out var value) == false)
-                    //         continue;
-                    //
-                    //     if (value.Length < 3)
-                    //         continue;
-                    //
-                    //     if (value.Length > wordsBuffer.Length)
-                    //     {
-                    //         wordsBuffer = new byte[value.Length * 2];
-                    //         tokenBuffer = new Token[value.Length * 2];
-                    //     }
-                    //
-                    //     int items;
-                    //     {
-                    //         var wordsSpan = wordsBuffer.AsSpan();
-                    //         var tokenSpan = tokenBuffer.AsSpan();
-                    //         analyzer.Execute(value, ref wordsSpan, ref tokenSpan);
-                    //         items = tokenSpan.Length;
-                    //     }
-                    //
-                    //     for (int j = 0; j < items; j++)
-                    //     {
-                    //         yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
-                    //     }
-                    // }
+                        var value = _terms[i];
+                        
+                        if (value.Length < 3)
+                            continue;
+                    
+                        if (value.Length > wordsBuffer.Length)
+                        {
+                            wordsBuffer = new byte[value.Length * 2];
+                            tokenBuffer = new Token[value.Length * 2];
+                        }
+                    
+                        int items;
+                        {
+                            var wordsSpan = wordsBuffer.AsSpan();
+                            var tokenSpan = tokenBuffer.AsSpan();
+                            analyzer.Execute(value.ToSpan(), ref wordsSpan, ref tokenSpan);
+                            items = tokenSpan.Length;
+                        }
+                    
+                        for (int j = 0; j < items; j++)
+                        {
+                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[i].Offset, (int)tokenBuffer[i].Length);
+                        }
+                    }
                 }
             }
         }

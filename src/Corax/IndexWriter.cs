@@ -490,7 +490,25 @@ namespace Corax
             Init();
         }
 
-        public class IndexEntryBuilder : IDisposable
+        public interface IIndexEntryBuilder
+        {
+            bool IsEmpty { get; }
+            void Boost(float boost);
+            void WriteNull(int fieldId, string path);
+            void Write(int fieldId, ReadOnlySpan<byte> value);
+            void Write(int fieldId, string path, ReadOnlySpan<byte> value);
+            void Write(int fieldId, string path, string value);
+            void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue);
+            void Write(int fieldId, string path, string value, long longValue, double dblValue);
+            void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue);
+            void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry);
+            void Store(BlittableJsonReaderObject storedValue);
+            void Store(int fieldId, string name, BlittableJsonReaderObject storedValue);
+            void IncrementList();
+            void DecrementList();
+        }
+
+        public class IndexEntryBuilder : IDisposable, IIndexEntryBuilder
         {
             private readonly IndexWriter _parent;
             private long _entryId;
@@ -498,7 +516,7 @@ namespace Corax
             public bool IsEmpty => Fields > 0;
             public int Fields;
             private bool _isUpdate;
-            private bool __buildingList;
+            private int _buildingList;
             public long EntryId => _entryId;
 
             public IndexEntryBuilder(IndexWriter parent)
@@ -656,7 +674,19 @@ namespace Corax
                 }
             }
 
+            public void Write(int fieldId, string path, string value)
+            {
+                using var _ = Slice.From(_parent._entriesAllocator, value, out var slice);
+                Write(fieldId, path, slice);
+            }
+
             public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue) => Write(fieldId, null, value, longValue, dblValue);
+            public void Write(int fieldId, string path, string value, long longValue, double dblValue)
+            {
+                using var _ = Slice.From(_parent._entriesAllocator, value, out var slice);
+                Write(fieldId, path, slice, longValue, dblValue);
+            }
+
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
             {
                 var field = GetField(fieldId, path);
@@ -702,7 +732,7 @@ namespace Corax
 
             void RegisterTerm(Slice fieldName, ReadOnlySpan<byte> term, StoredFieldType type)
             {
-                if (__buildingList)
+                if (_buildingList > 0)
                 {
                     type |= StoredFieldType.List;
                 }
@@ -741,27 +771,14 @@ namespace Corax
                 });
             }
 
-            public AsListDisposable AsList()
+            public void IncrementList()
             {
-                return new AsListDisposable(this);
+                _buildingList++;
             }
 
-            public readonly struct AsListDisposable : IDisposable
+            public void DecrementList()
             {
-                private readonly IndexEntryBuilder _parent;
-                private readonly bool _prevValue;
-
-                public AsListDisposable(IndexEntryBuilder parent)
-                {
-                    _parent = parent;
-                    _prevValue = _parent.__buildingList;
-                    _parent.__buildingList = true;
-                }
-
-                public void Dispose()
-                {
-                    _parent.__buildingList = _prevValue;
-                }
+                _buildingList--;
             }
         }
 
