@@ -23,7 +23,7 @@ public class RavenDB_18357 : RavenTestBase
         var oldModifyDatabaseRecord = options.ModifyDatabaseRecord;
         options.ModifyDatabaseRecord = doc =>
         {
-            oldModifyDatabaseRecord(doc);
+            oldModifyDatabaseRecord?.Invoke(doc);
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
         };
 
