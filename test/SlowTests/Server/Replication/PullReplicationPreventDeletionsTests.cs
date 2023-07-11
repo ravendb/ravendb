@@ -16,7 +16,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -773,7 +772,6 @@ namespace SlowTests.Server.Replication
 
         private class User
         {
-            public string Id;
             public string Name;
             public string Source;
         }
