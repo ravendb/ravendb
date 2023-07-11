@@ -318,7 +318,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </span>
                                 )}
                             </RichPanelName>
-                            <div className="text-muted">
+                            <div className="text-muted align-self-center">
                                 {dbAccess && isSecuredServer() && <AccessIcon dbAccess={dbAccess} />}
                             </div>
                         </RichPanelInfo>
