@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             _firstFile = firstFile;
             _extension = extension;
+
+            Result.Files.FileCount = FilesToRestore.Count + 1;
         }
 
         protected override async Task RestoreAsync()
@@ -235,6 +237,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             };
 
             var lastPath = RestoreSource.GetSmugglerBackupPath(smugglerFile);
+
+            Result.Files.CurrentFileName = smugglerFile; 
+            Result.Files.CurrentFile++;
+
+            onProgress.Invoke(Result.Progress);
 
             using (var zip = await RestoreSource.GetZipArchiveForSnapshot(lastPath))
             {

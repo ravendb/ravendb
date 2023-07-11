@@ -211,6 +211,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected virtual async Task OnAfterRestoreAsync()
         {
+            Result.Files.CurrentFileName = null;
+
             DisableOngoingTasksIfNeeded(RestoreSettings.DatabaseRecord);
             SmugglerBase.EnsureProcessed(Result, skipped: false, indexesSkipped: Result.Indexes.Skipped);
             Progress.Invoke(Result.Progress);
@@ -315,19 +317,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             for (var i = 0; i < FilesToRestore.Count - 1; i++)
             {
                 Result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{FilesToRestore.Count:#,#;;0}");
+
+                var fileName = FilesToRestore[i];
+                Result.Files.CurrentFileName = fileName;
+                Result.Files.CurrentFile++;
+
                 Progress.Invoke(Result.Progress);
 
-                var filePath = RestoreSource.GetBackupPath(FilesToRestore[i]);
+                var filePath = RestoreSource.GetBackupPath(fileName);
                 await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
-            var lastFilePath = RestoreSource.GetBackupPath(FilesToRestore.Last());
 
             Result.AddInfo($"Restoring file {FilesToRestore.Count:#,#;;0}/{FilesToRestore.Count:#,#;;0}");
+
+            var lastFileName = FilesToRestore.Last();
+            Result.Files.CurrentFileName = lastFileName;
+            Result.Files.CurrentFile++;
+
             Result.Indexes.Skipped = RestoreConfiguration.SkipIndexes;
             Progress.Invoke(Result.Progress);
 
+            var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
 
             await ExecuteClusterTransactions(database);

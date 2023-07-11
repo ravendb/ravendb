@@ -303,6 +303,23 @@ public abstract class SmugglerProgressBase : IOperationProgress
         }
     }
 
+    public class FileCounts
+    {
+        public string CurrentFileName { get; set; }
+        public long CurrentFile { get; set; }
+        public long FileCount { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(CurrentFileName)] = CurrentFileName,
+                [nameof(CurrentFile)] = CurrentFile,
+                [nameof(FileCount)] = FileCount
+            };
+        }
+    }
+
     public class Counts
     {
         public DateTime? StartTime { get; set; }
