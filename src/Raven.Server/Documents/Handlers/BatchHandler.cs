@@ -252,15 +252,15 @@ namespace Raven.Server.Documents.Handlers
             // wait for the command to be applied on this node
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
 
-            var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-            if (forTestingTask != null)
-            {
-                await forTestingTask;
-            }
-
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
+                var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke(ServerStore, Database, clusterTransactionCommand);
+                if (forTestingTask != null)
+                {
+                    await forTestingTask;
+                }
+
                 var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
                 if (reply.IndexTask != null)
                 {

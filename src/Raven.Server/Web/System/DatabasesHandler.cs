@@ -219,6 +219,7 @@ namespace Raven.Server.Web.System
                     }
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+                    var license = ServerStore.LoadLicenseLimits();
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -230,14 +231,16 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName
+                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
+                                    [nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion()
                                 })
                                 .Concat(rawRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
-                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab,
+                                    [nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion()
                                 })
                                 )
                             ),
