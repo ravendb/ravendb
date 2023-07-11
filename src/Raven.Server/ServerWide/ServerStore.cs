@@ -527,7 +527,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool HasDatabaseRecordTopologyChanged(long newRecordIndex, long currentIndex, out string url)
+        public bool ShouldUpdateTopology(long newRecordIndex, long currentIndex, out string url)
         {
             if (currentIndex < newRecordIndex)
             {
@@ -1203,16 +1203,19 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
         {
-            if (_lastClusterTopologyIndex < topology.Etag)
-                _lastClusterTopologyIndex = topology.Etag;
-            
-            _ = ClusterRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() {ClusterTag = NodeTag, Url = Server.WebUrl})
+            if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _))
             {
-                DebugTag = "cluster-topology-update"
-            });
+                _lastClusterTopologyIndex = topology.Etag;
 
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
-                NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
+                _ = ClusterRequestExecutor.UpdateTopologyAsync(
+                    new RequestExecutor.UpdateTopologyParameters(new ServerNode() {ClusterTag = NodeTag, Url = GetNodeHttpServerUrl()})
+                    {
+                        DebugTag = "cluster-topology-update"
+                    });
+
+                NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
+                    NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
+            }
         }
 
         private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _, object state)

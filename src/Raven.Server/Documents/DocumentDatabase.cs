@@ -1509,7 +1509,7 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                if (ServerStore.HasDatabaseRecordTopologyChanged(record.Topology.Stamp.Index, _lastTopologyIndex, out string url))
+                if (ServerStore.ShouldUpdateTopology(record.Topology.Stamp.Index, _lastTopologyIndex, out string url))
                 {
                     _lastTopologyIndex = record.Topology.Stamp.Index;
 
@@ -1521,7 +1521,7 @@ namespace Raven.Server.Documents
 
                     _ = RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode()
                     {
-                        ClusterTag = _serverStore.NodeTag, Database = Name, Url = _serverStore.Server.WebUrl
+                        ClusterTag = _serverStore.NodeTag, Database = Name, Url = ServerStore.GetNodeHttpServerUrl()
                     })
                     {
                         DebugTag = "database-topology-update"

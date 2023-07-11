@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Sharding
                     {
                         _ = ShardExecutor.GetRequestExecutorAt(shardNumber).UpdateTopologyAsync(
                             new RequestExecutor.UpdateTopologyParameters(
-                                    new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.Server.WebUrl })
+                                    new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.GetNodeHttpServerUrl() })
                             { DebugTag = "shard-topology-update" });
                     }
                 }
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Sharding
         {
             var topologyIndex = topology.Stamp?.Index ?? 0;
             var oldTopologyIndex = oldTopology.Stamp?.Index ?? 0;
-            if (ServerStore.HasDatabaseRecordTopologyChanged(topologyIndex, oldTopologyIndex, out string url))
+            if (ServerStore.ShouldUpdateTopology(topologyIndex, oldTopologyIndex, out string url))
             {
                 Changes.RaiseNotifications(new TopologyChange
                 {
