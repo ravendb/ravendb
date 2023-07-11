@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Json;
@@ -884,6 +885,68 @@ namespace RachisTests
                 await executorB.ExecuteAsync(new GetDatabasesCommand("B"), ctx);
                 //second will request straight to D will already have it in the topology
                 await executorB.ExecuteAsync(new GetDatabasesCommand("D"), ctx);
+            }
+        }
+
+        [Fact]
+        public async Task DatabaseRequestExecutorTopologyWillUpdateWhenAddingNewNode_RavenDB_20702()
+        {
+            var name = GetDatabaseName();
+            var (nodes, leader) = await CreateRaftCluster(4, leaderIndex: 0, watcherCluster: true);
+            var (index ,dbNodes) = await CreateDatabaseInCluster(name, replicationFactor: 3, leader.WebUrl);
+
+            var dbNodeTags = dbNodes.Select(x => x.ServerStore.NodeTag);
+
+            //find the one node without a replica
+            var emptyNode = nodes.Single(x => dbNodeTags.Contains(x.ServerStore.NodeTag) == false);
+            var dbNode = nodes.First(x => dbNodeTags.Contains(x.ServerStore.NodeTag));
+
+            using (var store = GetDocumentStore(new Options()
+                   {
+                       Server = dbNode,
+                       CreateDatabase = false,
+                       ModifyDatabaseName = _=> name
+                   }))
+            {
+                Assert.NotEqual(emptyNode.ServerStore.NodeTag, dbNode.ServerStore.NodeTag);
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store.Database, dbNode);
+
+                await WaitForValueAsync(async () =>
+                {
+                    foreach (var node in dbNodes)
+                    {
+                        var db = await GetDocumentDatabaseInstanceForAsync(store.Database, node);
+                        if (db.RequestExecutor?.TopologyNodes?.Count == 3)
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }, true);
+
+                //add D to the database
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database, emptyNode.ServerStore.NodeTag));
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    foreach (var node in nodes)
+                    {
+                        var db = await GetDocumentDatabaseInstanceForAsync(store.Database, node);
+                        if (db.RequestExecutor?.TopologyNodes.Count != 4)
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }, true);
+
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    await database.RequestExecutor.ExecuteAsync(new GetIndexesProgressCommand("D"), ctx);
+                }
             }
         }
 

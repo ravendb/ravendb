@@ -527,6 +527,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public bool HasDatabaseRecordTopologyChanged(long newRecordIndex, long currentIndex, out string url)
+        {
+            if (currentIndex < newRecordIndex)
+            {
+                var clusterTopology = GetClusterTopology();
+                url = clusterTopology.GetUrlFromTag(NodeTag);
+                if (url != null)
+                    return true;
+            }
+            url = null;
+            return false;
+        }
+
         public bool HasTopologyChanged(long topologyEtag)
         {
             return _lastClusterTopologyIndex != topologyEtag;
