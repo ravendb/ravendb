@@ -20,6 +20,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
@@ -77,9 +78,12 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_Failover_Shouldnt_Throw_ConcurrencyException()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 3);
-            var databaseName = GetDatabaseName();
-            await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-            using var store = new DocumentStore { Database = databaseName, Urls = nodes.Select(n => n.WebUrl).ToArray() }.Initialize();
+            using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = nodes.Count
+            });
+            var databaseName = store.Database;
 
             var disposeNodeTask = Task.Run(async () =>
             {
@@ -123,10 +127,11 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_Should_Work_After_Commit_And_Failover()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            var databaseName = GetDatabaseName();
-            await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-
-            using var store = new DocumentStore { Database = databaseName, Urls = nodes.Select(n => n.WebUrl).ToArray() }.Initialize();
+            using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = nodes.Count
+            });
 
             await ApplyFailoverAfterCommit(nodes, store.Database);
 
@@ -149,11 +154,11 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            var databaseName = GetDatabaseName();
-            await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-
-            using var store = new DocumentStore { Database = databaseName, Urls = nodes.Select(n => n.WebUrl).ToArray() }.Initialize();
-
+            using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = nodes.Count
+            });
 
             await ApplyFailoverAfterCommit(nodes, store.Database);
 
@@ -193,11 +198,11 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover_UseResults()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            var databaseName = GetDatabaseName();
-            await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-
-            using var store = new DocumentStore { Database = databaseName, Urls = nodes.Select(n => n.WebUrl).ToArray() }.Initialize();
-
+            using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = nodes.Count
+            });
 
             await ApplyFailoverAfterCommit(nodes, store.Database);
 
