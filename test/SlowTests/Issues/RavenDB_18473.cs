@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
@@ -16,14 +15,15 @@ public class RavenDB_18473 : ReplicationTestBase
     {
     }
 
-    [Fact]
-    public async Task MustNotThrowVoronConcurrencyErrorExceptionDuringReplication()
+    [RavenTheory(RavenTestCategory.Replication)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task MustNotThrowVoronConcurrencyErrorExceptionDuringReplication(Options options)
     {
         var file = GetTempFileName();
         try
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 // Important: the issue reproduces only when RevisionsCollectionConfiguration.PurgeOnDelete is true
                 // that is the setup for "Users" collection. Let's verify that during the setup.
@@ -81,5 +81,4 @@ public class RavenDB_18473 : ReplicationTestBase
             File.Delete(file);
         }
     }
-
 }
