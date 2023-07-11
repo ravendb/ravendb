@@ -29,6 +29,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -437,6 +438,9 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+
+        private long _lastCompletedClusterTransactionIndex;
+        public long LastCompletedClusterTransactionIndex => _lastCompletedClusterTransactionIndex;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -637,6 +641,7 @@ namespace Raven.Server.Documents
                     ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+                    _lastCompletedClusterTransactionIndex = command.Index;
                     return;
                 }
 
