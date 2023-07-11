@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.9</RuntimeFrameworkVersion>
     <AssemblyName>LicenseTests</AssemblyName>
     <PackageId>LicenseTests</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
