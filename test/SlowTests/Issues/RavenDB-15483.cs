@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
@@ -18,12 +17,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ExternalReplicationWithRevisionsBin2()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationWithRevisionsBin2(Options options)
         {
-            using (var store1 = GetDocumentStore())
-
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
@@ -61,7 +60,7 @@ namespace SlowTests.Issues
                         return user == null;
                     }
                 }, true);
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var database = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -70,7 +69,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, revisions);
                 }
 
-                database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "foo/bar");
                 revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -81,12 +80,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ExternalReplicationWithRevisionsBin3()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationWithRevisionsBin3(Options options)
         {
-            using (var store1 = GetDocumentStore())
-
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
                 await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
@@ -132,7 +131,7 @@ namespace SlowTests.Issues
                         return user == null;
                     }
                 }, true);
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "foo/bar");
                 var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -141,7 +140,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, revisions);
                 }
 
-                database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                database = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -152,12 +151,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ExternalReplicationWithRevisionsBin4()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationWithRevisionsBin4(Options options)
         {
-            using (var store1 = GetDocumentStore())
-
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = true);
 
@@ -203,7 +202,7 @@ namespace SlowTests.Issues
                         return user == null;
                     }
                 }, true);
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "foo/bar");
                 var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -212,7 +211,7 @@ namespace SlowTests.Issues
                     Assert.Equal(0, revisions);
                 }
 
-                database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                database = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
