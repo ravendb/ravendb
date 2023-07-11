@@ -184,6 +184,24 @@ public class ChangeVector
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
     }
 
+    public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
+    {
+        var databaseChangeVector = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
+        if (changeVector.IsNullOrEmpty)
+            return databaseChangeVector;
+
+        if (changeVector.IsSingle)
+            return changeVector.MergeOrderWith(databaseChangeVector, context);
+
+        var mergedChangeVector = changeVector.MergeWith(databaseChangeVector, context);
+        return context.GetChangeVector(mergedChangeVector.Version, databaseChangeVector);
+    }
+
+    public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+    {
+        return MergeWithNewDatabaseChangeVector(context, context.GetChangeVector(changeVector));
+    }
+
     public static ChangeVector Merge(List<ChangeVector> changeVectors, IChangeVectorOperationContext context)
     {
         var result = changeVectors[0];

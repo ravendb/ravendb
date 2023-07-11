@@ -4,9 +4,11 @@ using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -290,13 +292,26 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3, interval: 128));
 
+                    var db2 = await GetDocumentDatabaseInstanceForAsync(storeB, options.DatabaseMode, "foo/bar");
+
                     var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
                     var flags = metadata[0]["@flags"];
                     Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
-                    flags = metadata[1]["@flags"];
-                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
-                    flags = metadata[2]["@flags"];
-                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+
+                    var expectedFlags1 = (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString();
+                    var expectedFlags2 = (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString();
+
+                    AssertRevisionFlags(metadata[1]);
+                    AssertRevisionFlags(metadata[2]);
+
+                    void AssertRevisionFlags(MetadataAsDictionary revisionMetadata)
+                    {
+                        flags = revisionMetadata["@flags"];
+                        var cv = revisionMetadata["@change-vector"].ToString();
+                        var etag = ChangeVectorUtils.GetEtagById(cv, db2.DbBase64Id);
+                        var expected = etag != 0 ? expectedFlags1 : expectedFlags2;
+                        Assert.Equal(expected, flags);
+                    }
                 }
             }
         }
