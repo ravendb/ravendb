@@ -335,11 +335,16 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        var errors = ExecuteClusterTransaction(context, cmd, index);
-                        if (errors != null)
+                        var executeResults = ExecuteClusterTransaction(context, cmd, index);
+                        if (executeResults.Errors != null)
                         {
-                            result = errors;
-                            leader?.SetStateOf(index, errors);
+                            result = executeResults.Errors;
+                            leader?.SetStateOf(index, result);
+                        }
+                        else
+                        {
+                            result = executeResults.PreviousCount;
+                            leader?.SetStateOf(index, result);
                         }
                         break;
 
@@ -943,7 +948,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private (long? PreviousCount, List<ClusterTransactionCommand.ClusterTransactionErrorInfo> Errors) ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -962,18 +967,18 @@ namespace Raven.Server.ServerWide
                 var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopology, context, index, compareExchangeItems);
                 if (error == null)
                 {
-                    clusterTransaction.SaveCommandsBatch(context, index);
+                    var count = clusterTransaction.SaveCommandsBatch(context, index);
                     var notify = clusterTransaction.HasDocumentsInTransaction
                         ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
                         : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return null;
+                    return (count, null);
                 }
 
                 OnTransactionDispose(context, index);
-                return error;
+                return (null, error);
             }
             catch (Exception e)
             {
