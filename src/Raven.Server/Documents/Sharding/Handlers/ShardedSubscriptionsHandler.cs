@@ -99,9 +99,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 switch (changeVectorSpecialValue)
                 {
-                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+                    case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
                         break;
-                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
+                    case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                         result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(HttpContext.Request, sub.Collection, DatabaseContext.DatabaseName))).LastChangeVectors;
                         foreach ((string key, string value) in result.ChangeVectorsCollection)
                         {
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         }
 
                         break;
-                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
+                    case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
                         result.InitialChangeVector = options.ChangeVector;
                         break;
                     default:
@@ -128,7 +128,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 result.InitialChangeVector = options.ChangeVector;
                 if (string.IsNullOrEmpty(result.InitialChangeVector) == false)
                 {
-                    throw new InvalidOperationException("Setting initial change vector for sharded subscription is not allowed.");
+                    throw new InvalidOperationException($"Setting initial change vector for sharded subscription is not allowed. " +
+                                                        $"Expected to get '{nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates)}' but got '{result.InitialChangeVector}'.");
                 }
             }
 

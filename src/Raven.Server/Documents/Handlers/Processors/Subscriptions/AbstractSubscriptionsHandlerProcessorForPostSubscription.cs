@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                     }
                 }
 
-                options.ChangeVector ??= state.ChangeVectorForNextBatchStartingPoint;
+                SetSubscriptionChangeVectorOnUpdate(options, state);
                 options.MentorNode ??= state.MentorNode;
                 options.Query ??= state.Query;
 
@@ -108,5 +108,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
             }
         }
+
+        protected abstract void SetSubscriptionChangeVectorOnUpdate(SubscriptionUpdateOptions options, SubscriptionState state);
     }
 }
