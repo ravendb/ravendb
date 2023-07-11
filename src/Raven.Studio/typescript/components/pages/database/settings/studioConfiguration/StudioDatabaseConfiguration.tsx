@@ -14,7 +14,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import { environmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
+import { studioEnvironmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
 import { useServices } from "components/hooks/useServices";
 import appUrl from "common/appUrl";
 import { NonShardedViewProps } from "components/models/common";
@@ -101,7 +101,11 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                     </PopoverBody>
                                 </UncontrolledPopover>
                             </Label>
-                            <FormSelect control={control} name="Environment" options={environmentOptions}></FormSelect>
+                            <FormSelect
+                                control={control}
+                                name="Environment"
+                                options={studioEnvironmentOptions}
+                            ></FormSelect>
                         </InputGroup>
                     </CardBody>
                 </Card>

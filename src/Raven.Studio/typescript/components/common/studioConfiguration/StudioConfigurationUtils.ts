@@ -9,7 +9,7 @@ export const allStudioEnvironments = exhaustiveStringTuple<StudioEnvironment>()(
     "Production"
 );
 
-export const environmentOptions: SelectOption<StudioEnvironment>[] = allStudioEnvironments.map((environment) => ({
+export const studioEnvironmentOptions: SelectOption<StudioEnvironment>[] = allStudioEnvironments.map((environment) => ({
     value: environment,
     label: environment,
 }));
