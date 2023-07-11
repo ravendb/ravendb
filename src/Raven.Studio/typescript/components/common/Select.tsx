@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from "reactstrap";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
+import classNames from "classnames";
 
 export interface SelectOption<T extends string | number> {
     value: T;
@@ -17,16 +18,22 @@ export interface SelectProps<T extends string | number> {
     disabled?: boolean;
     placeholder?: string | ReactNode | ReactNode[];
     outline?: boolean;
+    className?: string;
 }
 
 export default function Select<T extends string | number>(props: SelectProps<T>) {
-    const { selectedValue, setSelectedValue, options, disabled, outline, placeholder } = props;
+    const { selectedValue, setSelectedValue, options, disabled, outline, placeholder, className } = props;
 
     const selectedOption = options.find((x) => x.value === selectedValue);
 
     return (
         <UncontrolledDropdown>
-            <DropdownToggle caret disabled={disabled} outline={outline}>
+            <DropdownToggle
+                caret
+                disabled={disabled}
+                outline={outline}
+                className={classNames(className, "form-control select-btn")}
+            >
                 {selectedOption ? (
                     <>
                         {selectedOption.icon && <Icon icon={selectedOption.icon} />}

@@ -131,9 +131,15 @@ export function FormSelect<
     });
 
     return (
-        <div>
+        <div className="flex-grow">
             <div className="form-dropdown-select">
-                <Select setSelectedValue={onChange} outline selectedValue={value} {...rest} />
+                <Select
+                    setSelectedValue={onChange}
+                    outline
+                    selectedValue={value}
+                    className="d-flex justify-content-between align-items-center"
+                    {...rest}
+                />
             </div>
             {invalid && <div className="text-danger small">{error.message}</div>}
         </div>

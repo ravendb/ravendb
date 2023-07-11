@@ -177,7 +177,7 @@ export default function ClientGlobalConfiguration() {
                     </div>
                     <Row className="mb-4">
                         <Col className="d-flex align-items-center gap-3">
-                            <InputGroup>
+                            <InputGroup className="d-flex flex-grow">
                                 <InputGroupText>
                                     <FormCheckbox control={control} name="loadBalancerEnabled" />
                                 </InputGroupText>

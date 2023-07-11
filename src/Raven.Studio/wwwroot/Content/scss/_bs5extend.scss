@@ -223,7 +223,7 @@ select {
         flex-grow: 1;
     }
 
-    width: 200px;
+    min-width: 200px;
     .dropdown {
         max-width: 100%;
         .dropdown-toggle {
@@ -238,7 +238,9 @@ select {
 @each $key, $value in $theme-colors {
     .modal-border.bulge-#{$key} {
         --bulge-color: #{$value};
-        box-shadow: 0 0 0 3px rgba(var(--bs-body-bg-rgb), 1), 0px -4px 0px 2px var(--bulge-color);
+        box-shadow:
+            0 0 0 3px rgba(var(--bs-body-bg-rgb), 1),
+            0px -4px 0px 2px var(--bulge-color);
     }
 }
 
@@ -261,4 +263,10 @@ select {
 
 .empty-set {
     max-width: 30rem;
+}
+
+.select-btn {
+    color: $input-color;
+    background-color: $input-bg;
+    border: $input-border-width solid $input-border-color;
 }
