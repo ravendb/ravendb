@@ -419,9 +419,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                collectionName = extractCollectionName ? _documentsStorage.ExtractCollectionName(context, data) : default;
-                return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                using (data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    collectionName = extractCollectionName ? _documentsStorage.ExtractCollectionName(context, data) : default;
+                    return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                }
             }
             finally
             {
