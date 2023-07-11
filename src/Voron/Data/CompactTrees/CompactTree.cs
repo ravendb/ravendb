@@ -28,7 +28,7 @@ namespace Voron.Data.CompactTrees;
 /// </summary>
 public sealed partial class CompactTree : IPrepareForCommit
 {
-    private readonly Lookup<CompactKeyLookup> _inner;
+    internal readonly Lookup<CompactKeyLookup> _inner;
 
     public CompactTree(Lookup<CompactKeyLookup> inner)
     {

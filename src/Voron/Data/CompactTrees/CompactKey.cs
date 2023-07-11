@@ -1,10 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Voron.Exceptions;
@@ -20,24 +19,26 @@ public unsafe class CompactKey : IDisposable
 {
     public readonly LowLevelTransaction Owner;
 
-    private ByteString _storage;
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope _storageScope;
+    private const int MappingTableSize = 64;
+    private const int MappingTableMask = MappingTableSize - 1;
+
+    private readonly long[] _keyMappingCache;
+    private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
+    private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
+
+
+    private byte[] _storage;
 
     // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
     // copy the content back. 
-    private byte* _currentPtr;
-    private byte* _currentEndPtr;
+    private int _currentIdx;
 
     // The decoded key pointer points toward the actual decoded key (if available). If not we will take the current
     // dictionary and just decode it into the storage. 
     private int _decodedKeyIdx;
     private int _currentKeyIdx;
 
-    private const int MappingTableSize = 64;
-    private const int MappingTableMask = MappingTableSize - 1;
 
-    private readonly long* _keyMappingCache;
-    private readonly long* _keyMappingCacheIndex;
     private int _lastKeyMappingItem;
 
     public int MaxLength;
@@ -54,14 +55,11 @@ public unsafe class CompactKey : IDisposable
         _decodedKeyIdx = Invalid;
         _lastKeyMappingItem = Invalid;
 
-        int allocationSize = 2 * Constants.CompactTree.MaximumKeySize + 2 * MappingTableSize * sizeof(long);
+        _storage = new byte[2 * Constants.CompactTree.MaximumKeySize];
+        
+        _currentIdx = 0;
 
-        _storageScope = Owner.Allocator.Allocate(allocationSize, out _storage);
-        _currentPtr = _storage.Ptr;
-        _currentEndPtr = _currentPtr + Constants.CompactTree.MaximumKeySize * 2;
-
-        _keyMappingCache = (long*)_currentEndPtr;
-        _keyMappingCacheIndex = (long*)(_currentEndPtr + MappingTableSize * sizeof(long));
+        _keyMappingCache = new long[2 * MappingTableMask];
 
         MaxLength = 0;
     }
@@ -73,16 +71,14 @@ public unsafe class CompactKey : IDisposable
     {
         Debug.Assert(IsValid, "Cannot get an encoded key without a current dictionary");
 
-        var keyPtr = EncodedWithPtr(Dictionary, out lengthInBits);
-        int keyLength = Bits.ToBytes(lengthInBits);
-        return new ReadOnlySpan<byte>(keyPtr, keyLength);
+        return EncodedWith(Dictionary, out lengthInBits);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public byte* EncodedWithPtr(long dictionaryId, out int lengthInBits)
+    public ReadOnlySpan<byte> EncodedWith(long dictionaryId, out int lengthInBits)
     {
         [SkipLocalsInit]
-        byte* EncodeFromDecodedForm()
+        int EncodeFromDecodedForm()
         {
             Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version. Current dictionary cannot be invalid.");
 
@@ -93,56 +89,56 @@ public unsafe class CompactKey : IDisposable
 
             // We look for an appropriate place to put this key
             int buckedIdx = SelectBucketForWrite();
-            _keyMappingCache[buckedIdx] = dictionaryId;
-            _keyMappingCacheIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
+            KeyMappingCache(buckedIdx) = dictionaryId;
+            KeyMappingCacheIndex(buckedIdx) = _currentIdx;
 
             var dictionary = Owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
-            int currentSize = (int)(_currentEndPtr - _currentPtr);
+            int currentSize = _storage.Length - _currentIdx;
             if (maxSize > currentSize)
                 UnlikelyGrowStorage(currentSize + maxSize);
 
-            var encodedStartPtr = _currentPtr;
-
-            var encodedKey = new Span<byte>(encodedStartPtr + sizeof(int), maxSize);
+            int encodedStartIdx = _currentIdx;
+            var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
             dictionary.Encode(decodedKey, ref encodedKey, out var encodedKeyLengthInBits);
 
-            *(int*)encodedStartPtr = encodedKeyLengthInBits;
-            _currentPtr += encodedKey.Length + sizeof(int);
+            Unsafe.WriteUnaligned(ref _storage[encodedStartIdx], encodedKeyLengthInBits);
+            _currentIdx += encodedKey.Length + sizeof(int);
             MaxLength = Math.Max(encodedKey.Length, MaxLength);
 
-            return encodedStartPtr;
+            return encodedStartIdx;
         }
 
-        byte* start;
+        int startIdx;
         if (Dictionary == dictionaryId && _currentKeyIdx != Invalid)
         {
             // This is the fast-path, we are requiring the usage of a dictionary that happens to be the current one. 
-            start = _storage.Ptr + _currentKeyIdx;
+            startIdx = _currentKeyIdx;
         }
         else
         {
             int bucketIdx = SelectBucketForRead(dictionaryId);
             if (bucketIdx == Invalid)
             {
-                start = EncodeFromDecodedForm();
+                startIdx = EncodeFromDecodedForm();
                 bucketIdx = _lastKeyMappingItem;
 
                 // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
             }
             else
             {
-                start = _storage.Ptr + _keyMappingCacheIndex[bucketIdx];
+                startIdx = (int)KeyMappingCacheIndex(bucketIdx);
             }
 
             // Because we are decoding for the current dictionary, we will update the lazy index to avoid searching again next time. 
             if (Dictionary == dictionaryId)
-                _currentKeyIdx = (int)_keyMappingCacheIndex[bucketIdx];
+                _currentKeyIdx = (int)KeyMappingCacheIndex(bucketIdx);
         }
 
-        lengthInBits = *(int*)start;
-        return start + sizeof(int);
+
+        lengthInBits = Unsafe.ReadUnaligned<int>(ref _storage[startIdx]);
+        return _storage.AsSpan(startIdx + sizeof(int), Bits.ToBytes(lengthInBits));
     }
 
     [SkipLocalsInit]
@@ -152,37 +148,39 @@ public unsafe class CompactKey : IDisposable
 
         long currentDictionary = Dictionary;
         int currentKeyIdx = _currentKeyIdx;
-        if (currentKeyIdx == Invalid && _keyMappingCache[0] != 0)
+        if (currentKeyIdx == Invalid && KeyMappingCache(0) != 0)
         {
             // We don't have any decoded version, so we pick the first one and do it. 
-            currentDictionary = _keyMappingCache[0];
-            currentKeyIdx = (int)_keyMappingCacheIndex[0];
+            currentDictionary = KeyMappingCache(0);
+            currentKeyIdx = (int)KeyMappingCacheIndex(0);
         }
 
         Debug.Assert(currentKeyIdx != Invalid);
 
         var dictionary = Owner.GetEncodingDictionary(currentDictionary);
 
-        byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
-        int encodedKeyLengthInBits = *(int*)encodedStartPtr;
+        int encodedStartIdx = currentKeyIdx;
+        int encodedKeyLengthInBits = Unsafe.ReadUnaligned<int>(ref _storage[encodedStartIdx]);
         int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
 
         int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
-        int currentSize = (int)(_currentEndPtr - _currentPtr);
+        int currentSize = _storage.Length - _currentIdx;
         if (maxSize > currentSize)
         {
             // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
             UnlikelyGrowStorage(maxSize + currentSize);
-            encodedStartPtr = _storage.Ptr + currentKeyIdx;
+            encodedStartIdx = currentKeyIdx;
         }
 
-        _decodedKeyIdx = (int)(_currentPtr - _storage.Ptr);
+        _decodedKeyIdx = _currentIdx;
 
-        var decodedKey = new Span<byte>(_currentPtr + sizeof(int), maxSize);
-        dictionary.Decode(encodedKeyLengthInBits, new ReadOnlySpan<byte>(encodedStartPtr + sizeof(int), encodedKeyLength), ref decodedKey);
+        var decodedKey = _storage.AsSpan(_currentIdx + sizeof(int), maxSize);
+        var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), encodedKeyLength);
+        dictionary.Decode(encodedKeyLengthInBits, encodedKey, ref decodedKey);
 
-        *(int*)_currentPtr = decodedKey.Length;
-        _currentPtr += decodedKey.Length + sizeof(int);
+        Unsafe.WriteUnaligned(ref _storage[_currentIdx], decodedKey.Length);
+        
+        _currentIdx += decodedKey.Length + sizeof(int);
         MaxLength = Math.Max(decodedKey.Length, MaxLength);
     }
 
@@ -195,46 +193,18 @@ public unsafe class CompactKey : IDisposable
         }
 
         // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
-        byte* start = _storage.Ptr + _decodedKeyIdx;
-        int length = *((int*)start);
-
-        return new ReadOnlySpan<byte>(start + sizeof(int), length);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public byte* DecodedPtr(out int lengthInBytes)
-    {
-        if (_decodedKeyIdx == Invalid)
-        {
-            DecodeFromEncodedForm();
-        }
-
-        // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
-        byte* start = _storage.Ptr + _decodedKeyIdx;
-        // This is decoded therefore is bytes.
-        lengthInBytes = *((int*)start);
-
-        return start + sizeof(int);
+        int length = Unsafe.ReadUnaligned<int>(ref _storage[_decodedKeyIdx]);
+        return _storage.AsSpan(_decodedKeyIdx + sizeof(int), length);
     }
 
     private void UnlikelyGrowStorage(int maxSize)
     {
-        int memoryUsed = (int)(_currentPtr - _storage.Ptr);
-
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, _storage.Length) * 2;
-        var storageScope = Owner.Allocator.Allocate(maxSize, out var storage);
-        Memory.Copy(storage.Ptr, _storage.Ptr, memoryUsed);
 
-        _storageScope.Dispose();
-
-        // Update the new references.
-        _storage = storage;
-        _storageScope = storageScope;
-
-        // This procedure will invalidate any pointer beyond this point. 
-        _currentPtr = _storage.Ptr + memoryUsed;
-        _currentEndPtr = _currentPtr + _storage.Length;
+        var storage = new byte[maxSize];
+        _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
+        _storage = storage; // Update the new references.
     }
 
     public void Set(CompactKey key)
@@ -244,7 +214,7 @@ public unsafe class CompactKey : IDisposable
         _decodedKeyIdx = key._decodedKeyIdx;
         _lastKeyMappingItem = key._lastKeyMappingItem;
 
-        var originalSize = (int)(key._currentPtr - key._storage.Ptr);
+        var originalSize = key._currentIdx;
         if (originalSize > _storage.Length)
             UnlikelyGrowStorage(originalSize);
 
@@ -252,82 +222,75 @@ public unsafe class CompactKey : IDisposable
         int lastElementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
         if (lastElementIdx >= 0)
         {
-            var srcDictionary = key._keyMappingCache;
-            var destDictionary = _keyMappingCache;
-            var srcIndex = key._keyMappingCacheIndex;
-            var destIndex = _keyMappingCacheIndex;
-
             int currentElementIdx = 0;
 
             // PERF: Since we are avoiding the cost of general purpose copying, if we have the vector instruction set we should use it. 
-            if (Avx.IsSupported)
+            if (Vector256.IsHardwareAccelerated)
             {
                 // Find out the last element where a full vector can be copied.
                 while (currentElementIdx < lastElementIdx)
                 {
-                    Avx.Store(_keyMappingCache + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCache + currentElementIdx));
-                    Avx.Store(_keyMappingCacheIndex + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCacheIndex + currentElementIdx));
+                    Vector256.LoadUnsafe(ref key.KeyMappingCache(currentElementIdx))
+                             .StoreUnsafe(ref KeyMappingCache(currentElementIdx));
+
+                    Vector256.LoadUnsafe(ref key.KeyMappingCacheIndex(currentElementIdx))
+                             .StoreUnsafe(ref KeyMappingCacheIndex(currentElementIdx));
                     currentElementIdx += Vector256<long>.Count;
                 }
             }
 
             while (currentElementIdx < lastElementIdx)
             {
-                destDictionary[currentElementIdx] = srcDictionary[currentElementIdx];
-                destIndex[currentElementIdx] = srcIndex[currentElementIdx];
+                KeyMappingCache(currentElementIdx) = key.KeyMappingCache(currentElementIdx);
+                KeyMappingCacheIndex(currentElementIdx) = key.KeyMappingCacheIndex(currentElementIdx);
                 currentElementIdx++;
             }
         }
 
         // This is the operation to set an unencoded key, therefore we need to restart everything.
-        _currentPtr = _storage.Ptr;
-        Memory.Copy(_currentPtr, key._storage.Ptr, originalSize);
-        _currentPtr += originalSize;
+        key._storage.AsSpan(0, key._currentIdx)
+                    .CopyTo(_storage);
+        _currentIdx = key._currentIdx;
 
-        MaxLength = originalSize;
+        MaxLength = key.MaxLength;
     }
 
     public void Set(ReadOnlySpan<byte> key)
     {
         // This is the operation to set an unencoded key, therefore we need to restart everything.
-        var currentPtr = _storage.Ptr;
-
         _lastKeyMappingItem = Invalid;
 
         // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
-        _decodedKeyIdx = (int)(currentPtr - (long)_storage.Ptr);
+        _decodedKeyIdx = 0;
         _currentKeyIdx = Invalid;
         Dictionary = Invalid;
 
-        int keyLength = key.Length;
-
         // We write the size and the key. 
-        *((int*)currentPtr) = keyLength;
-        currentPtr += sizeof(int);
+        Unsafe.WriteUnaligned<int>(ref _storage[0], key.Length);
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength);
+        Unsafe.CopyBlock(ref _storage[sizeof(int)], ref Unsafe.AsRef(key[0]), (uint)key.Length);
 
-        currentPtr += keyLength; // We update the new pointer. 
-        _currentPtr = currentPtr;
+        _currentIdx = key.Length + sizeof(int);
 
-        MaxLength = keyLength;
+        MaxLength = key.Length;
     }
 
     public void Set(int keyLengthInBits, ReadOnlySpan<byte> key, long dictionaryId)
     {
-        fixed (byte* keyPtr = key)
-        {
-            Set(keyLengthInBits, keyPtr, dictionaryId);
-        }
+        Set(keyLengthInBits, ref MemoryMarshal.GetReference(key), dictionaryId);
     }
 
     public void Set(int keyLengthInBits, byte* keyPtr, long dictionaryId)
     {
+        Set(keyLengthInBits, ref Unsafe.AsRef<byte>(keyPtr), dictionaryId);
+    }
+
+    public void Set(int keyLengthInBits, ref byte keyRef, long dictionaryId)
+    {
         _lastKeyMappingItem = Invalid;
 
         // This is the operation to set an unencoded key, therefore we need to restart everything.
-        _currentPtr = _storage.Ptr;
 
         // Since the size is big enough to store twice the unencoded key, we don't check the remaining size here.
 
@@ -337,16 +300,17 @@ public unsafe class CompactKey : IDisposable
         Dictionary = dictionaryId;
 
         int bucketIdx = SelectBucketForWrite();
-        _keyMappingCache[bucketIdx] = dictionaryId;
-        _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
+        KeyMappingCache(bucketIdx) = dictionaryId;
+        KeyMappingCacheIndex(bucketIdx) = _currentKeyIdx;
 
         // We write the size and the key. 
-        *(int*)_currentPtr = keyLengthInBits;
-        _currentPtr += sizeof(int);
+        Unsafe.WriteUnaligned(ref _storage[0], keyLengthInBits);
 
+        // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
         int keyLength = Bits.ToBytes(keyLengthInBits);
-        Memory.Copy(_currentPtr, keyPtr, keyLength);
-        _currentPtr += keyLength; // We update the new pointer. 
+        Unsafe.CopyBlock(ref _storage[sizeof(int)], ref keyRef, (uint)keyLength);
+
+        _currentIdx = keyLength + sizeof(int); // We update the new pointer. 
 
         MaxLength = keyLength;
     }
@@ -397,48 +361,57 @@ public unsafe class CompactKey : IDisposable
             throw new VoronErrorException("The dictionary is not set.");
 
         if (_currentKeyIdx == Invalid)
-            return CompareEncodedWith(nextEntryPtr, nextEntryLengthInBits, Dictionary);
+            return CompareEncodedWith(ref Unsafe.AsRef<byte>(nextEntryPtr), nextEntryLengthInBits, Dictionary);
 
         // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
-        byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-        int lengthInBits = *((int*)encodedStartPtr);
+        int encodedStartIdx = _currentKeyIdx;
+
+        int lengthInBits = Unsafe.ReadUnaligned<int>(ref _storage[encodedStartIdx]);
 
         var length = Bits.ToBytes(lengthInBits);
         var nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
 
-        var result = AdvMemory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
+        var result = AdvMemory.CompareInline(ref _storage[encodedStartIdx + sizeof(int)], ref Unsafe.AsRef<byte>(nextEntryPtr), Math.Min(length, nextEntryLength));
         return result == 0 ? lengthInBits - nextEntryLengthInBits : result;
     }
 
-    public int CompareEncodedWith(byte* nextEntryPtr, int nextEntryLengthInBits, long dictionaryId)
+    public int CompareEncodedWithCurrent(ref byte nextEntryRef, int nextEntryLengthInBits)
+    {
+        if (Dictionary == Invalid)
+            throw new VoronErrorException("The dictionary is not set.");
+
+        return CompareEncodedWith(ref nextEntryRef, nextEntryLengthInBits, Dictionary);
+    }
+
+    public int CompareEncodedWith(ref byte nextEntryRef, int nextEntryLengthInBits, long dictionaryId)
     {
         // This method allow us to compare the key in it's encoded form using an arbitrary dictionary without changing
         // the current dictionary/cached state. 
-        byte* encodedStartPtr;
+        ReadOnlySpan<byte> encodedKey;
         int encodedLengthInBits;
         if (Dictionary == dictionaryId && _currentKeyIdx != Invalid)
         {
             Debug.Assert(_currentKeyIdx != Invalid, "The current key index is not set and it should be.");
 
-            encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-            encodedLengthInBits = *((int*)encodedStartPtr);
-            encodedStartPtr += sizeof(int);
+            encodedLengthInBits = Unsafe.ReadUnaligned<int>(ref _storage[_currentKeyIdx]);
+            encodedKey = _storage.AsSpan(_currentKeyIdx + sizeof(int), Bits.ToBytes(encodedLengthInBits));
         }
         else
         {
-            encodedStartPtr = EncodedWithPtr(dictionaryId, out encodedLengthInBits);
+            encodedKey = EncodedWith(dictionaryId, out encodedLengthInBits);
             MaxLength = Bits.ToBytes(encodedLengthInBits);
         }
 
         int nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
         int encodedLength = Bits.ToBytes(encodedLengthInBits);
-        var result = AdvMemory.CompareInline(encodedStartPtr, nextEntryPtr, Math.Min(encodedLength, nextEntryLength));
+
+        var result = AdvMemory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
         return result == 0 ? encodedLength - nextEntryLength : result;
     }
 
     public void Dispose()
     {
-        _storageScope.Dispose();
+
     }
 
     public int Compare(CompactKey value)
@@ -446,8 +419,8 @@ public unsafe class CompactKey : IDisposable
         // If both are using the same dictionary, we just get the current encoded value.
         if (Dictionary != Invalid && Dictionary == value.Dictionary)
         {
-            byte* valuePtr = value.EncodedWithPtr(value.Dictionary, out var valueLength);
-            return CompareEncodedWithCurrent(valuePtr, valueLength);
+            var valueStream = value.EncodedWith(value.Dictionary, out var valueLength);
+            return CompareEncodedWithCurrent(ref MemoryMarshal.GetReference(valueStream), valueLength);
         }
 
         // This is the fallback, let's hope that both have the decoded value already there to avoid

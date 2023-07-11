@@ -43,6 +43,7 @@ namespace FastTests.Corax.Bugs
             }
 
             new ComplexIndex().Execute(store);
+            WaitForUserToContinueTheTest(store);
             Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())

@@ -1055,8 +1055,11 @@ namespace Corax
             }
         }
 
-        private void ProcessDeletes(Tree fieldsTree) 
+        private void ProcessDeletes(Tree fieldsTree)
         {
+            if (_entryKeysToRemove.Count == 0 && _deletedEntries.Count == 0)
+                return;
+
             // we need to copy the keys so we could sort them
             Sorter<Slice, SliceStructComparer> sorter = default;
             sorter.Sort(CollectionsMarshal.AsSpan(_entryKeysToRemove));
@@ -1111,15 +1114,15 @@ namespace Corax
                     throw new InvalidOperationException($"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
                 }
                 
-                var ptr = reader.Current.DecodedPtr(out var len);
-                var scope = Slice.From(_entriesAllocator, ptr, len, out Slice termSlice);
+                var decodedKey = reader.Current.Decoded();
+                var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
                 if(field.HasSuggestions)
-                    RemoveSuggestions(field, new ReadOnlySpan<byte>(ptr, len));
+                    RemoveSuggestions(field, decodedKey);
                 
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_entriesAllocator, len);
+                    term = new EntriesModifications(_entriesAllocator, decodedKey.Length);
                     scope = default; // We dont want to reclaim the term name
                 }
 
