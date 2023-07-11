@@ -19,11 +19,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Counters_and_force_revisions()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Counters_and_force_revisions(Options options)
         {
-            using var storeA = GetDocumentStore();
-            using var storeB = GetDocumentStore();
+            using var storeA = GetDocumentStore(options);
+            using var storeB = GetDocumentStore(options);
 
             using (var s = storeA.OpenAsyncSession())
             {
