@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Platform;
@@ -16,26 +15,27 @@ namespace SlowTests.Issues
         {
         }
 
-
-        [Fact]
-        public async Task ReplicationShouldNotGetStuckWhenEncryptionBufferSizeIsGreaterThanMaxSizeToSend()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldNotGetStuckWhenEncryptionBufferSizeIsGreaterThanMaxSizeToSend(Options options)
         {
             Encryption.EncryptedServer(out var certificates, out var databaseName);
 
-            using (var encryptedStore = GetDocumentStore(new Options
+            using (var encryptedStore = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = _ => databaseName,
                 ClientCertificate = certificates.ServerCertificate.Value,
                 AdminCertificate = certificates.ServerCertificate.Value,
                 Encrypted = true
             }))
-            using (var store2 = GetDocumentStore(new Options { ClientCertificate = certificates.ServerCertificate.Value }))
+            using (var store2 = GetDocumentStore(new Options(options) { ClientCertificate = certificates.ServerCertificate.Value }))
             {
-                var db = await Databases.GetDocumentDatabaseInstanceFor(encryptedStore);
+                const string docId = "users/1";
+
+                var db = await GetDocumentDatabaseInstanceForAsync(encryptedStore, options.DatabaseMode, docId);
                 var maxSizeToSend = new Size(16, SizeUnit.Kilobytes);
                 db.Configuration.Replication.MaxSizeToSend = maxSizeToSend;
 
-                const string docId = "users/1";
                 using (var session = encryptedStore.OpenAsyncSession())
                 {
                     var entity = new
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument(store2, docId));
 
-                await EnsureNoReplicationLoop(Server, databaseName);
+                await EnsureNoReplicationLoopAsync(encryptedStore, options.DatabaseMode);
             }
         }
     }
