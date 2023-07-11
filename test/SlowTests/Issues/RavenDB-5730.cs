@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
 using Tests.Infrastructure;
@@ -20,33 +19,36 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public async Task Whitespace_at_the_beginning_of_replication_destination_url_should_not_cause_issues()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Whitespace_at_the_beginning_of_replication_destination_url_should_not_cause_issues(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var url = " " + storeB.Urls.First();
                 await DoReplicationTest(storeA, storeB, url);
             }
         }
 
-        [Fact]
-        public async Task Whitespace_at_the_end_of_replication_destination_url_should_not_cause_issues()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Whitespace_at_the_end_of_replication_destination_url_should_not_cause_issues(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var url = storeB.Urls.First() + " ";
                 await DoReplicationTest(storeA, storeB, url);
             }
         }
 
-        [Fact]
-        public async Task Whitespace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Whitespace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var url = " " + storeB.Urls.First() + " ";
                 await DoReplicationTest(storeA, storeB, url);
