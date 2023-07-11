@@ -3,6 +3,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import footer = require("common/shell/footer");
 import { bridgeToReact } from "common/reactUtils";
 import { IndexesPage } from "components/pages/database/indexes/list/IndexesPage";
+import { IndexCleanup } from "components/pages/database/indexes/cleanup/IndexCleanup";
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
@@ -46,7 +47,8 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/cleanup',
-            moduleId: require('viewmodels/database/indexes/indexCleanup'),
+            // moduleId: require('viewmodels/database/indexes/indexCleanup'),
+            moduleId: bridgeToReact(IndexCleanup, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Index Cleanup',
             nav: true,

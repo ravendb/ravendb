@@ -4,8 +4,11 @@ import endpoints = require("endpoints");
 
 class getIndexMergeSuggestionsCommand extends commandBase {
 
-    constructor(private db: database) {
+    private readonly db: database;
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults> {
