@@ -1,12 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using FastTests.Server.Replication;
+﻿using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
-using Xunit;
 using Raven.Server.Documents.Replication;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -22,31 +19,13 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public async Task PUT_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PUT_of_conflicted_document_with_outdated_etag_throws_concurrency_exception(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -74,7 +53,7 @@ namespace SlowTests.Issues
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    var db = Databases.GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var db = await GetDocumentDatabaseInstanceForAsync(storeA, options.DatabaseMode, "users/1");
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {
@@ -94,31 +73,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task DELETE_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DELETE_of_conflicted_document_with_outdated_etag_throws_concurrency_exception(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -147,7 +108,7 @@ namespace SlowTests.Issues
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    var db = Databases.GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var db = await GetDocumentDatabaseInstanceForAsync(storeA, options.DatabaseMode, "users/1");
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {
@@ -166,6 +127,5 @@ namespace SlowTests.Issues
                 }
             }
         }
-
     }
 }
