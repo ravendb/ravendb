@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task AutoNamingAlgorithmOfOngoingTasksShouldTakeNameAlreadyExistsIntoAccount()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AutoNamingAlgorithmOfOngoingTasksShouldTakeNameAlreadyExistsIntoAccount(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dbName = $"db/{Guid.NewGuid()}";
                 var csName = $"cs/{Guid.NewGuid()}";
@@ -28,7 +30,7 @@ namespace SlowTests.Issues
                 {
                     Name = csName,
                     Database = dbName,
-                    TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:12345" }
                 };
 
                 var result = await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
@@ -36,7 +38,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
-                
+
                 var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", azureSettings: new AzureSettings
                 {
                     StorageContainer = "abc"
@@ -63,18 +65,21 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
 
-                // for Pull Replication Hub name is required - no need to test
-
-                var sink = new PullReplicationAsSink
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
                 {
-                    HubName = "aa",
-                    ConnectionString = connectionString,
-                    ConnectionStringName = connectionString.Name
-                };
+                    // for Pull Replication Hub name is required - no need to test
 
-                await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
-                await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
+                    var sink = new PullReplicationAsSink
+                    {
+                        HubName = "aa",
+                        ConnectionString = connectionString,
+                        ConnectionStringName = connectionString.Name
+                    };
+
+                    await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
+                    await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
+                }
             }
-        } 
+        }
     }
 }
