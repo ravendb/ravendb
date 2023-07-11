@@ -15,7 +15,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import { environmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
+import { studioEnvironmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -95,7 +95,11 @@ export default function StudioGlobalConfiguration() {
                                     </PopoverBody>
                                 </UncontrolledPopover>
                             </Label>
-                            <FormSelect control={control} name="environment" options={environmentOptions}></FormSelect>
+                            <FormSelect
+                                control={control}
+                                name="environment"
+                                options={studioEnvironmentOptions}
+                            ></FormSelect>
                         </InputGroup>
                         <InputGroup className="gap-1 flex-wrap flex-column">
                             <Label className="mb-0 md-label">Default Replication Factor</Label>
