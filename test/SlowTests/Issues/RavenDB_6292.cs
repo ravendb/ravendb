@@ -1,19 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
-using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Expiration;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -30,53 +23,25 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task IfIncludedDocumentIsConflictedItShouldNotThrowConflictException()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IfIncludedDocumentIsConflictedItShouldNotThrowConflictException(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new Address
-                    {
-                        City = "New York"
-                    }, "addresses/1");
+                    session.Store(new Address { City = "New York" }, "addresses/1");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new Address
-                    {
-                        City = "Torun"
-                    }, "addresses/1");
+                    session.Store(new Address { City = "Torun" }, "addresses/1");
 
-                    session.Store(new User
-                    {
-                        Name = "John",
-                        AddressId = "addresses/1"
-                    }, "users/1");
+                    session.Store(new User { Name = "John", AddressId = "addresses/1" }, "users/1$addresses/1");
 
                     session.SaveChanges();
                 }
@@ -85,7 +50,8 @@ namespace SlowTests.Issues
 
                 await Replication.WaitForConflict(store2, "addresses/1");
 
-                using (var session = store2.OpenSession())
+                var dbName2 = options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "addresses/1");
+                using (var session = store2.OpenSession(dbName2))
                 {
                     var documentQuery = session.Advanced
                         .DocumentQuery<User>()
@@ -116,7 +82,7 @@ namespace SlowTests.Issues
                 {
                     var user = session
                         .Include<User>(x => x.AddressId)
-                        .Load("users/1");
+                        .Load("users/1$addresses/1");
 
                     Assert.Equal("John", user.Name);
 
@@ -124,7 +90,7 @@ namespace SlowTests.Issues
 
                     using (var commands = store2.Commands())
                     {
-                        var command = new GetDocumentsCommand(commands.RequestExecutor.Conventions, "users/1", includes: new[] { "AddressId" }, metadataOnly: false);
+                        var command = new GetDocumentsCommand(commands.RequestExecutor.Conventions, "users/1$addresses/1", includes: new[] { "AddressId" }, metadataOnly: false);
 
                         commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -138,54 +104,30 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ExpirationShouldHandleConflicts()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExpirationShouldHandleConflicts(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-                await SetupExpiration(store1);
-                await SetupExpiration(store2);
+                await SetupExpiration(store1, options.DatabaseMode, "companies/1");
+                await SetupExpiration(store2, options.DatabaseMode, "companies/1");
 
                 var expiry1 = SystemTime.UtcNow.AddMinutes(5);
                 var expiry2 = SystemTime.UtcNow.AddMinutes(15);
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var company1 = new Company
-                    {
-                        Name = "Company Name 10"
-                    };
+                    var company1 = new Company { Name = "Company Name 10" };
 
                     await session.StoreAsync(company1, "companies/1");
                     var metadata = session.Advanced.GetMetadataFor(company1);
                     metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
-                    var company2 = new Company
-                    {
-                        Name = "Company Name 11"
-                    };
+                    var company2 = new Company { Name = "Company Name 11" };
 
-                    await session.StoreAsync(company2, "companies/2");
+                    await session.StoreAsync(company2, "companies/2$companies/1");
                     metadata = session.Advanced.GetMetadataFor(company2);
                     metadata[Constants.Documents.Metadata.Expires] = expiry2.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
@@ -194,21 +136,15 @@ namespace SlowTests.Issues
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    var company = new Company
-                    {
-                        Name = "Company Name 20"
-                    };
+                    var company = new Company { Name = "Company Name 20" };
 
                     await session.StoreAsync(company, "companies/1");
                     var metadata = session.Advanced.GetMetadataFor(company);
                     metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
-                    var company2 = new Company
-                    {
-                        Name = "Company Name 21"
-                    };
+                    var company2 = new Company { Name = "Company Name 21" };
 
-                    await session.StoreAsync(company2, "companies/2");
+                    await session.StoreAsync(company2, "companies/2$companies/1");
                     metadata = session.Advanced.GetMetadataFor(company2);
                     metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
@@ -218,9 +154,9 @@ namespace SlowTests.Issues
                 await SetupReplicationAsync(store1, store2);
 
                 await Replication.WaitForConflict(store2, "companies/1");
-                await Replication.WaitForConflict(store2, "companies/2");
+                await Replication.WaitForConflict(store2, "companies/2$companies/1");
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                var database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "companies/1");
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
 
@@ -231,20 +167,19 @@ namespace SlowTests.Issues
                     var company2 = await session.LoadAsync<Company>("companies/1");
                     Assert.Null(company2);
 
-                    await Assert.ThrowsAsync<DocumentConflictException>(() => session.LoadAsync<Company>("companies/2"));
+                    await Assert.ThrowsAsync<DocumentConflictException>(() => session.LoadAsync<Company>("companies/2$companies/1"));
                 }
             }
         }
 
-        private async Task SetupExpiration(DocumentStore store)
+        private async Task SetupExpiration(DocumentStore store, RavenDatabaseMode mode, string id)
         {
-            var config = new ExpirationConfiguration
-            {
-                Disabled = false,
-                DeleteFrequencyInSec = 100,
-            };
+            var config = new ExpirationConfiguration { Disabled = false, DeleteFrequencyInSec = 100, };
 
-            await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+            var result = await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
+
+            var documentDatabase = await GetDocumentDatabaseInstanceForAsync(store, mode, id);
+            await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, Server.ServerStore.Engine.OperationTimeout);
         }
     }
 }
