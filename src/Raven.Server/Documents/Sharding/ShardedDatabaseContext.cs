@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            if (EnumerableExtension.ElementsEqual(record.Sharding.Orchestrator.Topology.Members, _record.Sharding.Orchestrator.Topology.Members) == false)
+            if (CheckForTopologyChangesAndRaiseNotification(record.Sharding.Orchestrator.Topology, _record.Sharding.Orchestrator.Topology))
             {
                 AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
             }
@@ -146,8 +146,6 @@ namespace Raven.Server.Documents.Sharding
 
             SubscriptionsStorage.Update(record);
             
-            CheckForTopologyChangesAndRaiseNotification(record.Sharding.Orchestrator.Topology, _record.Sharding.Orchestrator.Topology);
-
             Interlocked.Exchange(ref _record, record);
         }
 
@@ -155,19 +153,14 @@ namespace Raven.Server.Documents.Sharding
         {
             var topologyIndex = topology.Stamp?.Index ?? 0;
             var oldTopologyIndex = oldTopology.Stamp?.Index ?? 0;
-            if (topologyIndex > oldTopologyIndex)
+            if (ServerStore.HasDatabaseRecordTopologyChanged(topologyIndex, oldTopologyIndex, out string url))
             {
-                var clusterTopology = ServerStore.GetClusterTopology();
-                var url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag);
-                if (url != null)
+                Changes.RaiseNotifications(new TopologyChange
                 {
-                    Changes.RaiseNotifications(new TopologyChange
-                    {
-                        Url = url,
-                        Database = DatabaseName
-                    });
-                    return true;
-                }
+                    Url = url,
+                    Database = DatabaseName
+                });
+                return true;
             }
 
             return false;
