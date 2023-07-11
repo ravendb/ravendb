@@ -4,7 +4,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -28,7 +27,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Etl)]
     public async Task Can_Set_Pin_To_Mentor_Node_Etl()
     {
         const string srcDb = "ETL-src";
@@ -153,11 +152,10 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
             Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3"));
             Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2"));
-
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Etl)]
     public async Task Can_Fail_Over_When_Removing_Mentor_Node_Etl()
     {
         const string srcDb = "ETL-src";
@@ -283,7 +281,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         Assert.True(state.PinToMentorNode);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
     public async Task Can_Set_Pin_To_Node_Backup()
     {
         var store = GetDocumentStore();
@@ -303,8 +301,9 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         Assert.True(res.PinToMentorNode);
     }
 
-    [Fact]
-    public async Task Can_Set_Pin_To_Node_ExternalReplication()
+    [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Replication)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task Can_Set_Pin_To_Node_ExternalReplication(Options options)
     {
         var dbName = GetDatabaseName();
         var watcher = new ExternalReplication(dbName, "Connection")
@@ -313,7 +312,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             Name = "MyExternalReplication"
         };
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var replicationOperation = new UpdateExternalReplicationOperation(watcher);
             var replicationResult = await store.Maintenance.SendAsync(replicationOperation);
@@ -322,7 +321,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Replication)]
     public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Hub()
     {
         const int clusterSize = 3;
@@ -343,7 +342,6 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             ClientCertificate = adminHubClusterCert,
         }))
         {
-
             using (var sinkStore = GetDocumentStore(new Options
             {
                 Server = sinkMentorNode,
@@ -382,7 +380,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                     hubSession.SaveChanges();
                 }
 
-            Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava",30_000),$"{await Replication.GetErrorsForClusterAsync(hubNodes, sinkStore.Database)}");
+                Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava", 30_000), $"{await Replication.GetErrorsForClusterAsync(hubNodes, sinkStore.Database)}");
                 var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(hubMentorNode);
                 using (var hubSession = hubStore.OpenSession())
                 {
@@ -404,11 +402,11 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                     DataDirectory = disposedServer.DataDirectory
                 });
 
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
-            {
-                var waitForNotPassive = await revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
-                Assert.True(waitForNotPassive);
-            }
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+                {
+                    var waitForNotPassive = await revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
+                    Assert.True(waitForNotPassive);
+                }
 
                 Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2", 30_000));
                 Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
@@ -417,7 +415,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Replication)]
     public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Sink()
     {
         const int clusterSize = 3;
