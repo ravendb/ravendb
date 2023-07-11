@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
@@ -33,6 +35,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
         {
             var sub = ParseSubscriptionQuery(options.Query);
             await RequestHandler.CreateSubscriptionInternalAsync(bjro, id, disabled, options, context, sub);
+        }
+
+        protected override void SetSubscriptionChangeVectorOnUpdate(SubscriptionUpdateOptions options, SubscriptionState state)
+        {
+            // the actual validation will happen in TryValidateChangeVector
+            if (string.IsNullOrEmpty(options.ChangeVector))
+            {
+                options.ChangeVector = nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange);
+            }
         }
     }
 }

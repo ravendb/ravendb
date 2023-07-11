@@ -1394,7 +1394,7 @@ namespace SlowTests.Sharding.Cluster
         private int _current;
         private string NextId => $"users/{Interlocked.Increment(ref _current)}-A";
 
-        private static ((string Id, int ShardNumber) Tuple1, (string Id, int ShardNumber) Tuple2) GetIdsOnDifferentShards(ShardingConfiguration conf,
+        internal static ((string Id, int ShardNumber) Tuple1, (string Id, int ShardNumber) Tuple2) GetIdsOnDifferentShards(ShardingConfiguration conf,
             string collection = "users",
             int start = 1)
         {

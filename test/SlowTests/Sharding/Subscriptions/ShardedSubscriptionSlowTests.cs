@@ -20,12 +20,14 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Sharding.Cluster;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Utils;
@@ -1381,6 +1383,139 @@ namespace SlowTests.Sharding.Subscriptions
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [InlineData(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime))]
+        [InlineData(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))]
+        [InlineData(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument))]
+        [InlineData(null)]
+        [InlineData("")]
+        public async Task CanUpdateQueryOfShardedSubscriptionById(string cv)
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users where Age < 18", Name = "Created" });
+
+                List<string> ids = new List<string>();
+
+                var conf = await Sharding.GetShardingConfigurationAsync(store);
+                var tuple = SubscriptionsWithReshardingTests.GetIdsOnDifferentShards(conf);
+                var shardNumber1 = tuple.Tuple1.ShardNumber;
+                var id1 = tuple.Tuple1.Id;
+                var id2 = tuple.Tuple2.Id;
+                var shardNumber2 = tuple.Tuple2.ShardNumber;
+                var shardsNums = new List<int>() { shardNumber1, shardNumber2 };
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() { Age = 11 }, id1);
+                    await session.StoreAsync(new User() { Age = 21 }, id2);
+                    await session.SaveChangesAsync();
+                }
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users where Age < 18", state.Query);
+
+                await using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName) { MaxDocsPerBatch = 1 });
+
+                worker.AfterAcknowledgment += batch =>
+                {
+                    ids.AddRange(batch.Items.Select(x => x.Id));
+                    return Task.CompletedTask;
+                };
+
+                var t = worker.Run(async batch =>
+                {
+                    await Task.Delay(100);
+                });
+
+                // both docs got processed by shards
+                Assert.True(await WaitForValueAsync(async () =>
+                {
+                    subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                    state = subscriptions.First();
+                    return state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.ContainsKey(ClientShardHelper.ToShardName(store.Database, shardNumber1));
+                }, true, interval: 500), "ContainsKey(shardNumber1)");
+                Assert.True(await WaitForValueAsync(async () =>
+                {
+                    subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                    state = subscriptions.First();
+                    return state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.ContainsKey(ClientShardHelper.ToShardName(store.Database, shardNumber2));
+                }, true, interval: 500), "ContainsKey(shardNumber2)");
+
+
+                Assert.Equal(1, await WaitForValueAsync(() => ids.Count, 1));
+                Assert.Contains(id1, ids);
+
+                var newQuery = "from Users where Age > 18";
+                var updateOps = new SubscriptionUpdateOptions { Query = newQuery, Id = state.SubscriptionId };
+                if (cv != null)
+                {
+                    updateOps.ChangeVector = cv;
+                }
+
+                if (cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime) ||
+                    cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User() { Age = 20 }, "users/322");
+                        session.SaveChanges();
+                    }
+
+                    ids.Clear();
+                }
+
+                await store.Subscriptions.UpdateAsync(updateOps);
+
+                subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users where Age > 18", state.Query);
+                var n = conf.Shards.Keys.First(x => shardsNums.Contains(x) == false);
+                Assert.DoesNotContain(n, shardsNums);
+                var res = Sharding.GetRandomIdForShard(conf, n);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Age = 20 }, res);
+                    session.SaveChanges();
+                }
+
+                if (string.IsNullOrEmpty(cv) || cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
+                {
+                    Assert.Equal(2, await WaitForValueAsync(() => ids.Count, 2));
+                    Assert.Contains(id1, ids);
+                    Assert.DoesNotContain(id2, ids);
+                    Assert.Contains(res, ids);
+                }
+                else if (cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime))
+                {
+                    Assert.Equal(2, await WaitForValueAsync(() => ids.Count, 2));
+                    Assert.Contains(id2, ids);
+                    Assert.DoesNotContain(id1, ids);
+                    Assert.Contains(res, ids);
+                }
+                else if (cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument))
+                {
+                    Assert.Equal(1, await WaitForValueAsync(() => ids.Count, 1));
+                    Assert.DoesNotContain(id2, ids);
+                    Assert.DoesNotContain(id1, ids);
+                    Assert.DoesNotContain("users/322", ids);
+                    Assert.Contains(res, ids);
+                }
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
             }
         }
 

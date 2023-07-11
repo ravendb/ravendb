@@ -23,5 +23,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 await RequestHandler.CreateInternalAsync(bjro, options, context, id, disabled, sub);
             }
         }
+
+        protected override void SetSubscriptionChangeVectorOnUpdate(SubscriptionUpdateOptions options, SubscriptionState state)
+        {
+            options.ChangeVector ??= state.ChangeVectorForNextBatchStartingPoint;
+        }
     }
 }
