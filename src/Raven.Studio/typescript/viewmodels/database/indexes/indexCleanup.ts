@@ -115,6 +115,7 @@ class indexCleanup extends shardViewModelBase {
             });
     }
 
+    // TODO copy 1:1
     private async fetchStats(): Promise<void> {
         const locations = this.db.getLocations();
         const tasks = locations.map(location => new getIndexesStatsCommand(this.db, location).execute());

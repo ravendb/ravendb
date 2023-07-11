@@ -17,6 +17,7 @@ import openFaultyIndexCommand from "commands/database/index/openFaultyIndexComma
 import forceIndexReplace from "commands/database/index/forceIndexReplace";
 import { DatabaseSharedInfo } from "components/models/databases";
 import toggleDisableIndexingCommand from "commands/database/index/toggleDisableIndexingCommand";
+import getIndexMergeSuggestionsCommand = require("commands/database/index/getIndexMergeSuggestionsCommand");
 
 export default class IndexesService {
     async getProgress(db: database, location: databaseLocationSpecifier) {
@@ -77,5 +78,11 @@ export default class IndexesService {
 
     async forceReplace(indexName: string, database: database, location: databaseLocationSpecifier) {
         await new forceIndexReplace(indexName, database, location).execute();
+    }
+
+    async getIndexMergeSuggestions(
+        db: database
+    ): Promise<Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults> {
+        return await new getIndexMergeSuggestionsCommand(db).execute();
     }
 }

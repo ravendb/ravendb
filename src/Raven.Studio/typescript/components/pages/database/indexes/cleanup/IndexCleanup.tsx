@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { Icon } from "components/common/Icon";
 import { Badge, Button, Card, Carousel, CarouselItem, Nav, NavItem, Table } from "reactstrap";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
@@ -6,33 +6,191 @@ import { Checkbox } from "components/common/Checkbox";
 import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
 import classNames from "classnames";
+import database from "models/resources/database";
+import { useServices } from "components/hooks/useServices";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
-export interface IndexInfo {
-    indexName: string;
+interface UnusedIndexInfo {
+    name: string;
     containingIndexName?: string;
-    lastQuery: Date;
-    lastIndexing: Date;
+    lastQueryTime?: Date;
+    lastIndexingTime?: Date;
 }
 
-export interface UnmergableIndexInfo {
-    indexName: string;
-    unmergableReason: string;
+interface SubIndexInfo {
+    name?: string;
+    containingIndexName: string;
+    toDelete: string;
+    lastQueryTime?: Date;
+    lastIndexingTime?: Date;
+}
+
+interface IndexStats {
+    lastQueryTime?: string;
+    lastIndexingTime?: string;
+}
+
+interface MergeCandidateIndexItemInfo {
+    name: string;
+    lastQueryTime?: Date;
+    lastIndexingTime?: Date;
+}
+
+interface MergeIndexInfo {
+    toMerge: MergeCandidateIndexItemInfo[];
+    mergedIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
+}
+
+interface UnmergableIndexInfo {
+    name: string;
+    reason: string;
 }
 
 interface IndexCleanupProps {
-    mergableIndexes: IndexInfo[][];
-    subIndexes: IndexInfo[];
-    unusedIndexes: IndexInfo[];
-    unmergableIndexes: UnmergableIndexInfo[];
+    db: database;
 }
 
 export function IndexCleanup(props: IndexCleanupProps) {
-    const { mergableIndexes, subIndexes, unusedIndexes, unmergableIndexes } = props;
+    const { db } = props;
+
+    // ------------------------------------------------------
+    // TODO kalczur move to custom hook or redux
+    const [mergableIndexes, setMergableIndexes] = useState<MergeIndexInfo[]>([]);
+    const [subIndexes, setSubIndexes] = useState<SubIndexInfo[]>([]);
+    const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndexInfo[]>([]);
+    const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndexInfo[]>([]);
+
+    const [indexStats, setIndexStats] = useState<Map<string, IndexStats>>(null);
+
+    const { indexesService } = useServices();
+
+    const getNewer = (date1: string, date2: string) => {
+        if (!date1) {
+            return date2;
+        }
+        if (!date2) {
+            return date1;
+        }
+
+        return date1.localeCompare(date2) ? date1 : date2;
+    };
+
+    const findUnusedIndexes = (stats: Map<string, IndexStats>): UnusedIndexInfo[] => {
+        const result: UnusedIndexInfo[] = [];
+
+        const now = moment();
+        const milliSecondsInWeek = 1000 * 3600 * 24 * 7;
+
+        for (const [name, stat] of stats.entries()) {
+            if (stat.lastQueryTime) {
+                const lastQueryDate = moment(stat.lastQueryTime);
+                const agoInMs = now.diff(lastQueryDate);
+
+                if (lastQueryDate.isValid() && agoInMs > milliSecondsInWeek) {
+                    result.push({
+                        name: name,
+                        lastQueryTime: stat.lastQueryTime ? new Date(stat.lastQueryTime) : null,
+                        lastIndexingTime: stat.lastIndexingTime ? new Date(stat.lastIndexingTime) : null,
+                    });
+
+                    result.sort((a, b) => a.lastQueryTime.getTime() - b.lastQueryTime.getTime());
+                }
+            }
+        }
+
+        return result;
+    };
+
+    const fetchStats = async () => {
+        const locations = db.getLocations();
+        const allStats = locations.map((location) => indexesService.getStats(db, location));
+
+        const resultMap = new Map<string, IndexStats>();
+
+        for await (const nodeStat of allStats) {
+            for (const indexStat of nodeStat) {
+                const existing = resultMap.get(indexStat.Name);
+                const lastIndexingTime = getNewer(existing?.lastIndexingTime, indexStat.LastIndexingTime);
+                const lastQueryTime = getNewer(existing?.lastQueryTime, indexStat.LastQueryingTime);
+
+                resultMap.set(indexStat.Name, {
+                    lastIndexingTime,
+                    lastQueryTime,
+                });
+            }
+        }
+
+        setIndexStats(resultMap);
+        setUnusedIndexes(findUnusedIndexes(resultMap));
+    };
+
+    const fetchIndexMergeSuggestions = async () => {
+        const results = await indexesService.getIndexMergeSuggestions(db);
+
+        const suggestions = results.Suggestions;
+        const mergeCandidatesRaw = suggestions.filter((x) => x.MergedIndex);
+
+        setMergableIndexes(
+            mergeCandidatesRaw.map((x) => {
+                return {
+                    mergedIndexDefinition: x.MergedIndex,
+                    toMerge: x.CanMerge.map((name) => {
+                        const stats = indexStats?.get(name);
+                        return {
+                            name,
+                            lastQueryTime: stats.lastQueryTime ? new Date(stats.lastQueryTime) : null,
+                            lastIndexingTime: stats.lastIndexingTime ? new Date(stats.lastIndexingTime) : null,
+                        };
+                    }),
+                };
+            })
+        );
+
+        const surpassingRaw = suggestions.filter((x) => !x.MergedIndex);
+
+        const surpassing: SubIndexInfo[] = [];
+        surpassingRaw.forEach((group) => {
+            group.CanDelete.forEach((deleteCandidate) => {
+                const stats = indexStats.get(deleteCandidate);
+
+                surpassing.push({
+                    toDelete: deleteCandidate,
+                    containingIndexName: group.SurpassingIndex,
+                    lastQueryTime: stats.lastQueryTime ? new Date(stats.lastQueryTime) : null,
+                    lastIndexingTime: stats.lastIndexingTime ? new Date(stats.lastIndexingTime) : null,
+                });
+            });
+        });
+
+        setSubIndexes(surpassing);
+
+        setUnmergableIndexes(
+            Object.keys(results.Unmergables).map((key) => ({
+                name: key,
+                reason: results.Unmergables[key],
+            }))
+        );
+    };
+
+    useEffect(() => {
+        (async () => {
+            await fetchStats();
+        })();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            if (indexStats != null) {
+                await fetchIndexMergeSuggestions();
+            }
+        })();
+    }, [indexStats]);
+
+    // ------------------------------------------------------
 
     function activeNonEmpty() {
         if (mergableIndexes.length !== 0) return 0;
@@ -67,7 +225,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
     return (
         <div className="p-4">
             <h2 className="mb-4">
-                <Icon icon="clean" /> Index Cleanup
+                <Icon icon="clear" /> Index Cleanup
             </h2>
             <div className="text-limit-width mb-5">
                 <p>
@@ -213,22 +371,24 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     <div className="flex-grow-1">
                                                         <Table className="m-0 table-inner-border">
                                                             <tbody>
-                                                                {mergableGroup.map((index, indexKey) => (
+                                                                {mergableGroup.toMerge.map((index, indexKey) => (
                                                                     <tr key={"index-" + groupKey + "-" + indexKey}>
                                                                         <td>
                                                                             <div>
                                                                                 <a href="#">
-                                                                                    {index.indexName}{" "}
+                                                                                    {index.name}{" "}
                                                                                     <Icon icon="newtab" margin="ms-1" />
                                                                                 </a>
                                                                             </div>
                                                                         </td>
 
                                                                         <td width={300}>
-                                                                            <div>{formatDate(index.lastQuery)}</div>
+                                                                            <div>{formatDate(index.lastQueryTime)}</div>
                                                                         </td>
                                                                         <td width={300}>
-                                                                            <div>{formatDate(index.lastIndexing)}</div>
+                                                                            <div>
+                                                                                {formatDate(index.lastIndexingTime)}
+                                                                            </div>
                                                                         </td>
                                                                     </tr>
                                                                 ))}
@@ -305,7 +465,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                             <td>
                                                                 <div>
                                                                     <a href="#">
-                                                                        {index.indexName}{" "}
+                                                                        {index.name}{" "}
                                                                         <Icon icon="newtab" margin="ms-1" />
                                                                     </a>
                                                                 </div>
@@ -322,10 +482,10 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                 </div>
                                                             </td>
                                                             <td width={300}>
-                                                                <div>{formatDate(index.lastQuery)}</div>
+                                                                <div>{formatDate(index.lastQueryTime)}</div>
                                                             </td>
                                                             <td width={300}>
-                                                                <div>{formatDate(index.lastIndexing)}</div>
+                                                                <div>{formatDate(index.lastIndexingTime)}</div>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -392,16 +552,16 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                             <td>
                                                                 <div>
                                                                     <a href="#">
-                                                                        {index.indexName}{" "}
+                                                                        {index.name}{" "}
                                                                         <Icon icon="newtab" margin="ms-1" />
                                                                     </a>
                                                                 </div>
                                                             </td>
                                                             <td width={300}>
-                                                                <div>{formatDate(index.lastQuery)}</div>
+                                                                <div>{formatDate(index.lastQueryTime)}</div>
                                                             </td>
                                                             <td width={300}>
-                                                                <div>{formatDate(index.lastIndexing)}</div>
+                                                                <div>{formatDate(index.lastIndexingTime)}</div>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -449,13 +609,13 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                             <td>
                                                                 <div>
                                                                     <a href="#">
-                                                                        {index.indexName}
+                                                                        {index.name}
                                                                         <Icon icon="newtab" margin="ms-1" />
                                                                     </a>
                                                                 </div>
                                                             </td>
                                                             <td>
-                                                                <div>{index.unmergableReason}</div>
+                                                                <div>{index.reason}</div>
                                                             </td>
                                                         </tr>
                                                     ))}

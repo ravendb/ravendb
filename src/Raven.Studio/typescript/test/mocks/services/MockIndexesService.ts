@@ -20,4 +20,9 @@ export default class MockIndexesService extends AutoMockService<IndexesService> 
     withGetProgress(dto?: MockedValue<IndexProgress[]>) {
         return this.mockResolvedValue(this.mocks.getProgress, dto, IndexesStubs.getSampleProgress());
     }
+
+    withGetIndexMergeSuggestions(dto?: MockedValue<Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults>) {
+        // TODO kalczur
+        return this.mockResolvedValue(this.mocks.getIndexMergeSuggestions, dto, null);
+    }
 }
