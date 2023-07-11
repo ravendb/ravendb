@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,12 +21,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CreateDatabaseOperationShouldThrowOnPassedTaskConfigurations()
+        [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CreateDatabaseOperationShouldThrowOnPassedTaskConfigurations(Options options)
         {
             var dbName1 = $"db1_{Guid.NewGuid().ToString()}";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dbRecord = new DatabaseRecord(dbName1)
                 {
@@ -55,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ThrowOnUpdateDatabaseRecordContainsTasksConfigurations()
+        [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ThrowOnUpdateDatabaseRecordContainsTasksConfigurations(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
 
@@ -79,7 +82,7 @@ namespace SlowTests.Issues
                     }
                 };
 
-                Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, etag)));
+                Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, replicationFactor: 1, etag)));
             }
         }
 
