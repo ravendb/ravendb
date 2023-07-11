@@ -1193,7 +1193,10 @@ namespace Raven.Server.ServerWide
             if (_lastClusterTopologyIndex < topology.Etag)
                 _lastClusterTopologyIndex = topology.Etag;
             
-            _ = ClusterRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() {ClusterTag = NodeTag, Url = Server.WebUrl}));
+            _ = ClusterRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() {ClusterTag = NodeTag, Url = Server.WebUrl})
+            {
+                DebugTag = "cluster-topology-update"
+            });
 
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
