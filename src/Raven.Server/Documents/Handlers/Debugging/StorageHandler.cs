@@ -65,6 +65,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/debug/storage/environment/debug-only/pages", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
+        public async Task Pages()
+        {
+            using (var processor = new StorageHandlerProcessorForGetEnvironmentPages(this))
+                await processor.ExecuteAsync();
+        }
+        
         [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task Trees()
         {
@@ -174,7 +181,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetReport(this))
                 await processor.ExecuteAsync();
         }
-
+        
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task AllEnvironmentsReport()
         {

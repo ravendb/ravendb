@@ -110,8 +110,8 @@ namespace Voron.Debugging
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
-            long _streamsAllocatedSpaceInBytes = 0;
-            long _treesAllocatedSpaceInBytes = 0;
+            long streamsAllocatedSpaceInBytes = 0;
+            long treesAllocatedSpaceInBytes = 0;
             var trees = new List<TreeReport>();
             foreach (var tree in input.Trees)
             {
@@ -145,6 +145,7 @@ namespace Voron.Debugging
                                         var nestedReport = GetReport(textLookup, input.IncludeDetails);
                                         nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
                                         trees.Add(nestedReport);
+                                        trees.Add(GetContainerReport(treeReport.Name + "/" + nestedReport.Name, textLookup.State.TermsContainerId, input.IncludeDetails));
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
@@ -169,9 +170,9 @@ namespace Voron.Debugging
                     continue;
 
                 if (treeReport.Streams == null)
-                    _treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                    treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                 else
-                    _streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
+                    streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
             }
 
             foreach (PostingList postingList in input.PostingLists)
@@ -183,7 +184,7 @@ namespace Voron.Debugging
 
             foreach (var (name, page) in input.Containers)
             {
-                trees.Add(GetContainerReport(name, page, input.IncludeDetails));
+                trees.Add(GetContainerReport(name.ToString(), page, input.IncludeDetails));
             }
 
             foreach (PersistentDictionaryRootHeader dic in input.PersistentDictionaries)
@@ -219,7 +220,7 @@ namespace Voron.Debugging
                 var treeReport = GetReport(fst, input.IncludeDetails);
                 trees.Add(treeReport);
 
-                _treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
             }
 
             long _tablesAllocatedSpaceInBytes = 0;
@@ -249,7 +250,7 @@ namespace Voron.Debugging
                 // so we calculate the original size as if we read the streams by:
                 // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
 
-                var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - _treesAllocatedSpaceInBytes;
+                var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes;
 
                 foreach (var tree in trees)
                 {
@@ -257,7 +258,7 @@ namespace Voron.Debugging
                     {
                         _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes;
                         _skippedStreamsDetailsEntry.Length = treesCalculatedSpaceInBytes;
-                        tree.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes - _streamsAllocatedSpaceInBytes;
+                        tree.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes - streamsAllocatedSpaceInBytes;
                         break;
                     }
                 }
@@ -503,7 +504,7 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        public TreeReport GetContainerReport(Slice name, long page, bool includeDetails)
+        public TreeReport GetContainerReport(string name, long page, bool includeDetails)
         {
             List<double> pageDensities = null;
 
@@ -527,19 +528,22 @@ namespace Voron.Debugging
                     }
                 }
             }
-
+            
+            var (allPages, freePages) = Container.GetPagesFor(_tx, page);
+            
             // cannot use GetPageHeaderForDebug since we are reading not just from the header
             var root = new Container(_tx.GetPage(page));
             double density = pageDensities?.Average() ?? -1;
-            int totalPages = root.Header.NumberOfPages + root.Header.NumberOfOverflowPages;
+            long totalPages = root.Header.NumberOfPages + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
                 Name = name.ToString(),
                 NumberOfEntries = root.GetNumberOfEntries(),
-                LeafPages = root.Header.NumberOfPages,
+                LeafPages = root.Header.NumberOfPages + allPages.State.LeafPages + freePages.State.LeafPages,
                 OverflowPages = root.Header.NumberOfOverflowPages,
-                PageCount = totalPages,
+                BranchPages = +freePages.State.BranchPages + allPages.State.BranchPages,
+                PageCount = totalPages ,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(totalPages),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(totalPages) * density) : -1,

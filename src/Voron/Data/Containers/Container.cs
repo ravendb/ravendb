@@ -595,7 +595,26 @@ namespace Voron.Data.Containers
                 return true;
             }
         }
-        
+
+        public static (Tree AllPages, Tree FreePages) GetPagesFor(LowLevelTransaction llt, long containerId)
+        {
+            var rootPage = llt.GetPage(containerId);
+            var rootContainer = new Container(rootPage);
+
+            Tree allPages;
+            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset))
+            {
+                allPages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
+            }
+            Tree freePages;
+            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.FreeListOffset))
+            {
+                freePages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
+            }
+
+            return (allPages, freePages);
+        }
+
         public static AllPagesIterator GetAllPagesSet(LowLevelTransaction llt, long containerId)
         {
             var rootPage = llt.GetPage(containerId);

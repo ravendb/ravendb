@@ -332,6 +332,34 @@ namespace Voron.Data.Tables
                 NumberOfFreePages = free
             };
         }
+        
+        public unsafe List<long> AllPages()
+        {
+            var fst = _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
+
+            var results = new List<long>();
+            
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    throw new InvalidOperationException($"Could not seek to the first element of {fst.Name} tree");
+
+                using (it.Value(out Slice slice))
+                {
+                    byte* ptr = slice.Content.Ptr;
+                    for (int i = 0; i < _numberOfPagesToAllocate; i++)
+                    {
+                        if (PtrBitVector.GetBitInPointer(ptr, i) == false)
+                        {
+                            results.Add(it.CurrentKey + i);
+                        }
+                    }
+                }
+            }
+
+
+            return results;
+        }
 
         internal FixedSizeTree GetAllocationStorageFst()
         {

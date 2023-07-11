@@ -49,6 +49,8 @@ namespace Voron.Data.Tables
         private readonly NewPageAllocator _tablePageAllocator;
         private readonly NewPageAllocator _globalPageAllocator;
 
+        public NewPageAllocator TablePageAllocator => _tablePageAllocator;
+
         public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
 
         public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true);
