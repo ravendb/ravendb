@@ -150,16 +150,6 @@ public partial class ClusterTestBase
             return record.Sharding?.Shards;
         }
 
-        public async Task EnsureNoReplicationLoopForSharding(RavenServer server, string database)
-        {
-            var stores = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
-
-            foreach (var store in stores)
-            {
-                var storage = await store;
-
-                await EnsureNoReplicationLoop(storage);
-            }
-        }
+        public Task EnsureNoReplicationLoopForSharding(RavenServer server, string database) => _parent.Sharding.EnsureNoReplicationLoopForShardingAsync(server, database);
     }
 }

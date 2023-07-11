@@ -269,36 +269,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
-        {
-            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database, new ReplicationManager.ReplicationOptions
-            {
-                BreakReplicationOnStart = false
-            });
-            await replication.EnsureNoReplicationLoopAsync();
-        }
-
-        protected static async Task EnsureNoReplicationLoop(DocumentDatabase storage)
-        {
-            using (var collector = new LiveReplicationPulsesCollector(storage))
-            {
-                var etag1 = storage.DocumentsStorage.GenerateNextEtag();
-
-                await Task.Delay(3000);
-
-                var etag2 = storage.DocumentsStorage.GenerateNextEtag();
-
-                Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
-
-                var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
-                foreach (var group in groups)
-                {
-                    var key = group.Key;
-                    var count = group.Count();
-                    Assert.True(count < 50, $"{key} seems to be excessive ({count})");
-                }
-            }
-        }
+        public Task EnsureNoReplicationLoop(RavenServer server, string database) => Replication.EnsureNoReplicationLoopAsync(server, database);
 
         private class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
