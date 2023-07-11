@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -74,10 +73,11 @@ namespace FastTests
             return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
-        protected virtual async ValueTask<DocumentDatabase> GetDocumentDatabaseInstanceForAsync(IDocumentStore store, RavenDatabaseMode mode, string id)
+        protected virtual async ValueTask<DocumentDatabase> GetDocumentDatabaseInstanceForAsync(IDocumentStore store, RavenDatabaseMode mode, string id, RavenServer server = null)
         {
+            server ??= Server;
             var database = mode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, id);
-            return await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
         protected virtual async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null)
