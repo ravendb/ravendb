@@ -209,7 +209,6 @@ namespace Voron.Data.Containers
             var page = AllocateContainerPage(llt);
 
             var root = new Container(page);
-            root.Header.NumberOfPages = 1;
             root.Header.NumberOfOverflowPages = 0;
             root.Header.PageLevelMetadata = -1;
             
@@ -474,7 +473,6 @@ namespace Voron.Data.Containers
 
             // no existing pages remaining, allocate new one
             var newPage = AllocateContainerPage(llt);
-            rootContainer.Header.NumberOfPages++;
             rootContainer.UpdateNextFreePage(newPage.PageNumber);
             
             container = new Container(newPage);

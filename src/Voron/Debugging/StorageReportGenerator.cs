@@ -534,13 +534,13 @@ namespace Voron.Debugging
             // cannot use GetPageHeaderForDebug since we are reading not just from the header
             var root = new Container(_tx.GetPage(page));
             double density = pageDensities?.Average() ?? -1;
-            long totalPages = root.Header.NumberOfPages + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
+            long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
                 Name = name.ToString(),
                 NumberOfEntries = root.GetNumberOfEntries(),
-                LeafPages = root.Header.NumberOfPages + allPages.State.LeafPages + freePages.State.LeafPages,
+                LeafPages = allPages.State.NumberOfEntries + allPages.State.LeafPages + freePages.State.LeafPages,
                 OverflowPages = root.Header.NumberOfOverflowPages,
                 BranchPages = +freePages.State.BranchPages + allPages.State.BranchPages,
                 PageCount = totalPages ,
