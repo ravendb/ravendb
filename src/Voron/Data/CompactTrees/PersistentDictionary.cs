@@ -35,8 +35,10 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(8)]
         public int TableSize;
         [FieldOffset(16)]
-        public long CurrentId;        
-     
+        public long CurrentId;
+        [FieldOffset(24)]
+        public long Reserved;
+
 
         public override string ToString()
         {
