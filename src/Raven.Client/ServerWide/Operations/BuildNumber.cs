@@ -12,6 +12,19 @@ namespace Raven.Client.ServerWide.Operations
 
         public string FullVersion { get; set; }
 
+        public string GetCleanedFullVersion()
+        {
+            if (IsNightlyOrDev(BuildVersion) == false)
+                return FullVersion;
+
+            var index = FullVersion.IndexOf('-');
+            return index == -1 ? FullVersion : FullVersion.Remove(index);
+        }
+        public static bool IsNightlyOrDev(long buildVersion)
+        {
+            return buildVersion >= 50 && buildVersion < 60;
+        }
+
         public override bool Equals(object obj)
         {
             return Equals(obj as BuildNumber);
