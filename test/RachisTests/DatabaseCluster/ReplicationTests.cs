@@ -897,8 +897,8 @@ namespace RachisTests.DatabaseCluster
             var (_, srcLeader) = await CreateRaftCluster(clusterSize);
             var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
 
-            source = AdjustOptionsToClusterSize(source, srcLeader, clusterSize);
-            destination = AdjustOptionsToClusterSize(destination, dstLeader, clusterSize);
+            source = Replication.AdjustOptionsToClusterSize(source, srcLeader, clusterSize);
+            destination = Replication.AdjustOptionsToClusterSize(destination, dstLeader, clusterSize);
 
             using (var src = GetDocumentStore(source))
             using (var dst = GetDocumentStore(destination))
@@ -963,21 +963,6 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.True(WaitForDocument(dst, "users/2", 30_000));
             }
-        }
-
-        private Options AdjustOptionsToClusterSize(Options options, RavenServer leader, int clusterSize)
-        {
-            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-            {
-                options = Sharding.GetOptionsForCluster(leader, clusterSize, clusterSize, clusterSize);
-            }
-            else
-            {
-                options.Server = leader;
-                options.ReplicationFactor = clusterSize;
-            }
-
-            return options;
         }
 
         [Fact]

@@ -414,6 +414,22 @@ public partial class RavenTestBase
             return docIdPerShard;
         }
 
+        
+        public async Task EnsureNoReplicationLoopForShardingAsync(RavenServer server, string database)
+        {
+            // wait for the replication ping-pong to settle down
+            await Task.Delay(TimeSpan.FromSeconds(3));
+
+            var stores = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
+
+            foreach (var store in stores)
+            {
+                var storage = await store;
+
+                await _parent.Replication.EnsureNoReplicationLoopAsync(storage);
+            }
+        }
+
         public async Task EnsureNoDatabaseChangeVectorLeakAsync(string database)
         {
             var ids = new Dictionary<string, int>(StringComparer.Ordinal);

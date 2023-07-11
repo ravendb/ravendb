@@ -10,6 +10,9 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication.Stats;
+using Tests.Infrastructure;
+using Xunit;
 
 namespace FastTests;
 
@@ -91,6 +94,63 @@ public partial class RavenTestBase
             }
 
             return null;
+        }
+
+        public async Task EnsureNoReplicationLoopAsync(RavenServer server, string database)
+        {
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database, new ReplicationManager.ReplicationOptions
+            {
+                BreakReplicationOnStart = false
+            });
+            await replication.EnsureNoReplicationLoopAsync();
+        }
+
+        public async Task EnsureNoReplicationLoopAsync(DocumentDatabase storage)
+        {
+            using (var collector = new LiveReplicationPulsesCollector(storage))
+            {
+                var etag1 = storage.DocumentsStorage.GenerateNextEtag();
+
+                await Task.Delay(3000);
+
+                var etag2 = storage.DocumentsStorage.GenerateNextEtag();
+
+                Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+
+                var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
+                foreach (var group in groups)
+                {
+                    var key = group.Key;
+                    var count = group.Count();
+                    Assert.True(count < 50, $"{key} seems to be excessive ({count})");
+                }
+            }
+        }
+        
+        public Task EnsureNoReplicationLoopAsync(RavenDatabaseMode mode, RavenServer server, string database)
+        {
+            if (mode == RavenDatabaseMode.Single)
+                return EnsureNoReplicationLoopAsync(server, database);
+
+            if (mode == RavenDatabaseMode.Sharded)
+                return _parent.Sharding.EnsureNoReplicationLoopForShardingAsync(server, database);
+
+            throw new ArgumentOutOfRangeException($"{mode} is unsupported");
+        }
+
+        public Options AdjustOptionsToClusterSize(Options options, RavenServer leader, int clusterSize)
+        {
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                options = _parent.Sharding.GetOptionsForCluster(leader, clusterSize, clusterSize, clusterSize);
+            }
+            else
+            {
+                options.Server = leader;
+                options.ReplicationFactor = clusterSize;
+            }
+
+            return options;
         }
 
         public Task<string> GetErrorsAsync(IDocumentStore store) => GetErrorsForClusterAsync(new List<RavenServer> { _parent.Server }, store.Database);

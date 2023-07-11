@@ -12,8 +12,8 @@ public class RavenExternalReplicationAttribute : DataAttribute
     private object[] _data;
 
     public RavenExternalReplicationAttribute(
-        RavenDatabaseMode source = RavenDatabaseMode.Single,
-        RavenDatabaseMode destination = RavenDatabaseMode.Single
+        RavenDatabaseMode source,
+        RavenDatabaseMode destination
     )
     {
         _source = source;
@@ -21,8 +21,8 @@ public class RavenExternalReplicationAttribute : DataAttribute
     }
 
     public RavenExternalReplicationAttribute(
-        RavenDatabaseMode source = RavenDatabaseMode.Single,
-        RavenDatabaseMode destination = RavenDatabaseMode.Single,
+        RavenDatabaseMode source,
+        RavenDatabaseMode destination,
         params object[] data
     ) : this ( source, destination )
     {
@@ -36,11 +36,11 @@ public class RavenExternalReplicationAttribute : DataAttribute
         {
             if (_data == null || _data.Length == 0)
             {
-                yield return new object[] { dstOptions, srcOptions };
+                yield return new object[] { srcOptions, dstOptions };
                 continue;
             }
 
-            yield return new object[] { dstOptions, srcOptions }.Concat(_data).ToArray();
+            yield return new object[] { srcOptions, dstOptions }.Concat(_data).ToArray();
         }
     }
 }
