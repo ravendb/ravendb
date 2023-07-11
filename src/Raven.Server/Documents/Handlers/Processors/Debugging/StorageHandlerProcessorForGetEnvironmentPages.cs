@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Corax;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -12,6 +13,8 @@ using Raven.Server.Web.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Data.Containers;
+using Voron.Data.PostingLists;
 using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
@@ -43,7 +46,30 @@ internal class StorageHandlerProcessorForGetEnvironmentPages : AbstractStorageHa
         using(var tx = env.Environment.ReadTransaction())
         {
             await using var sw = new StreamWriter( RequestHandler.ResponseBodyStream());
-            var owners = env.Environment.GetPageOwners(tx);
+            var owners = env.Environment.GetPageOwners(tx, postingList =>
+            {
+                if (postingList.Name.ToString() != "LargePostingListsSet")
+                    return null;
+
+                var list = new List<long>();
+                Span<long> buffer = stackalloc long[1024];
+                var it = postingList.Iterate();
+                unsafe
+                {
+                    while (it.Fill(buffer, out var read))
+                    {
+                        for (int i = 0; i < read; i++)
+                        {
+                            var item = Container.Get(tx.LowLevelTransaction, buffer[i]);
+                            var state = (PostingListState*)item.Address;
+                            var pl = new PostingList(tx.LowLevelTransaction, Constants.IndexWriter.LargePostingListsSetSlice, *state);
+                            list.AddRange(pl.AllPages());
+                        }
+                    }
+                }
+
+                return list;
+            });
 
             var gaps = new List<(long Start, long End)>();
 

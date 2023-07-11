@@ -62,7 +62,7 @@ namespace Voron.Data.PostingLists
         public static void Create(LowLevelTransaction tx, ref PostingListState state, FastPForEncoder encoder)
         {
             var newPage = tx.AllocatePage(1);
-            PostingListLeafPage leafPage = new PostingListLeafPage(newPage);
+            PostingListLeafPage leafPage = new(newPage);
             PostingListLeafPage.InitLeaf(leafPage.Header);
             state.RootObjectType = RootObjectType.Set;
             state.Depth = 1;

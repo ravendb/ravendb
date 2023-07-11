@@ -36,12 +36,11 @@ namespace Voron.Data.CompactTrees
         public int TableSize;
         [FieldOffset(16)]
         public long CurrentId;        
-        [FieldOffset(24)]
-        public long PreviousId;
+     
 
         public override string ToString()
         {
-            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
+            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(CurrentId)}: {CurrentId}";
         }
     }
 
@@ -75,7 +74,6 @@ namespace Voron.Data.CompactTrees
                 PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
                 header->TableSize = DefaultDictionaryTableSize;
                 header->CurrentId = p.PageNumber;
-                header->PreviousId = 0;
 
                 // We retrieve the embedded file from the assembly, copy and checksum the entire thing.             
                 var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
@@ -143,6 +141,9 @@ namespace Voron.Data.CompactTrees
             if (incumbentSize < successorSize * 1.05)
                 return previousDictionary;
 
+            if (previousDictionary != null)
+                llt.FreePage(previousDictionary.DictionaryId);
+
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(requiredTotalSize);
@@ -152,7 +153,6 @@ namespace Voron.Data.CompactTrees
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
             header->CurrentId = p.PageNumber;
-            header->PreviousId = previousDictionary?.DictionaryId ?? 0;
 
             byte* encodingTablesPtr = p.DataPointer + PersistentDictionaryHeader.SizeOf;
             encoderState.EncodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr, requiredSize / 2));
