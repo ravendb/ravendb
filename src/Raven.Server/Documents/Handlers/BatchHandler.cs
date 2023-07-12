@@ -256,8 +256,11 @@ namespace Raven.Server.Documents.Handlers
                 }
                 var count = ValidateClusterTransactionResult(result);
 
-                var lastModified = Database.Time.GetUtcNow();
-                GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count, lastModified, options.DisableAtomicDocumentWrites, array);
+                if (count.HasValue) // cluster transaction contains 'put/'delete'
+                {
+                    var lastModified = Database.Time.GetUtcNow();
+                    GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified, options.DisableAtomicDocumentWrites, array);
+                }
             }
             else
             {
@@ -307,7 +310,7 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
         }
 
-        private long ValidateClusterTransactionResult(object result)
+        private long? ValidateClusterTransactionResult(object result)
         {
             if (result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
@@ -322,6 +325,11 @@ namespace Raven.Server.Documents.Handlers
             if (result is long count)
             {
                 return count;
+            }
+
+            if (result == null)
+            {
+                return null;
             }
             
             throw new InvalidOperationException("Cluster Transaction result type isn't valid");
@@ -343,8 +351,8 @@ namespace Raven.Server.Documents.Handlers
                 switch (dataCmd.Type)
                 {
                     case CommandType.PUT:
-                        if (dataCmd.Document.GetMetadata().TryGet("@collection", out string collection) == false)
-                            throw new InvalidOperationException(); // TODO: change it to relevant exception
+                        if (dataCmd.Document.GetMetadata().TryGet(Constants.Documents.Metadata.Collection, out string collection) == false)
+                            throw new InvalidOperationException($"Cannot get doc '{dataCmd.Id}' collection");
 
                         commandsResults.Add(new DynamicJsonValue
                         {
@@ -366,7 +374,7 @@ namespace Raven.Server.Documents.Handlers
                         });
                         break;
                     default:
-                        throw new InvalidOperationException(); // TODO: change it to relevant exception
+                        throw new InvalidOperationException("Database command type isn't valid");
                 }
             }
         }
