@@ -74,3 +74,5 @@ export const exhaustiveStringTuple =
     ) =>
         x;
 // ---
+
+export const milliSecondsInWeek = 1000 * 3600 * 24 * 7;
