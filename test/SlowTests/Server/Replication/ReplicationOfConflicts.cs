@@ -378,12 +378,12 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store3, store1);
                 await SetupReplicationAsync(store3, store2);
 
+                await EnsureReplicatingAsync(store2, store1);
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
 
-                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
-                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
+                var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
                 await db1.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token);
 
