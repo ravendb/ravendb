@@ -12,7 +12,7 @@
     .distribution-summary,
     .distribution-item {
         font-size: 12px;
-        margin: sizes.$gutter-xs/2;
+        margin: sizes.$gutter-xs * 0.5;
 
         .top {
             font-size: 18px;

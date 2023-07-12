@@ -34,7 +34,7 @@
             background: var(--panel-bg-2);
             border-radius: sizes.$gutter-xs;
             font-size: 12px;
-            margin: sizes.$gutter-xs/2;
+            margin: sizes.$gutter-xs * 0.5;
             &:first-of-type {
                 margin-left: 0;
             }
