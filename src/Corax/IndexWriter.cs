@@ -51,12 +51,12 @@ namespace Corax
     {
         private long _numberOfModifications;
         private readonly HashSet<ByteString> _indexedEntries = new(new ByteStringEqualityComparer());
-        private readonly List<Slice> _entryKeysToRemove = new();
         private readonly IndexFieldsMapping _fieldsMapping;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
         private Tree _persistedDynamicFieldsAnalyzers;
         private long _numberOfTermModifications;
+        private CompactKeyCacheScope _compactKeyScope;
 
         private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
@@ -466,11 +466,14 @@ namespace Corax
 
         private void Init()
         {
+            _compactKeyScope = new(_transaction.LowLevelTransaction);
             _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoreFieldsSlice);
             _entriesTermsContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
+            _fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+            _primaryKeyTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName);
             _persistedDynamicFieldsAnalyzers = _transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
 
             _indexMetadata = _transaction.CreateTree(Constants.IndexMetadataSlice);
@@ -794,8 +797,18 @@ namespace Corax
 
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
-            TryDeleteEntry(key);
-            long entryId = InitBuilder(key);
+            long entryId;
+            if (TryDeleteEntry(key, out var entryTermId))
+            {
+                _numberOfModifications++;
+                RecordDeletion(entryTermId);
+                entryId = EntryIdEncodings.DecodeAndDiscardFrequency(entryTermId);
+                RegisterEntryByKey(key, entryId);
+            }
+            else
+            {
+                entryId = InitBuilder(key);
+            }
             _builder.Init(entryId, isUpdate: true);
             return _builder;
  
@@ -956,6 +969,8 @@ namespace Corax
         private FastPForEncoder _pForEncoder;
         private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
         private ByteStringContext _entriesAllocator;
+        private Tree _fieldsTree;
+        private CompactTree _primaryKeyTree;
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public struct RecordedTerm : IComparable<RecordedTerm>
@@ -1055,33 +1070,15 @@ namespace Corax
             }
         }
 
-        private void ProcessDeletes(Tree fieldsTree)
+        private void ProcessDeletes()
         {
-            if (_entryKeysToRemove.Count == 0 && _deletedEntries.Count == 0)
+            if (_deletedEntries.Count == 0)
                 return;
-
-            // we need to copy the keys so we could sort them
-            Sorter<Slice, SliceStructComparer> sorter = default;
-            sorter.Sort(CollectionsMarshal.AsSpan(_entryKeysToRemove));
-            
-            // now run over the keys in sorted fashion in optimal manner
-            var primaryKeyTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName);
-            primaryKeyTree.InitializeStateForTryGetNextValue();
-            using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
-            
-            for (int i = 0; i < _entryKeysToRemove.Count; i++)
-            {
-                compactKeyCacheScope.Key.Set(_entryKeysToRemove[i].AsSpan());
-                if (primaryKeyTree.TryGetNextValue(compactKeyCacheScope.Key, out var _, out var postingListId, out _))
-                {
-                    RecordDeletion(postingListId);
-                }
-            }
             
             var llt = _transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
 
-            var fieldsByRootPage = GetIndexedFieldByRootPage(fieldsTree);
+            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
             
             long dicId = CompactTree.GetDictionaryId(llt);
             var compactKey = llt.AcquireCompactKey();
@@ -1184,47 +1181,50 @@ namespace Corax
             return pageToField;
         }
 
-        public void TryDeleteEntry(string term)
+        public void TryDeleteEntry(string term) => TryDeleteEntry(term, out _);
+
+        public bool TryDeleteEntry(string term, out long entryId)
         {
-            var scope = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
-            TryDeleteEntry(termSlice);
+            using var _ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+            return TryDeleteEntry(termSlice, out entryId);
         }
         
-        public void TryDeleteEntry(ReadOnlySpan<byte> term)
+        public bool TryDeleteEntry(ReadOnlySpan<byte> term, out long entryId)
         {
-            Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
-
-            TryDeleteEntry(termSlice); 
+            using var _ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+            return TryDeleteEntry(termSlice, out entryId);
         }
 
-        private void TryDeleteEntry(Slice termSlice)
+        private bool TryDeleteEntry(Slice termSlice, out long entryId)
         {
             if (_indexedEntries.Contains(termSlice.Content) == false)
             {
-                _entryKeysToRemove.Add(termSlice);
-                return;
+                _compactKeyScope.Key.Set(termSlice);
+                return _primaryKeyTree.TryGetValue(_compactKeyScope.Key, out entryId);
             }
 
-            // calling ResetWriter will reset the _entriesAllocator, so we need to clone it to the side
-            var cloned = _transaction.Allocator.Clone(termSlice.Content);
+            FlushBatch();
+            return TryDeleteEntry(termSlice, out entryId);
 
-            // We cannot actually handles modifications to the same entry in the same batch, so we cheat
-            // we do a side channel flush at this point, then reset the state of the writer back to its initial level
-            bool prevValue = _ownsTransaction;
-            _ownsTransaction = false;
-            try
+            void FlushBatch()
             {
-                Commit();
-                ResetWriter();
-                // after the reset, mark this to be deleted in the next commit
-                
-                Slice.From(_entriesAllocator, cloned.ToReadOnlySpan(), ByteStringType.Immutable, out var freshTermSlice);
-                _transaction.Allocator.Release(ref cloned);
-                _entryKeysToRemove.Add(freshTermSlice);
-            }
-            finally
-            {
-                _ownsTransaction = prevValue;
+                // calling ResetWriter will reset the _entriesAllocator, so we need to clone it to the side
+                var cloned = _transaction.Allocator.Clone(termSlice.Content);
+
+                // We cannot actually handles modifications to the same entry in the same batch, so we cheat
+                // we do a side channel flush at this point, then reset the state of the writer back to its initial level
+                bool prevValue = _ownsTransaction;
+                _ownsTransaction = false;
+                try
+                {
+                    Commit();
+                    ResetWriter();
+                }
+                finally
+                {
+                    _transaction.Allocator.Release(ref cloned);
+                    _ownsTransaction = prevValue;
+                }
             }
         }
 
@@ -1232,7 +1232,6 @@ namespace Corax
         {
             _pforDecoder.Dispose();
             _indexedEntries.Clear();
-            _entryKeysToRemove.Clear();
             _deletedEntries.Clear();
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
@@ -1330,14 +1329,7 @@ namespace Corax
         /// <returns></returns>
         private bool TryGetEntryTermId(Slice fieldName, ReadOnlySpan<byte> term, out long idInTree)
         {
-            var fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-            if (fieldsTree == null)
-            {
-                idInTree = -1;
-                return false;
-            }
-
-            var fieldTree = fieldsTree.CompactTreeFor(fieldName);
+            var fieldTree = _fieldsTree.CompactTreeFor(fieldName);
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
             using var __ = CreateNormalizedTerm(_entriesAllocator, term, out var termSlice);
@@ -1355,9 +1347,8 @@ namespace Corax
         {
             _indexDebugDumper.Commit();
             using var _ = _entriesAllocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
-            Tree fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
             
-            ProcessDeletes(fieldsTree);
+            ProcessDeletes();
             
             Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
@@ -1373,20 +1364,20 @@ namespace Corax
                 if (indexedField.Textual.Count == 0)
                     continue;
 
-                InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
-                InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
-                InsertSpatialField(entriesToSpatialTree, fieldsTree, indexedField);
+                InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+                InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
+                InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
+                InsertSpatialField(entriesToSpatialTree, indexedField);
             }
 
             if (_dynamicFieldsTerms != null)
             {
                 foreach (var (_, indexedField) in _dynamicFieldsTerms)
                 {
-                    InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                    InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
-                    InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
-                    InsertSpatialField(entriesToSpatialTree,  fieldsTree, indexedField);
+                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
+                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
+                    InsertSpatialField(entriesToSpatialTree,  indexedField);
                 }
             }
 
@@ -1439,12 +1430,12 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertSpatialField(Tree entriesToSpatialTree, Tree fieldsTree, IndexedField indexedField)
+        private unsafe void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
         {
             if (indexedField.Spatial == null)
                 return;
 
-            var fieldRootPage = fieldsTree.GetLookupRootPage(indexedField.Name);
+            var fieldRootPage = _fieldsTree.GetLookupRootPage(indexedField.Name);
             Debug.Assert(fieldRootPage != -1);
             var termContainerId = fieldRootPage << 3 | 0b010;
             Debug.Assert(termContainerId >>> 3 == fieldRootPage, "field root too high?");
@@ -1476,9 +1467,9 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertTextualField(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private unsafe void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
-            var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
+            var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.Name); 
@@ -1498,7 +1489,7 @@ namespace Corax
             Sorter<Slice, SliceStructComparer> sorter = default;
             sorter.Sort(sortedTermsBuffer, 0, termsCount);
 
-            using var dumper = new IndexTermDumper(fieldsTree, indexedField.Name);
+            using var dumper = new IndexTermDumper(_fieldsTree, indexedField.Name);
 
             fieldTree.InitializeStateForTryGetNextValue();
             long totalLengthOfTerm = 0;
@@ -1840,9 +1831,9 @@ namespace Corax
             return AddEntriesToTermResult.NothingToDo;
         }
 
-        private void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
+            var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameLong); 
 
             _entriesAlreadyAdded.Clear();
@@ -1907,9 +1898,9 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private unsafe void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble);
+            var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble);
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble); 
 
             _entriesAlreadyAdded.Clear();
@@ -2047,6 +2038,7 @@ namespace Corax
         
         public void Dispose()
         {
+            _compactKeyScope.Dispose();
             _pforDecoder.Dispose();
             _entriesAllocator.Dispose();
             _jsonOperationContext?.Dispose();

@@ -20,7 +20,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
     {
     }
 
-    [Fact(Skip = "Temporarily disabled RavenDB-20761 ")]
+    [Fact]
     public void CanUpdateAndNotDelete()
     {
         using var fields = CreateKnownFields(Allocator);
@@ -44,7 +44,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             var ids = new long[16];
             var read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(EntryIdEncodings.Decode(oldId).EntryId, ids[0]);
+            Assert.Equal(oldId, ids[0]);
         }
 
         long newId;
@@ -52,9 +52,9 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         {
             using (var entry = indexWriter.Update("cars/1"u8))
             {
-                entry.Write(0, Encoding.UTF8.GetBytes("cars/1"));
-                entry.Write(1, Encoding.UTF8.GetBytes("Lightning"));
-                entry.Write(2, Encoding.UTF8.GetBytes("13"));
+                entry.Write(0, "cars/1"u8);
+                entry.Write(1, "Lightning"u8);
+                entry.Write(2, "13"u8);
                 newId = entry.EntryId;
             }
             
@@ -72,7 +72,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             ids = new long[16];
             read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(EntryIdEncodings.Decode(oldId).EntryId, ids[0]);
+            Assert.Equal(oldId, ids[0]);
         }
 
     }
