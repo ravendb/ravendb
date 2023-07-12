@@ -2,7 +2,7 @@ import React from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
-import { Input, InputProps } from "reactstrap";
+import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
@@ -18,6 +18,8 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 
 type FormInputProps = InputProps & {
     type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
+    addonTextEnabled?: boolean;
+    addonTextContent?: string;
 };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -201,7 +203,18 @@ function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & InputProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, children, type, ...rest } = props;
+    const {
+        name,
+        control,
+        defaultValue,
+        rules,
+        shouldUnregister,
+        children,
+        type,
+        addonTextEnabled,
+        addonTextContent,
+        ...rest
+    } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -225,17 +238,21 @@ function FormInputGeneral<
     return (
         <>
             <div className="d-flex flex-grow">
-                <Input
-                    name={name}
-                    type={type}
-                    onBlur={onBlur}
-                    onChange={(x) => handleValueChange(x.currentTarget.value)}
-                    value={value == null ? "" : value}
-                    invalid={invalid}
-                    {...rest}
-                >
-                    {children}
-                </Input>
+                <InputGroup>
+                    <Input
+                        name={name}
+                        type={type}
+                        onBlur={onBlur}
+                        onChange={(x) => handleValueChange(x.currentTarget.value)}
+                        value={value == null ? "" : value}
+                        invalid={invalid}
+                        addonTextEnabled={addonTextEnabled}
+                        {...rest}
+                    >
+                        {children}
+                    </Input>
+                    {addonTextEnabled && <InputGroupText>{addonTextContent}</InputGroupText>}
+                </InputGroup>
             </div>
 
             {error && <div className="d-flex justify-content-end text-danger small w-100">{error.message}</div>}
@@ -275,7 +292,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
     }
 
     return (
-        <div>
+        <>
             <ToggleComponent
                 selected={!!value}
                 toggleSelection={onChange}
@@ -285,6 +302,6 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                 {...rest}
             />
             {invalid && <div className="text-danger small">{error.message}</div>}
-        </div>
+        </>
     );
 }
