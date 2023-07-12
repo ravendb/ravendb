@@ -8,7 +8,7 @@ import {
     AccordionItemLicensing,
     AboutViewHeading,
 } from "./AboutView";
-import { Accordion, AccordionBody, AccordionHeader, AccordionItem, Button, Col, Collapse, Row } from "reactstrap";
+import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 
 export default {

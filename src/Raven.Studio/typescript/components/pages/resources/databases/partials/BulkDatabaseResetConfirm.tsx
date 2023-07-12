@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, ModalHeader, ModalBody, ModalFooter, Button, CloseButton } from "reactstrap";
+import { Modal, ModalBody, ModalFooter, Button, CloseButton } from "reactstrap";
 import {
     MultipleDatabaseLocationSelector,
     DatabaseActionContexts,
