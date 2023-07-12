@@ -2,6 +2,8 @@ import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import IndexUtils from "components/utils/IndexUtils";
 import CollectionStats = Raven.Client.Documents.Indexes.IndexProgress.CollectionStats;
+import IndexMergeResults = Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults;
+import moment = require("moment/moment");
 
 const statsFixture = require("../fixtures/indexes_stats.json");
 const progressFixture: { Results: IndexProgress[] } = require("../fixtures/indexes_progress.json");
@@ -150,5 +152,56 @@ export class IndexesStubs {
         stats.IsStale = true;
         stats.State = "Error";
         return [stats, null];
+    }
+
+    static getSampleMergeSuggestions(): IndexMergeResults {
+        return {
+            Unmergables: {
+                "Orders/ByShipment/Location": "Cannot merge indexes that have a where clause",
+                "Companies/StockPrices/TradeVolumeByMonth": "Cannot merge map/reduce indexes",
+            },
+            Suggestions: [
+                {
+                    CanMerge: ["Product/Search", "Products/ByUnitOnStock"],
+                    CanDelete: null,
+                    MergedIndex: {
+                        SourceType: "Documents",
+                        Priority: null,
+                        State: null,
+                        OutputReduceToCollection: null,
+                        PatternForOutputReduceToCollectionReferences: null,
+                        PatternReferencesCollectionName: null,
+                        Name: "Product/Search",
+                        Reduce: null,
+                        Type: "Map",
+                        Maps: [
+                            "from doc in docs.Products\r\nselect new\r\n{\r\n    Category = doc.Category,\r\n    Name = doc.Name,\r\n    PricePerUnit = doc.PricePerUnit,\r\n    Supplier = doc.Supplier,\r\n    UnitOnStock = LoadCompareExchangeValue(Id(doc))\r\n}",
+                        ],
+                        Fields: {
+                            Name: {
+                                Analyzer: null,
+                                Spatial: null,
+                            },
+                        },
+                        Configuration: {},
+                        AdditionalSources: {},
+                        AdditionalAssemblies: [],
+                    },
+                    Collection: "Products",
+                    SurpassingIndex: "",
+                },
+                {
+                    CanMerge: null,
+                    CanDelete: [
+                        "Companies/StockPrices/TradeVolumeByMonth",
+                        "Orders/ByCompany",
+                        "Orders/ByShipment/Location",
+                    ],
+                    MergedIndex: null,
+                    Collection: "Products",
+                    SurpassingIndex: "Some/SurpassingIndexName",
+                },
+            ],
+        };
     }
 }

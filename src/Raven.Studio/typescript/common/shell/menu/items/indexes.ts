@@ -47,7 +47,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/cleanup',
-            // moduleId: require('viewmodels/database/indexes/indexCleanup'),
             moduleId: bridgeToReact(IndexCleanup, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Index Cleanup',
