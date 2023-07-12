@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Identity;
-using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 
