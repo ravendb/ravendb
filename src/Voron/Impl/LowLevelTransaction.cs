@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1048,13 +1049,22 @@ namespace Voron.Impl
             }
         }
 
+        private static readonly ObjectPool<CompactKey> _sharedCompactKeyPool = new ( () => new CompactKey() );
+
         public CompactKey AcquireCompactKey()
         {
-            // Originally the low level transaction would allow to handle the reuse of compact keys.
-            // However, the implementation of reuse has been creating issues when indexing. The ability
-            // to reuse keys will be disable until we are able to resolve the underlying cause for it.
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-20143
-            return new CompactKey(this);
+            var key = _sharedCompactKeyPool.Allocate();
+            key.Initialize(this);
+            return key;
+        }
+
+        public void ReleaseCompactKey(ref CompactKey key)
+        {
+            // The reason why we reset the key, which in turn will null the storage is to avoid cases of reused keys
+            // been used by multiple operations. Eventually someone wil restore 
+            key.Reset();
+            _sharedCompactKeyPool.Free(key);
+            key = null;
         }
 
         private class PagerStateCacheItem

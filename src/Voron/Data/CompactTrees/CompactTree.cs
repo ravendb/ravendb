@@ -87,13 +87,16 @@ public sealed partial class CompactTree : IPrepareForCommit
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
             
-            Key = new CompactKey(llt);
+            Key = llt.AcquireCompactKey();
+            Key.Initialize(llt);
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
         
         public int CompareTo<T>(Lookup<T> parent, long currentKeyId) where T : struct, ILookupKey
         {
+            var llt = parent.Llt;
+
             byte* keyPtr;
             int keyLengthInBits;
             if (currentKeyId == 0)
@@ -103,7 +106,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
             else
             {
-                GetEncodedKey(parent.Llt, currentKeyId, out keyLengthInBits, out keyPtr);
+                GetEncodedKey(llt, currentKeyId, out keyLengthInBits, out keyPtr);
             }
 
             var k = GetKey(parent);
@@ -389,7 +392,8 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
     {
-        using var compactKey = new CompactKey(_inner.Llt);
+        var compactKey = new CompactKey();
+        compactKey.Initialize(_inner.Llt);
         compactKey.Set(key);
         compactKey.ChangeDictionary(_inner.State.DictionaryId);
         return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);

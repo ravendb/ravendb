@@ -25,7 +25,8 @@ public class CompactTreeOptimizedLookup : StorageTest
         using (var wtx = Env.WriteTransaction())
         {
             CompactTree dates = wtx.CompactTreeFor("Dates");
-            var ck = new CompactKey(wtx.LowLevelTransaction);
+            var ck = new CompactKey();
+            ck.Initialize(wtx.LowLevelTransaction);
             foreach (var terms in ReadTermsFromResource("Terms.log.gz"))
             {
                 dates.InitializeStateForTryGetNextValue();

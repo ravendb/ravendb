@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -17,12 +18,15 @@ namespace Voron.Data.CompactTrees;
 // when the same key is reused on multiple operations in the same transaction.
 public unsafe class CompactKey : IDisposable
 {
-    public readonly LowLevelTransaction Owner;
+    private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
+    private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;
+
+    private LowLevelTransaction _owner;
 
     private const int MappingTableSize = 64;
     private const int MappingTableMask = MappingTableSize - 1;
 
-    private readonly long[] _keyMappingCache;
+    private long[] _keyMappingCache;
     private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
     private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
 
@@ -47,21 +51,32 @@ public unsafe class CompactKey : IDisposable
 
     private const int Invalid = -1;
 
-    public CompactKey(LowLevelTransaction tx)
+    public void Initialize(LowLevelTransaction tx)
     {
-        Owner = tx;
+        _owner = tx;
+
         Dictionary = Invalid;
         _currentKeyIdx = Invalid;
         _decodedKeyIdx = Invalid;
         _lastKeyMappingItem = Invalid;
 
-        _storage = new byte[2 * Constants.CompactTree.MaximumKeySize];
-        
         _currentIdx = 0;
-
-        _keyMappingCache = new long[2 * MappingTableMask];
-
         MaxLength = 0;
+
+        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
+    }
+
+    public void Reset()
+    {
+        if (_storage is null || _keyMappingCache is null)
+            throw new InvalidOperationException("The key has not been initialized before calling reset.");
+
+        StoragePool.Return(_storage);
+        _storage = null;
+
+        KeyMappingPool.Return(_keyMappingCache);
+        _keyMappingCache = null;
     }
 
     public bool IsValid => Dictionary > 0;
@@ -92,7 +107,7 @@ public unsafe class CompactKey : IDisposable
             KeyMappingCache(buckedIdx) = dictionaryId;
             KeyMappingCacheIndex(buckedIdx) = _currentIdx;
 
-            var dictionary = Owner.GetEncodingDictionary(dictionaryId);
+            var dictionary = _owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
             int currentSize = _storage.Length - _currentIdx;
@@ -157,7 +172,7 @@ public unsafe class CompactKey : IDisposable
 
         Debug.Assert(currentKeyIdx != Invalid);
 
-        var dictionary = Owner.GetEncodingDictionary(currentDictionary);
+        var dictionary = _owner.GetEncodingDictionary(currentDictionary);
 
         int encodedStartIdx = currentKeyIdx;
         int encodedKeyLengthInBits = Unsafe.ReadUnaligned<int>(ref _storage[encodedStartIdx]);
@@ -202,8 +217,10 @@ public unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, _storage.Length) * 2;
 
-        var storage = new byte[maxSize];
+        var storage = StoragePool.Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
+        
+        StoragePool.Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
 
@@ -411,7 +428,7 @@ public unsafe class CompactKey : IDisposable
 
     public void Dispose()
     {
-
+        Reset();
     }
 
     public int Compare(CompactKey value)

@@ -97,7 +97,8 @@ public unsafe struct EntryTermsReader
         _end = cur + size;
         _prevTerm = 0;
         _prevLong = 0;
-        Current = new(llt);
+        Current = new();
+        Current.Initialize(llt);
     }
 
     public bool FindNextStored(long fieldRootPage)
