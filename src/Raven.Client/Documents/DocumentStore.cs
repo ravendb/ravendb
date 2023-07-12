@@ -198,7 +198,12 @@ namespace Raven.Client.Documents
 
             RequestExecutor CreateRequestExecutorForSingleNode()
             {
+#if  DEBUG
+                // passing several Urls here is probably not indented
                 var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls.Single(), database, Certificate, Conventions);
+#else
+                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
+#endif
                 RegisterEvents(forSingleNode);
 
                 RequestExecutorCreated?.Invoke(this, forSingleNode);

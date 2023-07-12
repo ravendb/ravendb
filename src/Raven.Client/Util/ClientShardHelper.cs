@@ -15,7 +15,9 @@ namespace Raven.Client.Util
             }
 
             ResourceNameValidator.AssertValidDatabaseName(database);
-            
+            if (shardNumber < 0)
+                throw new ArgumentException("Shard number must be non-negative");
+
             return $"{database}${shardNumber}";
         }
 
