@@ -198,7 +198,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return null;
             }
 
-            const status = this.op.progress();
+            const status: any = this.op.progress();
             if (!status) {
                 return null;
             }
