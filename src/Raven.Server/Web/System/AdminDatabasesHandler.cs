@@ -727,17 +727,11 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
 
-                if (parameters.TimeToWaitForConfirmation.HasValue == false)
-                {
-                    await WriteResponseAsync(context, index, pendingDeletes);
-                    return;
-                }
-                
+                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
+
+                await ServerStore.Cluster.WaitForIndexNotification(index, timeToWaitForConfirmation);
+
                 long actualDeletionIndex = index;
-
-                await ServerStore.Cluster.WaitForIndexNotification(index, parameters.TimeToWaitForConfirmation.Value);
-
-                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation.Value;
 
                 var sp = Stopwatch.StartNew();
                 int databaseIndex = 0;
@@ -775,22 +769,17 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                await WriteResponseAsync(context, actualDeletionIndex, pendingDeletes);
-            }
-        }
-
-        private async Task WriteResponseAsync(TransactionOperationContext context, long actualDeletionIndex, HashSet<string> pendingDeletes)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    // we only send the successful index here, we might fail to delete the index
-                    // because a node is down, and we don't want to cause the client to wait on an
-                    // index that doesn't exists in the Raft log
-                    [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex, 
-                    [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(pendingDeletes)
-                });
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        // we only send the successful index here, we might fail to delete the index
+                        // because a node is down, and we don't want to cause the client to wait on an
+                        // index that doesn't exists in the Raft log
+                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex, 
+                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(pendingDeletes)
+                    });
+                }
             }
         }
 

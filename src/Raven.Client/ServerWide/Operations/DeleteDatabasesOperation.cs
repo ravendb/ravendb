@@ -13,23 +13,7 @@ namespace Raven.Client.ServerWide.Operations
     {
         private readonly Parameters _parameters;
         
-        public DeleteDatabasesOperation(string databaseName, bool hardDelete) : this(databaseName, hardDelete, fromNode: null, timeToWaitForConfirmation: TimeSpan.FromSeconds(15))
-        {
-            
-        }
-
-        public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode) : this(databaseName, hardDelete, fromNode: fromNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(15))
-        {
-           
-        }
-
-        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode) : 
-            this(ClientShardHelper.ToShardName(databaseName, shardNumber), hardDelete, fromNode: fromNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(15))
-        {
-            
-        }
-
-        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode, TimeSpan? timeToWaitForConfirmation) : 
+        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode, TimeSpan? timeToWaitForConfirmation = null) : 
             this(ClientShardHelper.ToShardName(databaseName, shardNumber), hardDelete, fromNode: fromNode, timeToWaitForConfirmation: timeToWaitForConfirmation)
         {
             
