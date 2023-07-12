@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.TransactionMerger
             CancellationToken shutdown)
         {
             _resourceName = resourceName ?? throw new ArgumentNullException(nameof(resourceName));
-            _log = LoggingSource.Instance.GetLogger<AbstractTransactionOperationsMerger<TOperationContext, TTransaction>>(_resourceName);
+            _log = LoggingSource.Instance.GetLogger(_resourceName, GetType().FullName);
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _shutdown = shutdown;
