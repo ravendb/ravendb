@@ -52,6 +52,8 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
+            using var cts = new CancellationTokenSource();
+
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
             {
@@ -60,7 +62,6 @@ namespace SlowTests.Issues
 
             var e = await Assert.ThrowsAsync<TaskCanceledException>(async () =>
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user2 = await session.LoadAsync<User>(user1.Id);
