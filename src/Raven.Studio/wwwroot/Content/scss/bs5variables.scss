@@ -9,7 +9,7 @@
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.
 // See https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
-$min-contrast-ratio: 4.5 !default;
+$min-contrast-ratio: 4 !default;
 
 // Customize the light and dark text colors for use in our color contrast function.
 $color-contrast-dark: $black !default;
@@ -209,7 +209,7 @@ $body-text-align: null !default;
 
 $link-color: $primary !default;
 $link-decoration: none !default;
-$link-shade-percentage: 20 !default;
+$link-shade-percentage: 20% !default;
 $link-hover-color: none !default;
 $link-hover-decoration: none !default;
 
@@ -565,12 +565,12 @@ $btn-transition: color 0.05s ease-in-out, background-color 0.05s ease-in-out, bo
     box-shadow 0.15s ease-in-out !default;
 
 $btn-hover-bg-shade-amount: 15% !default;
-$btn-hover-bg-tint-amount: 30% !default;
-$btn-hover-border-shade-amount: 10% !default;
-$btn-hover-border-tint-amount: 50% !default;
-$btn-active-bg-shade-amount: 30% !default;
-$btn-active-bg-tint-amount: 40% !default;
-$btn-active-border-shade-amount: 25% !default;
+$btn-hover-bg-tint-amount: 20% !default;
+$btn-hover-border-shade-amount: 20% !default;
+$btn-hover-border-tint-amount: 30% !default;
+$btn-active-bg-shade-amount: 20% !default;
+$btn-active-bg-tint-amount: 20% !default;
+$btn-active-border-shade-amount: 10% !default;
 $btn-active-border-tint-amount: 00% !default;
 // scss-docs-end btn-variables
 
