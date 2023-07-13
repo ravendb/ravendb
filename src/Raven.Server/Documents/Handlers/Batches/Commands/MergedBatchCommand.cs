@@ -169,7 +169,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
                     var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                        cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
+                        cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue

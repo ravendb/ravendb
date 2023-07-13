@@ -10,7 +10,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public RestoreBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, IRestoreSource restoreSource, 
             List<string> filesToRestore, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
-            Result.Files.FileCount = FilesToRestore.Count;
         }
 
         protected override async Task RestoreAsync()
@@ -22,6 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await base.InitializeAsync();
 
+            Result.Files.FileCount = FilesToRestore.Count;
             Result.SnapshotRestore.Skipped = true;
             Result.SnapshotRestore.Processed = true;
 
