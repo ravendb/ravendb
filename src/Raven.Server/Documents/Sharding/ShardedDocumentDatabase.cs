@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Replication;
@@ -16,6 +20,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -139,8 +144,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
                         continue;
                 }
 
+                Debug.Assert(process.ConfirmationIndex.HasValue, $"invalid ShardBucketMigration for bucket '{process.Bucket}', " +
+                                                                 "got Status = OwnershipTransferred but no ConfirmationIndex");
+
                 // cleanup values
-                t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
+                t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.ConfirmationIndex.Value, process.LastSourceChangeVector);
 
                 t.ContinueWith(__ => DocumentsMigrator.ExecuteMoveDocumentsAsync());
             }
@@ -195,13 +203,17 @@ public class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
-    public async Task DeleteBucketAsync(int bucket, long migrationIndex, string uptoChangeVector)
+    public async Task DeleteBucketAsync(int bucket, long migrationIndex, long confirmationIndex, string uptoChangeVector)
     {
         if (string.IsNullOrEmpty(uptoChangeVector))
         {
             await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
             return;
         }
+
+        // before starting cleanup, wait for DestinationMigrationConfirm command
+        // to be applied in all orchestrator nodes
+        await WaitForConfirmationIndex(confirmationIndex);
 
         while (true)
         {
@@ -223,6 +235,30 @@ public class ShardedDocumentDatabase : DocumentDatabase
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+    }
+
+    private async Task WaitForConfirmationIndex(long confirmationIndex)
+    {
+        var cmd = new WaitForIndexNotificationCommand(new List<long> { confirmationIndex });
+        var tasks = new List<Task>(ShardingConfiguration.Orchestrator.Topology.Members.Count);
+        var clusterTopology = ServerStore.GetClusterTopology();
+
+        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            foreach (var nodeTag in ShardingConfiguration.Orchestrator.Topology.Members)
+            {
+                var chosenNode = new ServerNode
+                {
+                    ClusterTag = nodeTag, 
+                    Database = ShardedDatabaseName, 
+                    ServerRole = ServerNode.Role.Member, 
+                    Url = clusterTopology.GetUrlFromTag(nodeTag)
+                };
+                tasks.Add(ServerStore.ClusterRequestExecutor.ExecuteAsync(chosenNode, nodeIndex: null, context, cmd, token: DatabaseShutdown));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 
