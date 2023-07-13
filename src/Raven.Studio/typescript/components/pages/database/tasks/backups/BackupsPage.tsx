@@ -15,7 +15,7 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Col, Row, Spinner } from "reactstrap";
+import { Button, Spinner } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
 import { FlexGrow } from "components/common/FlexGrow";

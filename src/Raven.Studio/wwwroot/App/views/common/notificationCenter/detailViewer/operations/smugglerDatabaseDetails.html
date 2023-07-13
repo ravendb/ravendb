@@ -74,6 +74,19 @@
                 </div>
             </div>
             <br/>
+            <div class="export-list" data-bind="with: filesCount">
+                <div class="export-item">
+                    <div class="name">
+                        <h3>Current File</h3>
+                    </div>
+                    <div class="progress-overall" data-bind="text: CurrentFileName"></div>
+                    <div class="progress-count">
+                        <strong data-bind="text: CurrentFile"></strong>
+                        /
+                        <span data-bind="text: FileCount"></span>
+                    </div>
+                </div>
+            </div>
             <div class="export-list" data-bind="visible: uploadItems().length">
                 <div data-bind="foreach: uploadItems">
                     <div class="export-item">

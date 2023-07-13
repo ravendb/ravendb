@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await base.InitializeAsync();
 
+            Result.Files.FileCount = FilesToRestore.Count;
             Result.SnapshotRestore.Skipped = true;
             Result.SnapshotRestore.Processed = true;
 
