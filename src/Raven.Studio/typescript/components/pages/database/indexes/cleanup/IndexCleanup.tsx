@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useRef, useState } from "react";
 import { Icon } from "components/common/Icon";
 import { Badge, Button, Card, Carousel, CarouselItem, Nav, NavItem, Table } from "reactstrap";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
@@ -7,52 +7,16 @@ import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
 import classNames from "classnames";
 import database from "models/resources/database";
-import { useServices } from "components/hooks/useServices";
-import { milliSecondsInWeek } from "components/utils/common";
-import { useEventsCollector } from "components/hooks/useEventsCollector";
-import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
-import app from "durandal/app";
+import useIndexCleanup from "./useIndexCleanup";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import genUtils from "common/generalUtils";
-import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
-import router from "plugins/router";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
-
-type IndexStats = Map<string, Raven.Client.Documents.Indexes.IndexStats>;
-
-interface UnusedIndexInfo {
-    name: string;
-    containingIndexName?: string;
-    lastQueryingTime?: Date;
-    lastIndexingTime?: Date;
-}
-
-interface SurpassingIndexInfo {
-    name: string;
-    containingIndexName: string;
-    lastQueryingTime?: Date;
-    lastIndexingTime?: Date;
-}
-
-interface MergeCandidateIndexItemInfo {
-    name: string;
-    lastQueryTime?: Date;
-    lastIndexingTime?: Date;
-}
-
-interface MergeIndexInfo {
-    toMerge: MergeCandidateIndexItemInfo[];
-    mergedIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
-}
-
-interface UnmergableIndexInfo {
-    name: string;
-    reason: string;
-}
 
 interface IndexCleanupProps {
     db: database;
@@ -61,264 +25,38 @@ interface IndexCleanupProps {
 export function IndexCleanup(props: IndexCleanupProps) {
     const { db } = props;
 
-    // ------------------------------------------------------
-    // TODO kalczur move to custom hook or redux
-    const [indexStats, setIndexStats] = useState<IndexStats>(null);
-
-    const [mergableIndexes, setMergableIndexes] = useState<MergeIndexInfo[]>([]);
-    const [surpassingIndexes, setSurpassingIndexes] = useState<SurpassingIndexInfo[]>([]);
-    const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndexInfo[]>([]);
-    const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndexInfo[]>([]);
-
-    const [selectedSurpassingIndexes, setSelectedSurpassingIndexes] = useState<string[]>([]);
-    const [selectedUnusedIndexes, setSelectedUnusedIndexes] = useState<string[]>([]);
-
-    const { indexesService } = useServices();
+    const { asyncFetchStats, activeTab, setActiveTab, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
-    const { reportEvent } = useEventsCollector();
 
-    const getNewer = (date1: string, date2: string) => {
-        if (!date1) {
-            return date2;
-        }
-        if (!date2) {
-            return date1;
-        }
-
-        return date1.localeCompare(date2) ? date1 : date2;
-    };
-
-    const findUnusedIndexes = (stats: IndexStats): UnusedIndexInfo[] => {
-        const result: UnusedIndexInfo[] = [];
-        const now = moment();
-
-        for (const [name, stat] of stats.entries()) {
-            if (stat.LastIndexingTime) {
-                const lastQueryDate = moment(stat.LastQueryingTime);
-                const agoInMs = now.diff(lastQueryDate);
-
-                if (lastQueryDate.isValid() && agoInMs > milliSecondsInWeek) {
-                    result.push({
-                        name: name,
-                        lastQueryingTime: stat.LastQueryingTime ? new Date(stat.LastQueryingTime) : null,
-                        lastIndexingTime: stat.LastIndexingTime ? new Date(stat.LastIndexingTime) : null,
-                    });
-
-                    result.sort((a, b) => a.lastQueryingTime.getTime() - b.lastQueryingTime.getTime());
-                }
-            }
-        }
-
-        return result;
-    };
-
-    const fetchStats = async () => {
-        const locations = db.getLocations();
-        const allStats = locations.map((location) => indexesService.getStats(db, location));
-
-        const resultMap = new Map<string, Raven.Client.Documents.Indexes.IndexStats>();
-
-        for await (const nodeStat of allStats) {
-            for (const indexStat of nodeStat) {
-                const existing = resultMap.get(indexStat.Name);
-
-                resultMap.set(indexStat.Name, {
-                    ...indexStat,
-                    LastIndexingTime: getNewer(existing?.LastIndexingTime, indexStat.LastIndexingTime),
-                    LastQueryingTime: getNewer(existing?.LastQueryingTime, indexStat.LastQueryingTime),
-                });
-            }
-        }
-
-        setIndexStats(resultMap);
-        setUnusedIndexes(findUnusedIndexes(resultMap));
-        await fetchIndexMergeSuggestions(resultMap);
-    };
-
-    const fetchIndexMergeSuggestions = async (indexStats: IndexStats) => {
-        const results = await indexesService.getIndexMergeSuggestions(db);
-
-        const suggestions = results.Suggestions;
-        const mergeCandidatesRaw = suggestions.filter((x) => x.MergedIndex);
-
-        setMergableIndexes(
-            mergeCandidatesRaw.map((x) => ({
-                mergedIndexDefinition: x.MergedIndex,
-                toMerge: x.CanMerge.map((name) => {
-                    const stats = indexStats.get(name);
-                    return {
-                        name,
-                        lastQueryingTime: stats.LastQueryingTime ? new Date(stats.LastQueryingTime) : null,
-                        lastIndexingTime: stats.LastIndexingTime ? new Date(stats.LastIndexingTime) : null,
-                    };
-                }),
-            }))
-        );
-
-        const surpassingRaw = suggestions.filter((x) => !x.MergedIndex);
-
-        const surpassing: SurpassingIndexInfo[] = [];
-        surpassingRaw.forEach((group) => {
-            group.CanDelete.forEach((deleteCandidate) => {
-                const stats = indexStats.get(deleteCandidate);
-
-                surpassing.push({
-                    name: deleteCandidate,
-                    containingIndexName: group.SurpassingIndex,
-                    lastQueryingTime: stats.LastQueryingTime ? new Date(stats.LastQueryingTime) : null,
-                    lastIndexingTime: stats.LastIndexingTime ? new Date(stats.LastIndexingTime) : null,
-                });
-            });
-        });
-
-        setSurpassingIndexes(surpassing);
-
-        setUnmergableIndexes(
-            Object.keys(results.Unmergables).map((key) => ({
-                name: key,
-                reason: results.Unmergables[key],
-            }))
-        );
-    };
-
-    useEffect(() => {
-        (async () => {
-            await fetchStats();
-        })();
-    }, []);
-
-    // ------
-
-    const surpassingSelectionState = genUtils.getSelectionState(
-        surpassingIndexes.map((x) => x.name),
-        selectedSurpassingIndexes
-    );
-
-    const toggleAllSurpassingIndexes = () => {
-        if (selectedSurpassingIndexes.length === 0) {
-            setSelectedSurpassingIndexes(surpassingIndexes.map((x) => x.name));
-        } else {
-            setSelectedSurpassingIndexes([]);
-        }
-    };
-
-    const toggleSurpassingIndex = (checked: boolean, indexName: string) => {
-        if (checked) {
-            setSelectedSurpassingIndexes((selectedIndexes) => [...selectedIndexes, indexName]);
-        } else {
-            setSelectedSurpassingIndexes((selectedIndexes) => selectedIndexes.filter((x) => x !== indexName));
-        }
-    };
-
-    const filterSurpassingIndexes = (deletedIndexNames: string[]) => {
-        setSelectedSurpassingIndexes((x) => x.filter((y) => !deletedIndexNames.includes(y)));
-        setSurpassingIndexes((x) => x.filter((y) => !deletedIndexNames.includes(y.name)));
-    };
-
-    const deleteSelectedSurpassingIndexes = async () => {
-        reportEvent("index-merge-suggestions", "delete-surpassing");
-        await onDelete(selectedSurpassingIndexes, filterSurpassingIndexes);
-    };
-
-    // -----------------
-
-    const unusedSelectionState = genUtils.getSelectionState(
-        surpassingIndexes.map((x) => x.name),
-        selectedSurpassingIndexes
-    );
-
-    const toggleAllUnusedIndexes = () => {
-        if (selectedSurpassingIndexes.length === 0) {
-            setSelectedUnusedIndexes(unusedIndexes.map((x) => x.name));
-        } else {
-            setSelectedUnusedIndexes([]);
-        }
-    };
-
-    const toggleUnusedIndex = (checked: boolean, indexName: string) => {
-        if (checked) {
-            setSelectedUnusedIndexes((selectedIndexes) => [...selectedIndexes, indexName]);
-        } else {
-            setSelectedUnusedIndexes((selectedIndexes) => selectedIndexes.filter((x) => x !== indexName));
-        }
-    };
-
-    const filterUnusedIndexes = (deletedIndexNames: string[]) => {
-        setSelectedUnusedIndexes((x) => x.filter((y) => !deletedIndexNames.includes(y)));
-        setUnusedIndexes((x) => x.filter((y) => !deletedIndexNames.includes(y.name)));
-    };
-
-    const deleteSelectedUnusedIndex = async () => {
-        reportEvent("index-merge-suggestions", "delete-unused");
-        await onDelete(selectedUnusedIndexes, filterUnusedIndexes);
-    };
-
-    const onDelete = async (indexNames: string[], filterIndexes: (x: string[]) => void) => {
-        const indexes = indexNames.map((x) => {
-            const a = indexStats.get(x);
-
-            return {
-                name: a.Name,
-                reduceOutputCollectionName: a.ReduceOutputCollection,
-                patternForReferencesToReduceOutputCollection: a.PatternReferencesCollectionName,
-                lockMode: a.LockMode,
-            };
-        });
-
-        const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
-        app.showBootstrapDialog(deleteIndexesVm);
-        deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
-            if (succeed) {
-                filterIndexes(deletedIndexNames);
-            }
-        });
-
-        await deleteIndexesVm.deleteTask;
-    };
-
-    const navigateToMergeSuggestion = (item: MergeIndexInfo) => {
-        const mergedIndexName = mergedIndexesStorage.saveMergedIndex(
-            db,
-            item.mergedIndexDefinition,
-            item.toMerge.map((x) => x.name)
-        );
-
-        const targetUrl = appUrl.forEditIndex(mergedIndexName, db);
-
-        router.navigate(targetUrl);
-    };
-
-    // ------------------------------------------------------
-
-    function activeNonEmpty() {
-        if (mergableIndexes.length !== 0) return 0;
-        if (surpassingIndexes.length !== 0) return 1;
-        if (unusedIndexes.length !== 0) return 2;
-        if (unmergableIndexes.length !== 0) return 3;
-        return 0;
-    }
-
-    const [currentActiveTab, setCurrentActiveTab] = useState(activeNonEmpty());
     const [carouselHeight, setCarouselHeight] = useState(null);
     const carouselRefs = useRef([]);
 
     const setHeight = () => {
-        const activeCarouselItem = carouselRefs.current[currentActiveTab];
+        const activeCarouselItem = carouselRefs.current[activeTab];
         if (activeCarouselItem) {
             setCarouselHeight(activeCarouselItem.clientHeight);
         }
     };
 
     const toggleTab = (tab: number) => {
-        if (currentActiveTab !== tab) {
+        if (activeTab !== tab) {
             setHeight();
-            setCurrentActiveTab(tab);
+            setActiveTab(tab);
         }
     };
 
     const onCarouselExited = () => {
         setCarouselHeight(null);
     };
+
+    if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
+        return <LoadingView />;
+    }
+
+    if (asyncFetchStats.status === "error") {
+        console.log(asyncFetchStats);
+        return <LoadError error="Unable to load index cleanup data" refresh={asyncFetchStats.execute} />;
+    }
 
     return (
         <div className="p-4">
@@ -340,15 +78,15 @@ export function IndexCleanup(props: IndexCleanupProps) {
             <Nav className="card-tabs gap-3 card-tabs">
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 0 })}
+                        className={classNames("p-3", "card-tab", { active: activeTab === 0 })}
                         onClick={() => toggleTab(0)}
                     >
                         <img src={mergeIndexesImg} alt="" />
                         <Badge
                             className="rounded-pill fs-5"
-                            color={mergableIndexes.length !== 0 ? "primary" : "secondary"}
+                            color={mergable.data.length !== 0 ? "primary" : "secondary"}
                         >
-                            {mergableIndexes.length}
+                            {mergable.data.length}
                         </Badge>
                         <h4 className="text-center">
                             Merge
@@ -359,15 +97,15 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 1 })}
+                        className={classNames("p-3", "card-tab", { active: activeTab === 1 })}
                         onClick={() => toggleTab(1)}
                     >
                         <img src={removeSubindexesImg} alt="" />
                         <Badge
                             className="rounded-pill fs-5"
-                            color={surpassingIndexes.length !== 0 ? "primary" : "secondary"}
+                            color={surpassing.data.length !== 0 ? "primary" : "secondary"}
                         >
-                            {surpassingIndexes.length}
+                            {surpassing.data.length}
                         </Badge>
                         <h4 className="text-center">
                             Remove
@@ -378,15 +116,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 2 })}
+                        className={classNames("p-3", "card-tab", { active: activeTab === 2 })}
                         onClick={() => toggleTab(2)}
                     >
                         <img src={removeUnusedImg} alt="" />
-                        <Badge
-                            className="rounded-pill fs-5"
-                            color={unusedIndexes.length !== 0 ? "primary" : "secondary"}
-                        >
-                            {unusedIndexes.length}
+                        <Badge className="rounded-pill fs-5" color={unused.data.length !== 0 ? "primary" : "secondary"}>
+                            {unused.data.length}
                         </Badge>
                         <h4 className="text-center">
                             Remove <br />
@@ -396,15 +131,15 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 3 })}
+                        className={classNames("p-3", "card-tab", { active: activeTab === 3 })}
                         onClick={() => toggleTab(3)}
                     >
                         <img src={unmergableIndexesImg} alt="" />
                         <Badge
                             className="rounded-pill fs-5"
-                            color={unmergableIndexes.length !== 0 ? "primary" : "secondary"}
+                            color={unmergable.data.length !== 0 ? "primary" : "secondary"}
                         >
-                            {unmergableIndexes.length}
+                            {unmergable.data.length}
                         </Badge>
                         <h4 className="text-center">
                             Unmergable
@@ -416,13 +151,13 @@ export function IndexCleanup(props: IndexCleanupProps) {
             </Nav>
 
             <Carousel
-                activeIndex={currentActiveTab}
+                activeIndex={activeTab}
                 className="carousel-auto-height mt-3 mb-4"
                 style={{ height: carouselHeight }}
-                next={() => console.log(carouselRefs.current[currentActiveTab].clientHeight)}
-                previous={() => console.log("previous")}
+                next={() => console.log(carouselRefs.current[activeTab].clientHeight)} // TODO kalczur
+                previous={() => console.log("previous")} // TODO kalczur
             >
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-0">
                     <div ref={(el) => (carouselRefs.current[0] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4 d-block">
@@ -436,7 +171,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 </div>
                             </Card>
                             <div className="p-2">
-                                {mergableIndexes.length === 0 ? (
+                                {mergable.data.length === 0 ? (
                                     <EmptySet>No indexes to merge</EmptySet>
                                 ) : (
                                     <>
@@ -456,7 +191,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             </Table>
                                         </div>
 
-                                        {mergableIndexes.map((mergableGroup, groupKey) => (
+                                        {mergable.data.map((mergableGroup, groupKey) => (
                                             <RichPanel
                                                 key={"mergeGroup-" + mergableGroup.mergedIndexDefinition.Name}
                                                 hover
@@ -467,7 +202,9 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                             color="primary"
                                                             size="sm"
                                                             className="rounded-pill"
-                                                            onClick={() => navigateToMergeSuggestion(mergableGroup)}
+                                                            onClick={() =>
+                                                                mergable.navigateToMergeSuggestion(mergableGroup)
+                                                            }
                                                         >
                                                             <Icon icon="merge" />
                                                             Review suggested merge
@@ -514,7 +251,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-1">
                     <div ref={(el) => (carouselRefs.current[1] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -526,21 +263,22 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     optimization benefits.
                                 </div>
                             </Card>
-                            {surpassingIndexes.length === 0 ? (
+                            {surpassing.data.length === 0 ? (
                                 <EmptySet>No subset indexes</EmptySet>
                             ) : (
                                 <div className="p-2">
-                                    <Button
+                                    <ButtonWithSpinner
                                         color="primary"
                                         className="mb-2 rounded-pill"
-                                        onClick={deleteSelectedSurpassingIndexes}
-                                        disabled={selectedSurpassingIndexes.length === 0}
+                                        onClick={surpassing.deleteSelected}
+                                        isSpinning={surpassing.isDeleting}
+                                        disabled={surpassing.selected.length === 0}
                                     >
                                         Delete selected sub-indexes{" "}
                                         <Badge color="faded-primary" className="rounded-pill ms-1">
-                                            {selectedSurpassingIndexes.length}
+                                            {surpassing.selected.length}
                                         </Badge>
-                                    </Button>
+                                    </ButtonWithSpinner>
 
                                     <RichPanel hover>
                                         <RichPanelHeader className="px-3 py-2 d-block">
@@ -550,11 +288,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                         <td>
                                                             <Checkbox
                                                                 size="lg"
-                                                                selected={surpassingSelectionState === "AllSelected"}
+                                                                selected={surpassing.selectionState === "AllSelected"}
                                                                 indeterminate={
-                                                                    surpassingSelectionState === "SomeSelected"
+                                                                    surpassing.selectionState === "SomeSelected"
                                                                 }
-                                                                toggleSelection={toggleAllSurpassingIndexes}
+                                                                toggleSelection={surpassing.toggleAll}
                                                             />
                                                         </td>
                                                         <td>
@@ -577,16 +315,14 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {surpassingIndexes.map((index) => (
+                                                    {surpassing.data.map((index) => (
                                                         <tr key={"subindex-" + index.name}>
                                                             <td>
                                                                 <Checkbox
                                                                     size="lg"
-                                                                    selected={selectedSurpassingIndexes.includes(
-                                                                        index.name
-                                                                    )}
+                                                                    selected={surpassing.selected.includes(index.name)}
                                                                     toggleSelection={(x) =>
-                                                                        toggleSurpassingIndex(
+                                                                        surpassing.toggle(
                                                                             x.currentTarget.checked,
                                                                             index.name
                                                                         )
@@ -606,7 +342,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                             </td>
                                                             <td>
                                                                 <div>
-                                                                    <a href={appUrl.forEditIndex(index.name, db)}>
+                                                                    <a
+                                                                        href={appUrl.forEditIndex(
+                                                                            index.containingIndexName,
+                                                                            db
+                                                                        )}
+                                                                    >
                                                                         {index.containingIndexName}{" "}
                                                                         <Icon icon="newtab" margin="ms-1" />
                                                                     </a>
@@ -629,7 +370,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-2">
                     <div ref={(el) => (carouselRefs.current[2] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -642,21 +383,22 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     Review the list and consider deleting any unnecessary indexes.
                                 </div>
                             </Card>
-                            {unusedIndexes.length === 0 ? (
+                            {unused.data.length === 0 ? (
                                 <EmptySet>No unused indexes</EmptySet>
                             ) : (
                                 <div className="p-2">
-                                    <Button
+                                    <ButtonWithSpinner
                                         color="primary"
                                         className="mb-2"
-                                        onClick={deleteSelectedUnusedIndex}
-                                        disabled={selectedUnusedIndexes.length === 0}
+                                        onClick={unused.deleteSelected}
+                                        isSpinning={unused.isDeleting}
+                                        disabled={unused.selected.length === 0}
                                     >
                                         Delete selected indexes
                                         <Badge color="faded-primary" className="rounded-pill ms-1">
-                                            {selectedUnusedIndexes.length}
+                                            {unused.selected.length}
                                         </Badge>
-                                    </Button>
+                                    </ButtonWithSpinner>
                                     <RichPanel hover>
                                         <RichPanelHeader className="px-3 py-2 d-block">
                                             <Table responsive className="m-0 table-inner-border">
@@ -665,9 +407,9 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                         <td>
                                                             <Checkbox
                                                                 size="lg"
-                                                                selected={unusedSelectionState === "AllSelected"}
-                                                                indeterminate={unusedSelectionState === "SomeSelected"}
-                                                                toggleSelection={toggleAllUnusedIndexes}
+                                                                selected={unused.selectionState === "AllSelected"}
+                                                                indeterminate={unused.selectionState === "SomeSelected"}
+                                                                toggleSelection={unused.toggleAll}
                                                             />
                                                         </td>
                                                         <td>
@@ -683,16 +425,14 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {unusedIndexes.map((index) => (
+                                                    {unused.data.map((index) => (
                                                         <tr key={"unusedIndex-" + index.name}>
                                                             <td>
                                                                 <Checkbox
                                                                     size="lg"
-                                                                    selected={selectedUnusedIndexes.includes(
-                                                                        index.name
-                                                                    )}
+                                                                    selected={unused.selected.includes(index.name)}
                                                                     toggleSelection={(x) =>
-                                                                        toggleUnusedIndex(
+                                                                        unused.toggle(
                                                                             x.currentTarget.checked,
                                                                             index.name
                                                                         )
@@ -724,7 +464,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-3">
                     <div ref={(el) => (carouselRefs.current[3] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -735,7 +475,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 </div>
                             </Card>
 
-                            {unmergableIndexes.length === 0 ? (
+                            {unmergable.data.length === 0 ? (
                                 <EmptySet>No unmergable indexes</EmptySet>
                             ) : (
                                 <div className="p-2">
@@ -754,7 +494,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {unmergableIndexes.map((index, indexKey) => (
+                                                    {unmergable.data.map((index, indexKey) => (
                                                         <tr key={"unmergable-" + indexKey}>
                                                             <td>
                                                                 <div>
