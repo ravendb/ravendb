@@ -4,6 +4,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron.Util;
 
 namespace Voron.Data.PostingLists;
 
@@ -101,13 +102,4 @@ public unsafe struct NativeIntegersList : IDisposable
         return val;
     }
 
-    public void InitCopyFrom(ReadOnlySpan<long> items)
-    {
-        if (items.Length >= Capacity)
-        {
-            GrowListUnlikely(items.Length);
-        }
-        Count = items.Length;
-        items.CopyTo(Items);
-    }
 }

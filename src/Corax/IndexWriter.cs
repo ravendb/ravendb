@@ -47,10 +47,11 @@ namespace Corax
         PostingList = 2
     }
 
-    public partial class IndexWriter : IDisposable // single threaded, controlled by caller
+    public unsafe partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
         private readonly HashSet<ByteString> _indexedEntries = new(new ByteStringEqualityComparer());
+        private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
@@ -66,25 +67,35 @@ namespace Corax
         private byte[] _encodingBufferHandler;
         private byte[] _utf8ConverterBufferHandler;
 
-        internal unsafe struct EntriesModifications : IDisposable
+        internal struct TermInEntryModification : IEquatable<TermInEntryModification>, IComparable<TermInEntryModification>
         {
-            private readonly ByteStringContext _context;
-            private ByteStringContext<ByteStringMemoryCache>.InternalScope _memoryHandler;
+            public long EntryId;
+            public short Frequency;
 
+            public override string ToString() => EntryId + ", " + Frequency;
+
+            public bool Equals(TermInEntryModification other)
+            {
+                return EntryId == other.EntryId && Frequency == other.Frequency;
+            }
+
+            public int CompareTo(TermInEntryModification other)
+            {
+                var entryIdComparison = EntryId.CompareTo(other.EntryId);
+                if (entryIdComparison != 0) return entryIdComparison;
+                return Frequency.CompareTo(other.Frequency);
+            }
+        }
+        
+        internal struct EntriesModifications : IDisposable
+        {
             public long? Long;
             public double? Double;
+            public readonly int TermSize;
+            public NativeList<TermInEntryModification> Additions;
+            public NativeList<TermInEntryModification> Removals;
+            public NativeList<TermInEntryModification> Updates;
 
-            private long* _start;
-            private long* _end;
-            private int _additions;
-            private int _removals;
-
-            public int TermSize => _sizeOfTerm;
-            private readonly int _sizeOfTerm;
-
-
-            private short* _freqStart;
-            private short* _freqEnd;
             private bool _needToSortToDeleteDuplicates;
 
 #if DEBUG
@@ -92,143 +103,58 @@ namespace Corax
             private bool _preparationFinished = false;
 #endif
 
-            public bool HasChanges()
+            public void Prepare()
             {
                 AssertHasChangesIsCalledOnlyOnce();
 
                 DeleteAllDuplicates();
-
-                return _removals != 0 || _additions != 0;
             }
 
-            public int TotalAdditions => _additions;
-            public int TotalRemovals => _removals;
+            public bool HasChanges => Additions.Count + Removals.Count > 0;
 
-            public long TotalSpace => _end - _start;
-            public long FreeSpace => TotalSpace - (_additions + _removals);
-
-            public ReadOnlySpan<long> Additions => new(_start, _additions);
-
-            public long* RawAdditions => _start;
-
-            public ReadOnlySpan<long> Removals => new(_end - _removals, _removals);
-
-            public ReadOnlySpan<short> AdditionsFrequency => new(_freqStart, _additions);
-
-            public ReadOnlySpan<short> RemovalsFrequency => new(_freqEnd - _removals, _removals);
-
-            private const int InitialSize = 16;
-
-            // Entries Writer structure:
-            // [ADDITIONS][REMOVALS][ADDITIONS_FREQUENCY][REMOVALS_FREQUENCY]
-            // We've to track additions and removals independently since we encode frequencies inside entryId in inverted index.
-            // Reason:
-            // In case of posting lists we've to remove old encoded entry id from list when doing frequency update, to do so we've to options:
-            // iterate through all entries and encode them in-place to find which one to delete or just seek to exact key.
-            // To seek in place we store frequency during building data for Commit. This gives us possibility to encode old key
-            // and call "remove".
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
-                _sizeOfTerm = size;
-                _context = context;
-                _memoryHandler = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
+                TermSize = size;
                 _needToSortToDeleteDuplicates = true;
-                _start = (long*)output.Ptr;
-                _end = _start + InitialSize;
-                _freqStart = (short*)_end;
-                _freqEnd = _freqStart + InitialSize;
-                new Span<short>(_freqStart, InitialSize).Fill(1);
-                _additions = 0;
-                _removals = 0;
+                Additions = new(context);
+                Removals = new(context);
+                Updates = new(context);
             }
-
-            private static int CalculateSizeOfContainer(int size) => size * (sizeof(long) + sizeof(short));
 
             public void Addition(long entryId, short freq = 1)
             {
-                AssertPreparationIsNotFinished();
-                _needToSortToDeleteDuplicates = true;
-
-                if (_additions > 0 && *(_start + _additions - 1) == entryId)
-                {
-                    ref var frequency = ref *(_freqStart + _additions - 1);
-                    if (frequency < short.MaxValue)
-                        frequency++;
-                    return;
-                }
-
-                if (FreeSpace == 0)
-                    GrowBuffer();
-
-                *(_start + _additions) = entryId;
-                _additions++;
+                AddToList(ref Additions, entryId, freq);
+            }
+            
+            public void Removal(long entryId, short freq = 1)
+            {
+                AddToList(ref Removals, entryId, freq);
             }
 
-            public void Removal(long entryId)
+            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq)
             {
                 AssertPreparationIsNotFinished();
                 _needToSortToDeleteDuplicates = true;
 
-                if (_removals > 0 && *(_end - _removals) == entryId)
+                if (list.Count > 0)
                 {
-                    ref var frequency = ref *(_freqEnd - _removals);
-                    if (frequency < short.MaxValue)
-                        frequency++;
-                    return;
+                    ref var cur = ref list.RawItems[list.Count - 1];
+                    if (cur.EntryId == entryId)
+                    {
+                        if (cur.Frequency + freq < short.MaxValue)
+                        {
+                            cur.Frequency += freq;
+                        }
+                        else
+                        {
+                            cur.Frequency = short.MaxValue;
+                        }
+
+                        return;
+                    }
                 }
 
-                if (FreeSpace == 0)
-                    GrowBuffer();
-
-                _removals++;
-                *(_end - _removals) = entryId;
-            }
-
-            private void GrowBuffer()
-            {
-                int totalSpace = (int)TotalSpace;
-                int newTotalSpace = totalSpace * 2;
-
-                var itemsScope = _context.Allocate(CalculateSizeOfContainer(newTotalSpace), out var itemsOutput);
-
-                long* start = (long*)itemsOutput.Ptr;
-                long* end = start + newTotalSpace;
-
-                short* freqStart = (short*)end;
-                short* freqEnd = freqStart + newTotalSpace;
-
-                // Copy the contents that we already have.
-                Unsafe.CopyBlockUnaligned(start, _start, (uint)_additions * sizeof(long));
-                Unsafe.CopyBlockUnaligned(end - _removals, _end - _removals, (uint)_removals * sizeof(long));
-
-                //CopyFreq
-                Unsafe.CopyBlockUnaligned(freqStart, _freqStart, (uint)_additions * sizeof(short));
-                Unsafe.CopyBlockUnaligned(freqEnd - _removals, _freqEnd - _removals, (uint)_removals * sizeof(short));
-
-                //All new items are 1 by default
-                new Span<short>(freqStart + _additions, newTotalSpace - (_additions + _removals)).Fill(1);
-
-
-#if DEBUG
-                var additionsBufferEqual = new Span<long>(_start, _additions).SequenceEqual(new Span<long>(start, _additions));
-                var removalsBufferEqual = new Span<long>(_end - _removals, _removals).SequenceEqual(new Span<long>(end - _removals, _removals));
-                var additionsFrequencyBufferEqual = new Span<short>(_freqStart, _additions).SequenceEqual(new Span<short>(freqStart, _additions));
-                var removalsFrequencyBufferEqual = new Span<short>(_freqEnd - _removals, _removals).SequenceEqual(new Span<short>(freqEnd - _removals, _removals));
-                if ((additionsBufferEqual && removalsBufferEqual && additionsFrequencyBufferEqual && removalsFrequencyBufferEqual) == false)
-                    throw new InvalidDataException($"Lost item(s) in {nameof(GrowBuffer)}." +
-                                                   $"{Environment.NewLine}Additions buffer equal: {additionsBufferEqual}" +
-                                                   $"{Environment.NewLine}Removals buffer equal: {removalsBufferEqual}" +
-                                                   $"{Environment.NewLine}Additions frequency buffer equal: {additionsFrequencyBufferEqual}" +
-                                                   $"{Environment.NewLine}Removals frequency buffer equal: {removalsFrequencyBufferEqual}");
-#endif
-
-                // Return the memory
-                _memoryHandler.Dispose();
-                _freqStart = freqStart;
-                _freqEnd = freqEnd;
-                _start = start;
-                _end = end;
-                _memoryHandler = itemsScope;
+                list.Add(new TermInEntryModification { EntryId = entryId, Frequency = freq });
             }
 
             private void DeleteAllDuplicates()
@@ -236,88 +162,96 @@ namespace Corax
                 if (_needToSortToDeleteDuplicates == false)
                     return;
                 _needToSortToDeleteDuplicates = false;
+                
+                Additions.Sort();
+                Removals.Sort();
+                var oldUpdates = Updates.Count;
 
-                var additions = new Span<long>(_start, _additions);
-                var freqAdditions = new Span<short>(_freqStart, _additions);
-                var removals = new Span<long>(_end - _removals, _removals);
-                var freqRemovals = new Span<short>(_freqEnd - _removals, _removals);
-
-
-                MemoryExtensions.Sort(additions, freqAdditions);
-                MemoryExtensions.Sort(removals, freqRemovals);
-
-
-                int duplicatesFound = 0;
-                for (int add = 0, rem = 0; add < additions.Length && rem < removals.Length; ++add)
+                int additionPos = 0, removalPos = 0;
+                var additions = Additions.RawItems;
+                var removals = Removals.RawItems;
+                int add = 0, rem = 0;
+                for (; add < Additions.Count && rem < Removals.Count; ++add)
                 {
-                    Start:
                     ref var currentAdd = ref additions[add];
                     ref var currentRemoval = ref removals[rem];
-                    var currentFreqAdd = freqAdditions[add];
-                    var currentFreqRemove = freqRemovals[rem];
 
                     //We've to delete exactly same item in additions and removals and delete those.
                     //This is made for Set structure.
-                    if (currentAdd == currentRemoval && currentFreqAdd == currentFreqRemove)
+                    if (currentAdd.EntryId == currentRemoval.EntryId && currentAdd.Frequency == currentRemoval.Frequency)
                     {
-                        currentRemoval = -1;
-                        currentAdd = -1;
-                        duplicatesFound++;
+                        Updates.Add(currentAdd);
                         rem++;
                         continue;
                     }
 
-                    if (currentAdd < currentRemoval)
-                        continue;
-
-                    if (currentAdd > currentRemoval)
+                    // if it is equal, then we have same entry, different freq, so need to remove & add
+                    // the remove is the old one in this case
+                    if (currentAdd.EntryId >= currentRemoval.EntryId)
                     {
+                        removals[removalPos++] = currentRemoval;
                         rem++;
-                        while (rem < removals.Length)
-                        {
-                            if (currentAdd <= removals[rem])
-                                goto Start;
-                            rem++;
-                        }
+                        add--; // so the loop increment will stay the same
+                        continue;
                     }
+                    
+                    additions[additionPos++] = currentAdd;
                 }
 
-                if (duplicatesFound != 0)
+                for (; add < Additions.Count; add++)
                 {
-                    // rare case
-                    MemoryExtensions.Sort(additions, freqAdditions);
-                    MemoryExtensions.Sort(removals, freqRemovals);
-                    _additions -= duplicatesFound;
-                    _removals -= duplicatesFound;
-
-                    //Moving memory
-                    additions.Slice(duplicatesFound).CopyTo(additions);
-                    freqAdditions.Slice(duplicatesFound).CopyTo(freqAdditions);
-
-                    removals.Slice(duplicatesFound).CopyTo(new Span<long>(_end - _removals, _removals));
-                    freqRemovals.Slice(duplicatesFound).CopyTo(new Span<short>(_freqEnd - _removals, _removals));
-                    ValidateNoDuplicateEntries();
+                    additions[additionPos++] = additions[add];
                 }
+                for (; rem < Removals.Count; rem++)
+                {
+                    removals[removalPos++] = removals[rem];
+                }
+                Additions.Count = additionPos;
+                Removals.Count = removalPos;
+
+                Debug.Assert(oldUpdates == Updates.Count || oldUpdates == 0 && Updates.Count > 0,
+                    "New updates on *second* call here should not be possible");
+                
+                ValidateNoDuplicateEntries();
             }
 
             // There is an case we found in RavenDB-19688
             // Sometimes term can be added and removed for the same in the same batch and there can be multiple other docs between this two operations.
             // This requires us to ensure we don't have duplicates here.
-            public void PrepareDataForCommiting()
+            public void GetEncodedAdditionsAndRemovals(out Span<long> additions, out Span<long> removals)
+            {
+                GetEncodedAdditionsAndRemovals(out long* addPtr, out long* removePtr);
+                additions = new Span<long>(addPtr, Additions.Count);
+                removals = new Span<long>(removePtr, Removals.Count);
+            }
+
+            public void GetEncodedAdditions(out long* additions) => GetEncodedAdditionsAndRemovals(out additions, out _);
+            public void GetEncodedAdditionsAndRemovals(out long* additions, out long* removals)
             {
 #if DEBUG
                 if (_preparationFinished)
                     throw new InvalidOperationException(
-                        $"{nameof(PrepareDataForCommiting)} should be called only once. This is a bug. It was called via: {Environment.NewLine}" +
+                        $"{nameof(GetEncodedAdditionsAndRemovals)} should be called only once. This is a bug. It was called via: {Environment.NewLine}" +
                         Environment.StackTrace);
                 _preparationFinished = true;
 #endif
-
-
                 DeleteAllDuplicates();
 
-                EntryIdEncodings.Encode(new Span<long>(_start, _additions), new Span<short>(_freqStart, _additions));
-                EntryIdEncodings.Encode(new Span<long>(_end - _removals, _removals), new Span<short>(_freqEnd - _removals, _removals));
+                // repurposing the memory
+                Debug.Assert(sizeof(TermInEntryModification) >= sizeof(long));
+                additions = (long*)Additions.RawItems;
+                removals = (long*)Removals.RawItems;
+
+                for (int i = 0; i < Additions.Count; i++)
+                {
+                    ref var cur = ref Additions.RawItems[i];
+                    additions[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
+                }
+                for (int i = 0; i < Removals.Count; i++)
+                {
+                    ref var cur = ref Removals.RawItems[i];
+                    removals[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
+                }
             }
 
             [Conditional("DEBUG")]
@@ -325,15 +259,15 @@ namespace Corax
             {
                 var removals = Removals;
                 var additions = Additions;
-                foreach (var add in additions)
+                foreach (var add in additions.ToSpan())
                 {
-                    if (removals.BinarySearch(add) >= 0)
+                    if (removals.ToSpan().IndexOf(add) >= 0)
                         throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + add);
                 }
 
-                foreach (var removal in removals)
+                foreach (var removal in removals.ToSpan())
                 {
-                    if (additions.BinarySearch(removal) >= 0)
+                    if (additions.ToSpan().IndexOf(removal) >= 0)
                         throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + removal);
                 }
             }
@@ -353,13 +287,15 @@ namespace Corax
 #if DEBUG
                 _hasChangesCallCount++;
                 if (_hasChangesCallCount > 1)
-                    throw new InvalidOperationException($"{nameof(HasChanges)} should be called only once.");
+                    throw new InvalidOperationException($"{nameof(Prepare)} should be called only once.");
 #endif
             }
 
             public void Dispose()
             {
-                _memoryHandler.Dispose();
+                Additions.Dispose();
+                Removals.Dispose();
+                Updates.Dispose();
             }
         }
 
@@ -379,6 +315,11 @@ namespace Corax
             public readonly FieldIndexingMode FieldIndexingMode;
             public readonly bool HasSuggestions;
             public readonly bool ShouldStore;
+
+            public override string ToString()
+            {
+                return Name.ToString()  + " Id: " + Id; 
+            }
 
             public IndexedField(IndexFieldBinding binding) : this(binding.FieldId, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble,
                 binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore)
@@ -518,7 +459,6 @@ namespace Corax
             public bool Active;
             public bool IsEmpty => Fields == 0;
             public int Fields;
-            private bool _isUpdate;
             private int _buildingList;
             public long EntryId => _entryId;
 
@@ -529,14 +469,13 @@ namespace Corax
 
             public void Boost(float boost)
             {
-                _parent.AppendDocumentBoost(_entryId, boost, _isUpdate);
+                _parent.BoostEntry(_entryId, boost);
             }
 
-            public void Init(long entryId, bool isUpdate)
+            public void Init(long entryId)
             {
                 Active = true;
                 Fields = 0;
-                _isUpdate = isUpdate;
                 _entryId = entryId;
             }
 
@@ -797,21 +736,17 @@ namespace Corax
 
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
-            long entryId;
-            if (TryDeleteEntry(key, out var entryTermId))
+            if (TryDeleteEntry(key, out var entryId))
             {
                 _numberOfModifications++;
-                RecordDeletion(entryTermId);
-                entryId = EntryIdEncodings.DecodeAndDiscardFrequency(entryTermId);
                 RegisterEntryByKey(key, entryId);
             }
             else
             {
                 entryId = InitBuilder(key);
             }
-            _builder.Init(entryId, isUpdate: true);
+            _builder.Init(entryId);
             return _builder;
- 
         }
 
         public IndexEntryBuilder Index(string key) => Index(Encoding.UTF8.GetBytes(key));
@@ -819,7 +754,7 @@ namespace Corax
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
         {
             long entryId = InitBuilder(key);
-            _builder.Init(entryId, isUpdate: false);
+            _builder.Init(entryId);
             return _builder;
         }
 
@@ -844,15 +779,13 @@ namespace Corax
         //Document Boost should add priority to some documents but also should not be the main component of boosting.
         //The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
         //We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
-        private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
+        private void BoostEntry(long entryId, float documentBoost)
         {
             if (documentBoost.AlmostEquals(1f))
             {
-                
-                // We don't store `1` but if user update boost value to 1 we've to delete the previous one
-                if (isUpdate)
-                    _documentBoost.Delete(entryId);
-                
+                // We don't store `1` but if user update boost value to 1
+                // we've to delete the previous one, we don't need to do this explicitly
+                // since we'll delete it during ProcessDeletes()
                 return;
             }
 
@@ -861,10 +794,8 @@ namespace Corax
                 documentBoost = 0;
 
             documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
-            
-            using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
-            float* floatBoostPtr = (float*)boostPtr;
-            *floatBoostPtr = documentBoost;
+            _boostedDocs ??= new();
+            _boostedDocs.Add((entryId, documentBoost));
         }
 
 
@@ -1151,6 +1082,27 @@ namespace Corax
             }
         }
 
+
+        public unsafe Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+        {
+            var pageToField = new Dictionary<long, string>();
+            var it = _fieldsTree.Iterate(prefetch: false);
+            if (it.Seek(Slices.BeforeAllKeys))
+            {
+                do
+                {
+                    var state = (LookupState*)it.CreateReaderForCurrent().Base;
+                    if (state->RootObjectType == RootObjectType.Lookup)
+                    {
+                        pageToField.Add(state->RootPage, it.CurrentKey.ToString());
+                    }
+                } while (it.MoveNext());
+            }
+
+            return pageToField;
+        }
+
+
         private unsafe Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree)
         {
             var pageToField = new Dictionary<long, IndexedField>();
@@ -1181,17 +1133,21 @@ namespace Corax
             return pageToField;
         }
 
-        public void TryDeleteEntry(string term) => TryDeleteEntry(term, out _);
-
-        public bool TryDeleteEntry(string term, out long entryId)
+        public bool TryDeleteEntry(string term)
         {
             using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-            return TryDeleteEntry(termSlice, out entryId);
+            return TryDeleteEntry(termSlice);
         }
         
-        public bool TryDeleteEntry(ReadOnlySpan<byte> term, out long entryId)
+        public bool TryDeleteEntry(ReadOnlySpan<byte> term)
         {
-            using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
+            using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
+            return TryDeleteEntry(termSlice, out _);
+        }
+        
+        private bool TryDeleteEntry(ReadOnlySpan<byte> term, out long entryId)
+        {
+            using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
             return TryDeleteEntry(termSlice, out entryId);
         }
 
@@ -1200,7 +1156,16 @@ namespace Corax
             if (_indexedEntries.Contains(termSlice.Content) == false)
             {
                 _compactKeyScope.Key.Set(termSlice);
-                return _primaryKeyTree.TryGetValue(_compactKeyScope.Key, out entryId);
+                var exists = _primaryKeyTree.TryGetValue(_compactKeyScope.Key, out var containerId);
+                if (exists)
+                {
+                    // note that the containerId may be a single value or many(!), if it is many items
+                    // we'll delete them, but treat this as a _new_ entry, not an update to an existing
+                    // one
+                    return RecordDeletion(containerId, out entryId);
+                }
+                entryId = -1;
+                return false;
             }
 
             FlushBatch();
@@ -1256,12 +1221,12 @@ namespace Corax
 
         public void TryDeleteEntryByField(string field, string term)
         {
-            using var _ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
-            using var __ = Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice);
+            using var __ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
+            using var ___ = Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice);
             if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out long idInTree) == false) 
                 return;
 
-            RecordDeletion(idInTree);
+            RecordDeletion(idInTree, out _);
         }
   
         
@@ -1270,7 +1235,7 @@ namespace Corax
         /// </summary>
         /// <param name="idInTree">With frequencies and container type.</param>
         [SkipLocalsInit]
-        private unsafe void RecordDeletion(long idInTree)
+        private bool RecordDeletion(long idInTree, out long singleEntryId)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             if ((idInTree & (long)TermIdMask.PostingList) != 0)
@@ -1292,8 +1257,13 @@ namespace Corax
                     }
                     _numberOfModifications -= read;
                 }
+
+                singleEntryId = -1;
+                return false;
+                
             }
-            else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
+
+            if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
                 var smallSet = Container.Get(_transaction.LowLevelTransaction, containerId);
                 // combine with existing value
@@ -1314,12 +1284,14 @@ namespace Corax
                     }
                     _numberOfModifications -= read;
                 }
+                singleEntryId = -1;
+                return false;
             }
-            else
-            {
-                _deletedEntries.Add(containerId);
-                _numberOfModifications--;
-            }
+
+            singleEntryId = containerId;
+            _deletedEntries.Add(containerId);
+            _numberOfModifications--;
+            return true;
         }
 
         /// <summary>
@@ -1357,6 +1329,9 @@ namespace Corax
             _indexMetadata.Add(Constants.IndexWriter.LastEntryIdSlice, _lastEntryId);
             _pForEncoder = new FastPForEncoder(_entriesAllocator);
 
+            if (_boostedDocs != null)
+                AppendDocumentsBoost();
+            
             Slice[] keys = Array.Empty<Slice>();
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
@@ -1418,6 +1393,17 @@ namespace Corax
             }
         }
 
+        private void AppendDocumentsBoost()
+        {
+            _boostedDocs.Sort();
+            foreach (var (entryId, documentBoost) in _boostedDocs)
+            {
+                using var __ = _documentBoost.DirectAdd(entryId, out var isNew, out byte* boostPtr);
+                float* floatBoostPtr = (float*)boostPtr;
+                *floatBoostPtr = documentBoost;
+            }
+        }
+
         private void WriteIndexEntries()
         {
             using var writer = new EntryTermsWriter(_entriesAllocator);
@@ -1467,7 +1453,7 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
@@ -1495,16 +1481,15 @@ namespace Corax
             long totalLengthOfTerm = 0;
 
             using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
-            var newAdditions = new NativeIntegersList(_entriesAllocator);
+            var entriesForTerm = new NativeList<TermInEntryModification>(_entriesAllocator);
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
                 ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
-                if (entries.HasChanges() == false)
-                    continue;
-
-                newAdditions.InitCopyFrom(entries.Additions);
+                entries.Prepare();
+                
+                UpdateEntriesForTerm(ref entriesForTerm, entries);
 
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
@@ -1512,88 +1497,64 @@ namespace Corax
                     SetRange(_removalsForTerm, entries.Removals);
                 }
 
-                long termId;
 
                 compactKeyCacheScope.Key.Set(term.AsSpan());
                 bool found = fieldTree.TryGetNextValue(compactKeyCacheScope.Key, out var termContainerId, out var existingIdInTree, out var keyLookup);
-                Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
-                if (entries.TotalAdditions > 0 && found == false)
-                {
-                    if (entries.TotalRemovals != 0)
-                        throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
+                Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
 
-                    AddNewTerm(ref entries, tmpBuf, out termId);
-                    totalLengthOfTerm += entries.TermSize;
-                    
-                    dumper.WriteAddition(term, termId);
-                    termContainerId = fieldTree.AddAfterTryGetNext(ref keyLookup, termId);
-                }
-                else
+                if (entries.HasChanges)
                 {
-                    switch (AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId))
+                    long termId;
+                    if (entries.Additions.Count > 0 && found == false)
                     {
-                        case AddEntriesToTermResult.UpdateTermId:
-                            if (termId != existingIdInTree)
-                            {
-                                dumper.WriteRemoval(term, existingIdInTree);
-                            }
-                            dumper.WriteAddition(term, termId);
-                            fieldTree.SetAfterTryGetNext(ref keyLookup, termId);
-                            break;
-                        case AddEntriesToTermResult.RemoveTermId:
-                            if (fieldTree.TryRemoveExistingValue(ref keyLookup, out var ttt) == false)
-                            {
-                                dumper.WriteRemoval(term, termId);
-                                ThrowTriedToDeleteTermThatDoesNotExists();
-                            }
+                        if (entries.Removals.Count != 0)
+                            throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
 
-                            totalLengthOfTerm -= entries.TermSize;
-                            
-                            dumper.WriteRemoval(term, ttt);
-                            _numberOfTermModifications--;
-                            break;
-                        case AddEntriesToTermResult.NothingToDo:
-                            break;
+                        AddNewTerm(ref entries, tmpBuf, out termId);
+                        totalLengthOfTerm += entries.TermSize;
+
+                        dumper.WriteAddition(term, termId);
+                        termContainerId = fieldTree.AddAfterTryGetNext(ref keyLookup, termId);
                     }
-                    
-                    void ThrowTriedToDeleteTermThatDoesNotExists()
+                    else
                     {
-                        throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
-                    }
-                }
-
-                for (int i = 0; i < newAdditions.Count; i++)
-                {
-                    var entry = newAdditions.RawItems[i];
-                    ref var entryTerms = ref GetEntryTerms(entry);
-
-                    Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
-                    var recordedTerm = new RecordedTerm
-                    {
-                        TermContainerId = entries.AdditionsFrequency[i] switch
+                        var entriesToTermResult = AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId);
+                        switch (entriesToTermResult)
                         {
-                            > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
-                                   EntryIdEncodings.FrequencyQuantization(entries.AdditionsFrequency[i]) << 3 |
-                                   0b100, // marker indicating that we have a term frequency here
-                            _ => termContainerId
+                            case AddEntriesToTermResult.UpdateTermId:
+                                if (termId != existingIdInTree)
+                                {
+                                    dumper.WriteRemoval(term, existingIdInTree);
+                                }
+                                dumper.WriteAddition(term, termId);
+                                fieldTree.SetAfterTryGetNext(ref keyLookup, termId);
+                                break;
+                            case AddEntriesToTermResult.RemoveTermId:
+                                if (fieldTree.TryRemoveExistingValue(ref keyLookup, out var oldValue) == false)
+                                {
+                                    dumper.WriteRemoval(term, termId);
+                                    ThrowTriedToDeleteTermThatDoesNotExists();
+                                }
+
+                                totalLengthOfTerm -= entries.TermSize;
+                                dumper.WriteRemoval(term, oldValue);
+                                _numberOfTermModifications--;
+                                break;
+                            case AddEntriesToTermResult.NothingToDo:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                         }
-                    };
 
-                    if (entries.Long != null)
-                    {
-                        recordedTerm.TermContainerId |= 1; // marker!
-                        recordedTerm.Long = entries.Long.Value;
-
-                        // only if the double value can not be computed by casting from long, we store it 
-                        if (entries.Double!.Value.Equals((double)entries.Long.Value) == false)
+                        void ThrowTriedToDeleteTermThatDoesNotExists()
                         {
-                            recordedTerm.TermContainerId |= 2; // marker!
-                            recordedTerm.Double = entries.Double!.Value;
+                            throw new InvalidOperationException(
+                                $"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                         }
                     }
-                    
-                    entryTerms.Add(recordedTerm);
                 }
+
+                RecordTermsForEntries(entriesForTerm, entries, termContainerId);
                 
                 if (indexedField.Spatial == null)
                 {
@@ -1601,9 +1562,61 @@ namespace Corax
                     InsertEntriesForTerm(entriesToTerms, termContainerId);
                 }
             }
-            newAdditions.Dispose();
+            entriesForTerm.Dispose();
             
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+        }
+
+        private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
+        {
+            for (int i = 0; i < entriesForTerm.Count; i++)
+            {
+                ref var entry = ref entriesForTerm.RawItems[i];
+                ref var entryTerms = ref GetEntryTerms(entry.EntryId);
+
+                Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
+                var recordedTerm = new RecordedTerm
+                {
+                    TermContainerId = entry.Frequency switch
+                    {
+                        > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
+                               EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
+                               0b100, // marker indicating that we have a term frequency here
+                        _ => termContainerId
+                    }
+                };
+
+                if (entries.Long != null)
+                {
+                    recordedTerm.TermContainerId |= 1; // marker!
+                    recordedTerm.Long = entries.Long.Value;
+
+                    // only if the double value can not be computed by casting from long, we store it 
+                    if (entries.Double!.Value.Equals((double)entries.Long.Value) == false)
+                    {
+                        recordedTerm.TermContainerId |= 2; // marker!
+                        recordedTerm.Double = entries.Double!.Value;
+                    }
+                }
+
+                entryTerms.Add(recordedTerm);
+            }
+        }
+
+        private static void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
+        {
+            entriesForTerm.ResetAndEnsureCapacity(entries.Additions.Count + entries.Updates.Count);
+            var additions = entries.Additions.RawItems;
+            int i = 0;
+            for (; i < entries.Additions.Count; i++)
+            {
+                entriesForTerm.AddKnownCapacity(additions[i]);
+            }
+            var updates = entries.Updates.RawItems;
+            for (; i < entries.Updates.Count; i++)
+            {
+                entriesForTerm.AddKnownCapacity(updates[i]);
+            }
         }
 
         private ref NativeList<RecordedTerm> GetEntryTerms(long entry)
@@ -1616,12 +1629,12 @@ namespace Corax
             return ref entryTerms;
         }
 
-        private void SetRange(List<long> list, ReadOnlySpan<long> span)
+        private unsafe void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
         {
             list.Clear();
-            for (int i = 0; i < span.Length; i++)
+            for (int i = 0; i < span.Count; i++)
             {
-                list.Add(span[i]);
+                list.Add(span.RawItems[i].EntryId);
             }
         }
 
@@ -1648,13 +1661,13 @@ namespace Corax
             return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
-        private unsafe AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
+        private AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             
             var llt = _transaction.LowLevelTransaction;
             var item = Container.Get(llt, containerId);
-            Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
+            Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
             int removalIndex = 0;
             
             // combine with existing values
@@ -1663,7 +1676,6 @@ namespace Corax
             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
             var removals = entries.Removals;
-            long freeSpace = entries.FreeSpace;
             while (true)
             {
                 var read = _pforDecoder.Read(buffer, 1024);
@@ -1673,37 +1685,25 @@ namespace Corax
                 EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
                 for (int i = 0; i < read; i++)
                 {
-                    if (removalIndex < removals.Length)
+                    if (removalIndex < removals.Count)
                     {
-                        if (buffer[i] == removals[removalIndex])
+                        long entryId = removals.RawItems[removalIndex].EntryId;
+                        if (buffer[i] == entryId)
                         {
                             removalIndex++;
                             continue;
                         }
 
-                        if (buffer[i] > removals[removalIndex])
-                            throw new InvalidDataException("Attempt to remove value " + removals[removalIndex] + ", but got " + buffer[i] );
+                        if (buffer[i] > entryId)
+                            throw new InvalidDataException("Attempt to remove value " + entryId + ", but got " + buffer[i] );
                     } 
                     entries.Addition(buffer[i]);
-
-                    // PERF: Check if we have free space, in order to avoid copying the removals list in case
-                    // an addition requires an invalidation of the removals, we check if the conditions 
-                    // for a buffer growth are met. 
-                    if (freeSpace == 0)
-                    {
-                        removals = entries.Removals;
-                        freeSpace = entries.FreeSpace;
-                    }
-                    else
-                    {
-                        freeSpace--;
-                    }
                 }
             }
 
-            entries.PrepareDataForCommiting();
+            entries.GetEncodedAdditions(out var additions);
 
-            if (entries.TotalAdditions == 0)
+            if (entries.Additions.Count == 0)
             {
                 Container.Delete(llt, _postingListContainerId, containerId);
                 termIdInTree = -1;
@@ -1711,7 +1711,7 @@ namespace Corax
             }
 
             
-            if (TryEncodingToBuffer(entries.RawAdditions, entries.TotalAdditions, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(additions, entries.Additions.Count, tmpBuf, out var encoded) == false)
             {
 
                 AddNewTermToSet(out termIdInTree);
@@ -1743,7 +1743,7 @@ namespace Corax
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
+        private unsafe AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
             
@@ -1753,30 +1753,36 @@ namespace Corax
             // Let's assert whether the current document will output the same ID as the previous one.
             // We can assume that removals are "agnostic" for us since the already stored document has the same ID as this one.
             // In any other case, where did the different ID come from?
-            if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId) 
+            var additions = entries.Additions.RawItems;
+            if (entries.Additions.Count == 1) 
             {
-                if (entries.TotalRemovals > 0)
-                    Debug.Assert(entries.Removals[0] == existingEntryId);
-                
-                var newId = EntryIdEncodings.Encode(entries.Additions[0], entries.AdditionsFrequency[0], (long)TermIdMask.Single);
-                if (newId == idInTree)
+                ref var single = ref additions[0];
+                if (single.EntryId == existingEntryId)
                 {
-                    termId = -1;
-                    return AddEntriesToTermResult.NothingToDo;
+                    Debug.Assert(entries.Removals.Count == 0 || entries.Removals.RawItems[0].EntryId == existingEntryId);
+
+                    var newId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);
+                    if (newId == idInTree)
+                    {
+                        termId = -1;
+                        return AddEntriesToTermResult.NothingToDo;
+                    }
                 }
             }
             
-            if (entries.TotalAdditions == 0 && entries.TotalRemovals > 0) 
+            if (entries.Additions.Count == 0 && entries.Removals.Count > 0) 
             {
-                if (entries.TotalRemovals > 1) 
+                if (entries.Removals.Count > 1)
+                {
                     throw new InvalidOperationException($"More than one removal found for a single item, which is impossible. " +
                                                         $"{Environment.NewLine}Current tree id: {idInTree}" +
                                                         $"{Environment.NewLine}Current entry id {existingEntryId}" +
                                                         $"{Environment.NewLine}Current term frequency: {existingFrequency}" +
                                                         $"{Environment.NewLine}Items we wanted to delete (entryId|Frequency): " +
-                                                        $"{string.Join(", ", entries.Removals.ToArray().Zip(entries.RemovalsFrequency.ToArray()).Select(i => $"({i.First}|{i.Second})"))}");
+                                                        $"{string.Join(", ", entries.Removals.ToSpan().ToArray().Select(i => $"({i.EntryId}|{i.Frequency})"))}");
+                }
                 
-                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.RemovalsFrequency[0]) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
+                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.Removals.RawItems[0].Frequency) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
                 
                 termId = -1;
                 return AddEntriesToTermResult.RemoveTermId;
@@ -1784,19 +1790,19 @@ namespace Corax
 
             // Another document contains the same term. Let's check if the currently indexed document is in EntriesModification.
             // If it's not, we have to add it (since it has to be included in Small/Set too).
-            if (entries.TotalAdditions >= 1)
+            if (entries.Additions.Count >= 1)
             {
                 bool isIncluded = false;
-                for (int idX = 0; idX < entries.TotalAdditions && isIncluded == false; ++idX)
+                for (int idX = 0; idX < entries.Additions.Count && isIncluded == false; ++idX)
                 {
-                    if (entries.Additions[idX] == existingEntryId)
+                    if (entries.Additions.RawItems[idX].EntryId == existingEntryId)
                         isIncluded = true;
                 }
                 
                 //User may wants to delete it.
-                for (int idX = 0; idX < entries.TotalRemovals && isIncluded == false; ++idX)
+                for (int idX = 0; idX < entries.Removals.Count && isIncluded == false; ++idX)
                 {
-                    if (entries.Removals[idX] == existingEntryId)
+                    if (entries.Removals.RawItems[idX].EntryId == existingEntryId)
                         isIncluded = true;
                 }
 
@@ -1816,8 +1822,8 @@ namespace Corax
             var setSpace = Container.GetMutable(llt, containerId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
-            entries.PrepareDataForCommiting();
-            var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, entries.Additions, entries.Removals);
+            entries.GetEncodedAdditionsAndRemovals(out Span<long> additions, out Span<long> removals);
+            var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, removals);
 
             termId = -1;
 
@@ -1844,16 +1850,17 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-                if (localEntry.HasChanges() == false)
+                localEntry.Prepare();
+                if (localEntry.HasChanges == false)
                     continue;
                   
                 UpdateEntriesForTerm(entries, entriesToTerms, term);
                 
                 long termId;
                 var hasTerm = fieldTree.TryGetValue(term, out var existing);
-                if (localEntry.TotalAdditions > 0 && hasTerm == false)
+                if (localEntry.Additions.Count > 0 && hasTerm == false)
                 {
-                    Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                    Debug.Assert(localEntry.Removals.Count == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
                     
                     fieldTree.Add(term, termId);
@@ -1910,7 +1917,9 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-                if (localEntry.HasChanges() == false)
+                localEntry.Prepare();
+                
+                if (localEntry.HasChanges == false)
                     continue;
 
                 long termAsLong = BitConverter.DoubleToInt64Bits(term);
@@ -1919,9 +1928,9 @@ namespace Corax
                 var hasTerm = fieldTree.TryGetValue(termAsLong, out var existing);
 
                 long termId;
-                if (localEntry.TotalAdditions > 0 && hasTerm == false) // no existing value
+                if (localEntry.Additions.Count > 0 && hasTerm == false) // no existing value
                 {
-                    Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                    Debug.Assert(localEntry.Removals.Count == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
                     fieldTree.Add(termAsLong, termId);
                     continue;
@@ -1962,21 +1971,21 @@ namespace Corax
             }
         }
 
-        private unsafe void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
+        private void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
         {
-           
             _numberOfTermModifications += 1;
-            Debug.Assert(entries.TotalAdditions > 0, "entries.TotalAdditions > 0");
+            Debug.Assert(entries.Additions.Count > 0, "entries.TotalAdditions > 0");
             // common for unique values (guid, date, etc)
-            if (entries.TotalAdditions == 1)
+            if (entries.Additions.Count == 1)
             {
                 entries.AssertPreparationIsNotFinished();
-                termId = EntryIdEncodings.Encode(*entries.RawAdditions, entries.AdditionsFrequency[0], (long)TermIdMask.Single);                
+                ref var single = ref entries.Additions.RawItems[0]; 
+                termId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);                
                 return;
             }
 
-            entries.PrepareDataForCommiting();
-            if (TryEncodingToBuffer(entries.RawAdditions, entries.TotalAdditions, tmpBuf, out var encoded) == false)
+            entries.GetEncodedAdditions(out var additions);
+            if (TryEncodingToBuffer(additions, entries.Additions.Count, tmpBuf, out var encoded) == false)
             {
                 // too big, convert to a set
                 AddNewTermToSet(out termId);

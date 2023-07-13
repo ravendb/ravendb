@@ -52,7 +52,7 @@ public static class EntryIdEncodings
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static unsafe void Encode(Span<long> entries, Span<short> frequencies)
+    public static void Encode(Span<long> entries, Span<short> frequencies)
     {
         for (int idX = 0; idX < entries.Length; ++idX)
         {

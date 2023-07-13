@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow;
 using Sparrow.Compression;
+using Sparrow.Json;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -292,7 +294,7 @@ public unsafe struct EntryTermsReader
         _prevTerm = 0;
     }
 
-    public string Debug()
+    public string Debug(Dictionary<long, string> fields)
     {
         var sb = new StringBuilder();
         
@@ -300,7 +302,15 @@ public unsafe struct EntryTermsReader
 
         while (MoveNext())
         {
-            sb.Append(FieldRootPage).Append(" - ").Append(Current);
+            if (fields?.TryGetValue(FieldRootPage, out var name) == true)
+            {
+                sb.Append(name);
+            }
+            else
+            {
+                sb.Append(FieldRootPage);
+            }
+            sb.Append(" - ").Append(Current);
             if (Frequency > 1)
             {
                 sb.Append(" x").Append(Frequency);
@@ -333,10 +343,19 @@ public unsafe struct EntryTermsReader
                 continue;
             }
 
-            sb.Append(" '")
-                .Append(StoredField.Value.ToStringValue())
-                .Append('\'')
-                .AppendLine();
+            if (IsRaw)
+            {
+                using var ctx = JsonOperationContext.ShortTermSingleUse();
+                var json = new BlittableJsonReaderObject(StoredField.Value.Address, StoredField.Value.Length, ctx);
+                sb.Append(' ').Append(json).AppendLine();
+            }
+            else
+            {
+                sb.Append(" '")
+                    .Append(StoredField.Value.ToStringValue())
+                    .Append('\'')
+                    .AppendLine();
+            }
         }
 
         return sb.ToString();

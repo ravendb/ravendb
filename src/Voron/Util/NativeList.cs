@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -16,8 +17,11 @@ public unsafe struct NativeList<T> : IDisposable
 
     public T* RawItems;
 
+    public Span<T> Items => new(RawItems, Count);
+
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
+    public readonly Span<T> ToSpan() => new Span<T>(RawItems, Count);
     public bool IsValid => _ctx != null;
 
     public NativeList(ByteStringContext ctx)
@@ -33,6 +37,20 @@ public unsafe struct NativeList<T> : IDisposable
         }
 
         RawItems[Count++] = l;
+    }
+
+    public void AddKnownCapacity(T l)
+    {
+        Debug.Assert(Count < Capacity);
+        RawItems[Count++] = l;
+    }
+    
+    public void ResetAndEnsureCapacity(int count)
+    {
+        Count = 0;
+        if (count <= Capacity)
+            return;
+        GrowListUnlikely(count);
     }
     
     private void GrowListUnlikely(int addition)

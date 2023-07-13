@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             
             using (Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(key.AsReadOnlySpan(), out _);
+                _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
         
         /// <summary>
