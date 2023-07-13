@@ -48,6 +48,8 @@ namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunner
     {
+        private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
+
         public class Holder
         {
             public Holder(long generation)
@@ -1987,6 +1989,13 @@ namespace Raven.Server.Documents.Patch
                     var result = call.Call(JsValue.Undefined, _args);
 
                     return new ScriptRunnerResult(this, result);
+                }
+                catch (StatementsCountOverflowException e)
+                {
+                    JavaScriptUtils.Clear();
+                    throw new  Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
+                        $"The maximum number of statements executed have been reached - {_configuration.Patching.MaxStepsForScript}. You can configure it by modifying the configuration option: '{MaxStepsForScriptConfigurationKey}'.",
+                        e);
                 }
                 catch (JavaScriptException e)
                 {
