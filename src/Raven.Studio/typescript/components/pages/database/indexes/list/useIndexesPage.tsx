@@ -201,6 +201,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const onDisableIndexesConfirm = useCallback(
         async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
+            const disableRequests: Promise<void>[] = [];
 
             for (const index of indexes) {
                 for (const { nodeTag, shardNumbers } of contexts) {
@@ -214,16 +215,21 @@ export function useIndexesPage(database: database, stale: boolean) {
                             continue;
                         }
 
-                        await indexesService.disable(index, database, location);
-
-                        dispatch({
-                            type: "DisableIndexing",
-                            indexName: index.name,
-                            location,
-                        });
+                        disableRequests.push(
+                            indexesService.disable(index, database, location).then(() => {
+                                dispatch({
+                                    type: "DisableIndexing",
+                                    indexName: index.name,
+                                    location,
+                                });
+                            })
+                        );
                     }
                 }
             }
+
+            await Promise.all(disableRequests);
+            messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} disabled successfully.`);
         },
         [indexesService, database, eventsCollector]
     );
@@ -243,6 +249,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const onPauseIndexesConfirm = useCallback(
         async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
+            const pauseRequests: Promise<void>[] = [];
 
             for (const index of indexes) {
                 for (const { nodeTag, shardNumbers } of contexts) {
@@ -256,16 +263,21 @@ export function useIndexesPage(database: database, stale: boolean) {
                             continue;
                         }
 
-                        await indexesService.pause(index, database, location);
-
-                        dispatch({
-                            type: "PauseIndexing",
-                            indexName: index.name,
-                            location,
-                        });
+                        pauseRequests.push(
+                            indexesService.pause(index, database, location).then(() => {
+                                dispatch({
+                                    type: "PauseIndexing",
+                                    indexName: index.name,
+                                    location,
+                                });
+                            })
+                        );
                     }
                 }
             }
+
+            await Promise.all(pauseRequests);
+            messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} paused successfully.`);
         },
         [eventsCollector, indexesService, database]
     );
@@ -285,6 +297,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const onStartIndexesConfirm = useCallback(
         async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
+            const startRequests: Promise<void>[] = [];
 
             for (const index of indexes) {
                 for (const { nodeTag, shardNumbers } of contexts) {
@@ -299,19 +312,32 @@ export function useIndexesPage(database: database, stale: boolean) {
                         }
 
                         if (indexStatus === "Disabled") {
-                            await indexesService.enable(index, database, location);
+                            startRequests.push(
+                                indexesService.enable(index, database, location).then(() => {
+                                    dispatch({
+                                        type: "EnableIndexing",
+                                        indexName: index.name,
+                                        location,
+                                    });
+                                })
+                            );
                         } else {
-                            await indexesService.resume(index, database, location);
+                            startRequests.push(
+                                indexesService.resume(index, database, location).then(() => {
+                                    dispatch({
+                                        type: "ResumeIndexing",
+                                        indexName: index.name,
+                                        location,
+                                    });
+                                })
+                            );
                         }
-
-                        dispatch({
-                            type: indexStatus === "Disabled" ? "EnableIndexing" : "ResumeIndexing",
-                            indexName: index.name,
-                            location,
-                        });
                     }
                 }
             }
+
+            await Promise.all(startRequests);
+            messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} started successfully.`);
         },
         [eventsCollector, indexesService, database]
     );
@@ -454,6 +480,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("indexes", "reset");
+        const resetRequests: Promise<void>[] = [];
         setResettingIndex(true);
 
         try {
@@ -461,14 +488,19 @@ export function useIndexesPage(database: database, stale: boolean) {
                 const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                 for (const location of locations) {
-                    dispatch({
-                        type: "ResetIndex",
-                        indexName: resetIndexName,
-                        location,
-                    });
-                    await indexesService.resetIndex(resetIndexName, database, location);
+                    resetRequests.push(
+                        indexesService.resetIndex(resetIndexName, database, location).then(() => {
+                            dispatch({
+                                type: "ResetIndex",
+                                indexName: resetIndexName,
+                                location,
+                            });
+                        })
+                    );
                 }
             }
+
+            await Promise.all(resetRequests);
             messagePublisher.reportSuccess("Index " + resetIndexName + " restarted successfully.");
         } finally {
             // wait a bit and trigger refresh
@@ -481,6 +513,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const onSwapSideBySideIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("index", "swap-side-by-side");
+        const swapRequests: Promise<void>[] = [];
         setSwapNowProgress((x) => [...x, swapSideBySideConfirmIndexName]);
 
         try {
@@ -488,9 +521,12 @@ export function useIndexesPage(database: database, stale: boolean) {
                 const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                 for (const location of locations) {
-                    await indexesService.forceReplace(swapSideBySideConfirmIndexName, database, location);
+                    swapRequests.push(indexesService.forceReplace(swapSideBySideConfirmIndexName, database, location));
                 }
             }
+
+            await Promise.all(swapRequests);
+            messagePublisher.reportSuccess("Index " + resetIndexName + " replaced successfully.");
         } finally {
             setSwapNowProgress((item) => item.filter((x) => x !== swapSideBySideConfirmIndexName));
         }

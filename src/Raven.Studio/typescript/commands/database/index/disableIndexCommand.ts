@@ -1,14 +1,13 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import genUtils = require("common/generalUtils");
 
 class disableIndexCommand extends commandBase {
 
-    private indexName: string;
-
-    private db: database;
-
-    private location: databaseLocationSpecifier;
+    private readonly indexName: string;
+    private readonly db: database;
+    private readonly location: databaseLocationSpecifier;
 
     constructor(indexName: string, db: database, location: databaseLocationSpecifier) {
         super();
@@ -26,8 +25,10 @@ class disableIndexCommand extends commandBase {
         
         const url = endpoints.databases.adminIndex.adminIndexesDisable + this.urlEncodeArgs(args);
         
-        //tODO: report messages
-        return this.post(url, null, this.db, { dataType: undefined });
+        const locationText = genUtils.formatLocation(this.location);
+
+        return this.post(url, null, this.db, { dataType: undefined })
+            .fail((response: JQueryXHR) => this.reportError(`Failed to disable index ${this.indexName} for ${locationText}`, response.responseText));
     }
 }
 
