@@ -23,6 +23,7 @@ using Voron.Impl.Scratch;
 using Voron.Debugging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl
 {
@@ -840,6 +841,7 @@ namespace Voron.Impl
             }
         }
 
+        [DoesNotReturn]
         private void ThrowQuotaExceededException(long pageNumber, long? maxAvailablePageNumber)
         {
             throw new QuotaException(
@@ -1157,11 +1159,13 @@ namespace Voron.Impl
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowAsyncCommitAlreadyCalled()
         {
             throw new InvalidOperationException("Cannot start a new async commit because one was already started");
         }
 
+        [DoesNotReturn]
         private static void ThrowReadTranscationCannotDoAsyncCommit()
         {
             throw new InvalidOperationException("Only write transactions can do async commit");
@@ -1204,6 +1208,7 @@ namespace Voron.Impl
             CommitStage3_DisposeTransactionResources();
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidAsyncEndWithoutBegin()
         {
             throw new InvalidOperationException("Cannot call EndAsyncCommit when we don't have an async op running");
@@ -1272,6 +1277,7 @@ namespace Voron.Impl
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
         }
 
+        [DoesNotReturn]
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
         {
             throw new InvalidOperationException($"{nameof(StorageEnvironmentState.NextPageNumber)} cannot be <= 1 on {caller}.");
@@ -1316,11 +1322,13 @@ namespace Voron.Impl
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowAlreadyRolledBack()
         {
             throw new InvalidOperationException("Cannot commit rolled-back transaction.");
         }
 
+        [DoesNotReturn]
         private static void ThrowAlreadyCommitted()
         {
             throw new InvalidOperationException("Cannot commit already committed transaction.");
@@ -1557,6 +1565,7 @@ namespace Voron.Impl
                 _tx = tx;
             }
 
+            [DoesNotReturn]
             internal void ThrowSimulateErrorOnCommitStage2()
             {
                 throw new InvalidOperationException("Simulation error");

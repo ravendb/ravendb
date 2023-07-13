@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -165,6 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 : new DynamicArray(Enumerable.Empty<object>());
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidDocType(dynamic doc, string funcName)
         {
             throw new InvalidOperationException(

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Util;
@@ -506,6 +507,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 return true;
             }
 
+            [DoesNotReturn]
             private bool ThrowOnUnsupportedType(Operation operation)
             {
                 throw new NotSupportedException($"{nameof(CoraxParsedRange)} is not supporting {operation} comparison. This is a bug.");
@@ -590,6 +592,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowDifferentTypesOfRangeValues(FacetQuery query, RangeType type1, RangeType type2, string field)
         {
             throw new InvalidQueryException(
@@ -597,22 +600,26 @@ namespace Raven.Server.Documents.Queries.Facets
                 query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownFacetType(FacetBase facet)
         {
             throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
         }
 
+        [DoesNotReturn]
         private static void ThrowWhenOptionsAreUsedForRangeFacet()
         {
             throw new NotSupportedException($"Options are not supported in range facets.");
         }
-        
+
+        [DoesNotReturn]
         private static void ThrowRangeDefinedOnDifferentFields(FacetQuery query, string fieldName, string differentField)
         {
             throw new InvalidQueryException($"Facet ranges must be defined on the same field while we got '{fieldName}' and '{differentField}' used in the same faced",
                 query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFieldInFacetQuery(FacetQuery query, SelectField field)
         {
             throw new InvalidQueryException(
@@ -620,11 +627,13 @@ namespace Raven.Server.Documents.Queries.Facets
                 query.Query.QueryParameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnsupportedRangeOperator(FacetQuery query, OperatorType op)
         {
             throw new InvalidQueryException($"Unsupported operator in a range of a facet query: {op}", query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnsupportedRangeExpression(FacetQuery query, QueryExpression expression)
         {
             throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText(query.Query)}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);

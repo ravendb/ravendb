@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -191,31 +192,37 @@ namespace Raven.Server.Indexing
                 ThrowCancelled();
         }
 
+        [DoesNotReturn]
         private static void ThrowTransactionDisposed()
         {
             throw new ObjectDisposedException("No Transaction in thread");
         }
 
+        [DoesNotReturn]
         private static void ThrowDisposed()
         {
             throw new ObjectDisposedException("No Transaction in thread");
         }
 
+        [DoesNotReturn]
         private static void ThrowCancelled()
         {
             throw new OperationCanceledException("VoronIndexInput");
         }
 
+        [DoesNotReturn]
         private static void ThrowStateNullException()
         {
             throw new ArgumentNullException("State");
         }
 
+        [DoesNotReturn]
         private void ThrowEndOfStreamException()
         {
             throw new EndOfStreamException($"Input name: {_name}. Current position: {_stream.Position}, length: {_stream.Length}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidSeekPosition(long pos)
         {
             throw new InvalidOperationException($"Cannot set stream position to {pos} because the length of '{_name}' stream is {_stream.Length}");

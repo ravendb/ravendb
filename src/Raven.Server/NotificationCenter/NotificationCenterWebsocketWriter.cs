@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
@@ -101,6 +102,7 @@ namespace Raven.Server.NotificationCenter
             await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
         }
 
+        [DoesNotReturn]
         private static void ThrowNotSupportedType<TNotification>(TNotification notification)
         {
             throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");

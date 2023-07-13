@@ -14,6 +14,7 @@ using Sparrow.Threading;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Scratch
 {
@@ -491,6 +492,7 @@ namespace Voron.Impl.Scratch
             return scratchesToDispose.Count;
         }
 
+        [DoesNotReturn]
         private static void ThrowUnableToRemoveScratch(ScratchBufferItem scratchBufferItem)
         {
             throw new InvalidOperationException(

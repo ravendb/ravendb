@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.MapReduce;
@@ -598,6 +599,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowReduceOutputsPropertyNotFound(string id)
             {
                 throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");

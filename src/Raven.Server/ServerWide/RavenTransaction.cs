@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -59,6 +60,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
+        [DoesNotReturn]
         protected static void ThrowInvalidTransactionUsage()
         {
             throw new InvalidOperationException("There is a different transaction in context.");

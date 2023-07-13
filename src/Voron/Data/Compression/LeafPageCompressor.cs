@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -163,6 +164,7 @@ namespace Voron.Data.Compression
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowNullCompressionOutputButNonEmptyPage(TreePage page)
         {
             throw new InvalidOperationException($"{nameof(CompressionResult.CompressionOutputPtr)} was null but the page was not empty: {page}. Should never happen");

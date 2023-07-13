@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Jint.Native;
 using Raven.Client.Documents.Operations.ETL;
@@ -122,6 +123,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return index;
         }
 
+        [DoesNotReturn]
         private static void ThrowIndexNotDefinedInConfig(string indexName)
         {
             throw new InvalidOperationException($"Index '{indexName}' was not defined in the configuration of ElasticSearch ETL task");

@@ -9,6 +9,7 @@ using Lucene.Net.Store;
 using Sparrow;
 using Sparrow.Threading;
 using Voron.Impl;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -282,6 +283,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowEmptyFacets()
             {
                 throw new InvalidOperationException(

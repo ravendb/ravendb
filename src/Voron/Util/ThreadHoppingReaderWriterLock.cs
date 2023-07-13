@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace Voron.Util
@@ -133,12 +134,14 @@ namespace Voron.Util
             return true;
         }
 
+        [DoesNotReturn]
         private static void ThrowTooManyReaders(ulong waiters)
         {
             throw new InvalidOperationException(
                 $"Too many readers, we got {waiters} readers, possible read lock leak");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidWriteLockRelease()
         {
             throw new InvalidOperationException("Attempt to release write lock that isn't being held");

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -145,6 +146,7 @@ namespace Sparrow.Server.Utils
             return null;
         }
 
+        [DoesNotReturn]
         private void ThrowReaderClosed()
         {
             throw new ObjectDisposedException(null, "ReusableStringReader is disposed.");

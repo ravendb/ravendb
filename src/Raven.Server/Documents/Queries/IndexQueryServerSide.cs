@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -537,6 +538,7 @@ namespace Raven.Server.Documents.Queries
                 Ids.Add(key);
             }
 
+            [DoesNotReturn]
             private void ThrowNotSupportedCollectionQueryOperator(string @operator, BlittableJsonReaderObject parameters)
             {
                 throw new InvalidQueryException(

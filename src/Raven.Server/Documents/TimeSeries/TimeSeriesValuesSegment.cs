@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -329,21 +330,25 @@ namespace Raven.Server.Documents.TimeSeries
             return true;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTagLength()
         {
             throw new ArgumentOutOfRangeException("TimeSeries tag value cannot exceed 256 bytes");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidDelta()
         {
             throw new ArgumentOutOfRangeException("Delta can't be negative");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFirstDelta()
         {
             throw new ArgumentOutOfRangeException("First value must be with zero delta");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidNewDelta()
         {
             throw new ArgumentOutOfRangeException("New timestamp must be greater then the previous");
@@ -939,6 +944,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return _previousTimestamp;
             }
 
+            [DoesNotReturn]
             private void ThrowInvalidNumberOfValues()
             {
                 throw new ArgumentOutOfRangeException("The values span provided must have a length of exactly: " + _parent.Header->NumberOfValues);
@@ -950,16 +956,19 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidNumberOfValues(Span<double> vals)
         {
             throw new ArgumentOutOfRangeException("Expected to have " + Header->NumberOfValues + " values, but was provided with: " + vals.Length);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidCapacityLength()
         {
             throw new ArgumentOutOfRangeException("TimeSeriesValuesSegment can handle a size of up to 65,535, but was: " + _capacity);
         }
 
+        [DoesNotReturn]
         private static void ThrowValuesOutOfRange(int numberOfValues)
         {
             throw new ArgumentOutOfRangeException("TimeSeriesValuesSegment can handle up to 32 values, but had: " + numberOfValues);

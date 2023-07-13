@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
@@ -954,11 +954,13 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingAttachment((LazyStringValue DocId, LazyStringValue AttachmentName) details)
         {
             throw new FileNotFoundException($"Attachment's stream for file '{details.AttachmentName}' in document '{details.DocId}' was not found. This should never happen.");
         }
 
+        [DoesNotReturn]
         private static void ThrowConcurrentException(string documentId, string name, string expectedChangeVector, string oldChangeVector)
         {
             throw new ConcurrencyException(
@@ -970,6 +972,7 @@ namespace Raven.Server.Documents
             };
         }
 
+        [DoesNotReturn]
         private static void ThrowConcurrentExceptionOnMissingAttachment(string documentId, string name, string expectedChangeVector)
         {
             throw new ConcurrencyException(

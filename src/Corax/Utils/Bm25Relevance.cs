@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow.Extensions;
 using Sparrow.Server;
 using Voron.Data.PostingLists;
@@ -166,6 +167,7 @@ public unsafe class Bm25Relevance : IDisposable
         return *(_matchBuffer + _currentId - 1);
     }
 
+    [DoesNotReturn]
     private void ThrowAlreadyDisposed()
     {
         throw new ObjectDisposedException($"{nameof(Bm25Relevance)} instance is already disposed.");

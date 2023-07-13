@@ -1,5 +1,6 @@
 ﻿﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Sparrow.Json.Parsing;
@@ -485,22 +486,26 @@ namespace Sparrow.Platform.Posix
             };
         }
 
+        [DoesNotReturn]
         private static void ThrowOnNullString()
         {
             throw new InvalidDataException("Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
         }
 
+        [DoesNotReturn]
         private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
         {
             throw new InvalidDataException(
                 $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
         }
 
+        [DoesNotReturn]
         private void ThrowNotContainsValidValue(byte[] term, int processId)
         {
             throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
         }
 
+        [DoesNotReturn]
         private void ThrowNotContainsKbValue(byte[] term, int processId, string addtionalInfo)
         {
             throw new InvalidDataException(

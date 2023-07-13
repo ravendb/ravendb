@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -152,17 +153,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 _addedFields++;
             }
 
+            [DoesNotReturn]
             private void ThrowNumberOfProcessedFieldsMismatch()
             {
                 throw new InvalidOperationException(
                     $"Cannot create identifier for reference document of reduce outputs. Expected to process {_countOfFields} fields while it got {_addedFields}. Pattern: '{_pattern}'");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidId(string id, string message)
             {
                 throw new InvalidOperationException($"Invalid pattern reference document ID: '{id}'. Error: {message}");
             }
 
+            [DoesNotReturn]
             private static void ThrowEncounteredNullValueInPattern(string fieldName)
             {
                 throw new InvalidOperationException($"Invalid pattern reference document ID. Field '{fieldName}' was null");

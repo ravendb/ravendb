@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -256,12 +257,14 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
+            [DoesNotReturn]
             public static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
                                                     "Cannot put Counters on artificial documents.");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidBatchOperationType(CounterOperation operation)
             {
                 throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
@@ -621,6 +624,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingDocument(string docId)
         {
             throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");

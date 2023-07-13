@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -569,12 +570,14 @@ namespace Voron.Data.Tables
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
+        [DoesNotReturn]
         private void ThrowNotOwned(long id)
         {
             Debug.Assert(false, $"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
             throw new VoronErrorException($"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
         {
             throw new VoronErrorException(
@@ -737,12 +740,14 @@ namespace Voron.Data.Tables
             return id;
         }
 
+        [DoesNotReturn]
         private void ThrowBadWriter(int size, long id, bool compressed)
         {
             throw new VoronErrorException(
                 $"After successfully allocating {new Size(size, SizeUnit.Bytes)} bytes (id: {id} compressed: {compressed}), failed to write them on {Name}");
         }
 
+        [DoesNotReturn]
         private void ThrowBadAllocation(int size)
         {
             throw new VoronErrorException(
@@ -1017,6 +1022,7 @@ namespace Voron.Data.Tables
             }
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidDuplicateFixedSizeTreeKey(long key, TableSchema.FixedSizeKeyIndexDef indexDef)
         {
             throw new VoronErrorException("Attempt to add duplicate value " + key + " to " + indexDef.Name + " on " + Name);
@@ -2044,6 +2050,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
+        [DoesNotReturn]
         private static void ThrowNonNegativeNumberOfEntriesToDelete()
         {
             throw new VoronErrorException("Number of entries should not be negative");
@@ -2097,6 +2104,7 @@ namespace Voron.Data.Tables
             }
         }
 
+        [DoesNotReturn]
         private void ThrowInconsistentItemsCountInIndexes(string indexName, long expectedSize, long actualSize)
         {
             throw new InvalidOperationException($"Inconsistent index items count detected! Index name: {indexName} expected size: {expectedSize} actual size: {actualSize}");

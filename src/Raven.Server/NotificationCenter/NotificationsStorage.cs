@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -378,6 +379,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowCouldNotFindNotificationType(NotificationTableValue action)
         {
             string notificationJson;

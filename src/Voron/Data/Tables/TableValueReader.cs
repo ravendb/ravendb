@@ -6,6 +6,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Sparrow.Compression;
 
@@ -100,11 +101,13 @@ namespace Voron.Data.Tables
             return _dataPtr + position;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidElementSize()
         {
             throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
         }
 
+        [DoesNotReturn]
         private static void ThrowIndexOutOfRange()
         {
             // ReSharper disable once NotResolvedInText

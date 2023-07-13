@@ -2069,7 +2069,8 @@ namespace Corax
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
-        
+
+        [DoesNotReturn]
         private void ThrowInvalidTokenFoundOnBuffer(IndexedField field, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens, Token token)
         {
             throw new InvalidDataException(

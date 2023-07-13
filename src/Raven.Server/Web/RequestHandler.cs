@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -394,6 +395,7 @@ namespace Raven.Server.Web
             return null;
         }
 
+        [DoesNotReturn]
         public void ThrowInvalidInteger(string name, string etag, string type = "int")
         {
             throw new ArgumentException($"Could not parse header '{name}' header as {type}, value was: {etag}");
@@ -454,6 +456,7 @@ namespace Raven.Server.Web
             return result;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFloat(string name, float result)
         {
             throw new ArgumentException($"Could not parse query string '{name}' as float, value was: {result}");
@@ -491,16 +494,19 @@ namespace Raven.Server.Web
             return value[0];
         }
 
+        [DoesNotReturn]
         private static void ThrowSingleCharacterRequired(string name, string value)
         {
             throw new InvalidOperationException($"Query string {name} is expecting single character, but got '{value}'.");
         }
 
+        [DoesNotReturn]
         private static void ThrowRequiredMember(string name)
         {
             throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified.");
         }
 
+        [DoesNotReturn]
         public static void ThrowRequiredPropertyNameInRequest(string name)
         {
             throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
@@ -532,6 +538,7 @@ namespace Raven.Server.Web
             return result;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidBoolean(string name, string val)
         {
             throw new ArgumentException($"Could not parse query string '{name}' as bool, val {val}");
@@ -552,6 +559,7 @@ namespace Raven.Server.Web
             return null; //unreachable
         }
 
+        [DoesNotReturn]
         public static void ThrowInvalidDateTime(string name, string dataAsString)
         {
             throw new ArgumentException($"Could not parse query string '{name}' as date, val '{dataAsString}'");
@@ -572,6 +580,7 @@ namespace Raven.Server.Web
             return null;// unreachable
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTimeSpan(string name, string timeSpanAsString)
         {
             throw new ArgumentException($"Could not parse query string '{name}' as timespan val {timeSpanAsString}");
@@ -716,6 +725,7 @@ namespace Raven.Server.Web
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidAuthStatus(RavenServer.AuthenticationStatus? status)
         {
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);

@@ -19,6 +19,7 @@ using Constants = Raven.Client.Constants;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using static Raven.Server.Documents.Schemas.Documents;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents
 {
@@ -367,6 +368,7 @@ namespace Raven.Server.Documents
             return id;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidDocumentId(string id)
         {
             throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
@@ -607,12 +609,14 @@ namespace Raven.Server.Documents
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
         }
 
+        [DoesNotReturn]
         public static void ThrowRequiresTransaction([CallerMemberName] string caller = null)
         {
             // ReSharper disable once NotResolvedInText
             throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
+        [DoesNotReturn]
         private static void ThrowConcurrentExceptionOnMissingDoc(string id, string expectedChangeVector)
         {
             throw new ConcurrencyException(
@@ -623,11 +627,13 @@ namespace Raven.Server.Documents
             };
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidCollectionNameChange(string id, CollectionName oldCollectionName, CollectionName collectionName)
         {
             DocumentCollectionMismatchException.ThrowFor(id, oldCollectionName.Name, collectionName.Name);
         }
 
+        [DoesNotReturn]
         private static void ThrowConcurrentException(string id, string expectedChangeVector, string oldChangeVector)
         {
             throw new ConcurrencyException(

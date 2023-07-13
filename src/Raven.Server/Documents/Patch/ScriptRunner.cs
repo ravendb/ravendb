@@ -3,13 +3,13 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Esprima.Ast;
-using JetBrains.Annotations;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -1579,57 +1579,68 @@ namespace Raven.Server.Documents.Patch
                 return tsFunctionArgs;
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
             {
                 throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
                                                     "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidCounterValue()
             {
                 throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidCounterName(string signature)
             {
                 throw new InvalidOperationException($"{signature}: 'name' must be a non-empty string argument");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidDocumentArgsType(string signature)
             {
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
             }
 
+            [DoesNotReturn]
             private static void ThrowMissingDocument(string id)
             {
                 throw new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document.");
             }
 
+            [DoesNotReturn]
             private static void ThrowDeleteCounterNameArg()
             {
                 throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidDeleteCounterDocumentArg()
             {
                 throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidDeleteCounterArgs()
             {
                 throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
             }
 
+            [DoesNotReturn]
             private static JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
+            [DoesNotReturn]
             private static JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
+            [DoesNotReturn]
             private static JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
@@ -2037,6 +2048,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
+            [DoesNotReturn]
             private static JsonOperationContext ThrowArgumentNull()
             {
                 throw new ArgumentNullException("jsonCtx");

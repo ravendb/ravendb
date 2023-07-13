@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -42,6 +43,7 @@ namespace Raven.Server.Extensions
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me, string queryText, string whereCollectionName = null)
         {
             if (whereCollectionName == null)

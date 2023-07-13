@@ -17,6 +17,7 @@ using Sparrow.Server;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Constants = Voron.Global.Constants;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Data.BTrees
 {
@@ -143,11 +144,13 @@ namespace Voron.Data.BTrees
             return tree;
         }
 
+        [DoesNotReturn]
         private static void ThrowCannotCreatTreeInReadTx()
         {
             throw new ArgumentException("Cannot create a tree in a read only transaction");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTreeCreateType()
         {
             throw new ArgumentException(
@@ -258,11 +261,13 @@ namespace Voron.Data.BTrees
                 ThrowValueTooLarge();
         }
 
+        [DoesNotReturn]
         private static void ThrowValueTooLarge()
         {
             throw new ArgumentException("Cannot add a value that is over 2GB in size");
         }
 
+        [DoesNotReturn]
         private static void ThrowNullReferenceException()
         {
             throw new ArgumentNullException();
@@ -423,6 +428,7 @@ namespace Voron.Data.BTrees
             return new DirectAddScope(this);
         }
 
+        [DoesNotReturn]
         private static void ThrowConcurrencyException()
         {
             throw new VoronConcurrencyErrorException("Value already exists, but requested NewOnly");
@@ -451,6 +457,7 @@ namespace Voron.Data.BTrees
             }
 
 
+            [DoesNotReturn]
             private void ThrowScopeAlreadyOpen()
             {
                 var message = $"Write operation already requested on a tree name: {_parent}. " +
@@ -470,6 +477,7 @@ namespace Voron.Data.BTrees
             throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidKeySize(Slice key)
         {
             throw new ArgumentException(
@@ -805,6 +813,7 @@ namespace Voron.Data.BTrees
             return p;
         }
 
+        [DoesNotReturn]
         private static void ThrowOnCompressedPage(TreePage p)
         {
             throw new PageCompressedException($"Page {p} is compressed. You need to decompress it to be able to access its content.");
@@ -1009,11 +1018,13 @@ namespace Voron.Data.BTrees
             }
         }
 
+        [DoesNotReturn]
         public static void ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Slice treeName, long pageNumber)
         {
             throw new InvalidOperationException($"Attempting to free page #{pageNumber} of '{treeName}' index tree to the free space handling. The page was allocated by {nameof(NewPageAllocator)} so it needs to be returned there.");
         }
 
+        [DoesNotReturn]
         public static void ThrowAttemptToFreePageToNewPageAllocator(Slice treeName, long pageNumber)
         {
             throw new InvalidOperationException($"Attempting to free page #{pageNumber} of '{treeName}' tree to {nameof(NewPageAllocator)} while it wasn't allocated by it");

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -217,6 +218,7 @@ namespace Raven.Server.Documents.Queries
                    selectField.SourceAlias != null;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFetchAllStoredDocuments()
         {
             throw new InvalidOperationException("Cannot fetch all stored path from a nested method");

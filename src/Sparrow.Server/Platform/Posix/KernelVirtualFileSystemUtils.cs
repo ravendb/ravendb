@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Sparrow.Collections;
@@ -345,6 +346,7 @@ namespace Sparrow.Platform.Posix
                 return value;
             }
 
+            [DoesNotReturn]
             private void ThrowStreamBiggerThenBufferException()
             {
                 throw new InvalidOperationException($"The stream for {_path} is bigger then the buffer");

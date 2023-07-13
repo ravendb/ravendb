@@ -40,6 +40,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Rachis
 {
@@ -1485,6 +1486,7 @@ namespace Raven.Server.Rachis
             return lastIndex;
         }
 
+        [DoesNotReturn]
         private void ThrowTooLargeRaftCommand(BlittableJsonReaderObject cmd)
         {
             var type = RachisLogHistory.GetTypeFromCommand(cmd);
@@ -1694,6 +1696,7 @@ namespace Raven.Server.Rachis
             return (lastTopology, lastTopologyIndex);
         }
 
+        [DoesNotReturn]
         private void ThrowFatalError(RachisEntry firstEntry, long? myTermForTheIndex, long lastCommitIndex, long lastCommitTerm)
         {
             var message =
@@ -1859,6 +1862,7 @@ namespace Raven.Server.Rachis
             await task; // propagate cancellation/exception
         }
 
+        [DoesNotReturn]
         private static void ThrowTimeoutException()
         {
             throw new TimeoutException();
@@ -2165,6 +2169,7 @@ namespace Raven.Server.Rachis
                 ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
         }
 
+        [DoesNotReturn]
         public static void ThrowInvalidNodeTag(string nodeTag, string reason)
         {
             throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");

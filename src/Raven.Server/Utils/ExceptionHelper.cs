@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Raven.Server.Exceptions;
 using Sparrow.LowMemory;
@@ -53,12 +54,13 @@ namespace Raven.Server.Utils
             return e is Win32Exception win32Exception && win32Exception.NativeErrorCode == ERROR_COMMITMENT_LIMIT;
         }
 
+        [DoesNotReturn]
         public static void ThrowMediaIsWriteProtected(Exception inner)
         {
             throw new IOException($"{inner.Message}. {Sparrow.Server.Platform.PalHelper.ErrorMediaIsWriteProtectedHintMessage}", inner);
-                
         }
-        
+
+        [DoesNotReturn]
         public static void ThrowDiskFullException(string path) // Can be the folder path of the fole absolute path
         {
             var folderPath = Path.GetDirectoryName(path); // file Absolute Path

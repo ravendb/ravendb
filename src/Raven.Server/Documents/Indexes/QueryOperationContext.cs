@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -155,6 +156,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowTransactionsNotInTheSameStateException(bool opened, bool serverOpened)
         {
             throw new InvalidOperationException($"Documents transaction ('{opened}') and server transaction ('{serverOpened}') do not have the same state.");

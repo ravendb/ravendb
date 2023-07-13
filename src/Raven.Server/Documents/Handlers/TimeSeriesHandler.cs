@@ -17,6 +17,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Web;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -248,11 +249,13 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowMissingDocument(string docId)
             {
                 throw new DocumentDoesNotExistException(docId, "Cannot operate on time series of a missing document");
             }
 
+            [DoesNotReturn]
             public static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +

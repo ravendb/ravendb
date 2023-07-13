@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -78,6 +79,7 @@ namespace Raven.Server.Documents.Replication
                 ThrowInvalidNodeTag(ch);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidNodeTag(char ch)
         {
             throw new ArgumentException("Invalid node tag character: " + ch);
@@ -356,11 +358,13 @@ namespace Raven.Server.Documents.Replication
                 Debug.Assert(false, $"Cannot contain pipe {changeVector}");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidEndOfString(string state, string cv)
         {
             throw new ArgumentException("Expected " + state + ", but got end of string in : " + cv);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidState(State state, string cv)
         {
             throw new ArgumentOutOfRangeException(state + " in " + cv);

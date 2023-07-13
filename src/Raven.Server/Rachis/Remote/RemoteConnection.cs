@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -465,11 +466,12 @@ namespace Raven.Server.Rachis.Remote
                 ThrowUnexpectedMessage(type, expectedType, json);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnexpectedMessage(string type, string expectedType, BlittableJsonReaderObject json)
         {
             if (type == "Error")
             {
-                if (json.TryGet("ExceptionType", out string errorType) && errorType == typeof(TopologyMismatchException).Name)
+                if (json.TryGet("ExceptionType", out string errorType) && errorType == nameof(TopologyMismatchException))
                 {
                     json.TryGet("Message", out string message);
                     throw new TopologyMismatchException(message);

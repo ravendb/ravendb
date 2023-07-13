@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server;
 using Voron.Impl;
 using Constants = Voron.Global.Constants;
@@ -144,6 +145,7 @@ namespace Voron.Data.BTrees
             return TrySetPosition();
         }
 
+        [DoesNotReturn]
         private static void ThrowSkipTooBig(long count)
         {
             throw new InvalidOperationException($"Cannot skip by '{count}' because it is more than int.MaxValue");

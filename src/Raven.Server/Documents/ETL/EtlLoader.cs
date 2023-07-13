@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -334,6 +335,7 @@ namespace Raven.Server.Documents.ETL
             return processState ?? new EtlProcessState();
         }
 
+        [DoesNotReturn]
         public static void ThrownUnknownEtlConfiguration(Type type)
         {
             throw new InvalidOperationException($"Unknown config type: {type}");

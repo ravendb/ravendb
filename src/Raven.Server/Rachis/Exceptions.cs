@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Rachis
 {
@@ -31,6 +32,7 @@ namespace Raven.Server.Rachis
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RachisInvalidOperationException(msg);
@@ -51,6 +53,7 @@ namespace Raven.Server.Rachis
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RachisTopologyChangeException(msg);
@@ -71,6 +74,7 @@ namespace Raven.Server.Rachis
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RachisConcurrencyException(msg);
@@ -91,6 +95,7 @@ namespace Raven.Server.Rachis
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RachisApplyException(msg);

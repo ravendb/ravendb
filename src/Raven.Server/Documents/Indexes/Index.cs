@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -624,6 +625,7 @@ namespace Raven.Server.Documents.Indexes
             return _indexingBatchCompleted.GetFrozenAwaiter();
         }
 
+        [DoesNotReturn]
         internal static void ThrowObjectDisposed()
         {
             throw new ObjectDisposedException("index");
@@ -3821,27 +3823,32 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        [DoesNotReturn]
         private void ThrowErrored()
         {
             throw new InvalidOperationException(
                 $"Index '{Name}' is marked as errored. Please check index errors available at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
         }
 
+        [DoesNotReturn]
         private void ThrowMarkedAsError(string errorStateReason)
         {
             throw new InvalidOperationException($"Index '{Name}' is marked as errored. {errorStateReason}");
         }
 
+        [DoesNotReturn]
         private void ThrowWasDisposed()
         {
             throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
         }
 
+        [DoesNotReturn]
         private void ThrowNotInitialized()
         {
             throw new InvalidOperationException($"Index '{Name}' was not initialized.");
         }
 
+        [DoesNotReturn]
         private void ThrowCompactionInProgress()
         {
             throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted.");
@@ -5174,12 +5181,14 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
 
+            [DoesNotReturn]
             private void ThrowLockTimeoutException()
             {
                 throw new TimeoutException(
                     $"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
             }
 
+            [DoesNotReturn]
             private void ThrowLockAlreadyTaken()
             {
                 throw new InvalidOperationException(

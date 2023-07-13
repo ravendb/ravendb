@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -385,11 +386,13 @@ namespace Voron.Data.RawData
             return (RawDataSmallPageHeader*)page.Pointer;
         }
 
+        [DoesNotReturn]
         private static void ThrowReadOnlyTransaction(long id)
         {
             throw new InvalidOperationException($"Attempted to modify page {id} in a read only transaction");
         }
 
+        [DoesNotReturn]
         protected static void ThrowInvalidPage(long id)
         {
             throw new InvalidOperationException($"Page {id} is not a raw data section page");

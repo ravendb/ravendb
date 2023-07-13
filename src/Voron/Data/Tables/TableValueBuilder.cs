@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -125,6 +126,7 @@ namespace Voron.Data.Tables
             _isDirty = true;
         }
 
+        [DoesNotReturn]
         private void ThrowSizeCannotBeNegative(string argument)
         {
             throw new ArgumentException("Size cannot be negative", argument);

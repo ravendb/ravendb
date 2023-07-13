@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -2092,6 +2093,7 @@ namespace Raven.Server.Documents
             return SliceComparer.EqualsInline(tombstoneKey, lowerId);
         }
 
+        [DoesNotReturn]
         private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
             CollectionName tombstoneCollectionName, VoronConcurrencyErrorException e)
         {
@@ -2640,6 +2642,7 @@ namespace Raven.Server.Documents
             return scope;
         }
 
+        [DoesNotReturn]
         private static void ThrowNoActiveTransactionException()
         {
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
@@ -2723,11 +2726,13 @@ namespace Raven.Server.Documents
             return value;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTagLength()
         {
             throw new InvalidOperationException($"The tag length is invalid.");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidShortSize(string name, int size)
         {
             throw new InvalidOperationException($"{name} size is invalid, expected short but got {size}.");

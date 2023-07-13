@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -452,6 +453,7 @@ namespace Raven.Server.Documents
             NotifyLeaderAboutRemoval(dbName, databaseId);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
         {
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
@@ -860,6 +862,7 @@ namespace Raven.Server.Documents
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowServerIsBeingDisposed(StringSegment databaseName)
         {
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);

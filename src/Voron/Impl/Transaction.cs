@@ -17,6 +17,7 @@ using Voron.Data.Lookups;
 using Voron.Data.RawData;
 using Voron.Data.PostingLists;
 using Constants = Voron.Global.Constants;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl
 {
@@ -111,6 +112,7 @@ namespace Voron.Impl
             return null;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTreeType(Slice treeName, RootObjectType type, TreeRootHeader* header)
         {
             throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " +
@@ -138,6 +140,7 @@ namespace Voron.Impl
             return new Transaction(tx);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidAsyncCommitOnRead()
         {
             throw new InvalidOperationException("Cannot call begin async commit on read tx");

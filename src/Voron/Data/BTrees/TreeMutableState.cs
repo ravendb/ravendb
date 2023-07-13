@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Voron.Global;
 using Voron.Impl;
 
@@ -38,6 +39,7 @@ namespace Voron.Data.BTrees
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowCanOnlyModifyInWriteTransaction()
         {
             throw new InvalidOperationException("Invalid operation outside of a write transaction");

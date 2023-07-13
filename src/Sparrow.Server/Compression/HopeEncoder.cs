@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -181,6 +182,7 @@ namespace Sparrow.Server.Compression
             return _minSequenceLengthMultiplier * keySize;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidOperationWithoutTrainedDictionary()
         {
             throw new InvalidOperationException("Cannot calculate without a trained dictionary");

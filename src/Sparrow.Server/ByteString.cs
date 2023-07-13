@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -159,6 +160,7 @@ namespace Sparrow.Server
             ThrowFlagsWithReservedBits();
         }
 
+        [DoesNotReturn]
         private void ThrowFlagsWithReservedBits()
         {
             throw new ArgumentException("The flags passed contains reserved bits.");
@@ -366,6 +368,7 @@ namespace Sparrow.Server
             _pointer->Length = newSize;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidSize()
         {
             throw new ArgumentOutOfRangeException("newSize", "must be within the existing string limits");
@@ -643,6 +646,7 @@ namespace Sparrow.Server
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidMemorySegment()
         {
             throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
@@ -1402,12 +1406,14 @@ namespace Sparrow.Server
             return segment;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidMemorySegmentOnAllocation()
         {
             AllocationFailed?.Invoke();
             throw new InvalidOperationException("Allocate gave us a segment that was already disposed.");
         }
 
+        [DoesNotReturn]
         private void ThrowObjectDisposed()
         {
             AllocationFailed?.Invoke();

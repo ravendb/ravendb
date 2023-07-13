@@ -37,6 +37,7 @@ using Spatial4n.Shapes;
 using Spatial4n.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -995,17 +996,20 @@ function execute(doc, args){
             }
         }
 
+        [DoesNotReturn]
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("When using select function body, the '__selectOutput' function is reserved",
                 QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidFunctionSelectWithMoreFields(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("A query can contain a single select function body without extra fields", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowMissingAliasOnSelectFunctionBody(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Use of select function body requires that aliases will be defined, but none had",
@@ -1346,11 +1350,13 @@ function execute(doc, args){
             }
         }
 
+        [DoesNotReturn]
         private void ThrowDuplicateFunctionAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
         {
             throw new InvalidQueryException($"Duplicate function call '{finalAlias}' in 'select' clause is detected. Function calls in 'select' without aliases implicitly consider function name as alias. In order to fix it, use explicit aliases - 'select id(employee) as EmployeeId, id(manager) as ManagerId'", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidDuplicateAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
         {
             throw new InvalidQueryException($"Duplicate alias '{finalAlias}' detected. Note: if an alias is not specified, the implicit alias is equal to field name. So a select clause 'select employee.Name, manager.Name' is invalid because it has two fields with the same implicit alias - 'Name'. In order to fix it, use explicit aliases - 'select employee.Name as EmployeeName, manager.Name as ManagerName'", QueryText, parameters);
@@ -1913,11 +1919,13 @@ function execute(doc, args){
             return new GroupByField(name, byArrayBehavior, alias);
         }
 
+        [DoesNotReturn]
         private static void ThrowBetweenMustHaveFieldSource(string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Between must have a source that is a field expression.", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowIncompatibleTypesOfVariables(object fieldName, string queryText, BlittableJsonReaderObject parameters,
             params QueryExpression[] valueTokens)
         {
@@ -1925,6 +1933,7 @@ function execute(doc, args){
                                             $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowIncompatibleTypesOfParameters(object fieldName, string queryText, BlittableJsonReaderObject parameters,
             params QueryExpression[] valueTokens)
         {
@@ -1932,144 +1941,172 @@ function execute(doc, args){
                                             $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownAggregationMethodInSelectOfGroupByQuery(string methodName, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingFieldNameArgumentOfSumMethod(string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowIncorrectNumberOfArgumentsOfSumMethod(int count, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"sum() method expects exactly one argument but got {count}", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownMethodInSelect(string methodName, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unknown method call in SELECT clause: '{methodName}' method", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnhandledExpressionTypeInSelect(string expressionType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unhandled expression of type {expressionType} in SELECT clause", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidOperatorTypeInOrderBy(string type, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Invalid type of operator in ORDER BY clause. Operator: {type}", queryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowUnknownAlias(string alias, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unknown alias {alias}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})",
                 QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
         {
             throw new InvalidQueryException(methodName + " may only be used in group by queries", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowFacetQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use GROUP BY in a facet query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowFacetQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT DISTINCT in a facet query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidNumberOfArgumentsOfFacetAggregation(FacetAggregation method, int expected, int got, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Invalid number of arguments of {method} method in a facet query. Expected {expected}, got {got}", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidArgumentToIdInFacet(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("id() in facet query must have one argument which is identifier of a facet setup document", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidFacetUsingSetupDocument(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("facet() specifying a facet setup document using id() call must not have any additional arguments", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidArgumentExpressionInFacetQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowFacetQueryMustContainsOnlyFacetInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestionQueryMustContainsOnlySuggestInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of suggest(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestionQueryCannotBeFacet(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT suggest() in a facet query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowFacetQueryCannotBeSuggest(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT facet() in a suggestion query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestionQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT DISTINCT in a suggestion query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestionQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use GROUP BY in a suggestion query", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestMethodArgumentMustBeValue(int index, QueryExpression argument, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Argument at index '{index}' in suggest() must be a value but was '{argument.GetType()}'", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowSuggestMethodMustHaveTwoOrThreeArguments(int count, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method suggest() must contain two or three arguments but '{count}' were specified", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidNumberOfArgumentsForCounter(string methodName, BlittableJsonReaderObject parameters, int argsCount)
         {
             throw new InvalidQueryException($"There is no overload of method '{methodName}' that takes {argsCount} arguments. " +
                                             $"Supported overloads are : {methodName}(name), {methodName}(doc, name).", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidNumberOfArgumentsForCompareExchange(string methodName, BlittableJsonReaderObject parameters, int argsCount)
         {
             throw new InvalidQueryException($"There is no overload of method '{methodName}' that takes {argsCount} arguments. " +
                                             $"Supported overloads are : {methodName}(name).", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowCounterInvalidArgument(string methodName, QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Invalid argument of type {expression.GetType().Name} specified as an argument of {methodName}(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidArgumentToGetMetadata(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("getMetadata(doc) must be called with a single entity argument", QueryText, parameters);

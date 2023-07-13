@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
@@ -115,6 +116,7 @@ public static class QueryBuilderHelper
         return isNegative ? -l : l;
     }
 
+    [DoesNotReturn]
     internal static void ThrowInvalidInt64(string token)
     {
         throw new ArgumentException("Expected valid number, but got: " + token, nameof(token));
@@ -294,54 +296,64 @@ public static class QueryBuilderHelper
             ThrowValueTypeMismatch(fieldName, fieldType, ValueTokenType.Double);
     }
 
+    [DoesNotReturn]
     internal static void ThrowQueryTooComplexException(QueryMetadata metadata, BlittableJsonReaderObject parameters)
     {
         throw new InvalidQueryException($"Query is too complex", metadata.QueryText, parameters);
     }
 
+    [DoesNotReturn]
     internal static void ThrowUnhandledValueTokenType(ValueTokenType type)
     {
         throw new NotSupportedException($"Unhandled token type: {type}");
     }
 
+    [DoesNotReturn]
     internal static void ThrowInvalidOperatorInSearch(QueryMetadata metadata, BlittableJsonReaderObject parameters, FieldExpression fieldExpression)
     {
         throw new InvalidQueryException($"Supported operators in search() method are 'OR' or 'AND' but was '{fieldExpression.FieldValue}'", metadata.QueryText,
             parameters);
     }
 
+    [DoesNotReturn]
     internal static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (object Value, ValueTokenType Type) item, string queryText,
         BlittableJsonReaderObject parameters)
     {
         throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
     }
 
+    [DoesNotReturn]
     internal static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText,
         BlittableJsonReaderObject parameters)
     {
         throw new InvalidQueryException($"Method {methodName}() expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
     }
 
+    [DoesNotReturn]
     public static void ThrowParametersWereNotProvided(string queryText)
     {
         throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
     }
 
+    [DoesNotReturn]
     public static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
     {
         throw new InvalidQueryException($"Value of parameter '{parameterName}' was not provided", queryText, parameters);
     }
 
+    [DoesNotReturn]
     internal static void ThrowUnexpectedParameterValue(object parameter, string queryText, BlittableJsonReaderObject parameters)
     {
         throw new InvalidQueryException($"Parameter value '{parameter}' of type {parameter.GetType().FullName} is not supported", queryText, parameters);
     }
 
+    [DoesNotReturn]
     internal static void ThrowValueTypeMismatch(string fieldName, ValueTokenType fieldType, ValueTokenType expectedType)
     {
         throw new InvalidOperationException($"Field '{fieldName}' should be a '{expectedType}' but was '{fieldType}'.");
     }
 
+    [DoesNotReturn]
     internal static void ThrowValueTypeMismatch(ValueTokenType fieldType, ValueTokenType expectedType)
     {
         throw new InvalidOperationException($"Value should be a '{expectedType}' but was '{fieldType}'.");
@@ -448,6 +460,7 @@ public static class QueryBuilderHelper
         }
     }
 
+    [DoesNotReturn]
     internal static void ThrowInvalidInValue(Query query, BlittableJsonReaderObject parameters, QueryExpression val)
     {
         throw new InvalidQueryException("Expected in argument to be value, but was: " + val, query.QueryText, parameters);

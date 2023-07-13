@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -105,7 +106,7 @@ namespace Voron.Data.Fixed
                 _parent._directAddUsage--;
             }
 
-
+            [DoesNotReturn]
             private void ThrowScopeAlreadyOpen()
             {
                 var message = $"Write operation already requested on a tree name: {_parent}. " +
@@ -154,12 +155,14 @@ namespace Voron.Data.Fixed
                 ThrowInvalidFixedSizeTreeSize(header);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidFixedSizeTreeSize(FixedSizeTreeHeader.Embedded* header)
         {
             throw new InvalidFixedSizeTree("The expected value len " + _valSize + " does not match actual value len " +
                                                 header->ValueSize + " for " + _treeName);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFixedSizeTree(Slice treeName, FixedSizeTreeHeader.Embedded* header)
         {
             throw new InvalidFixedSizeTree("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " +
@@ -190,6 +193,7 @@ namespace Voron.Data.Fixed
             RepurposeInstance(treeName, clone);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFixedTreeValueSize()
         {
             throw new InvalidFixedSizeTree("The value size must be small than " + (Constants.Storage.PageSize / 8));
@@ -290,6 +294,7 @@ namespace Voron.Data.Fixed
             return new DirectAddScope(this);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidFixedSizeTreeType()
         {
             throw new InvalidFixedSizeTree(Type?.ToString());

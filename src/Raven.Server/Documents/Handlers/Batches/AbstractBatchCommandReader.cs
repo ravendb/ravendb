@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -241,6 +242,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
     public abstract ValueTask<TBatchCommand> GetCommandAsync(TOperationContext context);
 
+    [DoesNotReturn]
     private static void ThrowInvalidUsageOfChangeVectorWithIdentities(BatchRequestParser.CommandData commandData)
     {
         throw new InvalidOperationException($"You cannot use change vector ({commandData.ChangeVector}) " +

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -341,6 +342,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     }
                 }
 
+                [DoesNotReturn]
                 private static void ThrowUnexpectedNumberOfCharacters(int offset, int charUsed, Span<byte> str)
                 {
                     throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");

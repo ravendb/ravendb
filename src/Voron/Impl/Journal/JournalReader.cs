@@ -13,6 +13,7 @@ using Constants = Voron.Global.Constants;
 using System.Linq;
 using Sparrow.Platform;
 using Voron.Impl.FileHeaders;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Journal
 {
@@ -255,6 +256,7 @@ namespace Voron.Impl.Journal
             return transactionSizeIn4Kb;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidChecksumOnPageFromJournal(long pageNumber, TransactionHeader* current, ulong expectedChecksum, ulong checksum, PageHeader* pageHeader)
         {
             var message =

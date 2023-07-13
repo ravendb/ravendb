@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -329,16 +330,19 @@ public class ChangeVector
         ThrowInvalidChangeVectorState();
     }
 
+    [DoesNotReturn]
     private void ThrowInvalidChangeVectorState()
     {
         throw new InvalidOperationException($"order and version must be either filled or null (inner: {_changeVector}, version:{_version}, order:{_order})");
     }
 
+    [DoesNotReturn]
     private void ThrowInvalidInnerChangeVector()
     {
         throw new InvalidOperationException($"inner is '{_changeVector}' while order or version are not empty");
     }
 
+    [DoesNotReturn]
     private static void ThrowEmptyChangeVector()
     {
         throw new InvalidOperationException("Empty change vector");

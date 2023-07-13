@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
@@ -81,11 +82,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
+        [DoesNotReturn]
         private void ThrowUnknownReduceValueMode()
         {
             throw new NotSupportedException($"Unknown reduce value processing mode: {_mode}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidNumberOfFields()
         {
             throw new InvalidOperationException($"It processed {_processedFields} while expected to get {_numberOfReduceFields}");

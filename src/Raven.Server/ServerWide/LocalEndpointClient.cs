@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
 using System.Net;
@@ -83,11 +84,13 @@ namespace Raven.Server.ServerWide
             requestContext.RouteMatch.CaptureLength = values[0].Length;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidDatabasesParameter(Microsoft.Extensions.Primitives.StringValues databaseName, string paramName)
         {
             throw new ArgumentException($"Invalid \'{paramName}\' parameter, expected it to have exactly one value, but got {databaseName.Count}. Something is really wrong here.");
         }
 
+        [DoesNotReturn]
         private static void ThrowHttpRequestException(RouteInformation route, int statusCode)
         {
             throw new HttpRequestException($"A call to endpoint <<{route.Method} {route.Path}>> has failed with status code {statusCode}");

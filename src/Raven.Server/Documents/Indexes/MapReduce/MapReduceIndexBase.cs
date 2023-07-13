@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
@@ -227,6 +228,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
+        [DoesNotReturn]
         private static void ThrowCouldNotSeekToFirstElement(Slice treeName)
         {
             throw new InvalidOperationException($"Could not seek to the first element of {treeName} tree");

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -145,6 +146,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             };
         }
 
+        [DoesNotReturn]
         private static void ThrowIdsPropertyNotFound(string id)
         {
             throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");

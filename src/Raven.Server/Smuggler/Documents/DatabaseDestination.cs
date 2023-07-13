@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -823,6 +824,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowRevisionsDisabled()
             {
                 throw new InvalidOperationException("Revisions needs to be enabled before import!");
