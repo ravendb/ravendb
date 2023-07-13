@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import genUtils = require("common/generalUtils");
 
 class forceIndexReplace extends commandBase {
 
@@ -22,9 +23,10 @@ class forceIndexReplace extends commandBase {
         }
         const url = endpoints.databases.index.indexesReplace + this.urlEncodeArgs(args);
 
+        const locationText = genUtils.formatLocation(this.location);
+
         return this.post(url, null, this.db, { dataType: undefined })
-            .done(() => this.reportSuccess("Replaced index " + this.indexName))
-            .fail((response: JQueryXHR) => this.reportError("Failed to replace index.", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError(`Failed to replace index ${this.indexName} for ${locationText}`, response.responseText, response.statusText));
     }
 }
 

@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import genUtils = require("common/generalUtils");
 
 class enableIndexCommand extends commandBase {
 
@@ -25,9 +26,11 @@ class enableIndexCommand extends commandBase {
         };
         
         const url = endpoints.databases.adminIndex.adminIndexesEnable + this.urlEncodeArgs(args);
+
+        const locationText = genUtils.formatLocation(this.location);
         
-        //TODO: report messages
-        return this.post(url, null, this.db, { dataType: undefined });
+        return this.post(url, null, this.db, { dataType: undefined })
+            .fail((response: JQueryXHR) => this.reportError(`Failed to enable index ${this.indexName} for ${locationText}`, response.responseText));
     }
 }
 

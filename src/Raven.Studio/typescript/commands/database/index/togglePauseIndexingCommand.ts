@@ -2,6 +2,7 @@
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import { DatabaseSharedInfo } from "components/models/databases";
+import genUtils = require("common/generalUtils");
 
 type optsNames = {
     name: string;
@@ -53,10 +54,18 @@ class togglePauseIndexingCommand extends commandBase {
         }
 
         const url = basicUrl + (args ? this.urlEncodeArgs(args) : "");
-        //TODO: report messages!
-        return this.post(url, null, this.db, { dataType: undefined });
+        
+
+        return this.post(url, null, this.db, { dataType: undefined })
+            .fail((response: JQueryXHR) => this.reportError(this.getFailTitle(), response.responseText));
     }
 
+    getFailTitle() {
+        const locationText = genUtils.formatLocation(this.location);
+        const failText = `Failed to ${this.start ? "resume" : "pause"} ${this.name ? `index ${this.name}` : "all indexes"} for ${locationText}`;
+
+        return failText;
+    }
 }
 
 export = togglePauseIndexingCommand;
