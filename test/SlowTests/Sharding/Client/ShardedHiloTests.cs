@@ -8,7 +8,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Sharding.Client
+namespace SlowTests.Sharding.Client
 {
     public class ShardedHiloTests : ReplicationTestBase
     {
