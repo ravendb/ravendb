@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
@@ -129,6 +128,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             return string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase);
         }
 
+        [DoesNotReturn]
         protected void ThrowUnsupportedException(string message)
         {
             throw new NotSupportedException(message);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -88,11 +89,13 @@ namespace Raven.Server.Documents.Queries
             
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidOperatorType(QueryExpression expression)
         {
             throw new ArgumentException(expression.Type.ToString());
         }
 
+        [DoesNotReturn]
         private void ThrowUnexpectedExpression(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Expected binary expression, but got " + expression, QueryText, parameters);

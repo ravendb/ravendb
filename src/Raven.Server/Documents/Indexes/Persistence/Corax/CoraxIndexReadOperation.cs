@@ -1430,11 +1430,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowDistinctOnBiggerCollectionThanInt32()
         {
             throw new NotSupportedInCoraxException($"Corax doesn't support 'Distinct' operation on collection bigger than int32 ({int.MaxValue}).");
         }
 
+        [DoesNotReturn]
         private static void ThrowExplanationsIsNotImplementedInCorax()
         {
             throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");

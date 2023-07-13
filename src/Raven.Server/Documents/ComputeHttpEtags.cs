@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding.Executors;
@@ -232,16 +233,19 @@ namespace Raven.Server.Documents
             return str;
         }
 
+        [DoesNotReturn]
         private static void ThrowFailedToFinalizeHash()
         {
             throw new InvalidOperationException("Failed to finalize generic hash");
         }
 
+        [DoesNotReturn]
         internal static void ThrowFailToInitHash()
         {
             throw new InvalidOperationException("Failed to initiate generic hash");
         }
 
+        [DoesNotReturn]
         private static void ThrowFailedToUpdateHash()
         {
             throw new InvalidOperationException("Failed to update generic hash");

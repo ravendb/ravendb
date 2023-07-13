@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Smuggler;
@@ -802,32 +803,38 @@ namespace Raven.Server.Documents
             return true;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidMetadataProperty(JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata to be a simple type, but was {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around {reader.GenerateErrorState()}");
         }
 
+        [DoesNotReturn]
         private void ThrowExpectedFieldTypeOfString(string field, JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.{field} to have string type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidLastModifiedProperty(State state, LazyStringValue str, IJsonParser reader)
         {
             var field = state == State.ReadingLastModified ? Constants.Documents.Metadata.LastModified : LegacyLastModified;
             throw new InvalidDataException($"Cannot parse the value of property @metadata.{field}: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidEtagType(JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.@etag to have string or long type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidReplicationHistoryType(JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.Raven-Replication-History to have array type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidArrayType(JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property to have array type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -169,6 +170,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
+        [DoesNotReturn]
         private static void ThrowTableNotDefinedInConfig(string tableName)
         {
             throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of SQL ETL task");

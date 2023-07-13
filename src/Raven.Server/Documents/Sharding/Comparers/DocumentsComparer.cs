@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Exceptions.Sharding;
@@ -188,16 +189,19 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         return false;
     }
 
+    [DoesNotReturn]
     private static void ThrowIfCannotFindMetadata(BlittableJsonReaderObject blittable)
     {
         throw new InvalidOperationException($"Missing metadata in document. Unable to find {Constants.Documents.Metadata.Key} in {blittable}");
     }
 
+    [DoesNotReturn]
     private static void ThrowIfCannotFindOrderByFields(BlittableJsonReaderObject metadata)
     {
         throw new InvalidOperationException($"Unable to find {Constants.Documents.Metadata.Sharding.Querying.OrderByFields} in metadata: {metadata}");
     }
 
+    [DoesNotReturn]
     private static void ThrowIfNotExpectedType(string expectedType, object actualValue)
     {
         throw new InvalidOperationException($"Expected to get type: {expectedType} but got: {actualValue} of type: {actualValue.GetType()}");

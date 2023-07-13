@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -100,6 +101,7 @@ namespace Voron.Platform.Posix
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowNotSupportedOption(string file)
         {
             throw new NotSupportedException(
@@ -315,6 +317,7 @@ namespace Voron.Platform.Posix
             return loadedPage;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidMappingRequested(long startPage, long size)
         {
             throw new InvalidOperationException(

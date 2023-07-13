@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -382,6 +383,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         }
     }
 
+    [DoesNotReturn]
     private static void ThrowWhenBoostingIsInDocument()
     {
         throw new NotImplementedInCoraxException("Indexing-time boosting of field is not implemented.");

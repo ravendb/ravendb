@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
@@ -436,11 +436,13 @@ namespace Raven.Server.Documents
             }
         }
 
+        [DoesNotReturn]
         internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
         {
             throw new InvalidDataException($"Counter-Group document '{counterKeySlice}' is missing '{property}' property. Shouldn't happen");
         }
 
+        [DoesNotReturn]
         private static void ThrowCounterNameTooBig(string name)
         {
             throw new ArgumentException(

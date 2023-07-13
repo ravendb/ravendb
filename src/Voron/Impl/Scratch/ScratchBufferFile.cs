@@ -15,6 +15,7 @@ using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Sparrow.Server.Utils;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Scratch
 {
@@ -285,6 +286,7 @@ namespace Voron.Impl.Scratch
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidFreeOfUnusedPage(long page)
         {
             throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);

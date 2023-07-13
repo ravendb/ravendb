@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -217,6 +218,7 @@ namespace Raven.Server.Utils
             return (true, vectorBuffer.ToString());
         }
 
+        [DoesNotReturn]
         public static void ThrowConflictingEtag(string id, string changeVector, long newEtag, string dbId, string nodeTag)
         {
             throw new InvalidOperationException($"Tried to update the change vector '{changeVector}' but the new etag '{newEtag}' is smaller than " +

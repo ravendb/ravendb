@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
@@ -20,6 +21,7 @@ namespace Raven.Server.Exceptions
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(Feature feature)
         {
             throw new FeaturesAvailabilityException(
@@ -27,6 +29,7 @@ namespace Raven.Server.Exceptions
                 $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
 
+        [DoesNotReturn]
         public static void Throw(string message)
         {
             throw new FeaturesAvailabilityException(message);

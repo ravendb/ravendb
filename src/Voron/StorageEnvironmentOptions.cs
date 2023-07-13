@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -164,6 +165,7 @@ namespace Voron
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInitialLogFileSizeOutOfRange()
         {
             throw new ArgumentOutOfRangeException("InitialLogFileSize", "The initial log for the Voron must be above zero");

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
@@ -430,6 +431,7 @@ namespace Raven.Server.Utils
             return kvpKeyAsString;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidObject(JsValue jsValue)
         {
             throw new InvalidOperationException("Invalid type " + jsValue);

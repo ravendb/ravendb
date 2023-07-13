@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -498,11 +499,13 @@ namespace Raven.Server.Routing
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownAuthStatus(RouteInformation route)
         {
             throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownAuthStatus(RavenServer.AuthenticationStatus status)
         {
             throw new ArgumentOutOfRangeException("Unknown auth status: " + status);

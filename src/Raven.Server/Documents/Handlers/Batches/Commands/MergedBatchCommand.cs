@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Raven.Client;
@@ -515,6 +516,7 @@ public class MergedBatchCommand : TransactionMergedCommand
         public Stream Stream;
     }
 
+    [DoesNotReturn]
     private void ThrowUnexpectedOrderOfRavenEtlCommands(string source)
     {
         throw new InvalidOperationException($"Unexpected order of commands sent by {source}. {CommandType.AttachmentPUT} needs to be preceded by {CommandType.PUT}");

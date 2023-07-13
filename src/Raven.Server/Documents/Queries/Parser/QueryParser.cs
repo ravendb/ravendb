@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
@@ -247,6 +248,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidQueryException(string message, Exception e = null)
         {
             throw new InvalidQueryException(message, Scanner.Input, null, e);
@@ -258,6 +260,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return javaScriptParser.ParseScript(script);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownQueryType(QueryType queryType)
         {
             throw new ArgumentOutOfRangeException(nameof(queryType), queryType, "Unknown query type");
@@ -550,6 +553,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return tsf;
         }
 
+        [DoesNotReturn]
         private void ThrowCannotHaveBothClauses(string clause1, string clause2, string functionName)
         {
             ThrowInvalidQueryException($"Cannot have both '{clause1}' and '{clause2}' in the same Time Series query function '{functionName}'");
@@ -1361,6 +1365,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             return args;
         }
 
+        [DoesNotReturn]
         private void ThrowParseException(string msg)
         {
             var sb = new StringBuilder()
@@ -1385,6 +1390,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             throw new ParseException(sb.ToString());
         }
 
+        [DoesNotReturn]
         private void ThrowQueryException(string msg)
         {
             var sb = new StringBuilder()
@@ -1397,6 +1403,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             throw new ParseException(sb.ToString());
         }
 
+        [DoesNotReturn]
         private void ThrowQueryTooComplexException()
         {
             throw new ParseException($"Query is too complex. Query: {Scanner.Input}");

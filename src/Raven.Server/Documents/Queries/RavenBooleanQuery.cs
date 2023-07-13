@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Queries.AST;
@@ -150,11 +151,13 @@ namespace Raven.Server.Documents.Queries
             return *(int*)(&value);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidOperator(OperatorType @operator)
         {
             throw new InvalidOperationException($"Cannot '{@operator}' query clause because current operator is {_operator}");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidOperatorType(OperatorType operatorType)
         {
             throw new ArgumentException($"{nameof(RavenBooleanQuery)} doesn't handle '{operatorType}' operator");

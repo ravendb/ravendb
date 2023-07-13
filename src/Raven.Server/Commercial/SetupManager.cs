@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -505,6 +506,7 @@ namespace Raven.Server.Commercial
             }
         }
 
+        [DoesNotReturn]
         private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
         {
             progress.AddError(msg, e);

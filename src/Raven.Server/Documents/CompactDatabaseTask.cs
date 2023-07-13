@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -227,6 +228,7 @@ namespace Raven.Server.Documents
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowCantMoveDirectory(string src, string dst, Exception e, string databasePath)
         {
             throw new IOException(

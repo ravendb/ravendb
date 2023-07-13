@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Jint.Native.Json;
@@ -833,6 +834,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _reduceKeyProcessor.ReleaseBuffer();
                 }
 
+                [DoesNotReturn]
                 private static void ThrowMissingGroupByFieldsInMapOutput(object output, Dictionary<string, CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
                 {
                     string outputString;

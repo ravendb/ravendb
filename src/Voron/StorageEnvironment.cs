@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -37,6 +37,7 @@ using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 using Sparrow.Server.Collections;
 using Voron.Data.Lookups;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron
 {
@@ -414,6 +415,7 @@ namespace Voron
                 ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema.");
         }
 
+        [DoesNotReturn]
         private void ThrowSchemaUpgradeRequired(int schemaVersionVal, string message)
         {
             SchemaErrorException.Raise(this,
@@ -578,6 +580,7 @@ namespace Voron
             }
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidDisposeDuringActiveTransactions(List<ActiveTransaction> activeTxs)
         {
             throw new TimeoutException(
@@ -766,6 +769,7 @@ namespace Voron
             }
         }
 
+        [DoesNotReturn]
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
@@ -790,11 +794,13 @@ namespace Voron
                 _envDispose.Signal();
         }
 
+        [DoesNotReturn]
         private void ThrowCurrentlyDisposing()
         {
             throw new ObjectDisposedException("The environment " + Options.BasePath + " is currently being disposed");
         }
 
+        [DoesNotReturn]
         private void ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(LowLevelTransaction llt)
         {
             throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}. (Debug details: tx id of {nameof(llt.ActiveTransactionNode)} - {llt.ActiveTransactionNode?.Value?.Id}");
@@ -824,6 +830,7 @@ namespace Voron
             throw new TimeoutException(message);
         }
 
+        [DoesNotReturn]
         private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
         {
             var copy = Journal.CurrentFlushingInProgressHolder;
@@ -1334,6 +1341,7 @@ namespace Voron
             }
         }
 
+        [DoesNotReturn]
         private static unsafe void ThrowInvalidPageNumber(long pageNumber, PageHeader* current)
         {
             var message = $"When reading page {pageNumber}, we read a page with header of page {current->PageNumber}. ";
@@ -1346,6 +1354,7 @@ namespace Voron
             throw new InvalidDataException(message);
         }
 
+        [DoesNotReturn]
         private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
         {
             var message = $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}. ";
@@ -1469,6 +1478,7 @@ namespace Voron
             tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
         }
 
+        [DoesNotReturn]
         private static void ThrowSimulateFailureOnDbCreation()
         {
             throw new InvalidOperationException("Simulation of db creation failure");

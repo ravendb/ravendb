@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
@@ -1184,6 +1184,7 @@ namespace Raven.Server.Smuggler.Documents
                    document.Id.StartsWith("Raven/Replication/Sources/");
         }
 
+        [DoesNotReturn]
         protected static void ThrowInvalidData()
         {
             throw new InvalidDataException("Document does not contain an id.");

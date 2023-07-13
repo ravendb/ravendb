@@ -69,6 +69,7 @@ using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents
 {
@@ -474,6 +475,7 @@ namespace Raven.Server.Documents
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
+        [DoesNotReturn]
         internal void ThrowDatabaseShutdown(Exception e = null)
         {
             throw CreateDatabaseShutdownException(e);

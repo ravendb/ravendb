@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -113,11 +114,13 @@ namespace Raven.Server.ServerWide.Context
             return value;
         }
 
+        [DoesNotReturn]
         private static void ThrowWriteTransactionMustBeOpen()
         {
             throw new InvalidOperationException("Write transaction must be opened");
         }
 
+        [DoesNotReturn]
         private static void ThrowReadTransactionMustBeOpen()
         {
             throw new InvalidOperationException("Read transaction must be opened");
@@ -139,6 +142,7 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+        [DoesNotReturn]
         private static void ThrowTransactionAlreadyOpened()
         {
             throw new InvalidOperationException("Transaction is already opened");

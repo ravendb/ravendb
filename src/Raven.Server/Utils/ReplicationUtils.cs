@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -78,6 +79,7 @@ namespace Raven.Server.Utils
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidCollectionAfterResolve(string collection, string actual)
         {
             throw new InvalidOperationException(

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Sparrow;
 
@@ -259,11 +260,13 @@ namespace Raven.Server.Documents.Queries.AST
 
         }
 
+        [DoesNotReturn]
         private static void GetValueThrowInvalidExprType(QueryExpression expr)
         {
             throw new ArgumentOutOfRangeException(expr.Type.ToString());
         }
 
+        [DoesNotReturn]
         protected static void ThrowInvalidOperationType(BinaryExpression @where)
         {
             throw new ArgumentOutOfRangeException(@where.Operator.ToString());

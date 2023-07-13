@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Global;
@@ -87,11 +88,13 @@ namespace Sparrow.Server.Platform
                     ThrowFailedToFree();
             }
 
+            [DoesNotReturn]
             private static void ThrowFailedToAllocate()
             {
                 throw new Win32Exception("Could not allocate memory");
             }
 
+            [DoesNotReturn]
             private static void ThrowFailedToFree()
             {
                 throw new Win32Exception("Failed to free memory");

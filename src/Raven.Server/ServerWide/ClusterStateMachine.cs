@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -4941,6 +4942,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
+        [DoesNotReturn]
         private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
         {
             var openingString = isExecution
@@ -4957,6 +4959,7 @@ namespace Raven.Server.ServerWide
                                        $"Number of errors is: {_numberOfErrors}." + closingString);
         }
 
+        [DoesNotReturn]
         private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
         {
             var openingString = isExecution
@@ -4973,6 +4976,7 @@ namespace Raven.Server.ServerWide
                                        $"Number of errors is: {_numberOfErrors}." + closingString);
         }
 
+        [DoesNotReturn]
         private void ThrowApplyException(long index, Exception e)
         {
             throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);

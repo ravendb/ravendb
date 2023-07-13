@@ -2,10 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -135,6 +135,7 @@ namespace Raven.Server.Documents.TransactionMerger
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowTxMergerWasDisposed()
         {
             throw new ObjectDisposedException("Transaction Merger");

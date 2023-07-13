@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -248,6 +249,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return null;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidObject(JsValue jsValue)
         {
             throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue}");

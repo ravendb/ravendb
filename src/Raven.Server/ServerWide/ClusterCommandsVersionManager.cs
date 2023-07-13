@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -189,6 +190,7 @@ namespace Raven.Server.ServerWide
             MyCommandsVersion = ClusterCommandsVersions.Values.Max();
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidClusterVersion(int version)
         {
             throw new InvalidOperationException($"Can't set cluster version '{version}' that is higher then my version '{MyCommandsVersion}', " +

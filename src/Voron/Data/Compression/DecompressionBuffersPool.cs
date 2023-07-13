@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
@@ -184,11 +185,13 @@ namespace Voron.Data.Compression
             return buffer;
         }
 
+        [DoesNotReturn]
         private static void ThrowPageSizeTooBig(int pageSize)
         {
             throw new ArgumentException($"Max page size is {Constants.Compression.MaxPageSize} while you requested {pageSize} bytes");
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidPageSize(int pageSize)
         {
             throw new ArgumentException(

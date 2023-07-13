@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
@@ -286,6 +287,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                 }
             }
 
+            [DoesNotReturn]
             private void ThrowUnsupportedType()
             {
                 throw new NotSupportedException("Unsupported blittable type");

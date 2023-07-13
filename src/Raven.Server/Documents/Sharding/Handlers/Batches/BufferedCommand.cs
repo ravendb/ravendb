@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
@@ -275,6 +276,7 @@ public class BufferedCommand
             }
         }
 
+        [DoesNotReturn]
         public static void ThrowArgumentMustBePositive(string name)
         {
             throw new ArgumentException($"{name} must be positive");

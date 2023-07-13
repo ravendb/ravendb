@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
@@ -140,11 +141,13 @@ internal unsafe class AnalyzersScope : IDisposable
         return analyzer;
     }
 
+    [DoesNotReturn]
     private static Analyzer ThrowWhenAnalyzerModeNotFound(FieldIndexingMode mode)
     {
         throw new ArgumentOutOfRangeException($"{mode} is not implemented in {nameof(AnalyzersScope)}");
     }
 
+    [DoesNotReturn]
     private static void ThrowWhenDynamicFieldNotFound(Slice fieldName)
     {
         throw new InvalidDataException(

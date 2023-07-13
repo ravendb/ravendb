@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using Voron.Impl;
 
@@ -27,6 +28,8 @@ namespace Voron.Exceptions
                 throw;
             }
         }
+
+        [DoesNotReturn]
         public static void Raise(StorageEnvironment env, string message)
         {
             try

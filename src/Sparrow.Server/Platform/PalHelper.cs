@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Sparrow.Server.Exceptions;
@@ -10,7 +11,8 @@ namespace Sparrow.Server.Platform
         private const int ERROR_WRITE_PROTECT = 19; 
         public const string ErrorMediaIsWriteProtectedHintMessage =
             "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
-        
+
+        [DoesNotReturn]
         public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
         {
             string txt;

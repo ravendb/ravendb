@@ -33,6 +33,7 @@ using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Journal
 {
@@ -1076,6 +1077,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowReadByeondOldestActiveTransaction(long currentJournalMaxTransactionId,
                 long previousJournalMaxTransactionId, long oldestActiveTransaction)
             {
@@ -1320,6 +1322,7 @@ namespace Voron.Impl.Journal
                         _parent._fsyncLock.Release();
                 }
 
+                [DoesNotReturn]
                 private static void ThrowErrorWhenSyncingDataFile(LastFlushState lastFlushed, TransactionHeader transactionHeader, StorageEnvironment env)
                 {
                     var message =
@@ -1523,6 +1526,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            [DoesNotReturn]
             private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, PagePosition pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
             {
                 var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
@@ -1652,6 +1656,7 @@ namespace Voron.Impl.Journal
                 });
             }
 
+            [DoesNotReturn]
             [Conditional("DEBUG")]
             private void ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
             {

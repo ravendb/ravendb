@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
@@ -148,6 +149,7 @@ namespace Voron.Impl.Paging
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowNotSupportedOption(string file)
         {
             throw new NotSupportedException(
@@ -410,6 +412,7 @@ namespace Voron.Impl.Paging
             return loadedPage;
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidMappingRequested(long startPage, long size)
         {
             throw new InvalidOperationException(

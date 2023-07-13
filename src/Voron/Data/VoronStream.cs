@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -65,6 +66,7 @@ namespace Voron.Data
             ThrowTransactionIsNull();            
         }
 
+        [DoesNotReturn]
         private void ThrowTransactionIsNull()
         {
             throw new ArgumentNullException("tx");
@@ -230,6 +232,7 @@ namespace Voron.Data
             throw new NotSupportedException("The method or operation is not supported by VoronStream.");
         }
 
+        [DoesNotReturn]
         private static void ThrowWhenValueIsEqualOrLessZero(long position)
         {
             throw new ArgumentException($"Position {position} is not possible inside {nameof(VoronStream)}.");

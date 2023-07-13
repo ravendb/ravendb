@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -134,6 +135,7 @@ namespace Voron.Data.Compression
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowCouldNotCompressEmptyDecompressedPage(long pageNumber)
         {
             throw new InvalidOperationException($"Empty decompressed page #{pageNumber} could not be compressed back. Should never happen");

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
@@ -161,6 +161,7 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         return new ClusterTransactionRequestProcessor(RequestHandler, topology);
     }
 
+    [DoesNotReturn]
     private static void ThrowTimeoutException(List<WaitForIndexItem> indexesToWait, int i, Stopwatch sp, QueryOperationContext context, long cutoffEtag)
     {
         var staleIndexesCount = 0;

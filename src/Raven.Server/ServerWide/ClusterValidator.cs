@@ -1,5 +1,5 @@
 ﻿using System;
-using JetBrains.Annotations;
+using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
@@ -66,6 +66,7 @@ namespace Raven.Server.ServerWide
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RejectPutClusterCommandException(msg);
@@ -86,6 +87,7 @@ namespace Raven.Server.ServerWide
         {
         }
 
+        [DoesNotReturn]
         public static void Throw(string msg)
         {
             throw new RejectSendToFollowerException(msg);

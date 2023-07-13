@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -2709,11 +2710,13 @@ namespace Raven.Server
                     header.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats);
         }
 
+        [DoesNotReturn]
         private static void ThrowDatabaseShutdown(string databaseName)
         {
             throw new DatabaseDisabledException($"Database {databaseName} was shutdown.");
         }
 
+        [DoesNotReturn]
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");

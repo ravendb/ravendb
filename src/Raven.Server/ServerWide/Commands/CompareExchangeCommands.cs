@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Raven.Client;
@@ -417,6 +418,7 @@ namespace Raven.Server.ServerWide.Commands
             return json;
         }
 
+        [DoesNotReturn]
         private static void ThrowCompareExchangeKeyTooBig(string str)
         {
             throw new CompareExchangeKeyTooBigException(

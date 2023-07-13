@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -661,12 +662,14 @@ namespace Raven.Server.Documents.Replication.Outgoing
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
         }
 
+        [DoesNotReturn]
         protected static void ThrowTimeout(int timeout)
         {
             throw new TimeoutException("Could not get a server response in a reasonable time " +
                                        TimeSpan.FromMilliseconds(timeout));
         }
 
+        [DoesNotReturn]
         protected static void ThrowConnectionClosed()
         {
             throw new OperationCanceledException("The connection has been closed by the Dispose method");

@@ -24,6 +24,7 @@ using Encoding = System.Text.Encoding;
 using System.Diagnostics;
 using Corax.Mappings;
 using Raven.Client.Exceptions.Corax;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -387,6 +388,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
+    [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {
         throw new InvalidOperationException($"A field `{field.Name}` that is neither indexed nor stored is useless because it cannot be searched or retrieved.");
@@ -440,6 +442,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
+    [DoesNotReturn]
     internal static void ThrowIndexingComplexObjectNotSupported(IndexField field, IndexType indexType)
     {
         var fieldName = field.OriginalName ?? field.Name;

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -234,16 +235,19 @@ namespace Raven.Server.Routing
                 DatabaseDoesNotExistException.Throw(databaseName.Value);
         }
 
+        [DoesNotReturn]
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when unloading database {databaseName} after {timeout}, try again later");
         }
 
+        [DoesNotReturn]
         private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {databaseName} after {timeout}, try again later");
         }
 
+        [DoesNotReturn]
         private static void ThrowDatabaseLoadTimeoutWithLog(StringSegment databaseName, TimeSpan timeout, string log)
         {
             throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. Database initialization log: " + Environment.NewLine + log);

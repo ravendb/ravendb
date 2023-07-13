@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -2185,6 +2186,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
+        [DoesNotReturn]
         private void ThrowInvalidConfigurationIfNecessary(BlittableJsonReaderObject etlConfiguration, IReadOnlyCollection<string> errors)
         {
             if (errors.Count <= 0)
@@ -3224,6 +3226,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
             throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
@@ -3231,6 +3234,7 @@ namespace Raven.Server.ServerWide
                                             "to indicate that this node should create its own cluster");
         }
 
+        [DoesNotReturn]
         private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
         {
             throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, " +
@@ -3519,6 +3523,7 @@ namespace Raven.Server.ServerWide
             return result;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidTcpUrlOnStartup()
         {
             throw new InvalidOperationException("The server has yet to complete startup, cannot get NodeTcpServerUtl");

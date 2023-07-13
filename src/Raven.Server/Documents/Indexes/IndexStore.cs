@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -2120,11 +2121,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        [DoesNotReturn]
         public static void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason, ServerStore serverStore)
         {
             throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {serverStore.NodeTag} state is {serverStore.LastStateChangeReason()}", exception);
         }
 
+        [DoesNotReturn]
         public static void ThrowIndexDeletionException(string indexName, Exception exception)
         {
             throw new IndexDeletionException($"Failed to delete index '{indexName}'.", exception);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -206,6 +207,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Transformation.IsEmptyScript == false;
         }
 
+        [DoesNotReturn]
         private static void ThrowTimeoutException(int numberOfCommands, TimeSpan duration, Exception e)
         {
             var message = $"Load request applying {numberOfCommands} commands timed out after {duration}.";

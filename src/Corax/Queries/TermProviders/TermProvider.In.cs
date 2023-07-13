@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Corax.Mappings;
 using Voron;
@@ -54,6 +55,7 @@ namespace Corax.Queries
                             });
         }
 
+        [DoesNotReturn]
         private static TermMatch ThrowInvalidTermType()
         {
             throw new InvalidDataException($"In {nameof(InTermProvider<TTermsType>)} type {nameof(TTermsType)} has to be `string` or `Slice`.");

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
@@ -108,6 +109,7 @@ namespace Raven.Server.Documents
             return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, options);
         }
 
+        [DoesNotReturn]
         private static void ThrowAttachmentsModificationsDetected()
         {
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");

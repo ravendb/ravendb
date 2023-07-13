@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -546,6 +547,7 @@ namespace Voron.Data.BTrees
             return Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out tag);
         }
 
+        [DoesNotReturn]
         private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)
         {
             VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,

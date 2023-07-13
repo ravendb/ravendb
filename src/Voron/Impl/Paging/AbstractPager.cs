@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow;
@@ -521,12 +522,14 @@ namespace Voron.Impl.Paging
         public abstract override string ToString();
 
 
+        [DoesNotReturn]
         public void ThrowAlreadyDisposedException()
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
             throw new ObjectDisposedException($"The pager is already disposed ({ToString()})");
         }
 
+        [DoesNotReturn]
         protected void ThrowOnInvalidPageNumber(long pageNumber)
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
@@ -536,6 +539,7 @@ namespace Voron.Impl.Paging
                 GetSourceName());
         }
 
+        [DoesNotReturn]
         public static void ThrowIncreasingDataFileInCopyOnWriteModeException(string dataFilePath, long requestedSize)
         {
             throw new IncreasingDataFileInCopyOnWriteModeException(dataFilePath, requestedSize);

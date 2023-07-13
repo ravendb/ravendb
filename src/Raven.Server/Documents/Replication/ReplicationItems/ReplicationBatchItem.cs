@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -193,7 +194,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             _isDisposed = true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DoesNotReturn]
         public static void ThrowTooManyChangeVectorEntries(ReplicationBatchItem item, string id)
         {
             throw new ArgumentOutOfRangeException(nameof(item),

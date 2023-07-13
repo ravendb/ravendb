@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -586,21 +587,25 @@ namespace Raven.Server.Documents.Handlers.Batches
             return cmds;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidType()
         {
             throw new InvalidOperationException($"Command must have a valid '{nameof(CommandData.Type)}' property");
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingDocumentProperty()
         {
             throw new InvalidOperationException($"PUT command must have a '{nameof(CommandData.Document)}' property");
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingPatchProperty()
         {
             throw new InvalidOperationException($"PUT command must have a '{nameof(CommandData.Patch)}' property");
         }
 
+        [DoesNotReturn]
         private static void ThrowMissingNameProperty()
         {
             throw new InvalidOperationException($"Attachment PUT command must have a '{nameof(CommandData.Name)}' property");
@@ -987,18 +992,21 @@ namespace Raven.Server.Documents.Handlers.Batches
             return CommandType.None;
         }
 
+        [DoesNotReturn]
         private static unsafe void ThrowInvalidProperty(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidOperationException("Invalid property name: " +
                                                 ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
+        [DoesNotReturn]
         private static unsafe void ThrowInvalidCommandType(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidCommandTypeException("Invalid command type: "
                                                   + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
+        [DoesNotReturn]
         public static void ThrowUnexpectedToken(JsonParserToken jsonParserToken, JsonParserState state)
         {
             throw new InvalidOperationException("Expected " + jsonParserToken + " , but got " + state.CurrentTokenType);
@@ -1019,6 +1027,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             parser.SetBuffer(buffer, 0, read);
         }
 
+        [DoesNotReturn]
         private static void ThrowUnexpectedEndOfStream()
         {
             throw new EndOfStreamException();

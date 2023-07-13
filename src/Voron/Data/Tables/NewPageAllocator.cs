@@ -12,6 +12,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 using Constants = Voron.Global.Constants;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Data.Tables
 {
@@ -149,6 +150,7 @@ namespace Voron.Data.Tables
             return  NumberOfPagesInSection; // 2 MB
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidExistingBuffer()
         {
             throw new InvalidOperationException("Invalid attempt to create a new buffer, but it was already there");
@@ -260,6 +262,7 @@ namespace Voron.Data.Tables
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidNewBuffer()
         {
             throw new InvalidOperationException("Invalid attempt to set value on non existing buffer");
@@ -335,12 +338,14 @@ namespace Voron.Data.Tables
             return _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidPageReleased(long pageNumber)
         {
             throw new InvalidOperationException("Tried to released page " + pageNumber +
                                                 " but couldn't find it in the allocation section");
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidEmptySectionState(long pageNumber)
         {
             throw new InvalidOperationException("Tried to return " + pageNumber +

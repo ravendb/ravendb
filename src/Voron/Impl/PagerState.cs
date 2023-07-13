@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -153,6 +154,7 @@ namespace Voron.Impl
 #endif
         }
 
+        [DoesNotReturn]
         internal void ThrowInvalidPagerState()
         {
             throw new ObjectDisposedException("Cannot add reference to a disposed pager state for " + _pager.FileName);

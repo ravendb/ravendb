@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Elasticsearch.Net;
@@ -254,6 +255,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return id.ToLowerInvariant();
         }
 
+        [DoesNotReturn]
         private void ThrowElasticSearchLoadException(string message, ServerError serverError, Exception originalException, string debugInformation)
         {
             if (serverError != null)

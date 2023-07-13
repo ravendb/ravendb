@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -404,6 +405,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return result;
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownAggregationOperation(AggregationOperation operation)
         {
             throw new InvalidOperationException($"Unknown aggregation operation defined: {operation}");

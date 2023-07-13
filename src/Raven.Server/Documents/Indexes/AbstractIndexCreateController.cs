@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
@@ -253,7 +253,7 @@ public abstract class AbstractIndexCreateController
         private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
         private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
 
-        public IndexBatchScope([NotNull] AbstractIndexCreateController controller, [NotNull] ServerStore serverStore, int numberOfUtilizedCores)
+        public IndexBatchScope([System.Diagnostics.CodeAnalysis.NotNull] AbstractIndexCreateController controller, [NotNull] ServerStore serverStore, int numberOfUtilizedCores)
         {
             _controller = controller ?? throw new ArgumentNullException(nameof(controller));
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
@@ -346,6 +346,7 @@ public abstract class AbstractIndexCreateController
             }
         }
 
+        [DoesNotReturn]
         private void ThrowIndexCreationException(Exception exception, string reason)
         {
             var sb = new StringBuilder();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -478,6 +479,7 @@ namespace Raven.Server.Documents.Queries.Results
             result[key] = fieldVal;
         }
 
+        [DoesNotReturn]
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)
         {
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
@@ -778,6 +780,7 @@ namespace Raven.Server.Documents.Queries.Results
             return context.Sync.ReadForMemory(stringValue, field.Name);
         }
 
+        [DoesNotReturn]
         private static void ThrowBinaryValuesNotSupported()
         {
             throw new NotSupportedException("Cannot convert binary values");
@@ -1212,6 +1215,7 @@ namespace Raven.Server.Documents.Queries.Results
             return null;
         }
 
+        [DoesNotReturn]
         private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
         {
             throw new NotSupportedException(

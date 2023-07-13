@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -248,6 +249,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        [DoesNotReturn]
         private static void ThrowQueryWantToExceedsInt32()
         {
             throw new InvalidDataException($"Lucene entries limit is int32 documents. ({int.MaxValue}).");

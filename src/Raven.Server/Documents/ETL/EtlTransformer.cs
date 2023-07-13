@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using Jint;
@@ -398,11 +399,13 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Transform(TExtracted item, TStatsScope stats, EtlProcessState state);
 
+        [DoesNotReturn]
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {
             throw new ArgumentException($"{parameterName} parameter is mandatory");
         }
 
+        [DoesNotReturn]
         protected static void ThrowInvalidScriptMethodCall(string message)
         {
             throw new InvalidOperationException(message);
