@@ -335,17 +335,8 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        var executeResults = ExecuteClusterTransaction(context, cmd, index);
-                        if (executeResults.Errors != null)
-                        {
-                            result = executeResults.Errors;
-                            leader?.SetStateOf(index, result);
-                        }
-                        else
-                        {
-                            result = executeResults.PreviousCount;
-                            leader?.SetStateOf(index, result);
-                        }
+                        result = ExecuteClusterTransaction(context, cmd, index);
+                        leader?.SetStateOf(index, result);
                         break;
 
                     case nameof(CleanUpClusterStateCommand):
@@ -948,7 +939,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private (long? PreviousCount, List<ClusterTransactionCommand.ClusterTransactionErrorInfo> Errors) ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private object ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -974,11 +965,11 @@ namespace Raven.Server.ServerWide
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return (count, null);
+                    return count;
                 }
 
                 OnTransactionDispose(context, index);
-                return (null, error);
+                return error;
             }
             catch (Exception e)
             {

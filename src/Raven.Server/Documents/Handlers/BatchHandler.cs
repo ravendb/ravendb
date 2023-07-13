@@ -291,7 +291,11 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
-                array.Add(new DynamicJsonValue { ["Type"] = clusterCommands.Type, ["Key"] = clusterCommands.Id, ["Index"] = index });
+                array.Add(new DynamicJsonValue { 
+                    ["Type"] = clusterCommands.Type, 
+                    ["Key"] = clusterCommands.Id, 
+                    ["Index"] = index
+                });
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
