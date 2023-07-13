@@ -794,8 +794,6 @@ namespace SlowTests.Server.Replication
 
         private class User
         {
-#pragma warning disable CS0649
-            public string Id;
 #pragma warning restore CS0649
             public string Name;
             public string Source;

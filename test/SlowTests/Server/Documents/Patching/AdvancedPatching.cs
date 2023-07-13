@@ -428,7 +428,7 @@ namespace SlowTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    await Assert.ThrowsAsync<RavenException>(async () =>
+                    await Assert.ThrowsAsync<JavaScriptException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
