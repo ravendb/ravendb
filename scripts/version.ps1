@@ -10,6 +10,10 @@ function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
     SetTeamCityEnvironmentVariable 'env.BUILT_AT' $($builtAt.ToString('o'))
 }
 
+function SetTagInTeamCity ($tag) {
+    Write-Host "##teamcity[addBuildTag '$tag']"
+}
+
 $DEV_BUILD_NUMBER = 60
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
@@ -59,6 +63,7 @@ function SetVersionInfo($projectDir) {
 
     SetVersionEnvironmentVariableInTeamCity $version
     SetBuiltAtEnvironmentVariableInTeamCity $builtAt
+    SetTagInTeamCity $version
     
     $versionInfo = @{ 
         Version       = $version;
