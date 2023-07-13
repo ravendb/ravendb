@@ -12,11 +12,20 @@ export default {
 } satisfies Meta<typeof IndexCleanup>;
 
 export const Empty: Story<typeof IndexCleanup> = () => {
+    const { indexesService } = mockServices;
+
+    indexesService.withGetStats([]);
+    indexesService.withGetIndexMergeSuggestions({
+        Suggestions: [],
+        Unmergables: {},
+    });
+
     return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };
 
 export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
     const { indexesService } = mockServices;
+
     indexesService.withGetStats();
     indexesService.withGetIndexMergeSuggestions();
 
