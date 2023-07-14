@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from "react";
+﻿import React from "react";
 import { Icon } from "components/common/Icon";
 import { Badge, Button, Card, Carousel, CarouselItem, Nav, NavItem, Table } from "reactstrap";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
@@ -25,29 +25,8 @@ interface IndexCleanupProps {
 export function IndexCleanup(props: IndexCleanupProps) {
     const { db } = props;
 
-    const { asyncFetchStats, activeTab, setActiveTab, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
+    const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
-
-    const [carouselHeight, setCarouselHeight] = useState(null);
-    const carouselRefs = useRef([]);
-
-    const setHeight = () => {
-        const activeCarouselItem = carouselRefs.current[activeTab];
-        if (activeCarouselItem) {
-            setCarouselHeight(activeCarouselItem.clientHeight);
-        }
-    };
-
-    const toggleTab = (tab: number) => {
-        if (activeTab !== tab) {
-            setHeight();
-            setActiveTab(tab);
-        }
-    };
-
-    const onCarouselExited = () => {
-        setCarouselHeight(null);
-    };
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;
@@ -78,8 +57,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
             <Nav className="card-tabs gap-3 card-tabs">
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: activeTab === 0 })}
-                        onClick={() => toggleTab(0)}
+                        className={classNames("p-3", "card-tab", { active: carousel.activeTab === 0 })}
+                        onClick={() => carousel.setActiveTab(0)}
                     >
                         <img src={mergeIndexesImg} alt="" />
                         <Badge
@@ -97,8 +76,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: activeTab === 1 })}
-                        onClick={() => toggleTab(1)}
+                        className={classNames("p-3", "card-tab", { active: carousel.activeTab === 1 })}
+                        onClick={() => carousel.setActiveTab(1)}
                     >
                         <img src={removeSubindexesImg} alt="" />
                         <Badge
@@ -116,8 +95,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: activeTab === 2 })}
-                        onClick={() => toggleTab(2)}
+                        className={classNames("p-3", "card-tab", { active: carousel.activeTab === 2 })}
+                        onClick={() => carousel.setActiveTab(2)}
                     >
                         <img src={removeUnusedImg} alt="" />
                         <Badge className="rounded-pill fs-5" color={unused.data.length !== 0 ? "primary" : "secondary"}>
@@ -131,8 +110,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </NavItem>
                 <NavItem>
                     <Card
-                        className={classNames("p-3", "card-tab", { active: activeTab === 3 })}
-                        onClick={() => toggleTab(3)}
+                        className={classNames("p-3", "card-tab", { active: carousel.activeTab === 3 })}
+                        onClick={() => carousel.setActiveTab(3)}
                     >
                         <img src={unmergableIndexesImg} alt="" />
                         <Badge
@@ -151,14 +130,14 @@ export function IndexCleanup(props: IndexCleanupProps) {
             </Nav>
 
             <Carousel
-                activeIndex={activeTab}
+                activeIndex={carousel.activeTab}
                 className="carousel-auto-height mt-3 mb-4"
-                style={{ height: carouselHeight }}
-                next={() => console.log(carouselRefs.current[activeTab].clientHeight)} // TODO kalczur
-                previous={() => console.log("previous")} // TODO kalczur
+                style={{ height: carousel.carouselHeight }}
+                previous={() => null}
+                next={() => null}
             >
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-0">
-                    <div ref={(el) => (carouselRefs.current[0] = el)}>
+                <CarouselItem key="carousel-0" onEntered={() => carousel.setHeight(0)}>
+                    <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4 d-block">
                                 <div className="text-limit-width">
@@ -251,8 +230,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-1">
-                    <div ref={(el) => (carouselRefs.current[1] = el)}>
+                <CarouselItem key="carousel-1" onEntered={() => carousel.setHeight(1)}>
+                    <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
                                 <div className="text-limit-width">
@@ -370,17 +349,15 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-2">
-                    <div ref={(el) => (carouselRefs.current[2] = el)}>
+                <CarouselItem key="carousel-2" onEntered={() => carousel.setHeight(2)}>
+                    <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
                                 <div className="text-limit-width">
                                     <h2>Remove unused indexes</h2>
-                                    Unused indexes still consume resources.
-                                    <br />
-                                    Indexes that have not been queried for over a week are listed below.
-                                    <br />
-                                    Review the list and consider deleting any unnecessary indexes.
+                                    Unused indexes still consume resources. Indexes that have not been queried for over
+                                    a week are listed below. Review the list and consider deleting any unnecessary
+                                    indexes.
                                 </div>
                             </Card>
                             {unused.data.length === 0 ? (
@@ -464,14 +441,14 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key="carousel-3">
-                    <div ref={(el) => (carouselRefs.current[3] = el)}>
+                <CarouselItem key="carousel-3" onEntered={() => carousel.setHeight(3)}>
+                    <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
                                 <div className="text-limit-width">
                                     <h2>Unmergable indexes</h2>
-                                    The following indexes cannot be merged. <br />
-                                    See the specific reason explanation provided for each index.
+                                    The following indexes cannot be merged. See the specific reason explanation provided
+                                    for each index.
                                 </div>
                             </Card>
 
