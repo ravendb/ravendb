@@ -20,6 +20,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
+import { todo } from "common/developmentHelper";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -81,6 +82,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     }
 
     const canEditDatabaseConfig = formValues.overrideConfig || !globalConfig;
+
+    todo("Feature", "Damian", "Render you do not have permission to this view");
 
     return (
         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
