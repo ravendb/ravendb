@@ -5,6 +5,7 @@ import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.Essential
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
+import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -254,6 +255,13 @@ export class DatabasesStubs {
         return {
             LastStatus: "Ok",
             LastError: null,
+        };
+    }
+
+    static refreshConfiguration(): RefreshConfiguration {
+        return {
+            Disabled: false,
+            RefreshFrequencyInSec: 65,
         };
     }
 }

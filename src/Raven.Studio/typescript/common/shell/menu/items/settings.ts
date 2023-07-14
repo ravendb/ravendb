@@ -5,6 +5,7 @@ import { bridgeToReact } from "common/reactUtils";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import ClientDatabaseConfiguration from "components/pages/database/settings/clientConfiguration/ClientDatabaseConfiguration";
 import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
+import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
 
 export = getSettingsMenuItem;
 
@@ -79,12 +80,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/refresh',
-            moduleId: require('viewmodels/database/settings/refresh'),
+            moduleId: bridgeToReact(DocumentRefresh, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Document Refresh',
             nav: true,
             css: 'icon-expos-refresh',
-            dynamicHash: appUrls.refresh
+            dynamicHash: appUrls.refresh,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/expiration',

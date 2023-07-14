@@ -5,7 +5,15 @@ const schema = yup
     .object({
         isDocumentRefreshEnabled: yup.boolean(),
         isRefreshFrequencyEnabled: yup.boolean(),
-        isRefreshFrequencyInSec: yup.number(),
+        refreshFrequency: yup
+            .number()
+            .nullable()
+            .positive()
+            .integer()
+            .when("isRefreshFrequencyEnabled", {
+                is: true,
+                then: (schema) => schema.required(),
+            }),
     })
     .required();
 
