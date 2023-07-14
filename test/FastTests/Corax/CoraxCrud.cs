@@ -29,7 +29,7 @@ public class CoraxCrud: StorageTest
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Eini"u8);
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
         
         {
@@ -52,7 +52,7 @@ public class CoraxCrud: StorageTest
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Eini"u8);
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
         
         using (var indexWriter = new IndexWriter(Env, fields))
@@ -62,7 +62,7 @@ public class CoraxCrud: StorageTest
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Ayende Rahien"u8);
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
         
         {

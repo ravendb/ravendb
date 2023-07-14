@@ -202,7 +202,7 @@ namespace StressTests.Corax
                 {
                     CreateEntry(indexWriter, entry);
                 }
-                indexWriter.PrepareAndCommit();
+                indexWriter.Commit();
             }
         }
 

@@ -42,7 +42,7 @@ namespace FastTests.Corax
                     builder.Write(1, "dancing queen"u8);
                 }
                 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
 
             using (var writer = new IndexWriter(Env, fields))
@@ -52,7 +52,7 @@ namespace FastTests.Corax
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "fernando"u8);
                 }
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
             
             Dictionary<long, string> fieldNamesByRootPage;
@@ -66,7 +66,7 @@ namespace FastTests.Corax
 
                 fieldNamesByRootPage = writer.GetIndexedFieldNamesByRootPage();
 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
             
             using (var writer = new IndexWriter(Env, fields))
@@ -76,7 +76,7 @@ namespace FastTests.Corax
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "eagles"u8); // no change!
                 }
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
 
 
@@ -109,7 +109,7 @@ namespace FastTests.Corax
                     builder.Write(1, "dancing queen"u8);
                 }
                 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
 
             using (var writer = new IndexWriter(Env, fields))
@@ -130,7 +130,7 @@ namespace FastTests.Corax
                     }
                 }
 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
 
             {

@@ -43,7 +43,7 @@ public class FacetIndexingRepro : StorageTest
             builder.Write(0, Encoding.UTF8.GetBytes(entryKey));
             entryId = builder.EntryId;
         }
-        iw.PrepareAndCommit();
+        iw.Commit();
         
         {
             var searcher = new IndexSearcher(wtx, fields);
@@ -134,7 +134,7 @@ public class FacetIndexingRepro : StorageTest
                 }
                 catch (EndOfStreamException)
                 {
-                    iw.PrepareAndCommit();
+                    iw.Commit();
                     iw.Dispose();
                     wtx.Commit();
                     wtx.Dispose();
@@ -166,7 +166,7 @@ public class FacetIndexingRepro : StorageTest
             
             void FlushIndexAndRenewWriteTransaction()
             {
-                iw.PrepareAndCommit();
+                iw.Commit();
                 iw.Dispose();
                 wtx.Commit();
                 wtx.Dispose();
@@ -238,14 +238,14 @@ public class FacetIndexingRepro : StorageTest
                 catch (EndOfStreamException)
                 {
 
-                    iw.PrepareAndCommit();
+                    iw.Commit();
                     iw.Dispose();
                     break;
                 }
 
                 if (id == "!Commit!")
                 {
-                    iw.PrepareAndCommit();
+                    iw.Commit();
                     iw.Dispose();
                     iw = new IndexWriter(wtx, indexFieldsMapping);
                     continue;

@@ -284,7 +284,7 @@ namespace FastTests.Corax
 
             }
 
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
 

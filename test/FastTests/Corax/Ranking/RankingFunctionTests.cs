@@ -187,7 +187,7 @@ public class RankingFunctionTests : StorageTest
             builder.Write(ContentIndex, dto.ContentAsSpan);
         }
 
-        indexWriter.PrepareAndCommit();
+        indexWriter.Commit();
     }
 
     public override void Dispose()

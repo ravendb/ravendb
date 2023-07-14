@@ -145,7 +145,7 @@ namespace Voron.Benchmark.Corax
                   
                 }
 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
         }
 

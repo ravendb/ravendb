@@ -1310,11 +1310,6 @@ namespace Corax
             return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
-        public void PrepareAndCommit()
-        {
-            Commit();
-        }
-
         public void Commit()
         {
             _indexDebugDumper.Commit();

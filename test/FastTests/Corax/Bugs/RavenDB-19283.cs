@@ -56,7 +56,7 @@ public class RavenDB_19283 : StorageTest
                 }
                 writer.DecrementList();
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         using (var indexSearcher = new IndexSearcher(Env, knownFields))

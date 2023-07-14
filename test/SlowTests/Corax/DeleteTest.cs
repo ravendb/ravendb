@@ -57,7 +57,7 @@ public class DeleteTest : StorageTest
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
             indexWriter.TryDeleteEntry("list/9");
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         {
@@ -160,7 +160,7 @@ public class DeleteTest : StorageTest
             builder.Write(ContentId, null, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
         }
 
-        indexWriter.PrepareAndCommit();
+        indexWriter.Commit();
         knownFields.Dispose();
     }
 

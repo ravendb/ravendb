@@ -47,7 +47,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 writer.Write(0, "users/1"u8);
                 entryId = writer.EntryId;
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
         
         using (var indexSearcher = new IndexSearcher(Env, knownFields))
@@ -100,7 +100,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 writer.Write(Constants.IndexWriter.DynamicField,"Age_1", Encoding.UTF8.GetBytes("10"), 10, 10);
             }
 
-            indexer.PrepareAndCommit();
+            indexer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, knownFields))
@@ -161,14 +161,14 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Nick", "Ayende"u8);
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
 
         using (var writer = new IndexWriter(Env, fields))
         {
             writer.TryDeleteEntry("users/1");
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -203,14 +203,14 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini Oren"u8);
             }
             
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
 
         using (var writer = new IndexWriter(Env, fields))
         {
             writer.TryDeleteEntry("users/1");
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -244,14 +244,14 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
 
         using (var writer = new IndexWriter(Env, fields))
         {
             writer.TryDeleteEntry("users/1");
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -285,7 +285,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(Constants.IndexWriter.DynamicField, "Rank", "U"u8);
             }
 
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var writer = new IndexWriter(Env, fields))
@@ -296,7 +296,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
 
@@ -309,7 +309,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
             }
            
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -344,7 +344,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 builder.WriteSpatial(Constants.IndexWriter.DynamicField,"Coordinates_Home", spatialEntry);
 
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         for (int i = 0; i < geohash.Length; ++i)
@@ -366,7 +366,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var writer = new IndexWriter(Env, fields))
         {
             writer.TryDeleteEntry(IdString);
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -416,7 +416,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 writer.DecrementList();
                 entryId = writer.EntryId;
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         using (var indexSearcher = new IndexSearcher(Env, fields))
@@ -463,7 +463,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(1, "Oren"u8);
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
@@ -475,7 +475,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
             }
           
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -488,7 +488,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var writer = new IndexWriter(Env, fields))
         {
             writer.TryDeleteEntry("users/1");
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -521,7 +521,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
 
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
         
         using (var writer = new IndexWriter(Env, fields))
@@ -533,7 +533,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
 
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, fields))
@@ -551,7 +551,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Eini"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
             }
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
         
         using (var searcher = new IndexSearcher(Env, fields))

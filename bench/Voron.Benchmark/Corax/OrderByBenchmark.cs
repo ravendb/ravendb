@@ -147,7 +147,7 @@ namespace Voron.Benchmark.Corax
                     builder.Write(3, Encoding.UTF8.GetBytes("Dog"));
                 }
 
-                writer.PrepareAndCommit();
+                writer.Commit();
             }
         }
 

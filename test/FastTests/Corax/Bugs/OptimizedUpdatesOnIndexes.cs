@@ -35,7 +35,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
                 oldId = entry.EntryId;
             }
             
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         using (var indexSearcher = new IndexSearcher(Env, fields))
@@ -58,7 +58,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
                 newId = entry.EntryId;
             }
             
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
         Assert.Equal(oldId, newId);
         

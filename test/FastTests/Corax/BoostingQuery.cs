@@ -320,7 +320,7 @@ namespace FastTests.Corax
             using (var indexWriter = new IndexWriter(Env, knownFields))
             {
                 indexWriter.TryDeleteEntry("list/1");
-                indexWriter.PrepareAndCommit();
+                indexWriter.Commit();
             }
             
             using(var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)))
@@ -398,7 +398,7 @@ namespace FastTests.Corax
                     builder.Boost(entry.Boost.Value);
             }
 
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)

@@ -52,7 +52,7 @@ public class RawCoraxFlag : StorageTest
                 builder.Store(Constants.IndexWriter.DynamicField, "Dynamic", item);
             }
 
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using var __ = Slice.From(bsc, "Dynamic", out var fieldName);
@@ -78,7 +78,7 @@ public class RawCoraxFlag : StorageTest
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
             indexWriter.TryDeleteEntry("1");
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         {
@@ -111,7 +111,7 @@ public class RawCoraxFlag : StorageTest
                 builder.Store(item);
             }
 
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         Span<long> mem = stackalloc long[1024];
@@ -142,7 +142,7 @@ public class RawCoraxFlag : StorageTest
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
             indexWriter.TryDeleteEntry("1");
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         {

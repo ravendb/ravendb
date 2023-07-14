@@ -2035,7 +2035,7 @@ namespace FastTests.Corax
 
                 entry.IndexEntryId = builder.EntryId;
             }
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
             mapping.Dispose();
         }
 
@@ -2051,7 +2051,7 @@ namespace FastTests.Corax
 
             }
 
-            indexWriter.PrepareAndCommit();
+            indexWriter.Commit();
         }
 
         private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
@@ -2069,7 +2069,7 @@ namespace FastTests.Corax
                     entryWriter.Write(ContentIndex, PrepareString(entry.Content.ToString(CultureInfo.InvariantCulture)), Convert.ToInt64(entry.Content), entry.Content);
                 }
 
-                indexWriter.PrepareAndCommit();
+                indexWriter.Commit();
             }
         }
 

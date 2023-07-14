@@ -67,7 +67,7 @@ public class SpatialTests : StorageTest
                 entry.WriteSpatial(CoordinatesIndex, null, spatialEntry);
             }
 
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         for (int i = 0; i < geohash.Length; ++i)
@@ -91,7 +91,7 @@ public class SpatialTests : StorageTest
         using (var writer = new IndexWriter(Env, _fieldsMapping))
         {
             writer.TryDeleteEntry(IdString);
-            writer.PrepareAndCommit();
+            writer.Commit();
         }
 
         using (var searcher = new IndexSearcher(Env, _fieldsMapping))
