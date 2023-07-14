@@ -136,7 +136,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 previous={() => null}
                 next={() => null}
             >
-                <CarouselItem key="carousel-0" onEntered={() => carousel.setHeight(0)}>
+                <CarouselItem key="carousel-0" onEntering={() => carousel.setHeight(0)}>
                     <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4 d-block">
@@ -230,7 +230,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem key="carousel-1" onEntered={() => carousel.setHeight(1)}>
+                <CarouselItem key="carousel-1" onEntering={() => carousel.setHeight(1)}>
                     <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -349,7 +349,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem key="carousel-2" onEntered={() => carousel.setHeight(2)}>
+                <CarouselItem key="carousel-2" onEntering={() => carousel.setHeight(2)}>
                     <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -441,7 +441,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem key="carousel-3" onEntered={() => carousel.setHeight(3)}>
+                <CarouselItem key="carousel-3" onEntering={() => carousel.setHeight(3)}>
                     <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
