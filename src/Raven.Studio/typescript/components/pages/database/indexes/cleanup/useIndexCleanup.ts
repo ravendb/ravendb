@@ -9,38 +9,38 @@ import app from "durandal/app";
 import database from "models/resources/database";
 import moment from "moment";
 import router from "plugins/router";
-import { useEffect, useState } from "react";
-import { useAsync, useAsyncCallback } from "react-async-hook";
+import { useEffect, useRef, useState } from "react";
+import { useAsync } from "react-async-hook";
 import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
 
 type IndexStats = Map<string, Raven.Client.Documents.Indexes.IndexStats>;
 
-interface UnusedIndexInfo {
+interface UnusedIndex {
     name: string;
     containingIndexName?: string;
     lastQueryingTime?: Date;
     lastIndexingTime?: Date;
 }
 
-interface SurpassingIndexInfo {
+interface SurpassingIndex {
     name: string;
     containingIndexName: string;
     lastQueryingTime?: Date;
     lastIndexingTime?: Date;
 }
 
-interface MergeCandidateIndexItemInfo {
+interface MergeCandidateIndexItem {
     name: string;
     lastQueryTime?: Date;
     lastIndexingTime?: Date;
 }
 
-interface MergeIndexInfo {
-    toMerge: MergeCandidateIndexItemInfo[];
+interface MergeIndex {
+    toMerge: MergeCandidateIndexItem[];
     mergedIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
 }
 
-interface UnmergableIndexInfo {
+interface UnmergableIndex {
     name: string;
     reason: string;
 }
@@ -49,10 +49,13 @@ export default function useIndexCleanup(db: database) {
     const [activeTab, setActiveTab] = useState(0);
     const [indexStats, setIndexStats] = useState<IndexStats>(null);
 
-    const [mergableIndexes, setMergableIndexes] = useState<MergeIndexInfo[]>([]);
-    const [surpassingIndexes, setSurpassingIndexes] = useState<SurpassingIndexInfo[]>([]);
-    const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndexInfo[]>([]);
-    const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndexInfo[]>([]);
+    const [carouselHeight, setCarouselHeight] = useState(null);
+    const carouselRefs = useRef<HTMLDivElement[]>(new Array(4).fill(null));
+
+    const [mergableIndexes, setMergableIndexes] = useState<MergeIndex[]>([]);
+    const [surpassingIndexes, setSurpassingIndexes] = useState<SurpassingIndex[]>([]);
+    const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndex[]>([]);
+    const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndex[]>([]);
 
     const [selectedSurpassingIndexes, setSelectedSurpassingIndexes] = useState<string[]>([]);
     const [selectedUnusedIndexes, setSelectedUnusedIndexes] = useState<string[]>([]);
@@ -82,6 +85,10 @@ export default function useIndexCleanup(db: database) {
         }
     }, [mergableIndexes.length, surpassingIndexes.length, unmergableIndexes.length, unusedIndexes.length]);
 
+    const setHeight = (tab: number) => {
+        setCarouselHeight(carouselRefs.current[tab].clientHeight);
+    };
+
     const fetchIndexMergeSuggestions = async (indexStats: IndexStats) => {
         const results = await indexesService.getIndexMergeSuggestions(db);
 
@@ -104,7 +111,7 @@ export default function useIndexCleanup(db: database) {
 
         const surpassingRaw = suggestions.filter((x) => !x.MergedIndex);
 
-        const surpassing: SurpassingIndexInfo[] = [];
+        const surpassing: SurpassingIndex[] = [];
         surpassingRaw.forEach((group) => {
             group.CanDelete.forEach((deleteCandidate) => {
                 const stats = indexStats.get(deleteCandidate);
@@ -250,7 +257,7 @@ export default function useIndexCleanup(db: database) {
         await deleteIndexesVm.deleteTask;
     };
 
-    const navigateToMergeSuggestion = (item: MergeIndexInfo) => {
+    const navigateToMergeSuggestion = (item: MergeIndex) => {
         const mergedIndexName = mergedIndexesStorage.saveMergedIndex(
             db,
             item.mergedIndexDefinition,
@@ -264,8 +271,13 @@ export default function useIndexCleanup(db: database) {
 
     return {
         asyncFetchStats,
-        activeTab,
-        setActiveTab,
+        carousel: {
+            activeTab,
+            setActiveTab,
+            setHeight,
+            carouselHeight,
+            carouselRefs,
+        },
         mergable: {
             data: mergableIndexes,
             navigateToMergeSuggestion,
@@ -305,8 +317,8 @@ function getNewer(date1: string, date2: string) {
     return date1.localeCompare(date2) ? date1 : date2;
 }
 
-function findUnusedIndexes(stats: IndexStats): UnusedIndexInfo[] {
-    const result: UnusedIndexInfo[] = [];
+function findUnusedIndexes(stats: IndexStats): UnusedIndex[] {
+    const result: UnusedIndex[] = [];
     const now = moment();
 
     for (const [name, stat] of stats.entries()) {
