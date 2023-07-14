@@ -180,6 +180,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             public const string MemInfoPrefix = "1.6.12.{0}";
 
+            [Description("Available memory for processing (in MB)")]
             public const string AvailableMemoryForProcessing = "1.6.13";
 
             [Description("Number of concurrent requests")]
