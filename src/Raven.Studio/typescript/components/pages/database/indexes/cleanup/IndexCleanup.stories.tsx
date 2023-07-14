@@ -11,7 +11,7 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof IndexCleanup>;
 
-export const Empty: Story<typeof IndexCleanup> = () => {
+export const EmptyView: Story<typeof IndexCleanup> = () => {
     const { indexesService } = mockServices;
 
     indexesService.withGetStats([]);
