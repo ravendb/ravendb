@@ -59,10 +59,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 {
                     if (prop.Name.Length > 0 && prop.Name[0] == '@')
                     {
-                        if (prop.Name != Constants.Documents.Metadata.Collection &&
-                            prop.Name != Constants.Documents.Metadata.Expires &&
-                            prop.Name != Constants.Documents.Metadata.Refresh &&
-                            prop.Name != Constants.Documents.Metadata.Edges)
+                        if (Constants.Documents.Metadata.SystemKeys.Contains(prop.Name))
                             continue; // system property, ignoring it
                     }
 
