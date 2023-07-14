@@ -21,6 +21,8 @@ import { LoadError } from "components/common/LoadError";
 import { useAccessManager } from "components/hooks/useAccessManager";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
+    todo("Styling", "Matteo", "fix position of input validation error");
+    todo("Other", "Matteo", "revise texts");
     const { databasesService } = useServices();
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
@@ -98,7 +100,11 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 <Card>
                                     <CardBody>
                                         <div className="vstack gap-2">
-                                            <FormSwitch name="isDocumentRefreshEnabled" control={control}>
+                                            <FormSwitch
+                                                name="isDocumentRefreshEnabled"
+                                                control={control}
+                                                disabled={formState.isSubmitting}
+                                            >
                                                 Enable Document Refresh
                                             </FormSwitch>
                                             <div>
@@ -106,7 +112,9 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                                     name="isRefreshFrequencyEnabled"
                                                     control={control}
                                                     className="mb-3"
-                                                    disabled={!formValues.isDocumentRefreshEnabled}
+                                                    disabled={
+                                                        formState.isSubmitting || !formValues.isDocumentRefreshEnabled
+                                                    }
                                                 >
                                                     Set custom refresh frequency
                                                 </FormSwitch>
@@ -114,10 +122,11 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                                     name="refreshFrequency"
                                                     control={control}
                                                     type="number"
-                                                    disabled={!formValues.isRefreshFrequencyEnabled}
+                                                    disabled={
+                                                        formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
+                                                    }
                                                     placeholder="Default (60)"
-                                                    addonTextEnabled
-                                                    addonTextContent="seconds"
+                                                    addonText="seconds"
                                                 ></FormInput>
                                             </div>
                                         </div>
