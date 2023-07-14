@@ -1054,11 +1054,7 @@ namespace Corax
                     scope = default; // We dont want to reclaim the term name
                 }
 
-                //TODO: Maciej - we need to modify EntriesModifications to accept it externally 
-                for (int i = 0; i < reader.Frequency; i++)
-                {
-                    term.Removal(entryToDelete);
-                }
+                term.Removal(entryToDelete, reader.Frequency);
                 scope.Dispose();
                 
                 if(reader.HasNumeric == false)

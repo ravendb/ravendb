@@ -84,7 +84,7 @@ public unsafe struct EntryTermsReader
     public double Latitude;
     public double Longitude;
     public UnmanagedSpan? StoredField;
-    public int Frequency;
+    public short Frequency;
     public bool HasNumeric;
     public bool IsRaw;
     public bool IsList;
