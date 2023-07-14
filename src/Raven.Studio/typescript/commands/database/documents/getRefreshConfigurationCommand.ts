@@ -1,19 +1,23 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 
 class getRefreshConfigurationCommand extends commandBase {
 
-    constructor(private db: database) {
+    private readonly db: database;
+    
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
-    execute(): JQueryPromise<Raven.Client.Documents.Operations.Refresh.RefreshConfiguration> {
+    execute(): JQueryPromise<RefreshConfiguration> {
 
-        const deferred = $.Deferred<Raven.Client.Documents.Operations.Refresh.RefreshConfiguration>();
+        const deferred = $.Deferred<RefreshConfiguration>();
         const url = endpoints.databases.refresh.refreshConfig;
         this.query(url, null, this.db)
-            .done((refreshConfig: Raven.Client.Documents.Operations.Refresh.RefreshConfiguration) => deferred.resolve(refreshConfig))
+            .done((refreshConfig: RefreshConfiguration) => deferred.resolve(refreshConfig))
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
                     deferred.resolve(null);

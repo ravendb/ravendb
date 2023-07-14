@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardBody, Col, Form, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -11,23 +11,69 @@ import { tryHandleSubmit } from "components/utils/common";
 import { DocumentRefreshFormData, documentRefreshYupResolver } from "./DocumentRefreshValidation";
 import Code from "components/common/Code";
 import { todo } from "common/developmentHelper";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useServices } from "components/hooks/useServices";
+import { NonShardedViewProps } from "components/models/common";
+import ServerRefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+import messagePublisher = require("common/messagePublisher");
+import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
-export default function DocumentRefresh() {
-    const asyncGlobalSettings = useAsyncCallback<DocumentRefreshFormData>(null);
+export default function DocumentRefresh({ db }: NonShardedViewProps) {
+    const { databasesService } = useServices();
 
-    const { handleSubmit, control, formState, reset } = useForm<DocumentRefreshFormData>({
+    const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
+        mapToFormData(await databasesService.getRefreshConfiguration(db))
+    );
+    const { handleSubmit, control, formState, reset, setValue } = useForm<DocumentRefreshFormData>({
         resolver: documentRefreshYupResolver,
         mode: "all",
-        defaultValues: asyncGlobalSettings.execute,
+        defaultValues: asyncGetRefreshConfiguration.execute,
     });
 
     useDirtyFlag(formState.isDirty);
+    const formValues = useWatch({ control: control });
+    const { reportEvent } = useEventsCollector();
+    const { isAdminAccessOrAbove } = useAccessManager();
+
+    useEffect(() => {
+        if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
+            setValue("refreshFrequency", null, { shouldValidate: true });
+        }
+        if (!formValues.isDocumentRefreshEnabled && formValues.isRefreshFrequencyEnabled) {
+            setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
+        }
+    }, [
+        formValues.isDocumentRefreshEnabled,
+        formValues.isRefreshFrequencyEnabled,
+        formValues.refreshFrequency,
+        setValue,
+    ]);
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("refresh-configuration", "save");
+
+            await databasesService.saveRefreshConfiguration(db, {
+                Disabled: !formData.isDocumentRefreshEnabled,
+                RefreshFrequencyInSec: formData.isRefreshFrequencyEnabled ? formData.refreshFrequency : null,
+            });
+
+            messagePublisher.reportSuccess("Refresh configuration saved successfully");
+            db.hasRefreshConfiguration(formData.isDocumentRefreshEnabled);
+
             reset(formData);
         });
     };
+
+    if (asyncGetRefreshConfiguration.status === "not-requested" || asyncGetRefreshConfiguration.status === "loading") {
+        return <LoadingView />;
+    }
+
+    if (asyncGetRefreshConfiguration.status === "error") {
+        return <LoadError error="Unable to load document refresh" refresh={asyncGetRefreshConfiguration.execute} />;
+    }
 
     todo("Feature", "Damian", "Render you do not have permission to this view");
 
@@ -43,7 +89,7 @@ export default function DocumentRefresh() {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={!formState.isDirty}
+                                disabled={!formState.isDirty || !isAdminAccessOrAbove}
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
@@ -60,13 +106,15 @@ export default function DocumentRefresh() {
                                                     name="isRefreshFrequencyEnabled"
                                                     control={control}
                                                     className="mb-3"
+                                                    disabled={!formValues.isDocumentRefreshEnabled}
                                                 >
                                                     Set custom refresh frequency
                                                 </FormSwitch>
                                                 <FormInput
-                                                    name="isRefreshFrequencyInSec"
+                                                    name="refreshFrequency"
                                                     control={control}
                                                     type="number"
+                                                    disabled={!formValues.isRefreshFrequencyEnabled}
                                                     placeholder="Default (60)"
                                                     addonTextEnabled
                                                     addonTextContent="seconds"
@@ -129,6 +177,22 @@ export default function DocumentRefresh() {
             </Col>
         </div>
     );
+}
+
+function mapToFormData(dto: ServerRefreshConfiguration): DocumentRefreshFormData {
+    if (!dto) {
+        return {
+            isDocumentRefreshEnabled: false,
+            isRefreshFrequencyEnabled: false,
+            refreshFrequency: null,
+        };
+    }
+
+    return {
+        isDocumentRefreshEnabled: !dto.Disabled,
+        isRefreshFrequencyEnabled: dto.RefreshFrequencyInSec != null,
+        refreshFrequency: dto.RefreshFrequencyInSec,
+    };
 }
 
 const codeExample = `

@@ -4,6 +4,7 @@ import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.Essential
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
+import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 
 export default class MockDatabasesService extends AutoMockService<DatabasesService> {
     constructor() {
@@ -40,5 +41,9 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
 
     withDetailedStats(dto?: MockedValue<DetailedDatabaseStatistics>) {
         return this.mockResolvedValue(this.mocks.getDetailedStats, dto, DatabasesStubs.detailedStats());
+    }
+
+    withRefreshConfiguration(dto?: RefreshConfiguration) {
+        return this.mockResolvedValue(this.mocks.getRefreshConfiguration, dto, DatabasesStubs.refreshConfiguration());
     }
 }

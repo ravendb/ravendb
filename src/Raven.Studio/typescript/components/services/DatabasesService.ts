@@ -23,6 +23,9 @@ import StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stu
 import saveDatabaseStudioConfigurationCommand = require("commands/resources/saveDatabaseStudioConfigurationCommand");
 import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
+import getRefreshConfigurationCommand = require("commands/database/documents/getRefreshConfigurationCommand");
+import saveRefreshConfigurationCommand = require("commands/database/documents/saveRefreshConfigurationCommand");
+import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -90,5 +93,13 @@ export default class DatabasesService {
 
     async killOperation(db: database, taskId: number) {
         return new killOperationCommand(db, taskId).execute();
+    }
+
+    async getRefreshConfiguration(db: database) {
+        return new getRefreshConfigurationCommand(db).execute();
+    }
+
+    async saveRefreshConfiguration(db: database, dto: RefreshConfiguration) {
+        return new saveRefreshConfigurationCommand(db, dto).execute();
     }
 }
