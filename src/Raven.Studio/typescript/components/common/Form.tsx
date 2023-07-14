@@ -18,8 +18,7 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 
 type FormInputProps = InputProps & {
     type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
-    addonTextEnabled?: boolean;
-    addonTextContent?: string;
+    addonText?: string;
 };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -203,18 +202,7 @@ function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & InputProps) {
-    const {
-        name,
-        control,
-        defaultValue,
-        rules,
-        shouldUnregister,
-        children,
-        type,
-        addonTextEnabled,
-        addonTextContent,
-        ...rest
-    } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, children, type, addonText, ...rest } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -246,12 +234,11 @@ function FormInputGeneral<
                         onChange={(x) => handleValueChange(x.currentTarget.value)}
                         value={value == null ? "" : value}
                         invalid={invalid}
-                        addonTextEnabled={addonTextEnabled}
                         {...rest}
                     >
                         {children}
                     </Input>
-                    {addonTextEnabled && <InputGroupText>{addonTextContent}</InputGroupText>}
+                    {addonText && <InputGroupText>{addonText}</InputGroupText>}
                 </InputGroup>
             </div>
 
