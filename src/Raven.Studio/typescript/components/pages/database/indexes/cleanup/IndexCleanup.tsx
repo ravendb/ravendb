@@ -12,6 +12,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { todo } from "common/developmentHelper";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -23,6 +24,8 @@ interface IndexCleanupProps {
 }
 
 export function IndexCleanup(props: IndexCleanupProps) {
+    todo("Styling", "Kwiato", "align table header for surpassing and unused indexes");
+    todo("Styling", "Kwiato", "add delete indexes icon");
     const { db } = props;
 
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
