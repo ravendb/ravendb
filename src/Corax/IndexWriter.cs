@@ -898,7 +898,7 @@ namespace Corax
         private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
         private FastPForEncoder _pForEncoder;
-        private Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
+        private readonly Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
         private CompactTree _primaryKeyTree;
@@ -1193,6 +1193,7 @@ namespace Corax
         {
             _pforDecoder.Dispose();
             _indexedEntries.Clear();
+            _termsPerEntryId.Clear();
             _deletedEntries.Clear();
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();

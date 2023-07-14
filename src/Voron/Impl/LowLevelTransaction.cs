@@ -1060,6 +1060,9 @@ namespace Voron.Impl
 
         public void ReleaseCompactKey(ref CompactKey key)
         {
+            if (key == null)
+                return;
+            
             // The reason why we reset the key, which in turn will null the storage is to avoid cases of reused keys
             // been used by multiple operations. Eventually someone wil restore 
             key.Reset();
