@@ -1,6 +1,8 @@
 ﻿using System;
 using Corax;
 using Corax.Mappings;
+using Corax.Queries.SortingMatches.Meta;
+using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
@@ -39,6 +41,52 @@ public class CoraxCrud: StorageTest
             Assert.Equal("users/1", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[0]));
         }
     }
+    
+     
+    [Fact]
+    public void CanUpdateWithDifferentFrequency()
+    {
+        var fields = CreateKnownFields(Allocator);
+        Span<long> ids = stackalloc long[1024];
+        using (var indexWriter = new IndexWriter(Env, fields))
+        {
+            using (var builder = indexWriter.Index("users/1"u8))
+            {
+                builder.Write(0, null, "users/1"u8);
+                builder.Write(1, null, "Oren Oren Oren Rahien"u8);
+            }
+            indexWriter.Commit();
+        }
+        
+        using (var indexWriter = new IndexWriter(Env, fields))
+        {
+            using (var builder = indexWriter.Update("users/1"u8))
+            {
+                builder.Write(0, null, "users/1"u8);
+                builder.Write(1, null, "Oren Eini"u8);
+            }
+            using (var builder = indexWriter.Update("users/2"u8))
+            {
+                builder.Write(0, null, "users/2"u8);
+                builder.Write(1, null, "Oren Oren"u8);
+            }
+            indexWriter.Commit();
+        }
+        
+        {
+            using var indexSearcher = new IndexSearcher(Env, fields);
+            
+            var match = indexSearcher.TermQuery("Content", "oren", hasBoost: true);
+            var sort = indexSearcher.OrderBy(match, new OrderMetadata(true, MatchCompareFieldType.Score));
+            Assert.Equal(2, sort.Fill(ids));
+            Assert.Equal("users/2", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[0]));
+            Assert.Equal("users/1", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[1]));
+            
+            match = indexSearcher.TermQuery("Content", "rahien");
+            Assert.Equal(0, match.Fill(ids));
+        }
+    }
+
     
     [Fact]
     public void CanUpdateUsingBuilder()
