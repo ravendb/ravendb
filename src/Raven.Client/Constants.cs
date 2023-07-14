@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Raven.Client
 {
     public static class Constants
@@ -123,7 +125,7 @@ namespace Raven.Client
             public const string Prefix = "certificates/";
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
-        
+
         internal class Network
         {
             public const string AnyIp = "0.0.0.0";
@@ -152,7 +154,7 @@ namespace Raven.Client
             {
                 internal const string IndexingStaticSearchEngineType = "Indexing.Static.SearchEngineType";
             }
-            
+
             public const string ClientId = "Configuration/Client";
 
             public const string StudioId = "Configuration/Studio";
@@ -192,6 +194,20 @@ namespace Raven.Client
 
             public class Metadata
             {
+                internal static readonly HashSet<string> SystemKeys = new()
+                {
+                    Key,
+                    Projection,
+                    Id,
+                    TimeSeriesNamedValues,
+                    IndexScore,
+                    SpatialResult,
+                    LastModified,
+                    ChangeVector,
+                    Etag,
+                    Flags
+                };
+
                 private Metadata()
                 {
                 }
@@ -310,15 +326,15 @@ namespace Raven.Client
                         private JavaScript()
                         {
                         }
-                        
+
                         public const string ValuePropertyName = "$value";
-                        
+
                         public const string OptionsPropertyName = "$options";
-                        
+
                         public const string NamePropertyName = "$name";
-                        
+
                         public const string SpatialPropertyName = "$spatial";
-                        
+
                         public const string BoostPropertyName = "$boost";
                     }
                 }
@@ -424,7 +440,7 @@ namespace Raven.Client
                 public const string Size = "@raven-blob-size";
             }
         }
-        
+
         internal static class Smuggler
         {
             public const string ImportOptions = "importOptions";
