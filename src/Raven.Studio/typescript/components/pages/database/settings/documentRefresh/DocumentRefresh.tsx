@@ -1,14 +1,16 @@
 import React from "react";
-import { Card, CardBody, Col, Form, InputGroup, InputGroupText, Row } from "reactstrap";
+import { Card, CardBody, Col, Form, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { FormCheckbox, FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { tryHandleSubmit } from "components/utils/common";
 import { DocumentRefreshFormData, documentRefreshYupResolver } from "./DocumentRefreshValidation";
+import Code from "components/common/Code";
+import { todo } from "common/developmentHelper";
 
 export default function DocumentRefresh() {
     const asyncGlobalSettings = useAsyncCallback<DocumentRefreshFormData>(null);
@@ -26,6 +28,8 @@ export default function DocumentRefresh() {
             reset(formData);
         });
     };
+
+    todo("Feature", "Damian", "Render you do not have permission to this view");
 
     return (
         <div className="content-margin">
@@ -117,7 +121,7 @@ export default function DocumentRefresh() {
                                     <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
                                     frequency specified. The actual refresh time can increase (up to) that value.
                                 </p>
-                                {/* <Code code={null} language="csharp"></Code> */}
+                                <Code code={codeExample} language="javascript"></Code>
                             </AccordionItemWrapper>
                         </AboutViewAnchored>
                     </Col>
@@ -126,3 +130,12 @@ export default function DocumentRefresh() {
         </div>
     );
 }
+
+const codeExample = `
+{
+    "Example": "This is an example of a document with @refresh flag set",
+    "@metadata": {
+        "@collection": "Foo",
+        "@refresh": "2017-10-10T08:00:00.0000000Z"
+    }
+}`;

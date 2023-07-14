@@ -4,7 +4,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import DocumentRefresh from "./DocumentRefresh";
 
 export default {
-    title: "Pages/Settings",
+    title: "Pages/Database/Settings",
     component: DocumentRefresh,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentRefresh>;

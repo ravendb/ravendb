@@ -19,6 +19,7 @@ import { useServices } from "components/hooks/useServices";
 import appUrl from "common/appUrl";
 import { NonShardedViewProps } from "components/models/common";
 import { useAccessManager } from "components/hooks/useAccessManager";
+import { todo } from "common/developmentHelper";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { isAdminAccessOrAbove } = useAccessManager();
@@ -63,6 +64,8 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     if (asyncDatabaseSettings.status === "error") {
         return <LoadError error="Unable to load studio configuration" refresh={onRefresh} />;
     }
+
+    todo("Feature", "Damian", "Render you do not have permission to this view");
 
     return (
         <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
