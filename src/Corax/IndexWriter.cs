@@ -409,7 +409,7 @@ namespace Corax
         {
             _compactKeyScope = new(_transaction.LowLevelTransaction);
             _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
-            _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoreFieldsSlice);
+            _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoredFieldsSlice);
             _entriesTermsContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();

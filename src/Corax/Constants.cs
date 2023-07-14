@@ -54,7 +54,7 @@ namespace Corax
 
             public static ReadOnlySpan<byte> LongTreeSuffix => "-L"u8;
             
-            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, StoreFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;            public const int IntKnownFieldMask = unchecked((int)0x80000000);
+            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;            public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const int DynamicField = -2;
             static IndexWriter()
             {
@@ -63,7 +63,7 @@ namespace Corax
                     Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                     Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
-                    Slice.From(ctx, "StoreFields", ByteStringType.Immutable, out StoreFieldsSlice);
+                    Slice.From(ctx, "StoredFields", ByteStringType.Immutable, out StoredFieldsSlice);
                     Slice.From(ctx, "EntriesTerms", ByteStringType.Immutable, out EntriesTermsContainerSlice);
                     Slice.From(ctx, "EntryIdToLocation", ByteStringType.Immutable, out EntryIdToLocationSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
