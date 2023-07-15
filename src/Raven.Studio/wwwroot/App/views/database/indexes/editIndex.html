@@ -477,9 +477,9 @@
                                 <div class="d-flex gap-3 flex-grow" >
                                     <div class="flex-grow" data-bind="visible: !testResultsVisible()"></div>
                                     <div class="d-flex flex-grow gap-3" data-bind="visible: testResultsVisible">
-                                        <div class="input-group flex-grow" data-bind="with: testIndex"">
+                                        <div class="input-group flex-grow" data-bind="with: testIndex">
                                             <div class="input-group-addon">Scan limit</div>
-                                            <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process" data-bind="textInput: testScanLimit" />
+                                            <input type="number" min="1" class="form-control" placeholder="Set maximum number of documents to process" title="Set number of documents to process (default 10,000)" data-bind="textInput: testScanLimit" />
                                         </div>
                                         <div class="input-group flex-grow" data-bind="with: testIndex">
                                             <div class="input-group-addon">Time limit</div>
@@ -492,7 +492,7 @@
                                         </div>
                                     </div>
                                     <div data-bind="with: testIndex">
-                                        <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.testing }, disable: spinners.testing" title="Run test with current settings">
+                                        <button class="btn btn-info" data-bind="click: $root.runTest, css: { 'btn-spinner': spinners.testing }, disable: spinners.testing" title="Run test with current settings">
                                             <i class="icon-rocket"></i><span>Run Test</span>
                                         </button>
                                     </div>

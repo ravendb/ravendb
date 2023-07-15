@@ -123,6 +123,7 @@ class editIndex extends shardViewModelBase {
 
         this.bindToCurrentInstance("removeMap",
             "removeField",
+            "runTest",
             "createFieldNameAutocompleter",
             "removeConfigurationOption",
             "formatIndex",
@@ -500,6 +501,11 @@ class editIndex extends shardViewModelBase {
 
     toggleTestResults() {
         this.testResultsVisible(!this.testResultsVisible());
+    }
+    
+    runTest() {
+        this.testResultsVisible(true);
+        this.testIndex.runTest();
     }
 
     indexHistoryButtonHandler() {

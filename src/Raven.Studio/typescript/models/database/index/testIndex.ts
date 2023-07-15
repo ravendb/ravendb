@@ -75,7 +75,7 @@ class testIndex {
             WaitForNonStaleResultsTimeoutInSec: this.testTimeLimit() ?? 15,
             Query: this.specifyQuery() ? this.query() : null,
             QueryParameters: null,
-            MaxDocumentsToProcess: this.testScanLimit()
+            MaxDocumentsToProcess: this.testScanLimit() ?? 10_000
         }
     }
 
@@ -189,6 +189,15 @@ class testIndex {
                     indexEntries: result.IndexEntries.length,
                     mapResults: result.MapResults.length,
                     reduceResults: result.ReduceResults.length
+                });
+            })
+            .fail(() => {
+                // reset results count
+                this.resultsCount({
+                    queryResults: 0,
+                    reduceResults: 0,
+                    mapResults: 0,
+                    indexEntries: 0
                 });
             })
             .always(() => this.spinners.testing(false));
