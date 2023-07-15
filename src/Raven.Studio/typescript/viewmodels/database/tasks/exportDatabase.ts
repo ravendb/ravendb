@@ -150,6 +150,14 @@ class exportDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
+        
+        popoverUtils.longWithHover($("#skipCorruptedDataPopover"), {
+            content: 
+            "<div>" +
+                "<strong>Checked</strong>: continues export despite corrupted data and logs errors in the report. <br />" +
+                "<strong>Unchecked</strong>: halts export upon encountering corrupted data." +
+                "</div>"
+        })
 
         popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
             content: "Imported ongoing tasks will be disabled by default."
