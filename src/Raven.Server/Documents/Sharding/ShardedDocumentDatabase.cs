@@ -244,22 +244,23 @@ public class ShardedDocumentDatabase : DocumentDatabase
         var tasks = new List<Task>(ShardingConfiguration.Orchestrator.Topology.Members.Count);
         var clusterTopology = ServerStore.GetClusterTopology();
 
-        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        foreach (var nodeTag in ShardingConfiguration.Orchestrator.Topology.Members)
         {
-            foreach (var nodeTag in ShardingConfiguration.Orchestrator.Topology.Members)
+            var chosenNode = new ServerNode
             {
-                var chosenNode = new ServerNode
-                {
-                    ClusterTag = nodeTag, 
-                    Database = ShardedDatabaseName, 
-                    ServerRole = ServerNode.Role.Member, 
-                    Url = clusterTopology.GetUrlFromTag(nodeTag)
-                };
-                tasks.Add(ServerStore.ClusterRequestExecutor.ExecuteAsync(chosenNode, nodeIndex: null, context, cmd, token: DatabaseShutdown));
-            }
+                ClusterTag = nodeTag,
+                Database = ShardedDatabaseName,
+                ServerRole = ServerNode.Role.Member,
+                Url = clusterTopology.GetUrlFromTag(nodeTag)
+            };
 
-            await Task.WhenAll(tasks);
+            var releaseCtx = ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+            var t = ServerStore.ClusterRequestExecutor.ExecuteAsync(chosenNode, nodeIndex: null, context, cmd, token: DatabaseShutdown)
+                .ContinueWith(_ => releaseCtx.Dispose());
+            tasks.Add(t);
         }
+
+        await Task.WhenAll(tasks);
     }
 
     public static ShardedDocumentDatabase CastToShardedDocumentDatabase(DocumentDatabase database) => database as ShardedDocumentDatabase ?? throw new ArgumentException($"Database {database.Name} must be sharded!");
