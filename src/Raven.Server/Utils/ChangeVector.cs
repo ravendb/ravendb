@@ -203,10 +203,13 @@ public class ChangeVector
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
     }
 
-    public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
+    public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, long? newEtag = null)
     {
-        var databaseChangeVector = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
-        if (changeVector.IsNullOrEmpty)
+        newEtag ??= context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+        var databaseChangeVector = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, newEtag.Value);
+        context.LastDatabaseChangeVector = databaseChangeVector;
+
+        if (changeVector == null)
             return databaseChangeVector;
 
         if (changeVector.IsSingle)

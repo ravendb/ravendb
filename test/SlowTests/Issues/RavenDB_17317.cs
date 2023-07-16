@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
@@ -15,13 +14,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanReplicateEntireSegmentOnUpdate_TimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateEntireSegmentOnUpdate_TimeSeries(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -61,9 +61,6 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
                 using (var session = storeA.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
@@ -73,9 +70,6 @@ namespace SlowTests.Issues
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
-
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -96,13 +90,15 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanReplicateEntireSegmentOnUpdate_TimeSeries2()
+
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateEntireSegmentOnUpdate_TimeSeries2(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -142,9 +138,6 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
                 using (var session = storeA.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
@@ -154,9 +147,6 @@ namespace SlowTests.Issues
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
-
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -185,9 +175,6 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
@@ -201,13 +188,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUpdateExistingSegmentWithMoreValues()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdateExistingSegmentWithMoreValues(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -247,9 +235,6 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
                 using (var session = storeA.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
@@ -259,9 +244,6 @@ namespace SlowTests.Issues
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
-
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -281,13 +263,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanDeleteEntireSegment()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteEntireSegment(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -327,9 +310,6 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
                 using (var session = storeA.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
@@ -339,9 +319,6 @@ namespace SlowTests.Issues
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
-
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -355,15 +332,16 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ClusterNodesShouldHaveTheSameChangeVectorAfterTimeSeriesValueDelete()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Cluster | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterNodesShouldHaveTheSameChangeVectorAfterTimeSeriesValueDelete(Options options)
         {
             DateTime baseline = DateTime.Today;
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
-            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+            await CreateDatabaseInClusterForMode(database, 3, cluster, options.DatabaseMode);
 
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 CreateDatabase = false,
                 Server = cluster.Leader,
@@ -401,7 +379,7 @@ namespace SlowTests.Issues
                     Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, database, options.DatabaseMode));
             }
         }
 

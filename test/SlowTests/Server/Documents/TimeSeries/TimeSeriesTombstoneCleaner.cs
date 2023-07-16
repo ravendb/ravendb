@@ -283,10 +283,7 @@ namespace SlowTests.Server.Documents.TimeSeries
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
 
-            var record = new DatabaseRecord(database);
-            options.ModifyDatabaseRecord(record);
-
-            await CreateDatabaseInCluster(record, 3, cluster.Leader.WebUrl);
+            await CreateDatabaseInClusterForMode(database, 3, cluster, options.DatabaseMode);
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options(options)
@@ -329,17 +326,18 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
+                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
+
                 using (var session = store.OpenSession())
                 {
                     var markerId = $"marker/{Guid.NewGuid()}$user/322";
                     session.Store(new User { Name = "Karmel" }, markerId);
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, dbName, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "user/322");
-                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, dbName), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
-
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, dbName, options.DatabaseMode), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
+            
                 foreach (var server in cluster.Nodes)
                 {
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
