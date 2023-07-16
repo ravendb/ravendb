@@ -42,6 +42,35 @@ public class CoraxCrud: StorageTest
         }
     }
     
+      
+    [Fact]
+    public void CanDetectWhenFieldHasMultipleTerms()
+    {
+        var fields = CreateKnownFields(Allocator);
+        Span<long> ids = stackalloc long[1024];
+        using (var indexWriter = new IndexWriter(Env, fields))
+        {
+            using (var builder = indexWriter.Index("users/1"u8))
+            {
+                builder.Write(0, null, "users/1"u8);
+                builder.Write(1, null, "Oren Eini"u8);
+                builder.IncrementList();
+                builder.Write(Constants.IndexWriter.DynamicField, "Items","One");
+                builder.Write(Constants.IndexWriter.DynamicField, "Items","Two");
+                builder.DecrementList();
+            }
+            indexWriter.Commit();
+        }
+        
+        {
+            using var indexSearcher = new IndexSearcher(Env, fields);
+          
+            Assert.True(indexSearcher.HasMultipleTermsInField("Content"));
+            Assert.True(indexSearcher.HasMultipleTermsInField("Items"));
+            Assert.False(indexSearcher.HasMultipleTermsInField("id()"));
+        }
+    }
+    
      
     [Fact]
     public void CanUpdateWithDifferentFrequency()

@@ -315,6 +315,7 @@ namespace Corax
             public readonly FieldIndexingMode FieldIndexingMode;
             public readonly bool HasSuggestions;
             public readonly bool ShouldStore;
+            public bool HasMultipleTermsPerField;
 
             public override string ToString()
             {
@@ -527,6 +528,11 @@ namespace Corax
                 Span<Token> tokens = _parent._tokensBufferHandler;
                 analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
 
+                if (tokens.Length > 1)
+                {
+                    field.HasMultipleTermsPerField = true;
+                }
+
                 for (int i = 0; i < tokens.Length; i++)
                 {
                     ref var token = ref tokens[i];
@@ -550,6 +556,11 @@ namespace Corax
                 {
                     term = new EntriesModifications(_parent._entriesAllocator, value.Length);
                     scope = null; // We don't want the fieldname (slice) to be returned.
+                }
+
+                if (_buildingList > 0)
+                {
+                    field.HasMultipleTermsPerField = true;
                 }
 
                 term.Addition(_entryId);
@@ -1335,6 +1346,11 @@ namespace Corax
                 InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
                 InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
                 InsertSpatialField(entriesToSpatialTree, indexedField);
+
+                if (indexedField.HasMultipleTermsPerField)
+                {
+                    _indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, indexedField.Name);
+                }
             }
 
             if (_dynamicFieldsTerms != null)
@@ -1345,6 +1361,11 @@ namespace Corax
                     InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
                     InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
                     InsertSpatialField(entriesToSpatialTree,  indexedField);
+                    
+                    if (indexedField.HasMultipleTermsPerField)
+                    {
+                        _indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, indexedField.Name);
+                    }
                 }
             }
 

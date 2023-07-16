@@ -416,4 +416,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
+
+    public bool HasMultipleTermsInField(string fieldName)
+    {
+        using var _ = Slice.From(Allocator, fieldName, out var slice);
+        return HasMultipleTermsInField(slice);
+    }
+
+    private bool HasMultipleTermsInField(Slice fieldName)
+    {
+        using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
+        return it.Seek(fieldName) && SliceComparer.Equals(it.CurrentKey, fieldName);
+    }
 }
