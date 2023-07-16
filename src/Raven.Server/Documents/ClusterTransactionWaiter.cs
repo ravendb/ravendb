@@ -2,38 +2,70 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Jint;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents
 {
     public class ClusterTransactionWaiter
     {
         internal readonly DocumentDatabase Database;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _results = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
+        internal readonly ServerStore ServerStore;
+        private readonly ConcurrentDictionary<string, TaskCompletionSource> _results = new ConcurrentDictionary<string, TaskCompletionSource>();
 
-        public ClusterTransactionWaiter(DocumentDatabase database)
+        public ClusterTransactionWaiter(DocumentDatabase database, ServerStore serverStore)
         {
             Database = database;
+            ServerStore = serverStore;
         }
 
-        public RemoveTask CreateTask(out string id)
+        public RemoveTask CreateTask(string id, out Task task)
         {
-            id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var t = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var current = _results.GetOrAdd(id, t);
+
+            long? raftIndex;
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                raftIndex = ServerStore.Engine.LogHistory.GetIndexByRaftId(context, id);
+            }
+
+            if (raftIndex.HasValue &&
+                Database.LastCompletedClusterTransactionIndex >= raftIndex &&
+                current == t)
+            {
+                // the database already finished the processing of this command
+                task = Task.CompletedTask;
+            }
+            else
+            {
+                /* the database already finished the processing of this command but didn't removed yet the task
+                 * OR
+                 * the database is applying the command
+                 * OR
+                 * I created this task, before the database start applying the tx
+                 */
+                task = current.Task;
+            }
+
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource<object> Get(string id)
+        public TaskCompletionSource Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public void SetResult(string id, long index, object result)
+        public void SetResult(string id, long index)
         {
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetResult(result);
+                task.SetResult();
             }
         }
 
@@ -65,7 +97,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task<object> WaitForResults(string id, CancellationToken token)
+        public async Task WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
@@ -74,7 +106,7 @@ namespace Raven.Server.Documents
 
             await using (token.Register(() => task.TrySetCanceled()))
             {
-                return await task.Task.ConfigureAwait(false);
+                await task.Task.ConfigureAwait(false);
             }
         }
     }
