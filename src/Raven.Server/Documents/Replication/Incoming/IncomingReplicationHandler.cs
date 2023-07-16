@@ -439,13 +439,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     From = deletedRange.From,
                                     To = deletedRange.To
                                 };
-                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, changeVectorVersion, updateMetadata: false);
-                                if (removedChangeVector != null)
-                                {
-                                    var removed = context.GetChangeVector(removedChangeVector);
-                                    context.LastDatabaseChangeVector = ChangeVector.Merge(removed, changeVectorOrder, context);
-                                }
-
+                                tss.DeleteTimestampRange(context, deletionRangeRequest, incomingChangeVector, updateMetadata: false);
+                               
                                 break;
 
                             case TimeSeriesReplicationItem segment:
@@ -468,7 +463,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
                                 
-                                if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
+                                if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, incomingChangeVector, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                     context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, changeVectorOrder, context);
@@ -478,7 +473,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 var options = new TimeSeriesStorage.AppendOptions
                                 {
                                     VerifyName = false,
-                                    ChangeVectorFromReplication = segment.ChangeVector
+                                    ChangeVectorFromReplication = incomingChangeVector
                                 };
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);

@@ -1462,14 +1462,16 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
-                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await replicationA.EnsureNoReplicationLoopAsync();
-                await replicationB.EnsureNoReplicationLoopAsync();
+                await Task.Delay(3_000); // wait for replication ping-pong to settle down
+
+                await EnsureNoReplicationLoopAsync(storeA, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(storeB, options.DatabaseMode);
 
                 var pageSize = 100;
                 var values = storeA.Operations
@@ -1531,14 +1533,16 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
-                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await replicationA.EnsureNoReplicationLoopAsync();
-                await replicationB.EnsureNoReplicationLoopAsync();
+                await Task.Delay(3_000); // wait for replication ping-pong to settle down
+
+                await EnsureNoReplicationLoopAsync(storeA, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(storeB, options.DatabaseMode);
 
                 for (int start = 0; start < size; start += pageSize)
                 {

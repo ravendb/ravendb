@@ -604,11 +604,11 @@ namespace SlowTests.Client.TimeSeries.Replication
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
-                await Task.Delay(3000); // wait for replication ping-pong to settle down
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
 
-                EnsureReplicating(storeA, storeB, "marker1$users/ayende");
-                EnsureReplicating(storeB, storeA, "marker2$users/ayende");
-
+                await Task.Delay(3_000); // wait for replication ping-pong to settle down
+               
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
@@ -635,8 +635,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                     }
                 }
 
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
+                await EnsureNoReplicationLoopAsync(storeA, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(storeB, options.DatabaseMode);
             }
         }
 
@@ -670,10 +670,10 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 var stats1 = await GetDatabaseStatisticsAsync(storeA);
                 var stats2 = await GetDatabaseStatisticsAsync(storeB);
@@ -688,7 +688,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -736,7 +736,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB, "marker1$users/ayende");
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeA.OpenSession())
                 {
@@ -744,12 +744,12 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB, "marker2$users/ayende");
+                await EnsureReplicatingAsync(storeA, storeB);
 
-                var a = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
+                var a = await GetDocumentDatabaseInstanceForAsync(storeA, options.DatabaseMode, "users/ayende");
                 await AssertNoLeftOvers(a);
 
-                var b = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
+                var b = await GetDocumentDatabaseInstanceForAsync(storeB, options.DatabaseMode, "users/ayende");
                 await AssertNoLeftOvers(b);
             }
         }
@@ -871,16 +871,16 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
+                await EnsureNoReplicationLoopAsync(storeA, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(storeB, options.DatabaseMode);
 
                 void AssertValues(IDocumentStore store)
                 {
@@ -935,8 +935,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
+                await EnsureNoReplicationLoopAsync(storeA, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(storeB, options.DatabaseMode);
 
                 void AssertValues(IDocumentStore store)
                 {
@@ -985,7 +985,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
                 var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
 
                 AssertValues(storeA);
@@ -1037,10 +1037,10 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 AssertValues(storeA);
                 AssertValues(storeB);
@@ -1092,10 +1092,10 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 AssertValues(storeA);
                 AssertValues(storeB);
@@ -1137,7 +1137,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
