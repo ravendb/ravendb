@@ -3262,24 +3262,6 @@ namespace Raven.Server.ServerWide
             await _engine.WaitForCommitIndexChange(modification, value, token);
         }
 
-        public bool CommandAlreadyInLog(CommandBase command, out long index, out object result, out Exception exception)
-        {
-            result = null;
-            index = -1;
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var djv = command.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
-                if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out index, out result, out exception))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
         public string LastStateChangeReason()
         {
             return $"{_engine.CurrentState}, {_engine.LastStateChangeReason} (at {_engine.LastStateChangeTime})";
