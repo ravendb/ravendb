@@ -58,6 +58,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Debugging;
 using Sparrow.Threading;
 using Voron;
@@ -985,8 +986,11 @@ namespace Raven.Server
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
+                    {
                         _httpsConnectionMiddleware.SetCertificate(newCertificate.Certificate);
-                    ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                        ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                    
                     return;
                 }
 
@@ -1066,8 +1070,13 @@ namespace Raven.Server
                     if (certUpdate.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations) == false)
                         throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.Confirmations)}' count");
 
-                    var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes.Count;
-                    if (nodesInCluster > confirmations)
+                    if (certUpdate.TryGet(nameof(CertificateReplacement.ConfirmedNodes), out BlittableJsonReaderArray confirmedNodesBlittable) == false)
+                        throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.ConfirmedNodes)}'");
+                    
+                    var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes;
+                    var confirmedNodes = confirmedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
+
+                    if (confirmations < nodesInCluster.Count && ServerStore.DidAllNodesConfirm(nodesInCluster, confirmedNodes) == false)
                     {
                         // we are already in the process of updating the certificate, so we need
                         // to nudge all the nodes in the cluster to check the replacement state.
@@ -1076,11 +1085,17 @@ namespace Raven.Server
                         await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
                         return null;
                     }
-
+                    
                     if (certUpdate.TryGet(nameof(CertificateReplacement.Replaced), out int replaced) == false)
                         replaced = 0;
 
-                    if (nodesInCluster > replaced)
+                    if (certUpdate.TryGet(nameof(CertificateReplacement.ReplacedNodes), out BlittableJsonReaderArray replacedNodesBlittable) == false)
+                    {
+                        throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.ReplacedNodes)}'");
+                    }
+
+                    var replacedNodes = replacedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
+                    if (replaced < nodesInCluster.Count && ServerStore.DidAllNodesConfirm(nodesInCluster, replacedNodes) == false)
                     {
                         // This is for the case where all nodes confirmed they received the replacement cert but
                         // not all nodes have made the actual change yet.
@@ -1090,7 +1105,7 @@ namespace Raven.Server
                     return null;
                 }
             }
-
+            
             // same certificate, but now we need to see if we need to auto update it
             var (shouldRenew, renewalDate) = CalculateRenewalDate(currentCertificate, forceRenew);
             if (shouldRenew == false)

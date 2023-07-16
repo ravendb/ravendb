@@ -9,22 +9,20 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Raven.Client.Util;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
@@ -871,15 +869,33 @@ namespace Raven.Server.Web.Authentication
                     if (certStatus != null)
                     {
                         certStatus.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
+                        certStatus.TryGet(nameof(CertificateReplacement.ConfirmedNodes), out BlittableJsonReaderArray confirmedNodes);
                         certStatus.TryGet(nameof(CertificateReplacement.Thumbprint), out string thumbprint);
                         certStatus.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint);
                         certStatus.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately);
                         certStatus.TryGet(nameof(CertificateReplacement.Replaced), out int replaced);
+                        certStatus.TryGet(nameof(CertificateReplacement.ReplacedNodes), out BlittableJsonReaderArray replacedNodes);
 
                         // Not writing the certificate itself, because it has the private key
                         writer.WriteStartObject();
                         writer.WritePropertyName(nameof(CertificateReplacement.Confirmations));
                         writer.WriteInteger(confirmations);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.ConfirmedNodes));
+                        writer.WriteStartArray();
+                        var first = true;
+                        foreach (var node in confirmedNodes.Items)
+                        {
+                            if (node is LazyStringValue lazy)
+                            {
+                                if (first == false)
+                                    writer.WriteComma();
+                                
+                                writer.WriteString(lazy);
+                                first = false;
+                            }
+                        }
+                        writer.WriteEndArray();
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(CertificateReplacement.Thumbprint));
                         writer.WriteString(thumbprint);
@@ -892,6 +908,22 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(CertificateReplacement.Replaced));
                         writer.WriteInteger(replaced);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.ReplacedNodes));
+                        writer.WriteStartArray();
+                        first = true;
+                        foreach (var node in replacedNodes.Items)
+                        {
+                            if (node is LazyStringValue lazy)
+                            {
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                writer.WriteString(lazy);
+                                first = false;
+                            }
+                        }
+                        writer.WriteEndArray();
                         writer.WriteEndObject();
                     }
                     else

@@ -250,7 +250,7 @@ namespace Raven.Server.ServerWide
         public ClusterStateMachine Cluster => _engine?.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
         public RachisState CurrentRachisState => _engine.CurrentState;
-        public string NodeTag => _engine.Tag;
+        public string NodeTag => _engine?.Tag;
 
         public bool Disposed => _disposed;
 
@@ -1208,11 +1208,12 @@ namespace Raven.Server.ServerWide
             {
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    int nodesInCluster;
+                    Dictionary<string, string> nodesInCluster;
+                    HashSet<string> replacedNodes;
                     int replaced;
                     string thumbprint;
                     string oldThumbprint;
-
+                    
                     using (context.OpenReadTransaction())
                     {
                         var cert = Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
@@ -1227,21 +1228,26 @@ namespace Raven.Server.ServerWide
 
                         if (cert.TryGet(nameof(CertificateReplacement.OldThumbprint), out oldThumbprint) == false)
                             throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.OldThumbprint)}` property");
+                        
+                        if (cert.TryGet(nameof(CertificateReplacement.ReplacedNodes), out BlittableJsonReaderArray replacedNodesBlittable) == false)
+                            throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.ReplacedNodes)}` property");
 
-                        nodesInCluster = GetClusterTopology(context).AllNodes.Count;
+                        nodesInCluster = GetClusterTopology(context).AllNodes;
+                        replacedNodes = replacedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
                     }
-
+                    
                     if (thumbprint == Server.Certificate?.Certificate?.Thumbprint)
                     {
-                        if (nodesInCluster > replaced)
+                        if (replaced < nodesInCluster.Count && DidAllNodesConfirm(nodesInCluster, replacedNodes) == false)
                         {
                             // I already replaced it, but not all nodes did
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"The server certificate was successfully replaced in {replaced} nodes out of {nodesInCluster}.");
+                                Logger.Operations(
+                                    $"The server certificate was successfully replaced in nodes {string.Join(",", replacedNodes)}. {replaced} nodes out of {nodesInCluster.Count}.");
 
                             return;
                         }
-
+                        
                         // I replaced it as did everyone else, we can safely delete the "server/cert" doc
                         // as well as the old and new server certs from the server store trusted certificates
                         using (var tx = context.OpenWriteTransaction())
@@ -1286,7 +1292,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task InstallUpdatedCertificateValueChanged(long index, string type)
+        internal async Task InstallUpdatedCertificateValueChanged(long index, string type)
         {
             try
             {
@@ -1303,6 +1309,9 @@ namespace Raven.Server.ServerWide
                     if (cert.TryGet(nameof(CertificateReplacement.Certificate), out string base64Cert) == false)
                         throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' property");
 
+                    if (cert.TryGet(nameof(CertificateReplacement.ConfirmedNodes), out BlittableJsonReaderArray confirmedNodesBlittable) == false)
+                        throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.ConfirmedNodes)}' property");
+                    
                     var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
 
                     var now = Server.Time.GetUtcNow();
@@ -1322,10 +1331,14 @@ namespace Raven.Server.ServerWide
                             NotificationSeverity.Error));
                         return;
                     }
+                    
+                    //this node already confirmed, no need to send a confirmation command again
+                    if (confirmedNodesBlittable.Items.Contains(NodeTag))
+                        return;
                 }
-
+                
                 // we got it, now let us let the leader know about it
-                await SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
+                await SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint, NodeTag));
             }
             catch (Exception e)
             {
@@ -1361,15 +1374,22 @@ namespace Raven.Server.ServerWide
 
                         if (cert.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately) == false)
                             throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.ReplaceImmediately)}` property");
+                        
+                        if (cert.TryGet(nameof(CertificateReplacement.ConfirmedNodes), out BlittableJsonReaderArray confirmedNodesBlittable) == false)
+                            throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.ConfirmedNodes)}` property");
 
-                        int nodesInCluster = GetClusterTopology(context).AllNodes.Count;
+                        if (cert.TryGet(nameof(CertificateReplacement.ReplacedNodes), out BlittableJsonReaderArray replacedNodesBlittable) == false)
+                            throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.ReplacedNodes)}` property");
 
-                        if (nodesInCluster > confirmations && replaceImmediately == false)
+                        var confirmedNodes = confirmedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
+                        var nodesInCluster = GetClusterTopology(context).AllNodes;
+                        
+                        if (confirmations < nodesInCluster.Count && DidAllNodesConfirm(nodesInCluster, confirmedNodes) == false && replaceImmediately == false)
                         {
                             if (Server.Certificate?.Certificate?.NotAfter != null &&
                                 (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
                             {
-                                var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
+                                var msg = $"Not all nodes have confirmed the certificate replacement. Nodes confirmed: {string.Join(',', confirmedNodes)}. {confirmations} nodes out of {nodesInCluster.Count}." +
                                           $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
                                           "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
                                           $"If you wish to force replacing the certificate just for the nodes that are up, please set '{nameof(CertificateReplacement.ReplaceImmediately)}' to true.";
@@ -1395,6 +1415,10 @@ namespace Raven.Server.ServerWide
                         if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
                             return;
 
+                        //this node already replaced, no need to replace again
+                        if (replacedNodesBlittable.Items.Contains(NodeTag))
+                            return;
+
                         if (cert.TryGet(nameof(CertificateReplacement.OldThumbprint), out oldThumbprint) == false)
                             oldThumbprint = string.Empty;
                     }
@@ -1403,7 +1427,7 @@ namespace Raven.Server.ServerWide
 
                     var bytesToSave = Convert.FromBase64String(certBase64);
                     var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
+                    
                     if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     {
                         if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
@@ -1493,8 +1517,8 @@ namespace Raven.Server.ServerWide
 
                         return;
                     }
-
-                    await SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint));
+                    
+                    await SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint, NodeTag));
                 }
             }
             catch (Exception e)
@@ -1510,6 +1534,17 @@ namespace Raven.Server.ServerWide
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
+        }
+
+        public static bool DidAllNodesConfirm(Dictionary<string, string> allNodes, HashSet<string> confirmedNodes)
+        {
+            foreach (var (node, _) in allNodes)
+            {
+                if (confirmedNodes.Contains(node) == false)
+                    return false;
+            }
+
+            return true;
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)

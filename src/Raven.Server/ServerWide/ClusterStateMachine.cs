@@ -859,23 +859,37 @@ namespace Raven.Server.ServerWide
                     {
                         throw new RachisApplyException($"{nameof(ConfirmReceiptServerCertificateCommand.Thumbprint)} property didn't exist in {nameof(ConfirmReceiptServerCertificateCommand)}");
                     }
+
+                    if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.NodeTag), out string nodeTag) == false)
+                        nodeTag = null;
+                    
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
                         return; // already applied?
 
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"{nameof(CertificateReplacement.Thumbprint)} property didn't exist in 'server/cert' value");
+                    
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.ConfirmedNodes), out BlittableJsonReaderArray confirmedNodesBlittable) == false)
+                        throw new RachisApplyException($"{nameof(CertificateReplacement.ConfirmedNodes)} property didn't exist in 'server/cert' value");
 
+                    
                     if (storedThumbprint != thumbprint)
                         return; // confirmation for a different cert, ignoring
 
                     certInstallation.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
 
+                    var newConfirmed = confirmedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
+                    if(string.IsNullOrEmpty(nodeTag) == false)
+                        newConfirmed.Add(nodeTag);
+                    confirmations++;
+                    
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
                     {
-                        [nameof(CertificateReplacement.Confirmations)] = confirmations + 1
+                        [nameof(CertificateReplacement.ConfirmedNodes)] = new DynamicJsonArray(newConfirmed),
+                        [nameof(CertificateReplacement.Confirmations)] = confirmations
                     };
-
+                    
                     certInstallation = context.ReadObject(certInstallation, "server.cert.update");
 
                     UpdateValue(index, items, key, key, certInstallation);
@@ -929,7 +943,9 @@ namespace Raven.Server.ServerWide
                         [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.Certificate.Thumbprint,
                         [nameof(CertificateReplacement.Confirmations)] = 0,
                         [nameof(CertificateReplacement.Replaced)] = 0,
-                        [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately
+                        [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately,
+                        [nameof(CertificateReplacement.ConfirmedNodes)] = new DynamicJsonArray(),
+                        [nameof(CertificateReplacement.ReplacedNodes)] = new DynamicJsonArray()
                     };
 
                     var json = context.ReadObject(djv, "server.cert.update.info");
@@ -981,6 +997,11 @@ namespace Raven.Server.ServerWide
                         throw new RachisApplyException($"{nameof(ConfirmServerCertificateReplacedCommand.OldThumbprint)} property didn't exist in {nameof(ConfirmServerCertificateReplacedCommand)}");
                     }
 
+                    if (cmd.TryGet(nameof(ConfirmServerCertificateReplacedCommand.NodeTag), out string nodeTag) == false)
+                    {
+                        nodeTag = null;
+                    }
+
                     var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
                         return; // already applied?
@@ -988,6 +1009,9 @@ namespace Raven.Server.ServerWide
                     if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
                         throw new RachisApplyException($"'{nameof(CertificateReplacement.Thumbprint)}' property didn't exist in 'server/cert' value");
 
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.ReplacedNodes), out BlittableJsonReaderArray replacedNodesBlittable) == false)
+                        throw new RachisApplyException($"'{nameof(CertificateReplacement.ReplacedNodes)}' property didn't exist in 'server/cert' value");
+                    
                     if (storedThumbprint != thumbprint)
                         return; // confirmation for a different cert, ignoring
 
@@ -1006,9 +1030,15 @@ namespace Raven.Server.ServerWide
                         };
                     }
 
+                    var newReplaced = replacedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
+                    if(string.IsNullOrEmpty(nodeTag) == false)
+                        newReplaced.Add(nodeTag);
+                    replaced++;
+                    
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
                     {
-                        [nameof(CertificateReplacement.Replaced)] = replaced + 1
+                        [nameof(CertificateReplacement.ReplacedNodes)] = new DynamicJsonArray(newReplaced),
+                        [nameof(CertificateReplacement.Replaced)] = replaced
                     };
 
                     certInstallation = context.ReadObject(certInstallation, "server.cert.update");

@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.ServerWide
+﻿using System.Collections.Generic;
+
+namespace Raven.Server.ServerWide
 {
     public class CertificateReplacement
     {
@@ -8,6 +10,8 @@
         public int Confirmations;
         public int Replaced;
         public bool ReplaceImmediately;
+        public HashSet<string> ConfirmedNodes;
+        public HashSet<string> ReplacedNodes;
 
         public const string CertReplaceAlertTitle = "Server Certificate Replacement";
         public const string CertificateReplacementDoc = "server/cert";
