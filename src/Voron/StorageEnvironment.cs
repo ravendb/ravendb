@@ -1,6 +1,5 @@
 ﻿using Sparrow;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
@@ -35,11 +33,9 @@ using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
-using Sparrow.Server.Collections;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using System.Diagnostics.CodeAnalysis;using Voron.Data.RawData;using Voron.Data.PostingLists;
-using Voron.Data.RawData;
 using Container = Voron.Data.Containers.Container;
 
 namespace Voron
@@ -772,7 +768,6 @@ namespace Voron
             }
         }
 
-        [DoesNotReturn]
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
