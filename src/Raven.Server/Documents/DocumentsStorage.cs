@@ -1708,15 +1708,13 @@ namespace Raven.Server.Documents
             {
                 // just delete the document
                 var doc = local.Document;
-                if (expectedChangeVector != null && doc.ChangeVector.CompareTo(expectedChangeVector) != 0)
+                if (expectedChangeVector != null)
                 {
-                    throw new ConcurrencyException(
-                        $"Document {id} has change vector {doc.ChangeVector}, but Delete was called with change vector '{expectedChangeVector}'. " +
-                        "Optimistic concurrency violation, transaction will be aborted.")
-                    {
-                        ActualChangeVector = doc.ChangeVector,
-                        ExpectedChangeVector = expectedChangeVector
-                    };
+                    var cv = context.GetChangeVector(doc.ChangeVector);
+                    var expected = context.GetChangeVector(expectedChangeVector);
+
+                    if (string.Compare(expected.Version, cv.Version, StringComparison.Ordinal) != 0) 
+                        ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
                 }
 
                 collectionName = ExtractCollectionName(context, doc.Data);
@@ -1844,6 +1842,18 @@ namespace Raven.Server.Documents
                     Etag = etag
                 };
             }
+        }
+
+        [DoesNotReturn]
+        private static void ThrowConcurrencyException(string id, string expected, string actual)
+        {
+            throw new ConcurrencyException($"Document {id} has change vector '{actual}', but Delete was called with change vector '{expected}'. " +
+                                           "Optimistic concurrency violation, transaction will be aborted.")
+            {
+                Id = id,
+                ActualChangeVector = actual, 
+                ExpectedChangeVector = expected
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
