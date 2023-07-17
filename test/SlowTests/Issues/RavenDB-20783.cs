@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task NullTimerInRecordFatest()
+        public async Task NullTimerInRecordFastest()
         {
             var (servers, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var mre = new ManualResetEvent(false);

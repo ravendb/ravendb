@@ -260,19 +260,19 @@ namespace Raven.Client.Http
         {
             state.Fastest = index;
             Interlocked.Exchange(ref state.SpeedTestMode, 0);
-            if (_updateFastestNodeTimer == null)
-                _updateFastestNodeTimer = new Timer(SwitchToSpeedTestPhase, null, TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
-            else
-                _updateFastestNodeTimer.Change(TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
+            EnsureFastestNodeTimerExists();
+            _updateFastestNodeTimer.Change(TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
         }
 
         public void ScheduleSpeedTest()
         {
-            if (_updateFastestNodeTimer == null)
-            {
-                _updateFastestNodeTimer = new Timer(SwitchToSpeedTestPhase, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            }
+            EnsureFastestNodeTimerExists();
             SwitchToSpeedTestPhase(null);
+        }
+
+        private void EnsureFastestNodeTimerExists()
+        {
+            _updateFastestNodeTimer ??= new Timer(SwitchToSpeedTestPhase, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         }
 
         public void Dispose()
