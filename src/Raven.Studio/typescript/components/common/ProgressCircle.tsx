@@ -4,7 +4,7 @@ export interface ProgressCircleProps {
     state: "success" | "failed" | "running";
     children?: ReactNode;
     icon?: IconName;
-    progress?: number | null;
+    progress?: number;
     inline?: boolean;
     onClick?: () => void;
 }
@@ -20,7 +20,7 @@ const circumference = 2 * Math.PI * stateIndicatorProgressRadius;
 export function ProgressCircle(props: ProgressCircleProps) {
     const { state, children, inline, icon, progress, onClick } = props;
 
-    const showProgress = progress > 0 && progress < 1;
+    const showProgress = progress != null;
 
     return (
         <div
