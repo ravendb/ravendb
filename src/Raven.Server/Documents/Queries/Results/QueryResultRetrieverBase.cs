@@ -564,10 +564,10 @@ namespace Raven.Server.Documents.Queries.Results
             object value = null;
             if (retrieverInput.KnownFields.TryGetByFieldName(fieldToFetch.Name.Value, out var binding) == false)
             {
-                if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, Corax.Constants.IndexWriter.DynamicField, ref retrieverInput, out value) == false)
+                if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out value) == false)
                     return false;
             }
-            else if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, binding.FieldId, ref retrieverInput, out value) == false)
+            else if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out value) == false)
                 return false;
             
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsNumeric;
         }
 
-        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
+        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, ref RetrieverInput retrieverInput, out object value)
         {
             long fieldRootPage = retrieverInput.CoraxIndexSearcher.FieldCache.GetLookupRootPage(fieldName);
             ref var reader = ref retrieverInput.CoraxTermsReader;
@@ -649,6 +649,15 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
             
+            if (found == false)
+            {
+                while (reader.FindNext(fieldRootPage))
+                {
+                    found = true;
+                    SetValue(ref value, reader.Current.ToString());
+                }
+            }
+
             return found;
 
             void SetValue(ref object value, object newVal)
@@ -707,7 +716,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -848,21 +857,20 @@ namespace Raven.Server.Documents.Queries.Results
                             }
                             break;
                         case SearchEngineType.Corax:
-                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) == false ||
-                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Name ?? fieldDefinition.OriginalName, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
+                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) && 
+                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Name ?? fieldDefinition.OriginalName, ref retrieverInput, out fieldValue))
                             {
-                                throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
+                                if (fieldValue is IEnumerable<object> enumerable)
+                                {
+                                    foreach (var item in enumerable)
+                                        if (item != null)
+                                            _loadedDocumentIds.Add(item.ToString());
+                                }
+                                else
+                                {
+                                    _loadedDocumentIds.Add(fieldValue?.ToString());
+                                }
                             }
-                            
-                            if (fieldValue is IEnumerable<object> enumerable)
-                            {
-                                foreach (var item in enumerable)
-                                    if (item != null)
-                                        _loadedDocumentIds.Add(item.ToString());
-                            }
-                            else
-                            _loadedDocumentIds.Add(fieldValue?.ToString());
-
                             break;
                         case SearchEngineType.None:
                             throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");

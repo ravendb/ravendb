@@ -82,17 +82,9 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, stats.TotalResults);
 
-                    if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
-                    {
-                        //Corax only: This is not valid since Corax's AutoIndexes are stored. 
-                        Assert.Equal(0, stats.SkippedResults);
-                        Assert.Equal(1, users.Count);
-                    }
-                    else
-                    {
-                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-                        Assert.Equal(0, users.Count);
-                    }
+
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                    Assert.Equal(0, users.Count);
                 }
             }
         }
@@ -175,16 +167,8 @@ namespace SlowTests.Issues
                     WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, stats.TotalResults);
 
-                    if (isCorax)
-                    {
-                        Assert.Equal(0, stats.SkippedResults);
-                        Assert.Equal(1, users.Count);
-                    }
-                    else
-                    {
-                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-                        Assert.Equal(0, users.Count);
-                    }
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                    Assert.Equal(0, users.Count);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -201,16 +185,8 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, stats.TotalResults);
 
-                    if (isCorax)
-                    {
-                        Assert.Equal(0, stats.SkippedResults);
-                        Assert.Equal(1, users.Count);
-                    }
-                    else
-                    {
-                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-                        Assert.Equal(0, users.Count);
-                    }
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                    Assert.Equal(0, users.Count);
                 }
             }
         }

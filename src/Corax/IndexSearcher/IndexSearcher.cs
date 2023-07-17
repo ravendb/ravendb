@@ -428,4 +428,23 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
         return it.Seek(fieldName) && SliceComparer.Equals(it.CurrentKey, fieldName);
     }
+
+    public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+    {
+        var pageToField = new Dictionary<long, string>();
+        var it = _fieldsTree.Iterate(prefetch: false);
+        if (it.Seek(Slices.BeforeAllKeys))
+        {
+            do
+            {
+                var state = (LookupState*)it.CreateReaderForCurrent().Base;
+                if (state->RootObjectType == RootObjectType.Lookup)
+                {
+                    pageToField.Add(state->RootPage, it.CurrentKey.ToString());
+                }
+            } while (it.MoveNext());
+        }
+
+        return pageToField;
+    }
 }

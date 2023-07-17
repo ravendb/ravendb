@@ -13,9 +13,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10343 : RavenTestBase
+    public class RavenDb10343 : RavenTestBase
     {
-        public RavenDB_10343(ITestOutputHelper output) : base(output)
+        public RavenDb10343(ITestOutputHelper output) : base(output)
         {
         }
 

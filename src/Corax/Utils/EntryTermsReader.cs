@@ -294,7 +294,17 @@ public unsafe struct EntryTermsReader
         _prevTerm = 0;
     }
 
-    public string Debug(Dictionary<long, string> fields)
+    public string Debug(IndexWriter w)
+    {
+        return Debug(w.GetIndexedFieldNamesByRootPage());
+    }
+
+    public string Debug(IndexSearcher r)
+    {
+        return Debug(r.GetIndexedFieldNamesByRootPage());
+    }
+    
+    public string Debug(Dictionary<long, string> fields = null)
     {
         var sb = new StringBuilder();
         
