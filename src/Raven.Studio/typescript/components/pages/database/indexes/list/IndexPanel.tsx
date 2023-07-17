@@ -456,7 +456,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {index.searchEngine}
                     </RichPanelDetailItem>
 
-                    {!isFaulty && <InlineDetails index={index} toggleLocationDetails={togglePanelCollapsed} />}
+                    {!isFaulty && (
+                        <InlineDetails
+                            index={index}
+                            toggleLocationDetails={togglePanelCollapsed}
+                            errorsUrl={urls.indexErrors()}
+                        />
+                    )}
                 </RichPanelDetails>
                 <div className="px-3 pb-2">
                     <Collapse isOpen={!panelCollapsed}>
@@ -503,10 +509,11 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
 interface InlineDetailsProps {
     index: IndexSharedInfo;
     toggleLocationDetails: () => void;
+    errorsUrl: string;
 }
 
 function InlineDetails(props: InlineDetailsProps) {
-    const { index, toggleLocationDetails } = props;
+    const { index, toggleLocationDetails, errorsUrl } = props;
 
     const estimatedEntries = IndexUtils.estimateEntriesCount(index)?.toLocaleString() ?? "-";
     const errorsCount = index.nodesInfo.filter((x) => x.details).reduce((prev, x) => prev + x.details.errorCount, 0);
@@ -518,15 +525,15 @@ function InlineDetails(props: InlineDetailsProps) {
                 Entries
                 <div className="value">{estimatedEntries}</div>
             </RichPanelDetailItem>
-            <RichPanelDetailItem
-                className={classNames("index-detail-item", {
-                    "text-danger": errorsCount > 0,
-                })}
-            >
-                <Icon icon="warning" />
-                Errors
-                <div className="value">{errorsCount.toLocaleString()}</div>
-            </RichPanelDetailItem>
+            {errorsCount > 0 && (
+                <a href={errorsUrl} title="View indexing errors">
+                    <RichPanelDetailItem className="index-detail-item text-danger">
+                        <Icon icon="warning" />
+                        Errors
+                        <div className="value">{errorsCount.toLocaleString()}</div>
+                    </RichPanelDetailItem>
+                </a>
+            )}
             <RichPanelDetailItem>
                 <JoinedIndexProgress index={index} onClick={toggleLocationDetails} />
             </RichPanelDetailItem>
