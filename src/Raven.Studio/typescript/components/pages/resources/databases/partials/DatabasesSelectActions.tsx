@@ -201,7 +201,7 @@ export function DatabasesSelectActions({
                             </Button>
                         )}
                     </ButtonGroup>
-                    <Button onClick={toggleSelectAll} color="link">
+                    <Button onClick={() => setSelectedDatabaseNames([])} color="link">
                         Cancel
                     </Button>
                 </div>

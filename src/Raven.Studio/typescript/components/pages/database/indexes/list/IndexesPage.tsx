@@ -44,6 +44,7 @@ export function IndexesPage(props: IndexesPageProps) {
         stats,
         selectedIndexes,
         toggleSelectAll,
+        onSelectCancel,
         filter,
         setFilter,
         filterByStatusOptions,
@@ -117,6 +118,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             pauseSelectedIndexes={pauseSelectedIndexes}
                             setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
                             toggleSelectAll={toggleSelectAll}
+                            onCancel={onSelectCancel}
                         />
                     )}
                 </StickyHeader>
