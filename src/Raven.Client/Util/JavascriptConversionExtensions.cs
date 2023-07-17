@@ -962,6 +962,18 @@ namespace Raven.Client.Util
             public bool IsEnumerable { get; set; }
             public bool DoNotTranslate { get; set; }
 
+            private HashSet<Type> _loadedTypes;
+
+            public LoadSupport()
+            {
+            }
+            
+            public LoadSupport(HashSet<Type> loadedTypes)
+            {
+                _loadedTypes = loadedTypes;
+            }
+
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
@@ -991,6 +1003,12 @@ namespace Raven.Client.Util
                 if (DoNotTranslate)
                     return;
 
+                if (_loadedTypes is not null)
+                {
+                    foreach (var innerType in methodCallExpression.Method.GetGenericArguments())
+                        _loadedTypes.Add(innerType);
+                }
+                
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
@@ -2509,17 +2527,19 @@ namespace Raven.Client.Util
             private readonly DocumentConventions _conventions;
             private readonly string _parameterName;
             private readonly Type _originalQueryType;
+            private readonly HashSet<Type> _loadTypes;
 
-            public IdentityPropertySupport(DocumentConventions conventions, string parameterName = null, Type originalQueryType = null)
+            public IdentityPropertySupport(DocumentConventions conventions, string parameterName = null, Type originalQueryType = null, HashSet<Type> loadTypes = null)
             {
                 _conventions = conventions;
                 _parameterName = parameterName;
                 _originalQueryType = originalQueryType;
+                _loadTypes = loadTypes;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, _parameterName, _originalQueryType, out var innerExpression) == false)
+                if (CanConvert(context.Node, _conventions, _parameterName, _originalQueryType, _loadTypes, out var innerExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2537,7 +2557,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, Type originalQueryType, out Expression innerExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, Type originalQueryType, HashSet<Type> loadTypes, out Expression innerExpression)
             {
                 innerExpression = null;
 
@@ -2545,7 +2565,23 @@ namespace Raven.Client.Util
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
 
-                if (member.Expression is ParameterExpression parameter && (originalQueryType == null || originalQueryType.IsEquivalentTo(parameter.Type)))
+
+                var hasTypeInLoadType = false;
+                if (expression is MemberExpression propertyExpression)
+                {
+                    var expressionSourceType = propertyExpression.Expression?.Type ?? null;
+                    
+                    foreach (var loadedType in loadTypes ?? Enumerable.Empty<Type>())
+                    {
+                        if (expressionSourceType != null && loadedType.IsEquivalentTo(expressionSourceType))
+                        {
+                            hasTypeInLoadType = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (member.Expression is ParameterExpression parameter && (originalQueryType == null || originalQueryType.IsEquivalentTo(parameter.Type) || hasTypeInLoadType))
                 {
                     innerExpression = parameter;
                     return true;
@@ -2556,7 +2592,7 @@ namespace Raven.Client.Util
 
                 innerExpression = innerMember;
 
-                if (originalQueryType != null && innerExpression?.Type.IsEquivalentTo(originalQueryType) == false)
+                if (originalQueryType != null && innerExpression?.Type.IsEquivalentTo(originalQueryType) == false && hasTypeInLoadType == false)
                     return false;
                 
                 var p = GetParameter(innerMember)?.Name;

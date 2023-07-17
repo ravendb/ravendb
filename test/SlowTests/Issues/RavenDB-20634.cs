@@ -52,11 +52,21 @@ public class RavenDB_20634 : RavenTestBase
                     let invite = workspace.Invites.FirstOrDefault(x => x.Id == "invites/1")
                     let inviter = RavenQuery.Load<MyUser>(invite.Invitee)
                     select new PendingInvite { Id = invite.Id, Created = invite.Created, Inviter = inviter.UserName });
+                
                 var result = query.ToList();
+                RavenTestHelper.AssertEqualRespectingNewLines(
+@"declare function output(workspace) {
+	var invite = workspace.invites.find(x=>x.id===""invites/1"");
+	var inviter = load(invite.invitee);
+	return { Id : invite.id, Created : invite.created, Inviter : inviter.userName };
+}
+from 'Workspaces' as workspace select output(workspace)", query.ToString());
                 Assert.NotNull(result);
                 Assert.Equal(1, result.Count);
                 Assert.Equal("john", result[0].Inviter);
                 Assert.Equal("invites/1", result[0].Id);
+                
+                
             }
         }
     }
