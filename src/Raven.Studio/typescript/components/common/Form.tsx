@@ -242,7 +242,7 @@ function FormInputGeneral<
                 </InputGroup>
             </div>
 
-            {error && <div className="d-flex justify-content-end text-danger small w-100">{error.message}</div>}
+            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
         </>
     );
 }

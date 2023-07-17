@@ -238,9 +238,7 @@ select {
 @each $key, $value in $theme-colors {
     .modal-border.bulge-#{$key} {
         --bulge-color: #{$value};
-        box-shadow:
-            0 0 0 3px rgba(var(--bs-body-bg-rgb), 1),
-            0px -4px 0px 2px var(--bulge-color);
+        box-shadow: 0 0 0 3px rgba(var(--bs-body-bg-rgb), 1), 0px -4px 0px 2px var(--bulge-color);
     }
 }
 
@@ -263,6 +261,10 @@ select {
 
 .empty-set {
     max-width: 30rem;
+}
+
+.accordion-item {
+    color: $text-color-var !important;
 }
 
 .select-btn {
