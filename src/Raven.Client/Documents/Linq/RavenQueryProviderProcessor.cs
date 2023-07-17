@@ -69,6 +69,7 @@ namespace Raven.Client.Documents.Linq
         private List<DeclareToken> _declareTokens;
         private List<LoadToken> _loadTokens;
         private HashSet<string> _loadAliases;
+        private HashSet<Type> _loadTypes;
         private readonly HashSet<string> _loadAliasesMovedToOutputFunction;
         private int _insideLet = 0;
         private string _loadAlias;
@@ -2972,7 +2973,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                          arg.NodeType != ExpressionType.Conditional &&
                                          (!(arg is MethodCallExpression methodCall) || methodCall.Method.Name == nameof(RavenQuery.Load));
 
-                var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
+                var loadSupport = new JavascriptConversionExtensions.LoadSupport(_loadTypes) { DoNotTranslate = shouldUseLoadToken };
                 var js = ToJs(arg, false, loadSupport);
 
                 if (loadSupport.HasLoad && shouldUseLoadToken)
@@ -3079,6 +3080,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     : name;
 
                 AddLoadToken(arg, alias);
+
+                if (expression is MethodCallExpression mce)
+                {
+                    foreach (var type in mce.Method.GetGenericArguments())
+                        _loadTypes.Add(type);
+                }
+                
                 if (wrapper != null)
                 {
                     AddPropertyToWrapperObject(alias, alias, wrapper);
@@ -3307,7 +3315,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
+                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(_loadTypes ??= new()),
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,
@@ -3338,13 +3346,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (loadArg == false)
             {
+                _loadTypes ??= new();
                 var newSize = _typedParameterSupport != null
                     ? extensions.Length + 2
                     : extensions.Length + 1;
                 Array.Resize(ref extensions, newSize);
                 if (_typedParameterSupport != null)
                     extensions[newSize - 2] = _typedParameterSupport;
-                extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name, _originalQueryType);
+                extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name, _originalQueryType, _loadTypes);
             }
 
             return expression.CompileToJavascript(new JavascriptCompilationOptions(ScriptVersion.ECMAScript2017, extensions)

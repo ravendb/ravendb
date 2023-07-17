@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         "from 'PostComments' as x select { " +
                             "Comments : x.Comments.map(comment=>({comment:comment,owner:load(comment.OwnerId)}))" +
-                                        ".map(__rvn0=>({Id:id(__rvn0.comment),Owner:{Id:id(__rvn0.owner)}})) }"
+                                        ".map(__rvn0=>({Id:__rvn0.comment.Id,Owner:{Id:id(__rvn0.owner)}})) }"
                         , query.ToString());
 
 
