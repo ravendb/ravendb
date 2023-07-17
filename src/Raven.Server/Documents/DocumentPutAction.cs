@@ -162,9 +162,12 @@ namespace Raven.Server.Documents
                     // anything else - must match exactly
 
                     oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
+                    
                     if (expectedChangeVector != null)
                     {
-                        if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
+                        var expected = context.GetChangeVector(expectedChangeVector);
+
+                        if (string.Compare(expected.Version, oldChangeVector.Version, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
                     if (oldChangeVectorForClusterTransactionIndexCheck == null)
