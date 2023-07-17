@@ -72,6 +72,8 @@ public unsafe class CompactKey : IDisposable
         if (_storage is null || _keyMappingCache is null)
             throw new InvalidOperationException("The key has not been initialized before calling reset.");
 
+        _owner = null;
+
         StoragePool.Return(_storage);
         _storage = null;
 
