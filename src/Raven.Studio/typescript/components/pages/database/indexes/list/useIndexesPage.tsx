@@ -592,6 +592,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         stats,
         selectedIndexes,
         toggleSelectAll,
+        onSelectCancel: () => setSelectedIndexes([]),
         filter,
         setFilter,
         filterByStatusOptions,

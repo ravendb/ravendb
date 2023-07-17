@@ -23,6 +23,7 @@ interface IndexSelectActionProps {
     pauseSelectedIndexes: () => Promise<void>;
     setLockModeSelectedIndexes: (lockMode: IndexLockMode) => Promise<void>;
     toggleSelectAll: () => void;
+    onCancel: () => void;
 }
 
 export default function IndexSelectAction(props: IndexSelectActionProps) {
@@ -35,6 +36,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
         pauseSelectedIndexes,
         setLockModeSelectedIndexes,
         toggleSelectAll,
+        onCancel,
     } = props;
 
     const [globalLockChanges] = useState(false);
@@ -132,7 +134,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             <span>Delete</span>
                         </Button>
                     </ButtonGroup>
-                    <Button onClick={toggleSelectAll} color="link">
+                    <Button onClick={onCancel} color="link">
                         Cancel
                     </Button>
                 </div>
