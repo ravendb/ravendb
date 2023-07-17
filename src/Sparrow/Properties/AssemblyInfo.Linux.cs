@@ -7,3 +7,4 @@
 [assembly: InternalsVisibleTo("Sparrow.Server")]
 [assembly: InternalsVisibleTo("Voron")]
 [assembly: InternalsVisibleTo("Corax")]
+[assembly: InternalsVisibleTo("Micro.Benchmark")]
