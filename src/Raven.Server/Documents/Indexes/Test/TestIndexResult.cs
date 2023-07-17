@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -14,6 +15,7 @@ public class TestIndexResult
     public List<BlittableJsonReaderObject> ReduceResults;
     public bool HasDynamicFields;
     public bool IsStale;
+    public IndexType IndexType;
     
     public async Task WriteTestIndexResultAsync(Stream responseBodyStream, DocumentsOperationContext context)
     {
@@ -56,6 +58,11 @@ public class TestIndexResult
             
             writer.WritePropertyName(nameof(IsStale));
             writer.WriteBool(IsStale);
+            
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(IndexType));
+            writer.WriteString(IndexType.ToString());
 
             writer.WriteEndObject();
         }
