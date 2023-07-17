@@ -263,6 +263,10 @@ select {
     max-width: 30rem;
 }
 
+.accordion-item {
+    color: $text-color-var !important;
+}
+
 .select-btn {
     color: $input-color;
     background-color: $input-bg;

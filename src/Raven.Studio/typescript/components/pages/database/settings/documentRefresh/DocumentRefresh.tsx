@@ -21,8 +21,6 @@ import { LoadError } from "components/common/LoadError";
 import { useAccessManager } from "components/hooks/useAccessManager";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
-    todo("Styling", "Matteo", "fix position of input validation error");
-    todo("Other", "Matteo", "revise texts");
     const { databasesService } = useServices();
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
@@ -145,40 +143,26 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 heading="About this view"
                             >
                                 <p>
-                                    Enabling <strong>Document Refresh</strong> will refresh documents that have a{" "}
-                                    <code>@refresh</code> flag in the metadata at the time specified by the flag. At
-                                    that time RavenDB will <strong>remove</strong> the <code>@refresh</code> flag
-                                    causing the document to automatically update.
+                                    When <strong>Document Refresh</strong> is enabled:
                                 </p>
-                                <p>As a result, and depending on your tasks and indexing configuration:</p>
                                 <ul>
-                                    <li>A document will be re-indexed</li>
                                     <li>
-                                        Ongoing-tasks such as Replication, ETL, Subscriptions, etc. will be triggered
+                                        The server scans the database at the specified <strong>frequency</strong>, searching for documents that should be refreshed.
+                                    </li>
+                                    <li>
+                                        Any document that has a <code>@refresh</code> metadata property whose time has passed at the time of the scan will be modified by removing this property.
+                                    </li>
+                                    <li>
+                                        This modification will trigger any processes related to the document, such as: re-indexing or taking part in an ongoing-task (e.g. Replication, ETL, Subscriptions, etc.), as defined by your configuration.
                                     </li>
                                 </ul>
+                                <p>Sample document:</p>
+                                <Code code={codeExample} language="javascript"/>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/1PKUYJ/6.0/Csharp" target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
-                            </AccordionItemWrapper>
-                            <AccordionItemWrapper
-                                targetId="2"
-                                icon="road-cone"
-                                color="success"
-                                description="Learn how to get the most of Document Refresh"
-                                heading="Examples of use"
-                            >
-                                <p>
-                                    <strong>To set the refresh time:</strong> enter the appropriate date in the metadata{" "}
-                                    <code>@refresh</code> property.
-                                </p>
-                                <p>
-                                    <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
-                                    frequency specified. The actual refresh time can increase (up to) that value.
-                                </p>
-                                <Code code={codeExample} language="javascript"></Code>
                             </AccordionItemWrapper>
                         </AboutViewAnchored>
                     </Col>
@@ -204,11 +188,10 @@ function mapToFormData(dto: ServerRefreshConfiguration): DocumentRefreshFormData
     };
 }
 
-const codeExample = `
-{
-    "Example": "This is an example of a document with @refresh flag set",
+const codeExample = `{
+    "Example": "Set a timestamp in the @refresh metadata property",
     "@metadata": {
         "@collection": "Foo",
-        "@refresh": "2017-10-10T08:00:00.0000000Z"
+        "@refresh": "2023-07-16T08:00:00.0000000Z"
     }
 }`;
