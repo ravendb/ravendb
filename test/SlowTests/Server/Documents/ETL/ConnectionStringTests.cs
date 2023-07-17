@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -275,6 +276,26 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.True(resultElastic.SqlConnectionStrings.Count == 0);
                 Assert.True(resultElastic.RavenConnectionStrings.Count == 0);
                 Assert.True(resultElastic.ElasticSearchConnectionStrings.Count > 0);
+            }
+        }
+
+        [RequiresMsSqlFact]
+        public void CannotAddSqlConnectionStringWithInvalidFactoryName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Assert.Throws<RavenException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                {
+                    Name = "Invalid Factory Connection String",
+                    ConnectionString = "some-connection-string-that-doesnt-matter",
+                    FactoryName = "Invalid.Factory.4.20-final.stable"
+                })));
+                Assert.Throws<RavenException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                {
+                    Name = "Not-supported Factory Connection String",
+                    ConnectionString = "some-connection-string-that-doesnt-matter",
+                    FactoryName = "System.Data.OleDb"
+                })));
             }
         }
     }
