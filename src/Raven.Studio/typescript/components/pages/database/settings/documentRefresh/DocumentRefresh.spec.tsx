@@ -11,7 +11,6 @@ describe("DocumentRefresh", () => {
         const { screen } = rtlRender(<DefaultDocumentRefresh />);
 
         expect(await screen.findByText("Enable Document Refresh")).toBeInTheDocument();
-        screen.logTestingPlaygroundURL();
     });
 
     it("can disable and set to null refresh frequency after disabling 'Enable Document Refresh'", async () => {
