@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var timespanToWaitForProcessing = TimeSpan.FromSeconds(waitForNonStaleResultsTimeoutInSec);
                     index.TestRun.WaitForProcessingOfSampleDocs(timespanToWaitForProcessing);
                     
-                    using (var token = CreateTimeLimitedQueryToken())
+                    using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                     using (var queryContext = QueryOperationContext.Allocate(Database))
                     {
                         indexQueryServerSide.WaitForNonStaleResults = false;
@@ -115,7 +115,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             MapResults = mapResults,
                             HasDynamicFields = hasDynamicFields,
                             ReduceResults = reduceResults,
-                            IsStale = queryResults.IsStale
+                            IsStale = queryResults.IsStale,
+                            IndexType = testIndexDefinition.Type
                         };
 
                         await result.WriteTestIndexResultAsync(ResponseBodyStream(), context);
