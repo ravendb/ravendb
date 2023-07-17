@@ -47,6 +47,8 @@ class testIndex {
         "mapResults": 0,
         "reduceResults": 0
     });
+    
+    showReduceTab = ko.observable<boolean>(false);
 
     currentTab = ko.observable<testTabName>(null);
 
@@ -190,6 +192,7 @@ class testIndex {
                     mapResults: result.MapResults.length,
                     reduceResults: result.ReduceResults.length
                 });
+                this.showReduceTab(result.IndexType === "AutoMapReduce" || result.IndexType === "MapReduce" || result.IndexType === "JavaScriptMapReduce");
             })
             .fail(() => {
                 // reset results count
@@ -199,6 +202,7 @@ class testIndex {
                     mapResults: 0,
                     indexEntries: 0
                 });
+                this.showReduceTab(false);
             })
             .always(() => this.spinners.testing(false));
     }

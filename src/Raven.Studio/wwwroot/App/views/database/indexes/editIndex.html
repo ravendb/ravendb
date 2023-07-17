@@ -555,7 +555,7 @@
                                 <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'mapResults' }, click: _.partial(goToTab, 'mapResults')">
                                     Map Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().mapResults.toLocaleString(), visible: resultsCount().mapResults"></span>
                                 </button>
-                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'reduceResults' }, click: _.partial(goToTab, 'reduceResults')">
+                                <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'reduceResults' }, click: _.partial(goToTab, 'reduceResults'), visible: showReduceTab">
                                     Reduce Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().reduceResults.toLocaleString(), visible: resultsCount().reduceResults"></span>
                                 </button>
                             </div>
