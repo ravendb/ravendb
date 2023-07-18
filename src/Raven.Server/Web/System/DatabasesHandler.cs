@@ -185,6 +185,8 @@ namespace Raven.Server.Web.System
                                     TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
                                 .Concat(rawRecord.Topology.Rehabs.Select(x =>
                                     TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab))
+                                .Concat(rawRecord.Topology.Promotables.Select(x =>
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable)))
                                 );
                             stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
                         }
