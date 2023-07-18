@@ -6,22 +6,10 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Glacier.Model;
-using Esprima.Ast;
 using FastTests.Graph;
-using FastTests.Issues;
-using Jint;
-using McMaster.Extensions.CommandLineUtils;
-using Nest;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Server;
-using Raven.Server.Config;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
-using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -58,7 +46,6 @@ namespace SlowTests.Issues
             db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
             {
                 cts.Cancel();
-                return Task.CompletedTask;
             };
 
             var e = await Assert.ThrowsAsync<TaskCanceledException>(async () =>
@@ -253,8 +240,6 @@ namespace SlowTests.Issues
                 {
                     if (Interlocked.CompareExchange(ref failover, 1, 0) == 0)
                         throw new TimeoutException("Shahar"); // for failover in node A
-
-                    return Task.CompletedTask;
                 };
             }
         }
