@@ -1,72 +1,79 @@
-﻿import React, { useCallback } from "react";
+﻿import React from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
-    EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
-import { OngoingTaskRabbitMqEtlInfo } from "components/models/tasks";
+} from "../../shared";
+import { OngoingTaskReplicationSinkInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
+    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
-import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
-type RabbitMqEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqEtlInfo>;
+type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
-function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
+function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
+    const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "RabbitMQ", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
+
     return (
         <RichPanelDetails>
+            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
             <ConnectionStringItem
-                connectionStringDefined
+                connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            <EmptyScriptsWarning task={data} />
+            {connectionStringDefined && (
+                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
+            )}
+            <RichPanelDetailItem label="Actual Hub URL">{data.shared.destinationUrl ?? "N/A"}</RichPanelDetailItem>
+
+            {data.shared.topologyDiscoveryUrls.map((url) => (
+                <RichPanelDetailItem label="Topology Discovery URL" key={url}>
+                    {url}
+                </RichPanelDetailItem>
+            ))}
         </RichPanelDetails>
     );
 }
 
-export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview } = props;
+export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
+    const { db, data } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editRabbitMqEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editReplicationSink(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
         props
     );
 
-    const showPreview = useCallback(
-        (transformationName: string) => {
-            showItemPreview(data, transformationName);
-        },
-        [data, showItemPreview]
-    );
-
     return (
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -83,7 +90,6 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
             </RichPanelHeader>
             <Collapse isOpen={detailsVisible}>
                 <Details {...props} canEdit={canEdit} />
-                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
             </Collapse>
         </RichPanel>
     );

@@ -9,7 +9,7 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
+} from "../../shared";
 import { OngoingTaskKafkaEtlInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -20,9 +20,10 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
 type KafkaEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaEtlInfo>;
 
@@ -69,6 +70,9 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

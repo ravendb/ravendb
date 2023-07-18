@@ -1,16 +1,5 @@
 ﻿import React from "react";
-import {
-    BaseOngoingTaskPanelProps,
-    ConnectionStringItem,
-    OngoingTaskActions,
-    OngoingTaskName,
-    OngoingTaskResponsibleNode,
-    OngoingTaskStatus,
-    useTasksOperations,
-} from "../shared";
-import { OngoingTaskReplicationSinkInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
-import { useAppUrls } from "hooks/useAppUrls";
+import { OngoingTaskExternalReplicationInfo } from "components/models/tasks";
 import {
     RichPanel,
     RichPanelActions,
@@ -18,20 +7,37 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
-import { Collapse } from "reactstrap";
+import {
+    ConnectionStringItem,
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskResponsibleNode,
+    OngoingTaskStatus,
+} from "../../shared";
+import { useAccessManager } from "hooks/useAccessManager";
+import { useAppUrls } from "hooks/useAppUrls";
+import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared";
+import genUtils from "common/generalUtils";
+import { Collapse, Input } from "reactstrap";
 
-type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
+type ExternalReplicationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskExternalReplicationInfo>;
 
-function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
+function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
+
+    const showDelayReplication = data.shared.delayReplicationTime > 0;
+    const delayHumane = genUtils.formatTimeSpan(1000 * (data.shared.delayReplicationTime ?? 0), true);
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
+            {showDelayReplication && (
+                <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>
+            )}
             <ConnectionStringItem
                 connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
@@ -39,27 +45,36 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                 connectionStringsUrl={connectionStringsUrl}
             />
             {connectionStringDefined && (
-                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
-            )}
-            <RichPanelDetailItem label="Actual Hub URL">{data.shared.destinationUrl ?? "N/A"}</RichPanelDetailItem>
-
-            {data.shared.topologyDiscoveryUrls.map((url) => (
-                <RichPanelDetailItem label="Topology Discovery URL" key={url}>
-                    {url}
+                <RichPanelDetailItem label="Destination Database">
+                    {data.shared.destinationDatabase}
                 </RichPanelDetailItem>
-            ))}
+            )}
+            <RichPanelDetailItem label="Actual Destination URL">
+                {data.shared.destinationUrl ? (
+                    <a href={data.shared.destinationUrl} target="_blank">
+                        {data.shared.destinationUrl}
+                    </a>
+                ) : (
+                    <div>N/A</div>
+                )}
+            </RichPanelDetailItem>
+            {data.shared.topologyDiscoveryUrls?.length > 0 && (
+                <RichPanelDetailItem label="Topology Discovery URLs">
+                    {data.shared.topologyDiscoveryUrls.join(", ")}
+                </RichPanelDetailItem>
+            )}
         </RichPanelDetails>
     );
 }
 
-export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
+export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
     const { db, data } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editReplicationSink(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editExternalReplication(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
@@ -70,6 +85,9 @@ export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

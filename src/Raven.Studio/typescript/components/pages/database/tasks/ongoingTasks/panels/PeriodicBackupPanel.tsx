@@ -6,7 +6,7 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
+} from "../../shared";
 import { OngoingTaskPeriodicBackupInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -17,10 +17,11 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import genUtils from "common/generalUtils";
 import moment = require("moment");
-import assertUnreachable from "../../../../utils/assertUnreachable";
+import assertUnreachable from "../../../../../utils/assertUnreachable";
 import timeHelpers from "common/timeHelpers";
 import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
 import classNames from "classnames";
@@ -29,7 +30,7 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
-import { Badge, Collapse } from "reactstrap";
+import { Badge, Collapse, Input } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
 
@@ -241,6 +242,9 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
