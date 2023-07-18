@@ -137,9 +137,11 @@ class databasesManager {
         
         if (waitForNotificationCenter) {
             return basicTask.then(() => {
+                this.changesContext.databaseNotifications().watchAllDatabaseStatsChanged(e => this.onDatabaseStateUpdateReceivedViaChangesApi(e));
                 return this.changesContext.databaseNotifications().connectToWebSocketTask;
             });
         } else {
+            this.changesContext.databaseNotifications().watchAllDatabaseStatsChanged(e => this.onDatabaseStateUpdateReceivedViaChangesApi(e));
             return basicTask;
         }
     }
@@ -247,6 +249,11 @@ class databasesManager {
                     });
                 break;
         }
+    }
+
+    private onDatabaseStateUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
+        const db = this.getDatabaseByName(event.Database);
+        this.updateDatabaseInfo(db, event.Database);
     }
 
     updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseInfo> {
