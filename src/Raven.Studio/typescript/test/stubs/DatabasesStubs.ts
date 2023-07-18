@@ -6,6 +6,7 @@ import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioData
 import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -262,6 +263,13 @@ export class DatabasesStubs {
         return {
             Disabled: false,
             RefreshFrequencyInSec: 65,
+        };
+    }
+
+    static expirationConfiguration(): ExpirationConfiguration {
+        return {
+            Disabled: false,
+            DeleteFrequencyInSec: 65,
         };
     }
 }
