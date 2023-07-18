@@ -10,6 +10,7 @@ using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Sharding;
@@ -455,7 +456,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 scope.DynamicFields[name] = field;
                 scope.IncrementDynamicFields();
             }
-            else if (existing.Indexing != field.Indexing)
+            else if (options.Indexing != null && existing.Indexing != field.Indexing)
             {
                 throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{existing.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             }

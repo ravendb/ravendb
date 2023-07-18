@@ -59,10 +59,6 @@ public class IndexFieldsMappingBuilder : IDisposable
         {
             AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode, shouldStore: shouldStore);
         }
-        else
-        {
-            Debug.Assert(storedBinding.FieldIndexingMode == mode);
-        }
 
         Analyzer GetAnalyzer() => mode switch
         {

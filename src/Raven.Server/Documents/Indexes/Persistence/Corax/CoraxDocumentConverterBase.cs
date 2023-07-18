@@ -374,11 +374,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (val.HasParent)
         {
             using var clonedBlittable = val.CloneOnTheSameContext();
-            builder.Store(clonedBlittable);
+            builder.Store(field.Id, field.Name,clonedBlittable);
         }
         else
         {
-            builder.Store(val);
+            builder.Store(field.Id, field.Name,val);
         }
 
         shouldSkip = false;
