@@ -12,7 +12,6 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { todo } from "common/developmentHelper";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -24,8 +23,6 @@ interface IndexCleanupProps {
 }
 
 export function IndexCleanup(props: IndexCleanupProps) {
-    todo("Styling", "Kwiato", "align table header for surpassing and unused indexes");
-    todo("Styling", "Kwiato", "add delete indexes icon");
     const { db } = props;
 
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
@@ -256,6 +253,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         isSpinning={surpassing.isDeleting}
                                         disabled={surpassing.selected.length === 0}
                                     >
+                                        <Icon icon="trash" />
                                         Delete selected sub-indexes{" "}
                                         <Badge color="faded-primary" className="rounded-pill ms-1">
                                             {surpassing.selected.length}
@@ -270,6 +268,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                         <td>
                                                             <Checkbox
                                                                 size="lg"
+                                                                color="primary"
                                                                 selected={surpassing.selectionState === "AllSelected"}
                                                                 indeterminate={
                                                                     surpassing.selectionState === "SomeSelected"
@@ -277,19 +276,19 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                 toggleSelection={surpassing.toggleAll}
                                                             />
                                                         </td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">Sub-index</div>
                                                         </td>
                                                         <td width={50}></td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">Containing index</div>
                                                         </td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">
                                                                 Last query time (sub-index)
                                                             </div>
                                                         </td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">
                                                                 Last indexing time (sub-index)
                                                             </div>
@@ -369,11 +368,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <div className="p-2">
                                     <ButtonWithSpinner
                                         color="primary"
-                                        className="mb-2"
+                                        className="mb-2 rounded-pill"
                                         onClick={unused.deleteSelected}
                                         isSpinning={unused.isDeleting}
                                         disabled={unused.selected.length === 0}
                                     >
+                                        <Icon icon="trash" />
                                         Delete selected indexes
                                         <Badge color="faded-primary" className="rounded-pill ms-1">
                                             {unused.selected.length}
@@ -387,19 +387,20 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                         <td>
                                                             <Checkbox
                                                                 size="lg"
+                                                                color="primary"
                                                                 selected={unused.selectionState === "AllSelected"}
                                                                 indeterminate={unused.selectionState === "SomeSelected"}
                                                                 toggleSelection={unused.toggleAll}
                                                             />
                                                         </td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">Unused index</div>
                                                         </td>
 
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">Last query time</div>
                                                         </td>
-                                                        <td>
+                                                        <td className="align-middle">
                                                             <div className="small-label">Last indexing time</div>
                                                         </td>
                                                     </tr>
