@@ -496,10 +496,9 @@ namespace Raven.Client.Http
                     {
                         _nodeSelector = new NodeSelector(topology);
 
-                        ForTestingPurposes?.WaitForRecoredfastest.Invoke(_nodeSelector);
-
                         if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
+                            ForTestingPurposes.OnBeforeScheduleSpeedTest?.Invoke(_nodeSelector);
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
@@ -2370,7 +2369,7 @@ namespace Raven.Client.Http
             internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
             internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
 
-            internal Action<NodeSelector> WaitForRecoredfastest;
+            internal Action<NodeSelector> OnBeforeScheduleSpeedTest;
         }
     }
 }
