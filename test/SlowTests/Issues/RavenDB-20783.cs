@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Http;
+using SlowTests.MailingList;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,12 +16,15 @@ namespace SlowTests.Issues
         {
         }
 
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(30 * 10) : TimeSpan.FromSeconds(3);
+
         [Fact]
         public async Task NullTimerInRecordFastest()
         {
             var (servers, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            var mre = new ManualResetEvent(false);
-            using (var store1 = GetDocumentStore(new Options
+            var mre = new ManualResetEventSlim(false);
+            var mre2 = new ManualResetEventSlim(false);
+            using (var store = GetDocumentStore(new Options
                    {
                        Server = servers[0],
                        ModifyDatabaseName = s => $"{s}_1",
@@ -27,31 +32,24 @@ namespace SlowTests.Issues
                        ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.FastestNode
                    }))
             {
-                var e = store1.GetRequestExecutor();
+                var requestExecutor = store.GetRequestExecutor();
                 NodeSelector node = null;
-                e.ForTestingPurposesOnly().WaitForRecoredfastest = async (n) =>
+                requestExecutor.ForTestingPurposesOnly().OnBeforeScheduleSpeedTest = (n) =>
                 {
                     node = n;
-                    mre.WaitOne();
+                    mre2.Set();
+                    Assert.True(mre.Wait(_reasonableWaitTime), "Waited too long");
                 };
-                _ = e.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = servers[0].WebUrl, Database = store1.Database })
+                _ = requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = servers[0].WebUrl, Database = store.Database })
                 {
                     TimeoutInMs = Timeout.Infinite,
                     ForceUpdate = true,
                     DebugTag = "first-topology-update",
                 });
-                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-
+                Assert.True(mre2.Wait(_reasonableWaitTime), "Waited too long");
                 for (int i = 0; i < 10; i++)
                 {
-                    try
-                    {
-                        node.RecordFastest(0, node.Topology.Nodes[0]);
-                    }
-                    catch (Exception exception)
-                    {
-                        Assert.Fail(exception.Message + "Stack Track : " + exception.StackTrace);
-                    }
+                    node.RecordFastest(0, node.Topology.Nodes[0]);
                 }
 
                 mre.Set();
