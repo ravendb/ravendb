@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -7,6 +9,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.QueueSink;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -94,6 +97,33 @@ namespace SlowTests.Server.Documents.QueueSink
 
             error = null;
             return false;
+        }
+        
+        protected ManualResetEventSlim WaitForEtl(DocumentStore store,
+            Func<string, QueueSinkProcessStatistics, bool> predicate)
+        {
+            var database = GetDatabase(store.Database).Result;
+
+            var mre = new ManualResetEventSlim();
+
+            database.QueueSinkLoader.BatchCompleted += x =>
+            {
+                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                    mre.Set();
+            };
+
+            return mre;
+        }
+
+        protected void AssertQueueSinkDone(ManualResetEventSlim etlDone, TimeSpan timeout)
+        {
+            if (etlDone.Wait(timeout) == false)
+            {
+                //TryGetLoadError(databaseName, config, out var loadError);
+                //TryGetTransformationError(databaseName, config, out var transformationError);
+
+                //Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+            }
         }
         
         public override void Dispose()

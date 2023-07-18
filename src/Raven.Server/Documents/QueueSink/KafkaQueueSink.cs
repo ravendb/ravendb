@@ -36,7 +36,6 @@ public class KafkaQueueSink : QueueSinkProcess
                 }
 
                 EnterFallbackMode();
-                //return messageBatch;
             }
         }
 
