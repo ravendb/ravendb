@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
@@ -11,13 +10,12 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.QueueSink;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.QueueSink.Kafka
+namespace SlowTests.Server.Documents.QueueSink
 {
     public class KafkaQueueSinkTests : QueueSinkTestBase
     {
@@ -335,32 +333,7 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             return producer;
         }
 
-        private ManualResetEventSlim WaitForEtl(DocumentStore store,
-            Func<string, QueueSinkProcessStatistics, bool> predicate)
-        {
-            var database = GetDatabase(store.Database).Result;
-
-            var mre = new ManualResetEventSlim();
-
-            database.QueueSinkLoader.BatchCompleted += x =>
-            {
-                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                    mre.Set();
-            };
-
-            return mre;
-        }
-
-        private void AssertQueueSinkDone(ManualResetEventSlim etlDone, TimeSpan timeout)
-        {
-            if (etlDone.Wait(timeout) == false)
-            {
-                //TryGetLoadError(databaseName, config, out var loadError);
-                //TryGetTransformationError(databaseName, config, out var transformationError);
-
-                //Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-            }
-        }
+        
     }
 
     public class User
