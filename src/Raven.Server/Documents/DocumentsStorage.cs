@@ -1713,7 +1713,7 @@ namespace Raven.Server.Documents
                     var cv = context.GetChangeVector(doc.ChangeVector);
                     var expected = context.GetChangeVector(expectedChangeVector);
 
-                    if (string.Compare(expected.Version, cv.Version, StringComparison.Ordinal) != 0) 
+                    if (ChangeVector.CompareVersion(expected, cv) != 0)
                         ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
                 }
 
