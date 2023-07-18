@@ -858,8 +858,8 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Increments: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.IncrementOperation[];
 }
 
-type StudioTaskType =  "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
-                       "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl";
+type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
+    "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
     
 type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
 

@@ -33,7 +33,7 @@
                         </div>
                     </div>
                     <div class="hr-title">
-                        <h5>ETL</h5>
+                        <h5>ETL (RavenDB &rAarr; Target)</h5>
                         <hr />
                     </div>
                     <div class="row row-sm flex-row">
@@ -70,6 +70,26 @@
                             <div data-bind="attr: { class: $root.canCreateQueueEtl() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
                                 <a href="#" class="rabbitmq-etl" data-bind="click: newRabbitMqEtlTask">
                                     <i class="icon-rabbitmq-etl"></i><h4 class="margin-none margin-top-sm">RabbitMQ ETL</h4>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hr-title">
+                        <h5>Sink (Source &rAarr; RavenDB)</h5>
+                        <hr />
+                    </div>
+                    <div class="row row-sm flex-row">
+                        <div class="col-sm-4 margin-bottom-xs" title="Create new Kafka Sink task">
+                            <div data-bind="attr: { class: $root.canCreateQueueSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
+                                <a href="#" class="kafka-sink" data-bind="click: newKafkaSinkTask">
+                                    <i class="icon-kafka-sink"></i><h4 class="margin-none margin-top-sm">Kafka Sink</h4>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-sm-4 margin-bottom-xs" title="Create new RabbitMQ Sink task">
+                            <div data-bind="attr: { class: $root.canCreateQueueSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
+                                <a href="#" class="rabbitmq-sink" data-bind="click: newRabbitSinkMqTask">
+                                    <i class="icon-rabbitmq-sink"></i><h4 class="margin-none margin-top-sm">RabbitMQ Sink</h4>
                                 </a>
                             </div>
                         </div>

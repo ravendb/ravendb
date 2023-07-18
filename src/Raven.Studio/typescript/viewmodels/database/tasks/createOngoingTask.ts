@@ -31,6 +31,10 @@ class createOngoingTask extends dialogViewModelBase {
         return !(this.db instanceof shardedDatabase);
     }
 
+    private canCreateQueueSink() {
+        return !(this.db instanceof shardedDatabase);
+    }
+
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
         const url = appUrl.forEditExternalReplication(this.db);
@@ -96,6 +100,26 @@ class createOngoingTask extends dialogViewModelBase {
         }
         eventsCollector.default.reportEvent("RabbitMqETL", "new");
         const url = appUrl.forEditRabbitMqEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
+    newKafkaSinkTask() {
+        if (!this.canCreateQueueSink()) {
+            return;
+        }
+        eventsCollector.default.reportEvent("KafkaSink", "new");
+        const url = appUrl.forEditKafkaSink(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
+    newRabbitSinkMqTask() {
+        if (!this.canCreateQueueSink()) {
+            return;
+        }
+        eventsCollector.default.reportEvent("RabbitMqSink", "new");
+        const url = appUrl.forEditRabbitMqSink(this.activeDatabase());
         router.navigate(url);
         this.close();
     }

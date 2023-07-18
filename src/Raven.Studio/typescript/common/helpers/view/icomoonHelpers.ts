@@ -46,8 +46,9 @@ class icomoonHelpers {
         "cluster-watcher": 0xf127,
         "arrow-up": 0xf128,
         "kafka-etl": 0xf129,
-        "rabbitmq-etl": 0xf130
-        
+        "rabbitmq-etl": 0xf130,
+        "kafka-sink": 0xf131,
+        "rabbitmq-sink": 0xf132,
     } as const;
     
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {

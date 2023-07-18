@@ -34,6 +34,14 @@
 @rabbitmq-etl-color-dark: darken(@color-4-2, 5%);
 @rabbitmq-etl-color-light: lighten(@color-4-2, 5%);
 
+@kafka-sink-color: @color-2-3; 
+@kafka-sink-color-dark: darken(@color-2-3, 10%);
+@kafka-sink-color-light: lighten(@color-2-3, 3%);
+
+@rabbitmq-sink-color: @color-4-2; 
+@rabbitmq-sink-color-dark: darken(@color-4-2, 5%);
+@rabbitmq-sink-color-light: lighten(@color-4-2, 5%);
+
 @backup-color: @color-5;
 @backup-color-dark: darken(@color-5, 10%);
 @backup-color-light: lighten(@color-5, 5%);
@@ -63,7 +71,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .rabbitmq-etl {
+    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .rabbitmq-etl, .kafka-sink, .rabbitmq-sink {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
@@ -106,13 +114,20 @@
         .bigbtn-variant (@ravendb-etl-color, @ravendb-etl-color-dark);
     }
 
-
     .kafka-etl {
         .bigbtn-variant (@kafka-etl-color, @kafka-etl-color-dark);
     }
 
     .rabbitmq-etl {
         .bigbtn-variant (@rabbitmq-etl-color, @rabbitmq-etl-color-dark);
+    }
+
+    .kafka-sink {
+        .bigbtn-variant (@kafka-sink-color, @kafka-sink-color-dark);
+    }
+
+    .rabbitmq-sink {
+        .bigbtn-variant (@rabbitmq-sink-color, @rabbitmq-sink-color-dark);
     }
 
     .periodic-backup {
@@ -160,9 +175,10 @@
             color: @text-emphasis;
         }
 
-        .collections {
+        .collections, .queues {
             font-size: 12px;
         }
+        
     }
 }
 
@@ -275,6 +291,22 @@
             background-color: @rabbitmq-etl-color;
         }
 
+        .kafka-sink {
+            color: @kafka-sink-color;
+        }
+
+        .task-kafka-sink {
+            background-color: @kafka-sink-color;
+        }
+
+        .rabbitmq-sink {
+            color: @rabbitmq-sink-color;
+        }
+
+        .task-rabbitmq-sink {
+            background-color: @rabbitmq-sink-color;
+        }
+
         .periodic-backup {
             color: @backup-color;
         }
@@ -341,6 +373,14 @@
         }
 
         &.rabbitmq-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+        
+        &.kafka-sink {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.rabbitmq-sink {
             .name-variant (@brand-info, @brand-info-light);
         }
 
@@ -508,7 +548,7 @@
     margin-left: auto;
 }
 
-.etl-collections, .transformation-scripts-list {
+.etl-collections, .transformation-scripts-list, .sink-queues {
 
     .collection-color-0 {
         color: @color-3;
@@ -688,7 +728,7 @@
     }
 }
 
-.edit-kafka-etl-task, .edit-rabbitmq-etl-task {
+.edit-kafka-etl-task, .edit-rabbitmq-etl-task, .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
 
     overflow-x: hidden;
 
