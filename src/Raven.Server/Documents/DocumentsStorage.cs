@@ -1847,7 +1847,7 @@ namespace Raven.Server.Documents
         [DoesNotReturn]
         private static void ThrowConcurrencyException(string id, string expected, string actual)
         {
-            throw new ConcurrencyException($"Document {id} has change vector '{actual}', but Delete was called with change vector '{expected}'. " +
+            throw new ConcurrencyException($"Document {id} has change vector {actual}, but Delete was called with change vector '{expected}'. " +
                                            "Optimistic concurrency violation, transaction will be aborted.")
             {
                 Id = id,
