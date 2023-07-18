@@ -3,6 +3,7 @@ import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingT
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import assertUnreachable from "./assertUnreachable";
+import OngoingTaskQueueSinkDetails = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSinkDetails;
 
 export default class TaskUtils {
     static ongoingTaskToStudioTaskType(task: OngoingTask): StudioTaskType {
@@ -17,6 +18,20 @@ export default class TaskUtils {
                     throw new Error("Expected non-null BrokerType");
                 default:
                     assertUnreachable(queueTask.BrokerType);
+            }
+        }
+
+        if (task.TaskType === "QueueSink") {
+            const queueTask = task as OngoingTaskQueueSinkDetails;
+            switch (queueTask.Configuration.BrokerType) {
+                case "Kafka":
+                    return "KafkaQueueSink";
+                case "RabbitMq":
+                    return "RabbitQueueSink";
+                case "None":
+                    throw new Error("Expected non-null BrokerType");
+                default:
+                    assertUnreachable(queueTask.Configuration.BrokerType);
             }
         }
 
@@ -36,6 +51,10 @@ export default class TaskUtils {
     static studioTaskTypeToTaskType(type: StudioTaskType): OngoingTaskType {
         if (type === "KafkaQueueEtl" || type === "RabbitQueueEtl") {
             return "QueueEtl";
+        }
+
+        if (type === "KafkaQueueSink" || type === "RabbitQueueSink") {
+            return "QueueSink";
         }
 
         return type;

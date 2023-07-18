@@ -176,7 +176,9 @@ module.exports = (env, args) => {
                                     "cluster-watcher": 0xf127,
                                     "arrow-up": 0xf128,
                                     "kafka-etl": 0xf129,
-                                    "rabbitmq-etl": 0xf130
+                                    "rabbitmq-etl": 0xf130,
+                                    "kafka-sink": 0xf131,
+                                    "rabbitmq-sink": 0xf132
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }

@@ -640,6 +640,12 @@
         .rabbitmq-etl {
             color: @rabbitmq-etl-color;
         }
+        .kafka-sink {
+            color: @kafka-sink-color;
+        }
+        .rabbitmq-sink {
+            color: @rabbitmq-sink-color;
+        }
         .periodic-backup {
             color: @backup-color;
         }
@@ -727,6 +733,14 @@
 
             &.rabbitmq-etl .task-name i {
                 color: @rabbitmq-etl-color;
+            }
+
+            &.kafka-sink .task-name i {
+                color: @kafka-sink-color;
+            }
+
+            &.rabbitmq-sink .task-name i {
+                color: @rabbitmq-sink-color;
             }
 
             &.periodic-backup .task-name i {

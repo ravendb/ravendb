@@ -26,6 +26,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -80,6 +81,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
@@ -518,10 +520,14 @@ namespace TypingsGenerator
 
             // ongoing tasks - Queue ETL
             scripter.AddType(typeof(OngoingTaskQueueEtl));
+            scripter.AddType(typeof(OngoingTaskQueueSinkDetails));
             scripter.AddType(typeof(QueueEtlConfiguration));
+            scripter.AddType(typeof(QueueSinkConfiguration));
             scripter.AddType(typeof(QueueEtlTestScriptResult));
             scripter.AddType(typeof(TestQueueEtlScript));
             scripter.AddType(typeof(KafkaConnectionSettings));
+            scripter.AddType(typeof(TestQueueSinkScript));
+            scripter.AddType(typeof(TestQueueSinkScriptResult));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

@@ -571,6 +571,10 @@ class databaseGroupGraph {
                     return icomoonHelpers.getCodePointForCanvas("kafka-etl");
                 case "RabbitQueueEtl":
                     return icomoonHelpers.getCodePointForCanvas("rabbitmq-etl");
+                case "KafkaQueueSink":
+                    return icomoonHelpers.getCodePointForCanvas("kafka-sink");
+                case "RabbitQueueSink":
+                    return icomoonHelpers.getCodePointForCanvas("rabbitmq-sink");
                 case "Subscription":
                     return icomoonHelpers.getCodePointForCanvas("subscription");
                 case "PullReplicationAsHub":

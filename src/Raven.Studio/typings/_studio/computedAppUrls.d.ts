@@ -27,6 +27,8 @@ interface computedAppUrls {
     editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editKafkaSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editRabbitMqSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
@@ -48,6 +50,8 @@ interface computedAppUrls {
     editElasticSearchEtlTaskUrl: KnockoutComputed<string>;
     editKafkaEtlTaskUrl: KnockoutComputed<string>;
     editRabbitMqEtlTaskUrl: KnockoutComputed<string>;
+    editKafkaSinkTaskUrl: KnockoutComputed<string>;
+    editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
