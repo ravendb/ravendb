@@ -213,7 +213,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
         // before starting cleanup, wait for DestinationMigrationConfirm command
         // to be applied in all orchestrator nodes
-        await WaitForConfirmationIndex(confirmationIndex);
+        await WaitForOrchestratorConfirmationAsync(confirmationIndex);
 
         while (true)
         {
@@ -238,7 +238,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
-    private async Task WaitForConfirmationIndex(long confirmationIndex)
+    private async Task WaitForOrchestratorConfirmationAsync(long confirmationIndex)
     {
         var cmd = new WaitForIndexNotificationCommand(new List<long> { confirmationIndex });
         var tasks = new List<Task>(ShardingConfiguration.Orchestrator.Topology.Members.Count);
@@ -260,7 +260,14 @@ public class ShardedDocumentDatabase : DocumentDatabase
             tasks.Add(t);
         }
 
-        await Task.WhenAll(tasks);
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException($"failed to wait for migration confirmation index '{confirmationIndex}' on Orchestrator nodes: {ShardingConfiguration.Orchestrator.Topology}. Error : {e}");
+        }
     }
 
     public static ShardedDocumentDatabase CastToShardedDocumentDatabase(DocumentDatabase database) => database as ShardedDocumentDatabase ?? throw new ArgumentException($"Database {database.Name} must be sharded!");
