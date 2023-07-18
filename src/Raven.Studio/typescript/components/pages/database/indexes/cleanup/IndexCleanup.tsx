@@ -33,7 +33,6 @@ export function IndexCleanup(props: IndexCleanupProps) {
     }
 
     if (asyncFetchStats.status === "error") {
-        console.log(asyncFetchStats);
         return <LoadError error="Unable to load index cleanup data" refresh={asyncFetchStats.execute} />;
     }
 
