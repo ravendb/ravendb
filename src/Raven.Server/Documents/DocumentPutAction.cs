@@ -166,8 +166,7 @@ namespace Raven.Server.Documents
                     if (expectedChangeVector != null)
                     {
                         var expected = context.GetChangeVector(expectedChangeVector);
-
-                        if (string.Compare(expected.Version, oldChangeVector.Version, StringComparison.Ordinal) != 0)
+                        if (ChangeVector.CompareVersion(expected, oldChangeVector) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
                     if (oldChangeVectorForClusterTransactionIndexCheck == null)
