@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../shared";
+import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../../shared";
 import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskReplicationHubInfo,
@@ -13,12 +13,13 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
 
 interface ReplicationHubPanelProps {
@@ -78,6 +79,9 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

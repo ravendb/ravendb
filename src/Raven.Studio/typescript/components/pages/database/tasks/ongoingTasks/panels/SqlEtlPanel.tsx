@@ -1,14 +1,6 @@
 ﻿import React, { useCallback } from "react";
-import { useAccessManager } from "hooks/useAccessManager";
 import {
-    RichPanel,
-    RichPanelActions,
-    RichPanelDetailItem,
-    RichPanelDetails,
-    RichPanelHeader,
-    RichPanelInfo,
-} from "components/common/RichPanel";
-import {
+    BaseOngoingTaskPanelProps,
     ConnectionStringItem,
     EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
@@ -16,61 +8,57 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-} from "../shared";
+    useTasksOperations,
+} from "../../shared";
+import { OngoingTaskSqlEtlInfo } from "components/models/tasks";
+import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { OngoingTaskRavenEtlInfo } from "components/models/tasks";
-import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelSelect,
+} from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
-type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
+type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
 
-function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
+function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
-    const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
+    const connectionStringDefined = !!data.shared.destinationDatabase;
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Sql", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
+            {connectionStringDefined && (
+                <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
+                    {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
+                </RichPanelDetailItem>
+            )}
             <ConnectionStringItem
                 connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            {connectionStringDefined && (
-                <RichPanelDetailItem label="Destination Database">
-                    {data.shared.destinationDatabase}
-                </RichPanelDetailItem>
-            )}
-            <RichPanelDetailItem label="Actual Destination URL">
-                {data.shared.destinationUrl ? (
-                    <a href={data.shared.destinationUrl} target="_blank">
-                        {data.shared.destinationUrl}
-                    </a>
-                ) : (
-                    <div>N/A</div>
-                )}
-            </RichPanelDetailItem>
-            {data.shared.topologyDiscoveryUrls?.length > 0 && (
-                <RichPanelDetailItem label="Topology Discovery URLs">
-                    {data.shared.topologyDiscoveryUrls.join(", ")}
-                </RichPanelDetailItem>
-            )}
             <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }
 
-export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editRavenEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editSqlEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
@@ -88,6 +76,9 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

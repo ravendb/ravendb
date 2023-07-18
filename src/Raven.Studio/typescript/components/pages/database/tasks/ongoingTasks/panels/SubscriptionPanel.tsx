@@ -6,6 +6,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingTaskSubscriptionInfo, OngoingTaskSubscriptionSharedInfo } from "components/models/tasks";
 import {
@@ -15,17 +16,17 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
+} from "../../shared";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Alert, Button, Collapse } from "reactstrap";
+import { Alert, Button, Collapse, Input } from "reactstrap";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
-import { SubscriptionConnectionsDetailsWithId } from "components/pages/database/tasks/list/OngoingTasksReducer";
 import { Icon } from "components/common/Icon";
+import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -231,6 +232,9 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

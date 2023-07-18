@@ -9,8 +9,8 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
-import { OngoingTaskOlapEtlInfo } from "components/models/tasks";
+} from "../../shared";
+import { OngoingTaskElasticSearchEtlInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
@@ -20,42 +20,44 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
-type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
+type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
 
-function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
+function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Olap", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "ElasticSearch", data.shared.connectionStringName);
+
     return (
         <RichPanelDetails>
-            {data.shared.destinations.map((dst) => (
-                <RichPanelDetailItem label="Destination" key={dst}>
-                    {dst}
-                </RichPanelDetailItem>
-            ))}
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
+            {data.shared.nodesUrls.map((nodeUrl) => (
+                <RichPanelDetailItem label="Node URL" key={nodeUrl}>
+                    {nodeUrl}
+                </RichPanelDetailItem>
+            ))}
             <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }
 
-export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editOlapEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editElasticSearchEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
@@ -73,6 +75,9 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

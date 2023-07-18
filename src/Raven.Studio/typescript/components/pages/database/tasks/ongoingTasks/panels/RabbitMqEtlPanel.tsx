@@ -9,38 +9,31 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
-import { OngoingTaskSqlEtlInfo } from "components/models/tasks";
+} from "../../shared";
+import { OngoingTaskRabbitMqEtlInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
-    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
-type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
+type RabbitMqEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqEtlInfo>;
 
-function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
+function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringDefined = !!data.shared.destinationDatabase;
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Sql", data.shared.connectionStringName);
-
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "RabbitMQ", data.shared.connectionStringName);
     return (
         <RichPanelDetails>
-            {connectionStringDefined && (
-                <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
-                    {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
-                </RichPanelDetailItem>
-            )}
             <ConnectionStringItem
-                connectionStringDefined={!!data.shared.destinationDatabase}
+                connectionStringDefined
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
@@ -50,14 +43,14 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editSqlEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editRabbitMqEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
@@ -75,6 +68,9 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    <RichPanelSelect>
+                        <Input type="checkbox" onChange={() => null} checked={false} />
+                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

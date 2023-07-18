@@ -6,7 +6,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import createOngoingTask from "viewmodels/database/tasks/createOngoingTask";
 import app from "durandal/app";
 import appUrl from "common/appUrl";
-import { ExternalReplicationPanel } from "../panels/ExternalReplicationPanel";
+import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
@@ -20,30 +20,30 @@ import {
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlInfo,
 } from "components/models/tasks";
-import { RavenEtlPanel } from "../panels/RavenEtlPanel";
-import { SqlEtlPanel } from "../panels/SqlEtlPanel";
-import { OlapEtlPanel } from "../panels/OlapEtlPanel";
-import { ElasticSearchEtlPanel } from "../panels/ElasticSearchEtlPanel";
-import { PeriodicBackupPanel } from "../panels/PeriodicBackupPanel";
-import { SubscriptionPanel } from "../panels/SubscriptionPanel";
-import { ReplicationSinkPanel } from "../panels/ReplicationSinkPanel";
-import { ReplicationHubDefinitionPanel } from "../panels/ReplicationHubDefinitionPanel";
+import { RavenEtlPanel } from "./panels/RavenEtlPanel";
+import { SqlEtlPanel } from "./panels/SqlEtlPanel";
+import { OlapEtlPanel } from "./panels/OlapEtlPanel";
+import { ElasticSearchEtlPanel } from "./panels/ElasticSearchEtlPanel";
+import { PeriodicBackupPanel } from "./panels/PeriodicBackupPanel";
+import { SubscriptionPanel } from "./panels/SubscriptionPanel";
+import { ReplicationSinkPanel } from "./panels/ReplicationSinkPanel";
+import { ReplicationHubDefinitionPanel } from "./panels/ReplicationHubDefinitionPanel";
 import useBoolean from "hooks/useBoolean";
 import { OngoingTaskProgressProvider } from "./OngoingTaskProgressProvider";
 import { BaseOngoingTaskPanelProps, taskKey } from "../shared";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
-
 import "./OngoingTaskPage.scss";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
 import TaskUtils from "../../../../utils/TaskUtils";
-import { KafkaEtlPanel } from "../panels/KafkaEtlPanel";
-import { RabbitMqEtlPanel } from "../panels/RabbitMqEtlPanel";
+import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
+import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Button } from "reactstrap";
-import { FlexGrow } from "components/common/FlexGrow";
+import { Button, Input } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
+import { Checkbox } from "components/common/Checkbox";
+import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -220,18 +220,66 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
     };
 
+    // TODO kalczur - add <FilterOngoingTasks />
+    // TODO kalczur - add ?<OngoingTasksActions />
+    // TODO kalczur - add checkbox properties to every panel
+
     return (
         <div>
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
             <div className="flex-vertical">
-                <div className="flex-header flex-horizontal">
+                <div className="flex-header flex-horizontal justify-content-between align-items-top gap-3">
                     {canReadWriteDatabase(database) && (
-                        <Button onClick={addNewOngoingTask} color="primary">
+                        <Button onClick={addNewOngoingTask} color="primary" className="rounded-pill">
                             <Icon icon="plus" />
                             Add a Database Task
                         </Button>
                     )}
-                    <FlexGrow />
+
+                    <div className="flex-grow">
+                        <div className="small-label ms-1 mb-1">Filter by name</div>
+                        <div className="clearable-input">
+                            <Input
+                                type="text"
+                                accessKey="/"
+                                placeholder="e.g. RavenETLTask"
+                                title="Filter ongoing tasks"
+                                className="filtering-input"
+                                value={""}
+                                onChange={(e) => null}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <MultiCheckboxToggle<string>
+                            inputItems={[
+                                {
+                                    label: "Replication",
+                                    value: "REPLICATION",
+                                },
+                                {
+                                    label: "ETL",
+                                    value: "ETL",
+                                },
+                                {
+                                    label: "Backups",
+                                    value: "Backups",
+                                },
+                                {
+                                    label: "SUBSCRIPTIONS",
+                                    value: "Subscriptions",
+                                },
+                            ]}
+                            label="Filter by type"
+                            selectedItems={[]}
+                            setSelectedItems={() => null}
+                            selectAll
+                            selectAllLabel="All"
+                            selectAllCount={12}
+                        />
+                    </div>
+
                     <div>
                         {canNavigateToServerWideTasks && (
                             <Button
@@ -250,10 +298,22 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 </div>
                 <div className="scroll flex-grow">
                     {tasks.tasks.length === 0 &&
-                        tasks.replicationHubs.length === 0 &&
-                        tasks.subscriptions.length === 0 && (
-                            <EmptySet>No tasks have been created for this Database Group.</EmptySet>
-                        )}
+                    tasks.replicationHubs.length === 0 &&
+                    tasks.subscriptions.length === 0 ? (
+                        <EmptySet>No tasks have been created for this Database Group.</EmptySet>
+                    ) : (
+                        <Checkbox
+                            toggleSelection={() => null}
+                            selected={false}
+                            // indeterminate={selectionState === "SomeSelected"}
+                            title="Select all or none"
+                            color="primary"
+                            size="lg"
+                            className="ms-3 mt-3"
+                        >
+                            <span className="small-label">Select all</span>
+                        </Checkbox>
+                    )}
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">

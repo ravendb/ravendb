@@ -1,10 +1,10 @@
 import database from "models/resources/database";
 import React, { useCallback, useEffect, useReducer, useState } from "react";
-import { PeriodicBackupPanel } from "../panels/PeriodicBackupPanel";
+import { PeriodicBackupPanel } from "../ongoingTasks/panels/PeriodicBackupPanel";
 import { useAccessManager } from "hooks/useAccessManager";
 import appUrl from "common/appUrl";
 import { useServices } from "hooks/useServices";
-import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../list/OngoingTasksReducer";
+import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../ongoingTasks/OngoingTasksReducer";
 import useInterval from "hooks/useInterval";
 import useTimeout from "hooks/useTimeout";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
