@@ -33,7 +33,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _converter = converter;
             var knownFields = _converter.GetKnownFieldsForWriter();
             _indexingScope = CurrentIndexingScope.Current;
-            _indexingScope.OnNewDynamicField += UpdateDynamicFieldsBindings;
+            if (_indexingScope != null)
+            {
+                _indexingScope.OnNewDynamicField += UpdateDynamicFieldsBindings;
+            }
             _allocator = writeTransaction.Allocator;
             try
             {
