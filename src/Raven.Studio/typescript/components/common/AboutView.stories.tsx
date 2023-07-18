@@ -10,6 +10,7 @@ import {
 } from "./AboutView";
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
+import Code from "./Code";
 
 export default {
     title: "Bits/AboutView",
@@ -67,13 +68,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                     <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
                                     frequency specified. The actual refresh time can increase (up to) that value.
                                 </p>
-                                <pre className="bg-black rounded-3 p-3">
-                                    <code className="language-javascript">
-                                        {`function greet(name) {
-    console.log('Hello, ' + name + '!');
-}`}
-                                    </code>
-                                </pre>
+                                <Code code={codeExample} language="javascript"/>
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"
@@ -161,13 +156,7 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                     <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
                                     frequency specified. The actual refresh time can increase (up to) that value.
                                 </p>
-                                <pre className="bg-black rounded-3 p-3">
-                                    <code className="language-javascript">
-                                        {`function greet(name) {
-    console.log('Hello, ' + name + '!');
-}`}
-                                    </code>
-                                </pre>
+                                <Code code={codeExample} language="javascript"/>
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"
@@ -206,3 +195,11 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
         </div>
     );
 };
+
+const codeExample = `{
+    "Example": "Set a timestamp in the @refresh metadata property",
+    "@metadata": {
+        "@collection": "Foo",
+        "@refresh": "2023-07-16T08:00:00.0000000Z"
+    }
+}`;

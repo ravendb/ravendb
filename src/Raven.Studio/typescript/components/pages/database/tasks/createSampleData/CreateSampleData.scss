@@ -4,7 +4,6 @@
 .sample-data {
     flex-grow: 1;
     position: relative;
-    background-color: var(--panel-bg-1);
     background-position: center;
     overflow: hidden;
 
@@ -25,11 +24,11 @@
             fill: #ed9c60;
         }
         .smoke-color {
-            fill: var(--bs-body-bg);
+            fill: var(--panel-bg-1);
             opacity: 0.66;
         }
         .smoke-color-2 {
-            fill: var(--panel-bg-1);
+            fill: var(--panel-bg-2);
             opacity: 0.85;
         }
     }
@@ -56,6 +55,9 @@
     .scroll {
         overflow: auto;
         height: 100%;
+        z-index: 999;
+        display: block;
+        position: relative;
     }
 
     .center {
