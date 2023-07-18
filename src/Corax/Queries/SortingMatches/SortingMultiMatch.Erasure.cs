@@ -46,13 +46,20 @@ namespace Corax.Queries.SortingMatches
             _inner.Score(matches, scores, boostFactor);
         }
 
-        internal class FunctionTable(delegate*<ref SortingMultiMatch, Span<long>, int> fillFunc,
-            delegate*<ref SortingMultiMatch, long> totalResultsFunc,
-            delegate*<ref SortingMultiMatch,  in SortingDataTransfer, void> setSortingDataTransfer)
+        public class FunctionTable
         {
-            public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc = fillFunc;
-            public readonly delegate*<ref SortingMultiMatch, long> TotalResultsFunc = totalResultsFunc;
-            public readonly delegate*<ref SortingMultiMatch, in SortingDataTransfer, void> SetSortingDataTransferFunc = setSortingDataTransfer;
+            public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc;
+            public readonly delegate*<ref SortingMultiMatch, long> TotalResultsFunc;
+            public readonly delegate*<ref SortingMultiMatch, in SortingDataTransfer, void> SetSortingDataTransferFunc;
+
+            public FunctionTable(delegate*<ref SortingMultiMatch, Span<long>, int> fillFunc,
+                delegate*<ref SortingMultiMatch, long> totalResultsFunc,
+                delegate*<ref SortingMultiMatch,  in SortingDataTransfer, void> setSortingDataTransfer)
+            {
+                FillFunc = fillFunc;
+                TotalResultsFunc = totalResultsFunc;
+                SetSortingDataTransferFunc = setSortingDataTransfer;
+            }
         }
 
         private static class StaticFunctionCache<TInner>
