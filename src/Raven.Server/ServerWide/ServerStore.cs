@@ -86,8 +86,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
-using static Raven.Server.Documents.Handlers.BatchHandler;
-using static Raven.Server.Rachis.Leader;
 using Constants = Raven.Client.Constants;
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
