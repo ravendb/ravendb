@@ -138,6 +138,8 @@ namespace Raven.Client.Http
 
         private bool _usePrivateUrls;
 
+        private bool _includePromotables;
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -366,11 +368,12 @@ namespace Raven.Client.Http
             }
         }
 
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false, bool includePromotables = false)
         {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls)
             {
-                _usePrivateUrls = usePrivateUrls
+                _usePrivateUrls = usePrivateUrls,
+                _includePromotables = includePromotables
             };
             conventions.ForTestingPurposes?.OnBeforeTopologyUpdate?.Invoke(executor);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
@@ -379,11 +382,18 @@ namespace Raven.Client.Http
 
         internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
         {
-            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls);
+            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls);
             executor._disableClientConfigurationUpdates = true;
             return executor;
         }
-        
+
+        internal static RequestExecutor CreateForProxy(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
+        {
+            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls, includePromotables: true);
+            executor._disableClientConfigurationUpdates = true;
+            return executor;
+        }
+
         internal static RequestExecutor CreateForShard(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var executor = CreateForServer(initialUrls, databaseName, certificate, conventions, usePrivateUrls: true);
@@ -512,7 +522,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null, _usePrivateUrls);
+                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null, _usePrivateUrls, _includePromotables);
                     ForTestingPurposes?.SetCommandTimeout?.Invoke(command);
 
                     if (DefaultTimeout.HasValue && DefaultTimeout.Value > command.Timeout)

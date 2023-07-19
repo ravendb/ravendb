@@ -70,6 +70,7 @@ using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
+using Raven.Server.Documents.Handlers.Processors;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents
         public string DatabaseGroupId;
         public string ClusterTransactionId;
 
-        private Lazy<RequestExecutor> _requestExecutor;
+        private Lazy<RequestExecutor> _proxyRequestExecutor;
 
         private readonly DatabasesLandlord.StateChange _databaseStateChange;
 
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
-                _requestExecutor = CreateRequestExecutor();
+                _proxyRequestExecutor = CreateRequestExecutor();
                 _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
             }
             catch (Exception)
@@ -234,7 +235,7 @@ namespace Raven.Server.Documents
 
         public ServerStore ServerStore => _serverStore;
 
-        public RequestExecutor RequestExecutor => _requestExecutor.Value;
+        public RequestExecutor RequestExecutor => _proxyRequestExecutor.Value;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
@@ -1077,13 +1078,13 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(_hasClusterTransaction);
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _hasClusterTransaction");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _requestExecutor");
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _proxyRequestExecutor");
             exceptionAggregator.Execute(() =>
             {
-                if (_requestExecutor?.IsValueCreated == true)
-                    _requestExecutor.Value.Dispose();
+                if (_proxyRequestExecutor?.IsValueCreated == true)
+                    _proxyRequestExecutor.Value.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _requestExecutor");
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _proxyRequestExecutor");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
@@ -1801,14 +1802,17 @@ namespace Raven.Server.Documents
 
         private void OnCertificateChange(object sender, EventArgs e)
         {
-            if (_requestExecutor.IsValueCreated == false)
+            if (_proxyRequestExecutor.IsValueCreated == false)
                 return;
 
-            using (_requestExecutor.Value)
-                _requestExecutor = CreateRequestExecutor();
+            using (_proxyRequestExecutor.Value)
+                _proxyRequestExecutor = CreateRequestExecutor();
         }
-
-        private Lazy<RequestExecutor> CreateRequestExecutor() => new(() => RequestExecutor.CreateForServer(new[] { ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl) }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+        
+        private Lazy<RequestExecutor> CreateRequestExecutor() =>
+            new(
+                () => RequestExecutor.CreateForProxy(new[] {ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl)}, Name,
+                    ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {

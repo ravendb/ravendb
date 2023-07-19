@@ -109,6 +109,7 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var applicationIdentifier = GetStringQueryString("applicationIdentifier", required: false);
             var usePrivate = GetBoolValueQueryString("private", required: false) ?? false;
+            var includePromotables = GetBoolValueQueryString("includePromotables", required: false) ?? false;
 
             if (applicationIdentifier != null)
             {
@@ -184,10 +185,14 @@ namespace Raven.Server.Web.System
                             dbNodes = rawRecord.Topology.Members.Select(x =>
                                     TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
                                 .Concat(rawRecord.Topology.Rehabs.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab))
-                                .Concat(rawRecord.Topology.Promotables.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable)))
-                                );
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab)));
+                            
+                            if (includePromotables)
+                            {
+                                dbNodes = dbNodes.Concat(rawRecord.Topology.Promotables.Select(x =>
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable)));
+                            }
+
                             stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
                         }
 
