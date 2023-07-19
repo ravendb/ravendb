@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.QueueSink.Handlers;
 
 public class QueueSinkHandler : DatabaseRequestHandler
 {
-    [RavenAction("/databases/*/admin/queuesink/test", "POST", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/queue-sink/test", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostScriptTest()
     {
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -23,7 +23,7 @@ public class QueueSinkHandler : DatabaseRequestHandler
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                writer.WriteObject(context.ReadObject(djv, "queuesink/test"));
+                writer.WriteObject(context.ReadObject(djv, "queue-sink/test"));
             }
         }
     }
