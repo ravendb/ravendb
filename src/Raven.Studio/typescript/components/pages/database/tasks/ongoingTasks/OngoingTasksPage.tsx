@@ -43,11 +43,11 @@ import { Button } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
-import { Checkbox } from "components/common/Checkbox";
 import OngoingTasksFilter, { OngoingTaskFilterType, OngoingTasksFilterCriteria } from "./OngoingTasksFilter";
 import { exhaustiveStringTuple } from "components/utils/common";
 import { InputItem } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
+import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -57,19 +57,15 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { database } = props;
 
     const { canReadWriteDatabase, isClusterAdminOrClusterNode } = useAccessManager();
+    const { tasksService } = useServices();
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
-
-    const { tasksService } = useServices();
-
     const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
-
     const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
         searchText: "",
         types: [],
     });
-
-    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -155,6 +151,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
+    const filteredTasks = getFilteredTasks(tasks, filter);
+
     const {
         externalReplications,
         ravenEtls,
@@ -168,7 +166,14 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         replicationSinks,
         subscriptions,
         hubDefinitions,
-    } = getFilteredTasks(tasks, filter);
+    } = filteredTasks;
+
+    const filteredTaskShardedInfos = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
+        .flat()
+        .map((x) => x.shared);
+
+    const [selectedTaskShardedInfos, setSelectedTaskShardedInfos] =
+        useState<OngoingTaskSharedInfo[]>(filteredTaskShardedInfos);
 
     const allTasksCount =
         tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +
@@ -179,6 +184,16 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         db: database,
         onDelete: deleteTask,
         toggleState: toggleOngoingTask,
+        isSelected: (taskName: string) => selectedTaskShardedInfos.map((x) => x.taskName).includes(taskName),
+        toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
+            if (checked) {
+                setSelectedTaskShardedInfos((selected) => [...selected, taskShardedInfo]);
+            } else {
+                setSelectedTaskShardedInfos((selected) =>
+                    selected.filter((x) => x.taskName !== taskShardedInfo.taskName)
+                );
+            }
+        },
     };
 
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
@@ -228,8 +243,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     };
 
     // TODO kalczur - add ?<OngoingTasksActions />
-    // TODO kalczur - add checkbox properties to every panel
     // TODO kalczur - styling
+    // TODO kalczur - hide checkbox when no access
+    // TODO kalczur - add loading
 
     return (
         <div>
@@ -272,17 +288,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {allTasksCount === 0 ? (
                         <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                     ) : (
-                        <Checkbox
-                            toggleSelection={() => null}
-                            selected={false}
-                            // indeterminate={selectionState === "SomeSelected"}
-                            title="Select all or none"
-                            color="primary"
-                            size="lg"
-                            className="ms-3 mt-3"
-                        >
-                            <span className="small-label">Select all</span>
-                        </Checkbox>
+                        <OngoingTaskSelectActions
+                            allTasks={filteredTaskShardedInfos}
+                            selectedTasks={selectedTaskShardedInfos}
+                            setSelectedTasks={setSelectedTaskShardedInfos}
+                        />
                     )}
 
                     {externalReplications.length > 0 && (

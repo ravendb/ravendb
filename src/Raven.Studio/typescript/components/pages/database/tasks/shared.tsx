@@ -19,6 +19,8 @@ import { Icon } from "components/common/Icon";
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
     data: T;
+    isSelected: (taskName: string) => boolean;
+    toggleSelection: (checked: boolean, taskName: OngoingTaskSharedInfo) => void;
     onDelete: (task: OngoingTaskSharedInfo) => void;
     toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
     onToggleDetails?: (newState: boolean) => void;

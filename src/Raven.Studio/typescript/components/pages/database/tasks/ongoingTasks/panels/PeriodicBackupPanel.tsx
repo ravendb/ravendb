@@ -225,7 +225,7 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    const { db, data } = props;
+    const { db, data, toggleSelection, isSelected } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -243,7 +243,11 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
+                        <Input
+                            type="checkbox"
+                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                            checked={isSelected(data.shared.taskName)}
+                        />
                     </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>

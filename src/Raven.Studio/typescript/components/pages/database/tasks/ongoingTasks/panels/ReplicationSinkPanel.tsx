@@ -54,7 +54,7 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
 }
 
 export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
-    const { db, data } = props;
+    const { db, data, toggleSelection, isSelected } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -72,7 +72,11 @@ export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
+                        <Input
+                            type="checkbox"
+                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                            checked={isSelected(data.shared.taskName)}
+                        />
                     </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
