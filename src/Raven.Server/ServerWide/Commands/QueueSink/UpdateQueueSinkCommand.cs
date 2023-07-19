@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.QueueSink
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.QueueEtl, DatabaseName, null).UpdateDatabaseRecord(
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.QueueSink, DatabaseName, null).UpdateDatabaseRecord(
                 record, etag);
             new AddQueueSinkCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }

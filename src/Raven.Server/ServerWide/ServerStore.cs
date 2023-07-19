@@ -42,6 +42,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
@@ -2225,9 +2226,9 @@ namespace Raven.Server.ServerWide
                 queueSink.Validate(out var queueSinkErr, validateName: false, validateConnection: false);
                 
                 var queueConnectionString = rawRecord.QueueConnectionStrings;
-                var a = queueConnectionString != null && queueConnectionString.TryGetValue(queueSink.ConnectionStringName, out _);
+                var result = queueConnectionString != null && queueConnectionString.TryGetValue(queueSink.ConnectionStringName, out _);
 
-                if (a)
+                if (result == false)
                     queueSinkErr.Add($"Could not find connection string named '{queueSink.ConnectionStringName}'. Please supply an existing connection string.");
 
                 ThrowInvalidQueueSinkConfigurationIfNecessary(queueSinkConfiguration, queueSinkErr);
