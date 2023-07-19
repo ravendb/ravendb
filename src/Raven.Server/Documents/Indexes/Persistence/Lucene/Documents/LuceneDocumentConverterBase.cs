@@ -184,6 +184,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 case ValueType.LazyString:
                 case ValueType.LazyCompressedString:
+                case ValueType.Char:
                 case ValueType.String:
                 case ValueType.Enum:
                 case ValueType.Stream:
@@ -193,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Dictionary:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS; // RavenDB-19560
                     break;
-                
+
                 case ValueType.DateOnly:
                 case ValueType.TimeOnly:
                 case ValueType.DateTime:
@@ -253,7 +254,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return newFields;
             }
 
-            if (valueType == ValueType.String)
+            if (valueType is ValueType.String or ValueType.Char)
             {
                 string stringValue = value as string ?? value.ToString();
 
@@ -519,7 +520,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     newFields++;
                 }
             }
-            else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
+            else if (valueType is ValueType.Convertible or ValueType.Numeric) // we need this to store numbers in invariant format, so JSON could read them
             {
                 instance.Add(GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, null, null, storage, indexing, termVector));
                 newFields++;
