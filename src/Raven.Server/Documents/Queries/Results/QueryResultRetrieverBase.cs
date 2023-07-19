@@ -631,6 +631,10 @@ namespace Raven.Server.Documents.Queries.Results
             while (reader.FindNextStored(fieldRootPage))
             {
                 found = true;
+                if (reader.IsList && value is null)
+                {
+                    value = new DynamicJsonArray();
+                }
                 if (reader.StoredField == null)
                 {
                     SetValue(ref value, null);
