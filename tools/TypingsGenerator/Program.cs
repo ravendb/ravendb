@@ -520,7 +520,7 @@ namespace TypingsGenerator
 
             // ongoing tasks - Queue ETL
             scripter.AddType(typeof(OngoingTaskQueueEtl));
-            scripter.AddType(typeof(OngoingTaskQueueSinkDetails));
+            scripter.AddType(typeof(OngoingTaskQueueSink));
             scripter.AddType(typeof(QueueEtlConfiguration));
             scripter.AddType(typeof(QueueSinkConfiguration));
             scripter.AddType(typeof(QueueEtlTestScriptResult));
