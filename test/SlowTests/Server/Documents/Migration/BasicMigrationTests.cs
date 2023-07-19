@@ -786,6 +786,9 @@ namespace SlowTests.Server.Documents.Migration
                     using (var session = store.OpenSession())
                     {
                         var order = session.Load<JObject>("Orders/1");
+                        
+                        Assert.NotNull(order["@metadata"]);
+                        Assert.NotNull(order["@metadata"]["@collection"]);
 
                         Assert.NotNull(order);
                         Assert.NotNull(order["Items"]);
@@ -849,6 +852,8 @@ namespace SlowTests.Server.Documents.Migration
                     using (var session = store.OpenSession())
                     {
                         var order = session.Load<JObject>("Orders/1");
+                        Assert.NotNull(order["@metadata"]);
+                        Assert.NotNull(order["@metadata"]["@collection"]);
 
                         Assert.NotNull(order);
                         Assert.NotNull(order["Items"]);
@@ -920,7 +925,9 @@ namespace SlowTests.Server.Documents.Migration
                         Assert.NotNull(order["Items"]);
                         Assert.NotNull(order["@metadata"]);
                         Assert.NotNull(order["@metadata"]["@sql-keys"]);
-                        
+
+                        Assert.NotNull(order["@metadata"]["@collection"]);
+
                         var sqlKeysMetadata = order["@metadata"]["@sql-keys"];
                         Assert.Equal(1, sqlKeysMetadata["o_id"]);
                         
