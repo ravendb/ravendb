@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Json;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
@@ -213,6 +215,38 @@ public class RavenDB_20883 : RavenTestBase
                 Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Counters));
                 Assert.Contains(DocumentFlags.HasCounters.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 Assert.False(metadata.Changed);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.ClusterTransactions)]
+    public async Task Changing_Metadata_Should_Not_Remove_Any_System_Properties()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "Test" };
+
+                await session.StoreAsync(user, "users/1");
+
+                session.CountersFor(user).Increment("counter-1", 3);
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user = await session.LoadAsync<User>("users/1");
+                user.Name = "Test2";
+
+                session.Advanced.GetMetadataFor(user)["Prop"] = Guid.NewGuid().ToString();
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => session.SaveChangesAsync());
+                Assert.Contains("has counters, this is not supported in cluster wide transaction", e.Message);
             }
         }
     }
