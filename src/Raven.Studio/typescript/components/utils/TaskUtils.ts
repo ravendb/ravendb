@@ -3,7 +3,7 @@ import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingT
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import assertUnreachable from "./assertUnreachable";
-import OngoingTaskQueueSinkDetails = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSinkDetails;
+import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 
 export default class TaskUtils {
     static ongoingTaskToStudioTaskType(task: OngoingTask): StudioTaskType {
@@ -22,7 +22,7 @@ export default class TaskUtils {
         }
 
         if (task.TaskType === "QueueSink") {
-            const queueTask = task as OngoingTaskQueueSinkDetails;
+            const queueTask = task as OngoingTaskQueueSink;
             switch (queueTask.Configuration.BrokerType) {
                 case "Kafka":
                     return "KafkaQueueSink";

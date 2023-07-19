@@ -9,7 +9,7 @@ class testQueueSinkCommand extends commandBase {
     }  
 
     execute(): JQueryPromise<Raven.Server.Documents.QueueSink.Test.TestQueueSinkScriptResult> {
-        const url = endpoints.databases.queueSink.adminQueuesinkTest;
+        const url = endpoints.databases.queueSink.adminQueueSinkTest;
 
         return this.post<Raven.Server.Documents.QueueSink.Test.TestQueueSinkScriptResult>(url, JSON.stringify(this.payload), this.db)
             .fail((response: JQueryXHR) => {
