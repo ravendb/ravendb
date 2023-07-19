@@ -9,7 +9,7 @@ import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand"
 import generalUtils = require("common/generalUtils");
 import ongoingTaskKafkaEtlEditModel = require("models/database/tasks/ongoingTaskKafkaEtlEditModel");
 import ongoingTaskQueueEtlTransformationModel = require("models/database/tasks/ongoingTaskQueueEtlTransformationModel");
-import connectionStringKafkaEtlModel = require("models/database/settings/connectionStringKafkaEtlModel");
+import connectionStringKafkaModel = require("models/database/settings/connectionStringKafkaModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -191,7 +191,7 @@ class editKafkaEtlTask extends viewModelBase {
     shortErrorText: KnockoutObservable<string>;
     
     createNewConnectionString = ko.observable<boolean>(false);
-    newConnectionString = ko.observable<connectionStringKafkaEtlModel>();
+    newConnectionString = ko.observable<connectionStringKafkaModel>();
 
     connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -264,7 +264,7 @@ class editKafkaEtlTask extends viewModelBase {
 
         popoverUtils.longWithHover($(".use-server-certificate"),
             {
-                content: connectionStringKafkaEtlModel.usingServerCertificateInfo
+                content: connectionStringKafkaModel.usingServerCertificateInfo
             });
     }
 
@@ -287,7 +287,7 @@ class editKafkaEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
         
-        this.newConnectionString(connectionStringKafkaEtlModel.empty());
+        this.newConnectionString(connectionStringKafkaModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.kafkaEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
         
         const connectionStringName = this.editedKafkaEtl().connectionStringName();
@@ -373,7 +373,7 @@ class editKafkaEtlTask extends viewModelBase {
             getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), this.editedKafkaEtl().connectionStringName())
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                    new connectionStringKafkaEtlModel(result.QueueConnectionStrings[this.editedKafkaEtl().connectionStringName()], true, [])
+                    new connectionStringKafkaModel(result.QueueConnectionStrings[this.editedKafkaEtl().connectionStringName()], true, [])
                         .testConnection(this.activeDatabase())
                         .done((testResult) => this.testConnectionResult(testResult))
                         .always(() => {
