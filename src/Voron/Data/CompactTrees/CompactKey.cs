@@ -180,10 +180,10 @@ public unsafe class CompactKey : IDisposable
 
         int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
         int currentSize = _storage.Length - _currentIdx;
-        if (maxSize > currentSize)
+        if (maxSize + sizeof(int) > currentSize)
         {
             // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-            UnlikelyGrowStorage(maxSize + currentSize);
+            UnlikelyGrowStorage(maxSize + currentSize + sizeof(int));
             encodedStartIdx = currentKeyIdx;
         }
 

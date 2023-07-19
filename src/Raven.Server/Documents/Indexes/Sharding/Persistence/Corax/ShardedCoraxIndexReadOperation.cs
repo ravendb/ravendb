@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Corax;
 using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
@@ -115,7 +116,12 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                         if (string.CompareOrdinal(m, stringValue) < 0)
                             m = stringValue;
                     }
-                    result.AddStringOrderByField(m);
+                    result.AddStringOrderByField(m switch
+                    {
+                         Constants.NullValue => null,
+                         Constants.EmptyString =>string.Empty,
+                         _ => m
+                    });
                     break;
                 }
             }

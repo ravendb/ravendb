@@ -165,19 +165,19 @@ namespace Raven.Server.Documents.Queries.Results
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
 
-                    if (FieldsToFetch.ExtractAllFromIndex)
-                    {
+                if (FieldsToFetch.ExtractAllFromIndex)
+                {
                     if (retrieverInput.IsLuceneDocument())
                     {
                         fields = retrieverInput.LuceneDocument!.GetFields()
-                        .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
-                                    && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
-                        .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
+                            .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
+                                        && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
+                            .Distinct(UniqueFieldNames.Instance)
+                            .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                     }
                     else
                     {
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 Constants.Documents.Indexing.Fields.ValueFieldName) == false)
                             .ToDictionary(x => x.FieldNameAsString, x => new FieldsToFetch.FieldToFetch(x.FieldNameAsString, null, null, true
                                 , isDocumentId: false, isTimeSeries: false));
-                }
+                    }
                 }
 
 
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     fields = FieldsToFetch.Fields;
                 }
-                else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
+                else if (FieldsToFetch.Fields is { Count: > 0 })
                 {
                     foreach (var kvp in FieldsToFetch.Fields)
                     {
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (fields is not null)
                 {
-                    foreach (var fieldToFetch in fields?.Values)
+                    foreach (var fieldToFetch in fields.Values)
                     {
                         if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here 
                                 TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
@@ -291,11 +291,11 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                 {
                     // the fields were projected from the index
-                    doc = new Document
-                    {
-                        Id = _context.GetLazyString(lowerId)
-                    };
+                    doc = new Document();
                 }
+
+                doc.Id = _context.GetLazyString(lowerId);
+
 
                 return (ReturnProjection(result, doc, _context, ref retrieverInput), null);
             }

@@ -113,6 +113,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public void UpdateDynamicFieldsBindings()
         {
+            if (_indexingScope == null)
+                return; // only from tests
+            
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
                 using var _ = Slice.From(_allocator, fieldName, out var slice);

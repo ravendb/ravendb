@@ -43,7 +43,12 @@ public unsafe class CoraxIndexedEntriesReader : IDisposable
                 continue;
 
             string value = entryReader.Current.ToString();
-            SetValue(fieldName, value);
+            SetValue(fieldName, value  switch
+            {
+                Constants.EmptyString => string.Empty,
+                Constants.NullValue => null, 
+                _ => value
+            });
         }
         entryReader.Reset();
         while (entryReader.MoveNextSpatial())

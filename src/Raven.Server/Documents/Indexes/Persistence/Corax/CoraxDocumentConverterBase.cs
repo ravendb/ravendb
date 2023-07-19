@@ -352,6 +352,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
 
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
+            fieldFromDefinition.Indexing != null && 
             fieldFromDefinition.Indexing != FieldIndexing.No)
         {
             // We need to disable the complex object handling after we check and then throw. 
