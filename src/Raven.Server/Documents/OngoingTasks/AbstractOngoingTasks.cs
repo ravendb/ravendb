@@ -18,6 +18,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -530,7 +531,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
             BrokerType = queueSink.BrokerType,
             Error = error,
-            Configuration = queueSink
+            Configuration = queueSink,
+            ConnectionStringName = queueSink.ConnectionStringName,
         };
     }
 }
