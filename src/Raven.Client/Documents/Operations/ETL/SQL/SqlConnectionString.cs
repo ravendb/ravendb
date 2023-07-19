@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
@@ -14,6 +15,20 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         protected override void ValidateImpl(ref List<string> errors)
         {
+            // Validate ConnectionString.FactoryName
+            try
+            {
+                SqlProviderParser.GetSupportedProvider(FactoryName);
+            }
+            catch (NotImplementedException)
+            {
+                errors.Add($"Factory '{FactoryName}' is not implemented yet.");
+            }
+            catch (Exception)
+            {
+                errors.Add($"Unsupported factory '{FactoryName}'");
+            }
+            
             if (string.IsNullOrEmpty(ConnectionString))
                 errors.Add($"{nameof(ConnectionString)} cannot be empty");
         }

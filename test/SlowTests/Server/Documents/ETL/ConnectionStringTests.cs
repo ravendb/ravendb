@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -237,7 +238,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [Fact]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetDocumentStore())
@@ -278,23 +279,26 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [Fact]
         public void CannotAddSqlConnectionStringWithInvalidFactoryName()
         {
             using (var store = GetDocumentStore())
             {
-                Assert.Throws<RavenException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                var e = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
                 {
                     Name = "Invalid Factory Connection String",
                     ConnectionString = "some-connection-string-that-doesnt-matter",
                     FactoryName = "Invalid.Factory.4.20-final.stable"
-                })));
-                Assert.Throws<RavenException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
-                {
-                    Name = "Not-supported Factory Connection String",
-                    ConnectionString = "some-connection-string-that-doesnt-matter",
-                    FactoryName = "System.Data.OleDb"
-                })));
+                }))); 
+                Assert.Contains("Invalid connection string configuration. Errors: Unsupported factory 'Invalid.Factory.4.20-final.stable'", e.Message);
+                
+                e = Assert.Throws<BadRequestException>(()=>store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                    {
+                        Name = "Not-supported Factory Connection String",
+                        ConnectionString = "some-connection-string-that-doesnt-matter",
+                        FactoryName = "System.Data.OleDb"
+                    }))); 
+                Assert.Contains("Raven.Client.Exceptions.BadRequestException: Invalid connection string configuration. Errors: Factory 'System.Data.OleDb' is not implemented yet.", e.Message);
             }
         }
     }

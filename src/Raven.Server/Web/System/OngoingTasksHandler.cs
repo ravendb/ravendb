@@ -784,8 +784,35 @@ namespace Raven.Server.Web.System
                             SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject), feature?.Status);
                             break;
                     }
+                    
+                    List<string> errors = new ();
+                    if (GetConnectionString(readerObject, connectionStringType).Validate(ref errors) == false)
+                    {
+                        throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join("\n", errors)}");
+                    }
                 });
         }
+
+        private static ConnectionString GetConnectionString(BlittableJsonReaderObject readerObject, ConnectionStringType connectionStringType)
+        {
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    return JsonDeserializationCluster.RavenConnectionString(readerObject); 
+                case ConnectionStringType.Sql:
+                    return JsonDeserializationCluster.SqlConnectionString(readerObject);
+                case ConnectionStringType.Olap:
+                    return JsonDeserializationCluster.OlapConnectionString(readerObject);
+                case ConnectionStringType.ElasticSearch:
+                    return JsonDeserializationCluster.ElasticSearchConnectionString(readerObject);
+                case ConnectionStringType.Queue:
+                    return JsonDeserializationCluster.QueueConnectionString(readerObject);
+                case ConnectionStringType.None:
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(connectionStringType), connectionStringType, "Unexpected connection string type.");
+            }
+        }
+        
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
