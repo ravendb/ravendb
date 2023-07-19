@@ -112,7 +112,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
     
     protected void InsertRegularField<TBuilder>(IndexField field, object value, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
-        out bool shouldSkip, bool nestedArray = false)
+        out bool shouldSkip)
         where TBuilder : IndexWriter.IIndexEntryBuilder
     {
         if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
@@ -255,7 +255,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 foreach (var item in iterator)
                 {
                     hasValues = true;
-                    InsertRegularField(field, item, indexContext, builder, sourceDocument, out _, nestedArray);
+                    InsertRegularField(field, item, indexContext, builder, sourceDocument, out _);
                 }
 
                 if (hasValues == false && field.Storage == FieldStorage.Yes)
@@ -284,7 +284,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
                 {
-                    InsertRegularField(field, val, indexContext, builder, sourceDocument, out shouldSkip, nestedArray);
+                    InsertRegularField(field, val, indexContext, builder, sourceDocument, out shouldSkip);
                     return;
                 }
 
@@ -299,7 +299,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.BlittableJsonObject:
-                HandleObject((BlittableJsonReaderObject)value, field, indexContext, builder, sourceDocument,out shouldSkip, nestedArray);
+                HandleObject((BlittableJsonReaderObject)value, field, indexContext, builder, sourceDocument,out shouldSkip);
                 return;
 
             case ValueType.DynamicNull:       
@@ -325,9 +325,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.CoraxDynamicItem:
                 var cdi = (CoraxDynamicItem)value;
                 //we want to unpack item here.
-                builder.DecrementList(); // For lists of CreatedField(), we ignoring the list
-                InsertRegularField(cdi!.Field, cdi.Value, indexContext, builder, sourceDocument, out shouldSkip, nestedArray);
-                builder.IncrementList();
+                var old = builder.ResetList(); // For lists of CreatedField(), we ignoring the list
+                InsertRegularField(cdi!.Field, cdi.Value, indexContext, builder, sourceDocument, out shouldSkip);
+                builder.RestoreList(old);
                 break;
             case ValueType.Stream:
                 throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
@@ -365,13 +365,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void HandleObject<TBuilder>(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
-         out bool shouldSkip, bool nestedArray = false)
+         out bool shouldSkip)
         where TBuilder : IndexWriter.IIndexEntryBuilder
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
-            InsertRegularField(field, (IEnumerable)values, indexContext, builder, sourceDocument, out shouldSkip, nestedArray);
+            InsertRegularField(field, (IEnumerable)values, indexContext, builder, sourceDocument, out shouldSkip);
             return;
         }
         

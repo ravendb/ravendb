@@ -112,6 +112,15 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             
         }
 
+        public int ResetList()
+        {
+            return default;
+        }
+
+        public void RestoreList(int old)
+        {
+        }
+
         public void DecrementList()
         {
         }

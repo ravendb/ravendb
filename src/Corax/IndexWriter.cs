@@ -452,6 +452,8 @@ namespace Corax
             void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type);
             void IncrementList();
             void DecrementList();
+            int ResetList();
+            void RestoreList(int old);
         }
 
         public class IndexEntryBuilder : IDisposable, IIndexEntryBuilder
@@ -747,6 +749,18 @@ namespace Corax
             public void DecrementList()
             {
                 _buildingList--;
+            }
+
+            public int ResetList()
+            {
+                var old = _buildingList;
+                _buildingList = 0;
+                return old;
+            }
+
+            public void RestoreList(int old)
+            {
+                _buildingList = old;
             }
         }
 
