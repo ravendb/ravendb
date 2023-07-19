@@ -40,6 +40,8 @@ public class QueueSinkLoader : IDisposable
 
     public event Action<QueueSinkProcess> ProcessRemoved;
 
+    public List<QueueSinkConfiguration> Sinks;
+
     public void Initialize(DatabaseRecord record)
     {
         LoadProcesses(record, record.QueueSinks, toRemove: null);
@@ -60,6 +62,9 @@ public class QueueSinkLoader : IDisposable
         lock (_loadProcessedLock)
         {
             _databaseRecord = record;
+
+            Sinks = _databaseRecord.QueueSinks;
+
             var processes = new List<QueueSinkProcess>(_processes);
 
             if (toRemove != null && toRemove.Count > 0)
@@ -349,5 +354,11 @@ public class QueueSinkLoader : IDisposable
                 }
             }
         });
+    }
+
+    public long GetSinkCountByBroker(QueueBrokerType brokerType)
+    {
+        var items = Sinks.Where(x => x.BrokerType == brokerType);
+        return items.Count();
     }
 }
