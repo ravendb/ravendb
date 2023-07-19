@@ -3,14 +3,15 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl> extends commandBase {
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink> extends commandBase {
 
     private readonly db: database;
     private readonly nodeTag: string;
@@ -103,6 +104,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     static forQueueEtl(db: database, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>(db, "QueueEtl", null, taskId);
+    }
+
+    static forQueueSink(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink>(db, "QueueSink", null, taskId);
     }
 }
 

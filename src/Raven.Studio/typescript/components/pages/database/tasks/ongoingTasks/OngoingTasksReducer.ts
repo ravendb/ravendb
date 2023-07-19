@@ -6,6 +6,7 @@ import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskInfo,
     OngoingTaskKafkaEtlSharedInfo,
+    OngoingTaskKafkaSinkSharedInfo,
     OngoingTaskNodeInfo,
     OngoingTaskNodeInfoDetails,
     OngoingTaskNodeProgressDetails,
@@ -13,6 +14,7 @@ import {
     OngoingTaskPeriodicBackupNodeInfoDetails,
     OngoingTaskPeriodicBackupSharedInfo,
     OngoingTaskRabbitMqEtlSharedInfo,
+    OngoingTaskRabbitMqSinkSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskReplicationSinkSharedInfo,
@@ -39,6 +41,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { WritableDraft } from "immer/dist/types/types-external";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
+import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 import database from "models/resources/database";
@@ -208,6 +211,31 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 case "RabbitMq": {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskRabbitMqEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
+                    };
+                    return result;
+                }
+                default:
+                    throw new Error("Invalid broker type: " + incoming.BrokerType);
+            }
+        }
+        case "QueueSink": {
+            const incoming = task as OngoingTaskQueueSinkListView;
+            switch (incoming.BrokerType) {
+                case "Kafka": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskKafkaSinkSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
+                    };
+                    return result;
+                }
+                case "RabbitMq": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskRabbitMqSinkSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
                         url: incoming.Url,

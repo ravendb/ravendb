@@ -12,6 +12,7 @@ import {
     OngoingTaskExternalReplicationInfo,
     OngoingTaskInfo,
     OngoingTaskKafkaEtlInfo,
+    OngoingTaskKafkaSinkInfo,
     OngoingTaskOlapEtlInfo,
     OngoingTaskPeriodicBackupInfo,
     OngoingTaskRabbitMqEtlInfo,
@@ -50,6 +51,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { StickyHeader } from "components/common/StickyHeader";
+import { KafkaSinkPanel } from "components/pages/database/tasks/panels/KafkaSinkPanel";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -146,6 +148,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         olapEtls,
         kafkaEtls,
         rabbitMqEtls,
+        kafkaSinks,
+        rabbitMqSinks,
         elasticSearchEtls,
         backups,
         replicationHubs,
@@ -413,6 +417,18 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         </div>
                     )}
 
+                    {kafkaSinks.length > 0 && (
+                        <div key="kafka-sinks">
+                            <HrHeader className="kafka-sink" count={kafkaSinks.length}>
+                                <Icon icon="kafka-sink" />
+                                KAFKA SINK
+                            </HrHeader>
+
+                            {kafkaSinks.map((x) => (
+                                <KafkaSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                            ))}
+                        </div>
+                    )}
                     {elasticSearchEtls.length > 0 && (
                         <div key="elastic-search-etls">
                             <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
@@ -586,6 +602,8 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         rabbitMqEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueEtl"
         ) as OngoingTaskRabbitMqEtlInfo[],
+        
+        //TODO: add sinks!
         elasticSearchEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "ElasticSearchEtl"
         ) as OngoingTaskElasticSearchEtlInfo[],

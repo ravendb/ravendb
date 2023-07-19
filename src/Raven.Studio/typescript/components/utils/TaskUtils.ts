@@ -23,7 +23,7 @@ export default class TaskUtils {
 
         if (task.TaskType === "QueueSink") {
             const queueTask = task as OngoingTaskQueueSink;
-            switch (queueTask.Configuration.BrokerType) {
+            switch (queueTask.BrokerType) {
                 case "Kafka":
                     return "KafkaQueueSink";
                 case "RabbitMq":
@@ -31,7 +31,7 @@ export default class TaskUtils {
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
-                    assertUnreachable(queueTask.Configuration.BrokerType);
+                    assertUnreachable(queueTask.BrokerType);
             }
         }
 
