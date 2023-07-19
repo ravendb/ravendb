@@ -20,24 +20,15 @@ public class RavenDB_20914 : ClusterTestBase
     [RavenFact(RavenTestCategory.ClientApi)]
     public async Task ReadBalanceBehavior_FastestNode_Should_Not_Leak_Tasks()
     {
-        var databaseName = GetDatabaseName();
         var (_, leader) = await CreateRaftCluster(3);
 
-        var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
-
-        using (var leaderStore = new DocumentStore
+        using (var leaderStore = GetDocumentStore(new Options
         {
-            Urls = new[] { leader.WebUrl },
-            Database = databaseName,
-            Conventions =
-            {
-                ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
-            }
-        })
+            ReplicationFactor = 3,
+            ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = ReadBalanceBehavior.FastestNode,
+            Server = leader
+        }))
         {
-            leaderStore.Initialize();
-
             Task[] tasks = null;
 
             leaderStore.GetRequestExecutor().ForTestingPurposesOnly().ExecuteOnAllToFigureOutTheFastestOnTaskCompletion = _ => Thread.Sleep(1000);
@@ -50,6 +41,7 @@ public class RavenDB_20914 : ClusterTestBase
             }
 
             Assert.NotNull(tasks);
+            Assert.NotEmpty(tasks);
 
             foreach (var task in tasks)
             {
