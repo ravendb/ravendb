@@ -30,7 +30,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -1628,9 +1627,11 @@ namespace Raven.Server.Documents
                         Id = local.Tombstone.LowerId,
                         ExpectedChangeVector = expectedChangeVector
                     };
+
+                var localCollection = ExtractCollectionName(context, local.Tombstone.Collection);
                 if (collectionName == null)
                 {
-                    collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
+                    collectionName = localCollection;
                 }
                 else if (local.Tombstone.Collection.Equals(collectionName.Name) == false)
                 {
@@ -1638,7 +1639,7 @@ namespace Raven.Server.Documents
                     ExtractCollectionName(context, collectionName.Name);
                 }
 
-                DocumentPut.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
+                DocumentPut.DeleteTombstoneIfNeeded(context, localCollection, lowerId);
 
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
