@@ -655,6 +655,7 @@ namespace Raven.Server.Documents.Queries.Results
             
             if (found == false)
             {
+                reader.Reset();
                 while (reader.FindNext(fieldRootPage))
                 {
                     found = true;
