@@ -318,7 +318,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.CoraxDynamicItem:
                 var cdi = (CoraxDynamicItem)value;
                 //we want to unpack item here.
+                builder.DecrementList(); // For lists of CreatedField(), we ignoring the list
                 InsertRegularField(cdi!.Field, cdi.Value, indexContext, builder, sourceDocument, out shouldSkip, nestedArray);
+                builder.IncrementList();
                 break;
             case ValueType.Stream:
                 throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
