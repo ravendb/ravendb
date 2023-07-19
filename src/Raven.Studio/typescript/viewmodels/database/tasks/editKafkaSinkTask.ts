@@ -18,6 +18,7 @@ import ongoingTaskKafkaSinkEditModel from "models/database/tasks/ongoingTaskKafk
 import viewHelpers from "common/helpers/view/viewHelpers";
 import database from "models/resources/database";
 import testQueueSinkCommand from "commands/database/tasks/testQueueSinkCommand";
+import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
  
 
 class kafkaTaskTestMode {
@@ -145,18 +146,16 @@ class editKafkaSinkTask extends viewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewKafkaSinkTask(false);
             
-            /* TODO:
-            getOngoingTaskInfoCommand.forQueueSinkEtl(this.activeDatabase(), args.taskId)
+            getOngoingTaskInfoCommand.forQueueSink(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl) => {
-                    this.editedKafkaEtl(new ongoingTaskKafkaEtlEditModel(result));
-                    this.showAdvancedOptions(this.editedKafkaEtl().hasAdvancedOptionsDefined());
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink) => {
+                    this.editedKafkaSink(new ongoingTaskKafkaSinkEditModel(result));
                     deferred.resolve();
                 })
                 .fail(() => { 
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase())); 
-                });*/
+                });
         } else {
             // 2. Creating a New task
             this.isAddingNewKafkaSinkTask(true);

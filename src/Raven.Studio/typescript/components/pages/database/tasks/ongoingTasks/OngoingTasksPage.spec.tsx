@@ -251,9 +251,9 @@ describe("OngoingTasksPage", function () {
         });
     });
 
-    describe("Kafka", function () {
+    describe("Kafka ETL", function () {
         it("can render disabled and not completed", async () => {
-            const View = boundCopy(stories.KafkaTemplate, {
+            const View = boundCopy(stories.KafkaEtlTemplate, {
                 disabled: true,
                 completed: false,
             });
@@ -276,7 +276,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can render completed", async () => {
-            const View = boundCopy(stories.KafkaTemplate, {
+            const View = boundCopy(stories.KafkaEtlTemplate, {
                 completed: true,
             });
 
@@ -291,7 +291,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can render enabled and not completed", async () => {
-            const View = boundCopy(stories.KafkaTemplate, {
+            const View = boundCopy(stories.KafkaEtlTemplate, {
                 completed: false,
                 disabled: false,
             });
@@ -307,7 +307,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can notify about empty script", async () => {
-            const View = boundCopy(stories.KafkaTemplate, {
+            const View = boundCopy(stories.KafkaEtlTemplate, {
                 completed: true,
                 emptyScript: true,
             });
@@ -325,9 +325,9 @@ describe("OngoingTasksPage", function () {
         });
     });
 
-    describe("RabbitMQ", function () {
+    describe("RabbitMQ ETL", function () {
         it("can render disabled and not completed", async () => {
-            const View = boundCopy(stories.RabbitTemplate, {
+            const View = boundCopy(stories.RabbitEtlTemplate, {
                 disabled: true,
                 completed: false,
             });
@@ -350,7 +350,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can render completed", async () => {
-            const View = boundCopy(stories.RabbitTemplate, {
+            const View = boundCopy(stories.RabbitEtlTemplate, {
                 completed: true,
             });
 
@@ -365,7 +365,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can render enabled and not completed", async () => {
-            const View = boundCopy(stories.RabbitTemplate, {
+            const View = boundCopy(stories.RabbitEtlTemplate, {
                 completed: false,
                 disabled: false,
             });
@@ -381,7 +381,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can notify about empty script", async () => {
-            const View = boundCopy(stories.RabbitTemplate, {
+            const View = boundCopy(stories.RabbitEtlTemplate, {
                 completed: true,
                 emptyScript: true,
             });
@@ -396,6 +396,43 @@ describe("OngoingTasksPage", function () {
             await screen.findAllByText(/Up to date/i);
 
             expect(await screen.findByText(selectors.emptyScriptText)).toBeInTheDocument();
+        });
+    });
+
+    describe("Kafka Sink", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.KafkaSinkTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/KAFKA SINK/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+        });
+
+        it("can render disabled", async () => {
+            const View = boundCopy(stories.KafkaSinkTemplate, {
+                disabled: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+
+            expect(await screen.findByText(/Disabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Enabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
         });
     });
 

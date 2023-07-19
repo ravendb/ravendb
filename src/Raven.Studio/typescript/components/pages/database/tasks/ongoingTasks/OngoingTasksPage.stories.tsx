@@ -13,6 +13,7 @@ import MockTasksService from "../../../../../test/mocks/services/MockTasksServic
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
+import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
@@ -320,7 +321,7 @@ export const ElasticSearchEmptyScript = boundCopy(ElasticSearchTemplate, {
     emptyScript: true,
 });
 
-export const KafkaTemplate = (args: {
+export const KafkaEtlTemplate = (args: {
     disabled?: boolean;
     completed?: boolean;
     emptyScript?: boolean;
@@ -333,7 +334,7 @@ export const KafkaTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getKafka();
+        const etl = TasksStubs.getKafkaEtl();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -348,20 +349,20 @@ export const KafkaTemplate = (args: {
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
 
-export const KafkaDisabled = boundCopy(KafkaTemplate, {
+export const KafkaEtlDisabled = boundCopy(KafkaEtlTemplate, {
     disabled: true,
 });
 
-export const KafkaCompleted = boundCopy(KafkaTemplate, {
+export const KafkaEtlCompleted = boundCopy(KafkaEtlTemplate, {
     completed: true,
 });
 
-export const KafkaEmptyScript = boundCopy(KafkaTemplate, {
+export const KafkaEtlEmptyScript = boundCopy(KafkaEtlTemplate, {
     completed: true,
     emptyScript: true,
 });
 
-export const RabbitTemplate = (args: {
+export const RabbitEtlTemplate = (args: {
     disabled?: boolean;
     completed?: boolean;
     emptyScript?: boolean;
@@ -374,7 +375,7 @@ export const RabbitTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getRabbit();
+        const etl = TasksStubs.getRabbitEtl();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -389,18 +390,47 @@ export const RabbitTemplate = (args: {
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
 
-export const RabbitDisabled = boundCopy(RabbitTemplate, {
+export const RabbitEtlDisabled = boundCopy(RabbitEtlTemplate, {
     disabled: true,
 });
 
-export const RabbitCompleted = boundCopy(RabbitTemplate, {
+export const RabbitEtlCompleted = boundCopy(RabbitEtlTemplate, {
     completed: true,
 });
 
-export const RabbitEmptyScript = boundCopy(RabbitTemplate, {
+export const RabbitEtlEmptyScript = boundCopy(RabbitEtlTemplate, {
     completed: true,
     emptyScript: true,
 });
+
+export const KafkaSinkTemplate = (args: {
+    disabled?: boolean;
+    customizeTask?: (x: OngoingTaskQueueSinkListView) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const sink = TasksStubs.getKafkaSink();
+        if (args.disabled) {
+            sink.TaskState = "Disabled";
+        }
+        x.OngoingTasks = [sink];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const KafkaSinkDisabled = boundCopy(KafkaSinkTemplate, {
+    disabled: true,
+});
+
+export const KafkaSinkCompleted = boundCopy(KafkaSinkTemplate, {});
 
 export const ReplicationSinkTemplate = (args: {
     disabled?: boolean;

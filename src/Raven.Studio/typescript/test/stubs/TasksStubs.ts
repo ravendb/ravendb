@@ -17,6 +17,7 @@ import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongo
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import collectionsStats = require("models/database/documents/collectionsStats");
 import collection = require("models/database/documents/collection");
+import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -31,8 +32,10 @@ export class TasksStubs {
                 TasksStubs.getOlap(),
                 TasksStubs.getElasticSearch(),
                 TasksStubs.getPeriodicBackupListItem(),
-                TasksStubs.getKafka(),
-                TasksStubs.getRabbit(),
+                TasksStubs.getKafkaEtl(),
+                TasksStubs.getRabbitEtl(),
+                TasksStubs.getKafkaSink(),
+                TasksStubs.getRabbitSink(),
                 TasksStubs.getReplicationSink(),
                 TasksStubs.getReplicationHub(),
                 TasksStubs.getExternalReplicationListItem(),
@@ -143,12 +146,12 @@ export class TasksStubs {
     }
 
     static getKafkaProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getKafka().TaskName;
+        const taskName = TasksStubs.getKafkaEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
     static getRabbitProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getRabbit().TaskName;
+        const taskName = TasksStubs.getRabbitEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
@@ -261,7 +264,7 @@ export class TasksStubs {
         };
     }
 
-    static getKafka(): OngoingTaskQueueEtl {
+    static getKafkaEtl(): OngoingTaskQueueEtl {
         return {
             TaskName: "KafkaTask",
             TaskId: 302,
@@ -279,11 +282,47 @@ export class TasksStubs {
         };
     }
 
-    static getRabbit(): OngoingTaskQueueEtl {
+    static getRabbitEtl(): OngoingTaskQueueEtl {
         return {
             TaskName: "RabbitTask",
             TaskId: 303,
             TaskType: "QueueEtl",
+            ConnectionStringName: "Rabbit-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            Url: "localhost:6006",
+            BrokerType: "RabbitMq",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getKafkaSink(): OngoingTaskQueueSink {
+        return {
+            TaskName: "KafkaSinkTask",
+            TaskId: 705,
+            TaskType: "QueueSink",
+            ConnectionStringName: "Kafka-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            BrokerType: "Kafka",
+            Url: "localhost:9092",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getRabbitSink(): OngoingTaskQueueEtl {
+        return {
+            TaskName: "RabbitSinkTask",
+            TaskId: 706,
+            TaskType: "QueueSink",
             ConnectionStringName: "Rabbit-CS",
             ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",

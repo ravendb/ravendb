@@ -104,9 +104,18 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
     mode: PullReplicationMode;
 }
 
+export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
+    connectionStringName: string;
+    url: string;
+}
+
 export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 
 export type OngoingTaskRabbitMqEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
+
+export type OngoingTaskKafkaSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
+
+export type OngoingTaskRabbitMqSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
 
 export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
@@ -150,6 +159,8 @@ export type OngoingTaskSubscriptionNodeInfoDetails = OngoingTaskNodeInfoDetails;
 export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
+export type OngoingTaskKafkaSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
@@ -219,6 +230,10 @@ type OngoingTaskRabbitMqEtlInfo = OngoingTaskInfo<
     OngoingEtlTaskNodeInfo<OngoingTaskRabbitMqEtlNodeInfoDetails>
 >;
 
+type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<
+    OngoingTaskKafkaSinkSharedInfo,
+    OngoingTaskNodeInfo<OngoingTaskKafkaSinkNodeInfoDetails>
+>;
 type OngoingTaskSubscriptionInfo = OngoingTaskInfo<
     OngoingTaskSubscriptionSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>
