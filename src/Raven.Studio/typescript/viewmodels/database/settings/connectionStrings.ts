@@ -585,11 +585,11 @@ class connectionStrings extends viewModelBase {
         }
         
         if (connectionType === "Kafka") {
-            return ["KafkaQueueEtl"];
+            return ["KafkaQueueEtl", "KafkaQueueSink"];
         }
 
         if (connectionType === "RabbitMQ") {
-            return ["RabbitQueueEtl"];
+            return ["RabbitQueueEtl", "RabbitQueueSink"];
         }
 
         return ["RavenEtl", "Replication", "PullReplicationAsSink"];
