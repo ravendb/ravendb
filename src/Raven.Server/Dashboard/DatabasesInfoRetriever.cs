@@ -22,6 +22,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
@@ -360,10 +361,20 @@ namespace Raven.Server.Dashboard
             var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
             long subscriptionCountOnNode = GetSubscriptionCountOnNode(database, dbRecord, serverStore, context);
 
+            var kafkaSinkCount = database.QueueSinkLoader.GetSinkCountByBroker(QueueBrokerType.Kafka);
+            long kafkaSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.QueueSink.QueueSinkConfiguration>(database, dbRecord, serverStore, database.QueueSinkLoader.Sinks,
+                task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.Kafka);
+
+            var rabbitMqSinkCount = database.QueueSinkLoader.GetSinkCountByBroker(QueueBrokerType.RabbitMq);
+            long rabbitMqSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.QueueSink.QueueSinkConfiguration>(database, dbRecord, serverStore, database.QueueSinkLoader.Sinks,
+                task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
+
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount + rabbitMqEtlCount +
-                                periodicBackupCount + subscriptionCount;
-            return new DatabaseOngoingTasksInfoItem()
+                                periodicBackupCount + subscriptionCount +
+                                kafkaSinkCount + rabbitMqSinkCount;
+
+            return new DatabaseOngoingTasksInfoItem
             {
                 Database = database.Name,
                 ExternalReplicationCount = extRepCountOnNode,
@@ -376,7 +387,9 @@ namespace Raven.Server.Dashboard
                 KafkaEtlCount = kafkaEtlCountOnNode,
                 RabbitMqEtlCount = rabbitMqEtlCountOnNode,
                 PeriodicBackupCount = periodicBackupCountOnNode,
-                SubscriptionCount = subscriptionCountOnNode
+                SubscriptionCount = subscriptionCountOnNode,
+                KafkaSinkCount = kafkaSinkCountOnNode,
+                RabbitMqSinkCount = rabbitMqSinkCountOnNode,
             };
         }
 
