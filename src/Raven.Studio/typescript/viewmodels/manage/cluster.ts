@@ -81,6 +81,11 @@ class cluster extends viewModelBase {
         this.addNotification(serverWideClient.watchReconnect(() => this.refresh()));
     }
 
+    deactivate():void {
+        super.deactivate();
+        this.graph.dispose();
+    }
+
     private initObservables() {
         this.canDeleteNodes = ko.pureComputed(() => this.topology().leader() && this.topology().nodes().length > 1);
         this.canAddNodes = ko.pureComputed(() => !!this.topology().leader() || this.topology().nodeTag() === "?");

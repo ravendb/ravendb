@@ -4,6 +4,7 @@ import d3 = require("d3");
 import clusterNode = require("models/database/cluster/clusterNode");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import icomoonHelpers from "common/helpers/view/icomoonHelpers";
+import _ from 'lodash';
 
 interface clusterNodeWithLayout extends clusterNode {
     x: number;
@@ -35,6 +36,7 @@ class clusterGraph {
     private edgesGroup: d3.Selection<void>;
     private nodes: d3.Selection<clusterNode>;
     private edges: d3.Selection<string>;
+    private resizeHandler: _.DebouncedFunc<() => void>;
 
     init(container: JQuery, initialNodesCount: number) {
         this.$container = container;
@@ -42,7 +44,13 @@ class clusterGraph {
         this.height = container.innerHeight();
 
         this.initGraph(initialNodesCount);
-        this.addResizeListener();
+        
+
+        this.resizeHandler = _.throttle(() => {
+            this.updateSize();
+        }, 200);
+        
+        window.addEventListener("resize", this.resizeHandler);
     }
 
     private initialScale(initialNodesCount: number) {
@@ -292,7 +300,7 @@ class clusterGraph {
     private updateSize() {
         this.width = this.$container.innerWidth();
         this.height = this.$container.innerHeight();
-    
+
         this.svg.style("width", this.width + "px")
           .style("height", this.height + "px")
           .attr("viewBox", "0 0 " + this.width + " " + this.height);
@@ -300,12 +308,10 @@ class clusterGraph {
         this.svg.select("rect")
             .attr("width", this.width)
             .attr("height", this.height);
-      }
+    }
 
-    private addResizeListener() {
-        window.addEventListener("resize", () => {
-          this.updateSize();
-        });
+    dispose() {
+        window.removeEventListener("resize", this.resizeHandler);
     }
 }
 
