@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
@@ -114,6 +115,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var subscriptionState in _subscriptionStorage.GetAllSubscriptionsFromServerStore(context))
             yield return CreateSubscriptionTaskInfo(context, clusterTopology, subscriptionState);
     }
+    
+    private IEnumerable<OngoingTaskQueueSink> GetQueueSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.QueueSinks == null || databaseRecord.QueueSinks.Count == 0)
+            yield break;
+
+        foreach (var queueSink in databaseRecord.QueueSinks)
+            yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
+    }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
@@ -145,6 +155,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return task;
 
         foreach (var task in CollectExternalReplicationTasks(clusterTopology, databaseRecord))
+            yield return task;
+        
+        foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
@@ -253,6 +266,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
     protected abstract OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
         where T : ConnectionString;
+    
+    protected abstract OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config, out string tag, out string error);
 
     protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
         where T : ExternalReplicationBase;
@@ -495,5 +510,27 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         }
 
         return sinkInfo;
+    }
+    
+    private OngoingTaskQueueSink CreateQueueSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, QueueSinkConfiguration queueSink)
+    {
+        databaseRecord.QueueConnectionStrings.TryGetValue(queueSink.ConnectionStringName, out var connection);
+
+        var connectionStatus = GetQueueSinkTaskConnectionStatus(databaseRecord, queueSink, out var tag, out var error);
+        var taskState = OngoingTasksHandler.GetQueueSinkTaskState(queueSink);
+
+        return new OngoingTaskQueueSink
+        {
+            TaskId = queueSink.TaskId,
+            TaskName = queueSink.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = queueSink.MentorNode,
+            PinToMentorNode = queueSink.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            BrokerType = queueSink.BrokerType,
+            Error = error,
+            Configuration = queueSink
+        };
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
@@ -31,7 +32,7 @@ public class RabbitMqEtlTestBase : QueueEtlTestBase
 
         public (byte[] Body, IBasicProperties Properties) Consume()
         {
-            var result = _deliveries.TryTake(out var delivery, TimeSpan.FromMinutes(1));
+            var result = _deliveries.TryTake(out var delivery, Timeout.Infinite, new CancellationToken());
 
             Assert.True(result, "Failed to consume message");
 

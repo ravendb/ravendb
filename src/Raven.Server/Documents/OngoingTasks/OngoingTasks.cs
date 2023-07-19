@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -12,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -90,6 +92,38 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
                     connectionStatus = OngoingTaskConnectionStatus.NotActive;
                 else
                     error = $"ETL process '{config.Name}' was not found.";
+            }
+        }
+        else
+        {
+            connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+        }
+
+        return connectionStatus;
+    }
+
+    protected override OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config,
+        out string tag, out string error)
+    {
+        var connectionStatus = OngoingTaskConnectionStatus.None;
+        error = null;
+
+        var processState = QueueSinkLoader.GetProcessState(config.Scripts, _database, config.Name);
+
+        tag = _server.WhoseTaskIsIt(record.Topology, config, processState);
+
+        if (tag == _server.NodeTag)
+        {
+            var process = _database.EtlLoader.Processes.FirstOrDefault(x => x.ConfigurationName == config.Name);
+
+            if (process != null)
+                connectionStatus = process.GetConnectionStatus();
+            else
+            {
+                if (config.Disabled)
+                    connectionStatus = OngoingTaskConnectionStatus.NotActive;
+                else
+                    error = $"Queue Sink process '{config.Name}' was not found.";
             }
         }
         else
