@@ -57,12 +57,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
                 {
-                    if (prop.Name.Length > 0 && prop.Name[0] == '@')
-                    {
-                        if (Constants.Documents.Metadata.SystemKeys.Contains(prop.Name))
-                            continue; // system property, ignoring it
-                    }
-
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
                     WritePropertyValue(prop.Name, prop.Value);
                 }
