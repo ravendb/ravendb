@@ -958,13 +958,31 @@ namespace Raven.Server.Documents.Revisions
 
         private unsafe void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
         {
+            Document revision = null;
+            if (table.IsOwned(tvr.Id) == false)
+            {
+                // We request to delete revision with the wrong collection
+                revision = TableValueToRevision(context, ref tvr);
+                var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Expected revision '{revision.Id}' with change vector '{revision.ChangeVector}' from table '{table.Name}' but revision is of collection '{currentCollection.Name}'");
+
+                table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
+
+                if (table.IsOwned(tvr.Id) == false || table.ReadByKey(changeVectorSlice, out tvr) == false) // this shouldn't happened
+                    throw new VoronErrorException(
+                        $"Failed to get revision '{revision.Id}' with change vector '{revision.ChangeVector}' of collection '{currentCollection}' from table '{table.Name}'. " +
+                        "This should not happen and is likely a bug.");
+            }
+
             var revisionCopy = context.GetMemory(tvr.Size);
             // we have to copy it to the side because we might do a defrag during update, and that
             // can cause corruption if we read from the old value (which we just deleted)
             Memory.Copy(revisionCopy.Address, tvr.Pointer, tvr.Size);
             var copyTvr = new TableValueReader(revisionCopy.Address, tvr.Size);
 
-            var revision = TableValueToRevision(context, ref copyTvr);
+            revision ??= TableValueToRevision(context, ref copyTvr);
             var flags = revision.Flags | DocumentFlags.Conflicted;
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
             var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr);
@@ -1636,7 +1654,7 @@ namespace Raven.Server.Documents.Revisions
 
             private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
             {
-                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id,  document.Data, out bool has);
+                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id, document.Data, out bool has);
                 RevertCounters(context, documentsStorage, document, collectionName);
 
                 document.Data = RevertSnapshotFlags(context, document.Data, document.Id);
