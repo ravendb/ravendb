@@ -74,7 +74,7 @@ interface ActionTasksLoadError {
     error: JQueryXHR;
 }
 
-interface OngoingTasksState {
+export interface OngoingTasksState {
     tasks: OngoingTaskInfo[];
     subscriptions: OngoingTaskSubscriptionInfo[];
     locations: databaseLocationSpecifier[];

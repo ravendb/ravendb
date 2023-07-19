@@ -1,7 +1,7 @@
 ﻿import database from "models/resources/database";
 import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
-import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
+import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
 import { useAccessManager } from "hooks/useAccessManager";
 import createOngoingTask from "viewmodels/database/tasks/createOngoingTask";
 import app from "durandal/app";
@@ -14,6 +14,7 @@ import {
     OngoingTaskKafkaEtlInfo,
     OngoingTaskOlapEtlInfo,
     OngoingTaskPeriodicBackupInfo,
+    OngoingTaskRabbitMqEtlInfo,
     OngoingTaskRavenEtlInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
@@ -38,12 +39,15 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Button, Input } from "reactstrap";
+import { Button } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
-import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
+import OngoingTasksFilter, { OngoingTaskFilterType, OngoingTasksFilterCriteria } from "./OngoingTasksFilter";
+import { exhaustiveStringTuple } from "components/utils/common";
+import { InputItem } from "components/models/common";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -59,6 +63,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { tasksService } = useServices();
 
     const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
+
+    const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
+        searchText: "",
+        types: [],
+    });
 
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
@@ -146,27 +155,25 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
-    const externalReplications = tasks.tasks.filter(
-        (x) => x.shared.taskType === "Replication"
-    ) as OngoingTaskExternalReplicationInfo[];
-    const ravenEtls = tasks.tasks.filter((x) => x.shared.taskType === "RavenEtl") as OngoingTaskRavenEtlInfo[];
-    const sqlEtls = tasks.tasks.filter((x) => x.shared.taskType === "SqlEtl") as OngoingTaskSqlEtlInfo[];
-    const olapEtls = tasks.tasks.filter((x) => x.shared.taskType === "OlapEtl") as OngoingTaskOlapEtlInfo[];
-    const kafkaEtls = tasks.tasks.filter((x) => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[];
-    const rabbitMqEtls = tasks.tasks.filter((x) => x.shared.taskType === "RabbitQueueEtl") as OngoingTaskKafkaEtlInfo[];
-    const elasticSearchEtls = tasks.tasks.filter(
-        (x) => x.shared.taskType === "ElasticSearchEtl"
-    ) as OngoingTaskElasticSearchEtlInfo[];
-    const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
-    const subscriptions = tasks.subscriptions;
-    const replicationHubs = tasks.tasks.filter(
-        (x) => x.shared.taskType === "PullReplicationAsHub"
-    ) as OngoingTaskReplicationHubInfo[];
-    const replicationSinks = tasks.tasks.filter(
-        (x) => x.shared.taskType === "PullReplicationAsSink"
-    ) as OngoingTaskReplicationSinkInfo[];
+    const {
+        externalReplications,
+        ravenEtls,
+        sqlEtls,
+        olapEtls,
+        kafkaEtls,
+        rabbitMqEtls,
+        elasticSearchEtls,
+        backups,
+        replicationHubs,
+        replicationSinks,
+        subscriptions,
+        hubDefinitions,
+    } = getFilteredTasks(tasks, filter);
 
-    const hubDefinitions = tasks.replicationHubs;
+    const allTasksCount =
+        tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +
+        tasks.replicationHubs.length +
+        tasks.subscriptions.length;
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
@@ -220,15 +227,15 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
     };
 
-    // TODO kalczur - add <FilterOngoingTasks />
     // TODO kalczur - add ?<OngoingTasksActions />
     // TODO kalczur - add checkbox properties to every panel
+    // TODO kalczur - styling
 
     return (
         <div>
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
             <div className="flex-vertical">
-                <div className="flex-header flex-horizontal justify-content-between align-items-top gap-3">
+                <div className="flex-header flex-horizontal justify-content-between align-items-center gap-3">
                     {canReadWriteDatabase(database) && (
                         <Button onClick={addNewOngoingTask} color="primary" className="rounded-pill">
                             <Icon icon="plus" />
@@ -236,49 +243,14 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         </Button>
                     )}
 
-                    <div className="flex-grow">
-                        <div className="small-label ms-1 mb-1">Filter by name</div>
-                        <div className="clearable-input">
-                            <Input
-                                type="text"
-                                accessKey="/"
-                                placeholder="e.g. RavenETLTask"
-                                title="Filter ongoing tasks"
-                                className="filtering-input"
-                                value={""}
-                                onChange={(e) => null}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <MultiCheckboxToggle<string>
-                            inputItems={[
-                                {
-                                    label: "Replication",
-                                    value: "REPLICATION",
-                                },
-                                {
-                                    label: "ETL",
-                                    value: "ETL",
-                                },
-                                {
-                                    label: "Backups",
-                                    value: "Backups",
-                                },
-                                {
-                                    label: "SUBSCRIPTIONS",
-                                    value: "Subscriptions",
-                                },
-                            ]}
-                            label="Filter by type"
-                            selectedItems={[]}
-                            setSelectedItems={() => null}
-                            selectAll
-                            selectAllLabel="All"
-                            selectAllCount={12}
+                    {allTasksCount > 0 && (
+                        <OngoingTasksFilter
+                            filter={filter}
+                            setFilter={setFilter}
+                            filterByStatusOptions={getFilterByStatusOptions(tasks)}
+                            tasksCount={allTasksCount}
                         />
-                    </div>
+                    )}
 
                     <div>
                         {canNavigateToServerWideTasks && (
@@ -297,9 +269,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     </div>
                 </div>
                 <div className="scroll flex-grow">
-                    {tasks.tasks.length === 0 &&
-                    tasks.replicationHubs.length === 0 &&
-                    tasks.subscriptions.length === 0 ? (
+                    {allTasksCount === 0 ? (
                         <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                     ) : (
                         <Checkbox
@@ -536,4 +506,76 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             </div>
         </div>
     );
+}
+
+function getFilterByStatusOptions(state: OngoingTasksState): InputItem<OngoingTaskFilterType>[] {
+    const backupCount = state.tasks.filter((x) => x.shared.taskType === "Backup").length;
+    const etlCount = state.tasks.filter((x) => x.shared.taskType.endsWith("Etl")).length;
+    const subscriptionsCount = state.subscriptions.length;
+    const replicationHubCount = state.replicationHubs.length;
+    const replicationSinkCount = state.tasks.filter((x) => x.shared.taskType === "PullReplicationAsSink").length;
+    const externalReplicationCount = state.tasks.filter((x) => x.shared.taskType === "Replication").length;
+
+    return exhaustiveStringTuple<OngoingTaskFilterType>()(
+        "Backup",
+        "ETL",
+        "Subscription",
+        "PullReplicationAsHub",
+        "PullReplicationAsSink",
+        "Replication"
+    ).map((filterType) => {
+        switch (filterType) {
+            case "Backup":
+                return { label: filterType, value: filterType, count: backupCount };
+            case "ETL":
+                return { label: filterType, value: filterType, count: etlCount };
+            case "Subscription":
+                return { label: filterType, value: filterType, count: subscriptionsCount };
+            case "PullReplicationAsHub":
+                return { label: "Replication Hub", value: filterType, count: replicationHubCount };
+            case "PullReplicationAsSink":
+                return { label: "Replication Sink", value: filterType, count: replicationSinkCount };
+            case "Replication":
+                return { label: "External Replication", value: filterType, count: externalReplicationCount };
+            default:
+                assertUnreachable(filterType);
+        }
+    });
+}
+
+function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTasksFilterCriteria) {
+    const isTaskNameMatching = sharedInfo.taskName.toLowerCase().includes(filter.searchText.toLowerCase());
+    const isETLTypeMatching = filter.types.includes("ETL") && sharedInfo.taskType.endsWith("Etl");
+    const isOtherTypeMatching = filter.types.includes(sharedInfo.taskType as OngoingTaskFilterType);
+
+    return isTaskNameMatching && (filter.types.length === 0 || isETLTypeMatching || isOtherTypeMatching);
+}
+
+function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCriteria) {
+    const filteredTasks = state.tasks.filter((x) => filterOngoingTask(x.shared, filter));
+
+    return {
+        externalReplications: filteredTasks.filter(
+            (x) => x.shared.taskType === "Replication"
+        ) as OngoingTaskExternalReplicationInfo[],
+        ravenEtls: filteredTasks.filter((x) => x.shared.taskType === "RavenEtl") as OngoingTaskRavenEtlInfo[],
+        sqlEtls: filteredTasks.filter((x) => x.shared.taskType === "SqlEtl") as OngoingTaskSqlEtlInfo[],
+        olapEtls: filteredTasks.filter((x) => x.shared.taskType === "OlapEtl") as OngoingTaskOlapEtlInfo[],
+        kafkaEtls: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[],
+        rabbitMqEtls: filteredTasks.filter(
+            (x) => x.shared.taskType === "RabbitQueueEtl"
+        ) as OngoingTaskRabbitMqEtlInfo[],
+        elasticSearchEtls: filteredTasks.filter(
+            (x) => x.shared.taskType === "ElasticSearchEtl"
+        ) as OngoingTaskElasticSearchEtlInfo[],
+        backups: filteredTasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[],
+        replicationHubs: filteredTasks.filter(
+            (x) => x.shared.taskType === "PullReplicationAsHub"
+        ) as OngoingTaskReplicationHubInfo[],
+        replicationSinks: filteredTasks.filter(
+            (x) => x.shared.taskType === "PullReplicationAsSink"
+        ) as OngoingTaskReplicationSinkInfo[],
+        subscriptions: state.subscriptions.filter((x) => filterOngoingTask(x.shared, filter)),
+        hubDefinitions: state.replicationHubs.filter((x) => filterOngoingTask(x.shared, filter)),
+    };
 }
