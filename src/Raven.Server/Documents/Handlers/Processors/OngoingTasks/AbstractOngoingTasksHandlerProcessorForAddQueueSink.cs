@@ -36,10 +36,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             AssertCanAddOrUpdateQueueSink(ref configuration);
         }
 
-        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _,
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _,
             BlittableJsonReaderObject configuration, string raftRequestId)
         {
             RequestHandler.LogTaskToAudit(Web.RequestHandler.AddQueueSinkDebugTag, _taskId, configuration);
+
+            return ValueTask.CompletedTask;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context,
