@@ -65,9 +65,6 @@ public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTas
 
         foreach (var script in Scripts)
         {
-            if (string.IsNullOrWhiteSpace(Name))
-                errors.Add("Script name cannot be empty");
-            
             if (string.IsNullOrWhiteSpace(script.Script))
                 errors.Add($"Script '{Name}' must not be empty");
 
