@@ -260,6 +260,16 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     : _subscriptionStorage.GetSubscriptionById(context, taskId.Value);
 
                 return CreateSubscriptionTaskInfo(context, clusterTopology, subscriptionState);
+            case OngoingTaskType.QueueSink:
+
+                var queueSink = taskName != null
+                    ? databaseRecord.QueueSinks.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.QueueSinks?.Find(x => x.TaskId == taskId);
+
+                if (queueSink == null)
+                    return null;
+
+                return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
             default:
                 return null;
         }
