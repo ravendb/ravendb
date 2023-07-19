@@ -1249,7 +1249,7 @@ namespace Raven.Client.Http
                    command is IBroadcast == false;
         }
 
-        private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
+        internal static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
         private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
             CancellationToken token = default)
@@ -1281,6 +1281,8 @@ namespace Raven.Client.Http
                     var copy = disposable;
                     tasks[i] = command.SendAsync(HttpClient, request, cts.Token).ContinueWith(x =>
                     {
+                        ForTestingPurposes?.ExecuteOnAllToFigureOutTheFastestOnTaskCompletion?.Invoke(x);
+
                         try
                         {
                             if (x.Exception != null)
@@ -1308,6 +1310,8 @@ namespace Raven.Client.Http
                     disposable?.Dispose();
                 }
             }
+
+            ForTestingPurposes?.ExecuteOnAllToFigureOutTheFastestOnBeforeWait?.Invoke(tasks);
 
             while (Interlocked.Read(ref numberOfFailedTasks) < tasks.Length)
             {
@@ -2394,6 +2398,10 @@ namespace Raven.Client.Http
             internal int[] NodeSelectorFailures => _requestExecutor._nodeSelector.NodeSelectorFailures;
             internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
             internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
+
+            public Action<Task> ExecuteOnAllToFigureOutTheFastestOnTaskCompletion;
+
+            public Action<Task[]> ExecuteOnAllToFigureOutTheFastestOnBeforeWait;
 
             internal Action<NodeSelector> OnBeforeScheduleSpeedTest;
         }
