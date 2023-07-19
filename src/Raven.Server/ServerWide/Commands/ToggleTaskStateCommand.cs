@@ -118,6 +118,14 @@ namespace Raven.Server.ServerWide.Commands
                     }
 
                     break;
+                case OngoingTaskType.QueueSink:
+
+                    var queueSink = record?.QueueSinks?.Find(x => x.TaskId == TaskId);
+                    if (queueSink != null)
+                    {
+                        queueSink.Disabled = Disable;
+                    }
+                    break;
             }
 
             void ThrowIfServerWideTask(string name, string prefix, string typeName)
