@@ -2,19 +2,23 @@
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.IO;
 using Corax.Utils;
+using Google.Protobuf.WellKnownTypes;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
-using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
+using Enum = System.Enum;
+using Field = Lucene.Net.Documents.Field;
+using Type = System.Type;
+
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
@@ -75,90 +79,142 @@ namespace Raven.Server.Documents.Indexes.Persistence
             return true;
         }
 
+        private static readonly TypeCache<ValueType> _valueTypeCache = new(32);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected ValueType GetValueType(object value)
         {
+            ValueType GetValueTypeUnlikely(Type type)
+            {
+                ValueType valueType;
+                switch (value)
+                {
+                    case DynamicNullObject:
+                        valueType = ValueType.DynamicNull;
+                        break;
+                    case LazyStringValue:
+                        valueType = ValueType.LazyString;
+                        break;
+                    case LazyCompressedStringValue:
+                        valueType = ValueType.LazyCompressedString;
+                        break;
+                    case Enum:
+                        valueType = ValueType.Enum;
+                        break;
+                    case BoostedValue:
+                        valueType = ValueType.BoostedValue;
+                        break;
+                    case DynamicDictionary:
+                        valueType = ValueType.ConvertToJson;
+                        break;
+                    case DynamicBlittableJson:
+                        valueType = ValueType.DynamicJsonObject;
+                        break;
+                    case BlittableJsonReaderObject:
+                        valueType = ValueType.BlittableJsonObject;
+                        break;
+                    case CoraxSpatialPointEntry:
+                        valueType = ValueType.CoraxSpatialPointEntry;
+                        break;
+                    case CoraxDynamicItem:
+                        valueType = ValueType.CoraxDynamicItem;
+                        break;
+                    case Stream:
+                        valueType = ValueType.Stream;
+                        break;
+                    case AbstractField:
+                        valueType = ValueType.Lucene;
+                        break;
+
+                    case bool:
+                        valueType = ValueType.Boolean;
+                        break;
+
+                    case char:
+                        valueType = ValueType.Char;
+                        break;
+                    
+                    case string:
+                        valueType = ValueType.String;
+                        break;
+
+                    case double:
+                    case float:
+                    case decimal:
+                    case LazyNumberValue:
+                        valueType = ValueType.Double;
+                        break;
+
+                    case long:
+                    case int:
+                    case byte:
+                    case short:
+                    case ushort:
+                    case uint:
+                    case sbyte:
+                    case ulong:
+                        valueType = ValueType.Numeric;
+                        break;
+
+                    case DateTime:
+                        valueType = ValueType.DateTime;
+                        break;
+                    case DateTimeOffset:
+                        valueType = ValueType.DateTimeOffset;
+                        break;
+                    case TimeSpan:
+                        valueType = ValueType.TimeSpan;
+                        break;
+                    case DateOnly:
+                        valueType = ValueType.DateOnly;
+                        break;
+                    case TimeOnly:
+                        valueType = ValueType.TimeOnly;
+                        break;
+
+                    default:
+                        if (value is IDictionary)
+                            valueType = ValueType.Dictionary;
+                        else if (value is IEnumerable)
+                            valueType = ValueType.Enumerable;
+                        else if (value is IConvertible)
+                            valueType = ValueType.Convertible;
+                        else
+                            valueType = ValueType.ConvertToJson;
+                        break;
+                }
+
+                _valueTypeCache.Put(type, valueType);
+
+                // We call GetValueType again because by now we know which type it is and we will return immediately
+                // after checking in the cache.
+                return GetValueType(value);
+            }
+
             if (value == null)
                 return ValueType.Null;
 
-            if (value is DynamicNullObject)
-                return ValueType.DynamicNull;
+            var type = value.GetType();
+            if (_valueTypeCache.TryGet(type, out ValueType valueType))
+            {
+                switch (valueType)
+                {
+                    case ValueType.String:
+                        return ((string)value).Length == 0 ? ValueType.EmptyString : ValueType.String;
+                    case ValueType.LazyString:
+                        return ((LazyStringValue)value).Length == 0 ? ValueType.EmptyString : ValueType.LazyString;
+                    case ValueType.LazyCompressedString:
+                        return ((LazyCompressedStringValue)value).UncompressedSize == 0 ? ValueType.EmptyString : ValueType.LazyCompressedString;
+                    case ValueType.Dictionary:
+                        return (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField)
+                            ? ValueType.Dictionary
+                            : ValueType.Enumerable;
+                }
 
-            var lazyStringValue = value as LazyStringValue;
-            if (lazyStringValue != null)
-                return lazyStringValue.Size == 0 ? ValueType.EmptyString : ValueType.LazyString;
+                return valueType;
+            }
 
-            var lazyCompressedStringValue = value as LazyCompressedStringValue;
-            if (lazyCompressedStringValue != null)
-                return lazyCompressedStringValue.UncompressedSize == 0 ? ValueType.EmptyString : ValueType.LazyCompressedString;
-
-            var valueString = value as string;
-            if (valueString != null)
-                return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
-
-            if (value is Enum)
-                return ValueType.Enum;
-
-            if (value is bool)
-                return ValueType.Boolean;
-
-            if (value is DateTime)
-                return ValueType.DateTime;
-
-            if (value is DateTimeOffset)
-                return ValueType.DateTimeOffset;
-
-            if (value is TimeSpan)
-                return ValueType.TimeSpan;
-
-            if (value is BoostedValue)
-                return ValueType.BoostedValue;
-
-            if (value is DynamicBlittableJson)
-                return ValueType.DynamicJsonObject;
-
-            if (value is DynamicDictionary)
-                return ValueType.ConvertToJson;
-
-            if (value is IDictionary && _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField)
-                return ValueType.Dictionary;
-            
-            if (value is IEnumerable)
-                return ValueType.Enumerable;
-
-            if (value is LazyNumberValue || value is double || value is decimal || value is float)
-                return ValueType.Double;
-
-            if (value is AbstractField)
-                return ValueType.Lucene;
-
-            if (value is char)
-                return ValueType.String;
-
-            if (value is IConvertible)
-                return ValueType.Convertible;
-
-            if (value is BlittableJsonReaderObject)
-                return ValueType.BlittableJsonObject;
-
-            if (IsNumber(value))
-                return ValueType.Numeric;
-
-            if (value is Stream)
-                return ValueType.Stream;
-
-            if (value is DateOnly)
-                return ValueType.DateOnly;
-
-            if (value is TimeOnly)
-                return ValueType.TimeOnly;
-
-            if (value is CoraxSpatialPointEntry)
-                return ValueType.CoraxSpatialPointEntry;
-
-            if (value is CoraxDynamicItem)
-                return ValueType.CoraxDynamicItem;
-            
-            return ValueType.ConvertToJson;
+            return GetValueTypeUnlikely(type);
         }
 
         protected static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
@@ -233,6 +289,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             DynamicNull,
 
             EmptyString,
+
+            Char,
 
             String,
 

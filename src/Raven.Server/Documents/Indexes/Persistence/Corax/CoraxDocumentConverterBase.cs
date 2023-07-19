@@ -119,12 +119,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             ThrowFieldIsNoIndexedAndStored(field);
         
         shouldSkip = false;
-        var valueType = GetValueType(value);
+       
         var path = field.Name;
         var fieldId = field.Id;
+
         long @long;
         double @double;
-        
+        ValueType valueType = GetValueType(value);
         switch (valueType)
         {
             case ValueType.Double:
@@ -174,10 +175,32 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
 
             case ValueType.Numeric:
-                throw new NotSupportedException("Numeric");
+                switch (value)
+                {
+                    case long l: @long = l; break;
+                    case ulong ul: @long = (long)ul; break;
+                    case int i: @long = i; break;
+                    case uint ui: @long = ui; break;
+                    case short s: @long = s; break;
+                    case ushort us: @long = us; break;
+                    case byte b: @long = b; break;
+                    case sbyte sb: @long = sb; break;
+                    default: throw new InvalidOperationException("There shouldn't be other numeric type here.");
+                }
+                builder.Write(fieldId, path, value.ToString(), @long, @long);
+                break;
+
+            case ValueType.Char:
+                unsafe
+                {
+                    char item = (char)value;
+                    builder.Write(fieldId, path, new ReadOnlySpan<byte>(&item, 1));
+                }
+
+                break;
 
             case ValueType.String:
-                builder.Write( fieldId,path, value.ToString());
+                builder.Write(fieldId, path, (string)value);
                 break;
 
             case ValueType.LazyCompressedString:

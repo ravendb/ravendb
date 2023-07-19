@@ -167,7 +167,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_numeric_fields()
         {
-            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new[]
             {
                 new IndexField
                 {
@@ -187,8 +187,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Age"] = 25,
             }, "users/1");
 
-            bool shouldSkip;
-            _sut.SetDocument(doc.Id, null, doc, _ctx, FakeWriteOperationBuffer.Create(), out shouldSkip);
+            _sut.SetDocument(doc.Id, null, doc, _ctx, FakeWriteOperationBuffer.Create(), out bool _);
 
             Assert.Equal(1 + 2 * 3, _sut.Document.GetFields().Count); // __document_id + 2x (field, field_L_Range, field_D_Range)
             Assert.NotNull(_sut.Document.GetField("Weight"));
