@@ -7,7 +7,7 @@ abstract class connectionStringModel {
     
     tasksThatAreUsingThisConnectionString = ko.observableArray<{ taskName: string; taskId: number }>([]);
 
-    constructor(isNew: boolean, tasks: { taskName: string; taskId: number }[]) {      
+    protected constructor(isNew: boolean, tasks: { taskName: string; taskId: number }[]) {      
         this.isNew(isNew);
         this.tasksThatAreUsingThisConnectionString(tasks);
     }    

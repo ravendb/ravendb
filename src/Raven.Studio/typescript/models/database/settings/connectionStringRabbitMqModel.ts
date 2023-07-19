@@ -5,7 +5,7 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import testRabbitMqServerConnectionCommand from "commands/database/cluster/testRabbitMqServerConnectionCommand";
 import jsonUtil = require("common/jsonUtil");
 
-class connectionStringRabbitMqEtlModel extends connectionStringModel {
+class connectionStringRabbitMqModel extends connectionStringModel {
     
     rabbitMqConnectionString = ko.observable<string>();
     
@@ -44,8 +44,8 @@ class connectionStringRabbitMqEtlModel extends connectionStringModel {
         });
     }
 
-    static empty(): connectionStringRabbitMqEtlModel {
-        return new connectionStringRabbitMqEtlModel({
+    static empty(): connectionStringRabbitMqModel {
+        return new connectionStringRabbitMqModel({
             Type: "Queue",
             BrokerType: "RabbitMq",
             Name: "",
@@ -83,4 +83,4 @@ class connectionStringRabbitMqEtlModel extends connectionStringModel {
     }
 }
 
-export = connectionStringRabbitMqEtlModel;
+export = connectionStringRabbitMqModel;

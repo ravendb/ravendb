@@ -5,8 +5,8 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
-import connectionStringKafkaEtlModel from "models/database/settings/connectionStringKafkaEtlModel";
-import connectionStringRabbitMqEtlModel from "models/database/settings/connectionStringRabbitMqEtlModel";
+import connectionStringKafkaModel from "models/database/settings/connectionStringKafkaModel";
+import connectionStringRabbitMqModel from "models/database/settings/connectionStringRabbitMqModel";
 
 class saveConnectionStringCommand extends commandBase {
 
@@ -14,8 +14,8 @@ class saveConnectionStringCommand extends commandBase {
                                                                 connectionStringSqlEtlModel           |
                                                                 connectionStringOlapEtlModel          |
                                                                 connectionStringElasticSearchEtlModel |
-                                                                connectionStringKafkaEtlModel         |
-                                                                connectionStringRabbitMqEtlModel) {
+                                                                connectionStringKafkaModel         |
+                                                                connectionStringRabbitMqModel) {
         super();
     }
  

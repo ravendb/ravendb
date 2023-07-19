@@ -47,7 +47,7 @@ class connectionOptionModel {
     }
 }
 
-class connectionStringKafkaEtlModel extends connectionStringModel {
+class connectionStringKafkaModel extends connectionStringModel {
     
     bootstrapServers = ko.observable<string>();
     useRavenCertificate = ko.observable<boolean>();
@@ -70,8 +70,8 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         this.initValidation();
         
         this.useRavenCertificate.subscribe(toggledOn => {
-            if (toggledOn && !this.connectionOptions().find(x => x.key() === connectionStringKafkaEtlModel.sslCaLocation)) {
-                this.connectionOptions.unshift(new connectionOptionModel(connectionStringKafkaEtlModel.sslCaLocation, ""));
+            if (toggledOn && !this.connectionOptions().find(x => x.key() === connectionStringKafkaModel.sslCaLocation)) {
+                this.connectionOptions.unshift(new connectionOptionModel(connectionStringKafkaModel.sslCaLocation, ""));
             }
         });
         
@@ -139,8 +139,8 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         return result;
     }
 
-    static empty(): connectionStringKafkaEtlModel {
-        return new connectionStringKafkaEtlModel({
+    static empty(): connectionStringKafkaModel {
+        return new connectionStringKafkaModel({
             Type: "Queue",
             BrokerType: "Kafka",
             Name: "",
@@ -209,4 +209,4 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
          </small>`;
 }
 
-export = connectionStringKafkaEtlModel;
+export = connectionStringKafkaModel;

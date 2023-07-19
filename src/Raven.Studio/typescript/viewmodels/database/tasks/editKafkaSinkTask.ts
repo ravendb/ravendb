@@ -5,7 +5,7 @@ import router = require("plugins/router");
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import generalUtils = require("common/generalUtils");
-import connectionStringKafkaEtlModel = require("models/database/settings/connectionStringKafkaEtlModel");
+import connectionStringKafkaModel = require("models/database/settings/connectionStringKafkaModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -75,7 +75,6 @@ class kafkaTaskTestMode {
             new testQueueSinkCommand(this.db(), dto, "Kafka")
                 .execute()
                 .done(simulationResult => {
-                    
                     this.testResults(simulationResult.Actions); //TODO:
                     this.debugOutput(simulationResult.DebugOutput);
 
@@ -115,7 +114,7 @@ class editKafkaSinkTask extends viewModelBase {
     shortErrorText: KnockoutObservable<string>;
     
     createNewConnectionString = ko.observable<boolean>(false);
-    newConnectionString = ko.observable<connectionStringKafkaEtlModel>();
+    newConnectionString = ko.observable<connectionStringKafkaModel>();
 
     connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -187,7 +186,7 @@ class editKafkaSinkTask extends viewModelBase {
 
         popoverUtils.longWithHover($(".use-server-certificate"),
             {
-                content: connectionStringKafkaEtlModel.usingServerCertificateInfo
+                content: connectionStringKafkaModel.usingServerCertificateInfo
             });
     }
 
@@ -210,7 +209,7 @@ class editKafkaSinkTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
         
-        this.newConnectionString(connectionStringKafkaEtlModel.empty());
+        this.newConnectionString(connectionStringKafkaModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.kafkaConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
         
         const connectionStringName = this.editedKafkaSink().connectionStringName();
@@ -297,7 +296,7 @@ class editKafkaSinkTask extends viewModelBase {
             getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), this.editedKafkaSink().connectionStringName())
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                    new connectionStringKafkaEtlModel(result.QueueConnectionStrings[this.editedKafkaSink().connectionStringName()], true, [])
+                    new connectionStringKafkaModel(result.QueueConnectionStrings[this.editedKafkaSink().connectionStringName()], true, [])
                         .testConnection(this.activeDatabase())
                         .done((testResult) => this.testConnectionResult(testResult))
                         .always(() => {

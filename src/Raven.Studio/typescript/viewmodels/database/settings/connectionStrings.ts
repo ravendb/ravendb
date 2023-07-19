@@ -3,8 +3,8 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
-import connectionStringKafkaEtlModel = require("models/database/settings/connectionStringKafkaEtlModel");
-import connectionStringRabbitMqEtlModel = require("models/database/settings/connectionStringRabbitMqEtlModel");
+import connectionStringKafkaModel = require("models/database/settings/connectionStringKafkaModel");
+import connectionStringRabbitMqModel = require("models/database/settings/connectionStringRabbitMqModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -40,8 +40,8 @@ class connectionStrings extends viewModelBase {
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
     olapEtlConnectionStringsNames = ko.observableArray<string>([]);
     elasticSearchEtlConnectionStringsNames = ko.observableArray<string>([]);
-    kafkaEtlConnectionStringsNames = ko.observableArray<string>([]);
-    rabbitMqEtlConnectionStringsNames = ko.observableArray<string>([]);
+    kafkaConnectionStringsNames = ko.observableArray<string>([]);
+    rabbitMqConnectionStringsNames = ko.observableArray<string>([]);
     
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: StudioTaskType }>> = {};
@@ -50,8 +50,8 @@ class connectionStrings extends viewModelBase {
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
     editedOlapEtlConnectionString = ko.observable<connectionStringOlapEtlModel>(null);
     editedElasticSearchEtlConnectionString = ko.observable<connectionStringElasticSearchEtlModel>(null);
-    editedKafkaEtlConnectionString = ko.observable<connectionStringKafkaEtlModel>(null);
-    editedRabbitMqEtlConnectionString = ko.observable<connectionStringRabbitMqEtlModel>(null);
+    editedKafkaConnectionString = ko.observable<connectionStringKafkaModel>(null);
+    editedRabbitMqConnectionString = ko.observable<connectionStringRabbitMqModel>(null);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     testConnectionHttpSuccess: KnockoutComputed<boolean>;
@@ -68,7 +68,7 @@ class connectionStrings extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "onEditElasticSearchEtl", "onEditKafkaEtl", "onEditRabbitMqEtl",
+        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "onEditElasticSearchEtl", "onEditKafka", "onEditRabbitMq",
                                    "confirmDelete", "isConnectionStringInUse", 
                                    "onTestConnectionRaven", "onTestConnectionElasticSearch", "onTestConnectionKafka", "onTestConnectionRabbitMq", "testCredentials");
         this.initObservables();
@@ -114,14 +114,14 @@ class connectionStrings extends viewModelBase {
                 return elasticEtl.dirtyFlag().isDirty();
             }
 
-            const kafkaEtl = this.editedKafkaEtlConnectionString();
-            if (kafkaEtl) {
-                return kafkaEtl.dirtyFlag().isDirty();
+            const kafka = this.editedKafkaConnectionString();
+            if (kafka) {
+                return kafka.dirtyFlag().isDirty();
             }
 
-            const rabbitMqEtl = this.editedRabbitMqEtlConnectionString();
-            if (rabbitMqEtl) {
-                return rabbitMqEtl.dirtyFlag().isDirty();
+            const rabbitMq = this.editedRabbitMqConnectionString();
+            if (rabbitMq) {
+                return rabbitMq.dirtyFlag().isDirty();
             }
 
             return false;
@@ -151,10 +151,10 @@ class connectionStrings extends viewModelBase {
                                 this.onEditElasticSearchEtl(args.name);
                                 break;
                             case "Kafka":
-                                this.onEditKafkaEtl(args.name);
+                                this.onEditKafka(args.name);
                                 break;
                             case "RabbitMQ":
-                                this.onEditRabbitMqEtl(args.name);
+                                this.onEditRabbitMq(args.name);
                                 break;
                             default: 
                                 console.warn(`Invalid etl type: ` + args.type);
@@ -198,6 +198,7 @@ class connectionStrings extends viewModelBase {
             task.TaskType === "OlapEtl" ||
             task.TaskType === "ElasticSearchEtl" ||
             task.TaskType === "QueueEtl" ||
+            task.TaskType === "QueueSink" ||
             task.TaskType === "Replication" ||
             task.TaskType === "PullReplicationAsSink");
         
@@ -236,6 +237,10 @@ class connectionStrings extends viewModelBase {
                     break;
                 case "PullReplicationAsSink":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink).ConnectionStringName;
+                    break;
+                case "KafkaQueueSink":
+                case "RabbitQueueSink":
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink).ConnectionStringName;
                     break;
             }
 
@@ -283,15 +288,15 @@ class connectionStrings extends viewModelBase {
                 const kafkaObjects = queueObjects.filter(x => x.BrokerType === "Kafka");
                 const kafkaNames = kafkaObjects.map(x => x.Name);
                 
-                this.kafkaEtlConnectionStringsNames(kafkaNames);
-                this.kafkaEtlConnectionStringsNames(_.sortBy(this.kafkaEtlConnectionStringsNames(), x => x.toUpperCase()));
+                this.kafkaConnectionStringsNames(kafkaNames);
+                this.kafkaConnectionStringsNames(_.sortBy(this.kafkaConnectionStringsNames(), x => x.toUpperCase()));
 
                 // RabbitMQ Etl
                 const rabbitMqObjects = queueObjects.filter(x => x.BrokerType === "RabbitMq");
                 const rabbitMqNames = rabbitMqObjects.map(x => x.Name);
                 
-                this.rabbitMqEtlConnectionStringsNames(rabbitMqNames);
-                this.rabbitMqEtlConnectionStringsNames(_.sortBy(this.rabbitMqEtlConnectionStringsNames(), x => x.toUpperCase()));
+                this.rabbitMqConnectionStringsNames(rabbitMqNames);
+                this.rabbitMqConnectionStringsNames(_.sortBy(this.rabbitMqConnectionStringsNames(), x => x.toUpperCase()));
             });
     }
 
@@ -343,8 +348,8 @@ class connectionStrings extends viewModelBase {
         this.editedSqlEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
     }
 
     onAddSqlEtl() {
@@ -384,8 +389,8 @@ class connectionStrings extends viewModelBase {
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
     }
 
     onAddOlapEtl() {
@@ -443,8 +448,8 @@ class connectionStrings extends viewModelBase {
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
     }
 
     onAddElasticSearchEtl() {
@@ -477,79 +482,79 @@ class connectionStrings extends viewModelBase {
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
     }
 
-    onAddKafkaEtl() {
+    onAddKafka() {
         eventsCollector.default.reportEvent("connection-strings", "add-kafka-etl");
-        this.editedKafkaEtlConnectionString(connectionStringKafkaEtlModel.empty());
-        this.onKafkaEtl();
+        this.editedKafkaConnectionString(connectionStringKafkaModel.empty());
+        this.onKafka();
         this.clearTestResult();
     }
 
-    onEditKafkaEtl(connectionStringName: string) {
+    onEditKafka(connectionStringName: string) {
         this.clearTestResult();
 
         return getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                const kafkaConnectionString = new connectionStringKafkaEtlModel(
+                const kafkaConnectionString = new connectionStringKafkaModel(
                     result.QueueConnectionStrings[connectionStringName],
                     false,
                     this.getTasksThatUseThisString(connectionStringName, "Kafka"));
 
-                this.editedKafkaEtlConnectionString(kafkaConnectionString);
-                this.onKafkaEtl();
+                this.editedKafkaConnectionString(kafkaConnectionString);
+                this.onKafka();
             });
     }
 
-    private onKafkaEtl() {
-        this.editedKafkaEtlConnectionString().bootstrapServers.subscribe(() => this.clearTestResult());
+    private onKafka() {
+        this.editedKafkaConnectionString().bootstrapServers.subscribe(() => this.clearTestResult());
 
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
 
         popoverUtils.longWithHover($(".use-server-certificate"),
             {
-                content: connectionStringKafkaEtlModel.usingServerCertificateInfo
+                content: connectionStringKafkaModel.usingServerCertificateInfo
             });
     }
 
-    onAddRabbitMqEtl() {
+    onAddRabbitMq() {
         eventsCollector.default.reportEvent("connection-strings", "add-rabbitmq-etl");
-        this.editedRabbitMqEtlConnectionString(connectionStringRabbitMqEtlModel.empty());
-        this.onRabbitMqEtl();
+        this.editedRabbitMqConnectionString(connectionStringRabbitMqModel.empty());
+        this.onRabbitMq();
         this.clearTestResult();
     }
 
-    onEditRabbitMqEtl(connectionStringName: string) {
+    onEditRabbitMq(connectionStringName: string) {
         this.clearTestResult();
 
         return getConnectionStringInfoCommand.forRabbitMqEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                const rabbitMqConnectionString = new connectionStringRabbitMqEtlModel(
+                const rabbitMqConnectionString = new connectionStringRabbitMqModel(
                     result.QueueConnectionStrings[connectionStringName],
                     false,
                     this.getTasksThatUseThisString(connectionStringName, "RabbitMQ"));
 
-                this.editedRabbitMqEtlConnectionString(rabbitMqConnectionString);
-                this.onRabbitMqEtl();
+                this.editedRabbitMqConnectionString(rabbitMqConnectionString);
+                this.onRabbitMq();
             });
     }
 
-    private onRabbitMqEtl() {
-        this.editedRabbitMqEtlConnectionString().rabbitMqConnectionString.subscribe(() => this.clearTestResult());
+    private onRabbitMq() {
+        this.editedRabbitMqConnectionString().rabbitMqConnectionString.subscribe(() => this.clearTestResult());
 
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
     }
 
     private getTasksThatUseThisString(connectionStringName: string, connectionStringType: StudioEtlType): { taskName: string; taskId: number }[] {
@@ -642,7 +647,7 @@ class connectionStrings extends viewModelBase {
 
     onTestConnectionKafka() {
         this.clearTestResult();
-        const kafkaConnectionString = this.editedKafkaEtlConnectionString();
+        const kafkaConnectionString = this.editedKafkaConnectionString();
         eventsCollector.default.reportEvent("kafka-connection-string", "test-connection");
 
         this.spinners.test(true);
@@ -657,7 +662,7 @@ class connectionStrings extends viewModelBase {
 
     onTestConnectionRabbitMq() {
         this.clearTestResult();
-        const rabbitMqConnectionString = this.editedRabbitMqEtlConnectionString();
+        const rabbitMqConnectionString = this.editedRabbitMqConnectionString();
         eventsCollector.default.reportEvent("rabbitmq-connection-string", "test-connection");
 
         this.spinners.test(true);
@@ -675,20 +680,20 @@ class connectionStrings extends viewModelBase {
         this.editedSqlEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
-        this.editedKafkaEtlConnectionString(null);
-        this.editedRabbitMqEtlConnectionString(null);
+        this.editedKafkaConnectionString(null);
+        this.editedRabbitMqConnectionString(null);
     }
 
     onSave() {
         let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel | connectionStringOlapEtlModel |
-                   connectionStringElasticSearchEtlModel | connectionStringKafkaEtlModel | connectionStringRabbitMqEtlModel;
+                   connectionStringElasticSearchEtlModel | connectionStringKafkaModel | connectionStringRabbitMqModel;
         
         const editedRavenEtl = this.editedRavenEtlConnectionString();
         const editedSqlEtl = this.editedSqlEtlConnectionString();
         const editedOlapEtl = this.editedOlapEtlConnectionString();
         const editedElasticSearchEtl = this.editedElasticSearchEtlConnectionString();
-        const editedKafkaEtl = this.editedKafkaEtlConnectionString();
-        const editedRabbitMqEtl = this.editedRabbitMqEtlConnectionString();
+        const editedKafka = this.editedKafkaConnectionString();
+        const editedRabbitMq = this.editedRabbitMqConnectionString();
         
         // 1. Validate model
         if (editedRavenEtl) {
@@ -715,17 +720,17 @@ class connectionStrings extends viewModelBase {
             }
             model = editedElasticSearchEtl;
             
-        } else if (editedKafkaEtl) {
-            if (!this.isValidEditedKafkaEtl()) {
+        } else if (editedKafka) {
+            if (!this.isValidEditedKafka()) {
                 return;
             }
-            model = editedKafkaEtl;
+            model = editedKafka;
             
-        } else if (editedRabbitMqEtl) {
-            if (!this.isValidEditedRabbitMqEtl()) {
+        } else if (editedRabbitMq) {
+            if (!this.isValidEditedRabbitMq()) {
                 return;
             }
-            model = editedRabbitMqEtl;
+            model = editedRabbitMq;
         }
 
         // 2. Create/add the new connection string
@@ -739,8 +744,8 @@ class connectionStrings extends viewModelBase {
                 this.editedSqlEtlConnectionString(null);
                 this.editedOlapEtlConnectionString(null);
                 this.editedElasticSearchEtlConnectionString(null);
-                this.editedKafkaEtlConnectionString(null);
-                this.editedRabbitMqEtlConnectionString(null);
+                this.editedKafkaConnectionString(null);
+                this.editedRabbitMqConnectionString(null);
 
                 this.dirtyFlag().reset();
             });
@@ -779,20 +784,20 @@ class connectionStrings extends viewModelBase {
                this.isValid(editedElasticEtl.authentication().validationGroup);
     }
 
-    isValidEditedKafkaEtl() {
-        const editedKafkaEtl = this.editedKafkaEtlConnectionString();
+    isValidEditedKafka() {
+        const editedKafka = this.editedKafkaConnectionString();
         
         let validOptions = true;
-        editedKafkaEtl.connectionOptions().forEach(x => {
+        editedKafka.connectionOptions().forEach(x => {
             validOptions = this.isValid(x.validationGroup);
         })
         
-        return this.isValid(editedKafkaEtl.validationGroup) && validOptions;
+        return this.isValid(editedKafka.validationGroup) && validOptions;
     }
 
-    isValidEditedRabbitMqEtl() {
-        const editedRabbitMqEtl = this.editedRabbitMqEtlConnectionString();
-        return this.isValid(editedRabbitMqEtl.validationGroup);
+    isValidEditedRabbitMq() {
+        const editedRabbitMq = this.editedRabbitMqConnectionString();
+        return this.isValid(editedRabbitMq.validationGroup);
     }
 
     isValidEditedOlapEtl() {
