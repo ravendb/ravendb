@@ -273,6 +273,9 @@ public unsafe struct EntryTermsReader
                     case StoredFieldType.Raw:
                         IsRaw = true;
                         goto case StoredFieldType.Term;
+                    case StoredFieldType.Empty | StoredFieldType.Raw:
+                        IsRaw = true;
+                        goto case StoredFieldType.Empty;
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
                 }
@@ -336,8 +339,17 @@ public unsafe struct EntryTermsReader
         Reset();
         while (MoveNextSpatial())
         {
-            sb.Append("spatial: ").Append(FieldRootPage)
-                .Append("Lat: ")
+            sb.Append("spatial: ");
+            if (fields?.TryGetValue(FieldRootPage, out var name) == true)
+            {
+                sb.Append(name);
+            }
+            else
+            {
+                sb.Append(FieldRootPage);
+            }
+
+            sb.Append("Lat: ")
                 .Append(Latitude)
                 .Append("Lng: ")
                 .Append(Longitude)
@@ -346,7 +358,15 @@ public unsafe struct EntryTermsReader
         Reset();
         while (MoveNextStoredField())
         {
-            sb.Append("Stored: ").Append(FieldRootPage);
+            sb.Append("Stored: ");
+            if (fields?.TryGetValue(FieldRootPage, out var name) == true)
+            {
+                sb.Append(name);
+            }
+            else
+            {
+                sb.Append(FieldRootPage);
+            }
             if (StoredField == null)
             {
                 sb.Append(" null value").AppendLine();

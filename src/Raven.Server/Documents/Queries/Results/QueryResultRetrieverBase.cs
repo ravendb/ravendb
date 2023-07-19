@@ -559,18 +559,19 @@ namespace Raven.Server.Documents.Queries.Results
             // We can always perform projection of ID from Index.
             if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false)
                 return false;
-
-
-            object value = null;
-            if (retrieverInput.KnownFields.TryGetByFieldName(fieldToFetch.Name.Value, out var binding) == false)
-            {
-                if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out value) == false)
-                    return false;
-            }
-            else if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out value) == false)
-                return false;
             
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+
+            if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out object value) == false)
+            {
+                if (fieldToFetch.IsDocumentId)
+                {
+                    toFill[name] = retrieverInput.DocumentId;
+                    return true;
+                }
+                return false;
+            }
+            
             toFill[name] = value;
             
             return true;
@@ -644,8 +645,15 @@ namespace Raven.Server.Documents.Queries.Results
                 var span = reader.StoredField.Value;    
                 if (reader.IsRaw)
                 {
-                    var json = new BlittableJsonReaderObject(span.Address, span.Length, context);
-                    SetValue(ref value, json);
+                    if (span.Length == 0)
+                    {
+                        // IsRaw here is possible when storing an empty list
+                    }
+                    else
+                    {
+                        var json = new BlittableJsonReaderObject(span.Address, span.Length, context);
+                        SetValue(ref value, json);
+                    }
                 }
                 else
                 {
@@ -653,16 +661,6 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
             
-            if (found == false)
-            {
-                reader.Reset();
-                while (reader.FindNext(fieldRootPage))
-                {
-                    found = true;
-                    SetValue(ref value, reader.Current.ToString());
-                }
-            }
-
             return found;
 
             void SetValue(ref object value, object newVal)

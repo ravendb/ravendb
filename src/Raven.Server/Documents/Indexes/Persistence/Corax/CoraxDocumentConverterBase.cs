@@ -251,9 +251,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
                 builder.IncrementList();
+                bool hasValues = false;
                 foreach (var item in iterator)
                 {
+                    hasValues = true;
                     InsertRegularField(field, item, indexContext, builder, sourceDocument, out _, nestedArray);
+                }
+
+                if (hasValues == false && field.Storage == FieldStorage.Yes)
+                {
+                    builder.RegisterEmptyOrNull(field.Id, field.Name, StoredFieldType.Empty | StoredFieldType.Raw | StoredFieldType.List);
                 }
                 builder.DecrementList();
 

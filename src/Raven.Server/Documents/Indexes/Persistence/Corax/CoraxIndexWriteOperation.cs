@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -36,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_indexingScope != null)
             {
                 _indexingScope.OnNewDynamicField += UpdateDynamicFieldsBindings;
+                _indexingScope.DynamicFields ??= new Dictionary<string, IndexField>();
             }
             _allocator = writeTransaction.Allocator;
             try
@@ -50,25 +52,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 throw new IndexWriteException(e);
             }
-            
-            if (index.Definition.HasDynamicFields)
+
+            _dynamicFieldsBuilder = IndexFieldsMappingBuilder.CreateForWriter(true);
+            try
             {
-                _dynamicFieldsBuilder = IndexFieldsMappingBuilder.CreateForWriter(true);
-                try
-                {
-                    _dynamicFieldsBuilder
-                        .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
-                        .AddExactAnalyzer(knownFields.ExactAnalyzer)
-                        .AddSearchAnalyzer(knownFields.SearchAnalyzer);
-                }
-                catch
-                {
-                    _dynamicFieldsBuilder.Dispose();
-                    throw;
-                }
-                _indexingScope.DynamicFields ??= new();
-                UpdateDynamicFieldsBindings();
+                _dynamicFieldsBuilder
+                    .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
+                    .AddExactAnalyzer(knownFields.ExactAnalyzer)
+                    .AddSearchAnalyzer(knownFields.SearchAnalyzer);
             }
+            catch
+            {
+                _dynamicFieldsBuilder.Dispose();
+                throw;
+            }
+
+            UpdateDynamicFieldsBindings();
         }
         
         public override void Commit(IndexingStatsScope stats)
@@ -93,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 stats.RecordIndexingOutput();
                 _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
 
-                if (builder.Fields != 0) 
+                if (builder.Fields > 1) 
                     return;
                 Delete(key, stats);
             }

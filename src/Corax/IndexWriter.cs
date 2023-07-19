@@ -449,6 +449,7 @@ namespace Corax
             void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry);
             void Store(BlittableJsonReaderObject storedValue);
             void Store(int fieldId, string name, BlittableJsonReaderObject storedValue);
+            void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type);
             void IncrementList();
             void DecrementList();
         }
@@ -713,6 +714,12 @@ namespace Corax
                     TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
                     Long = termId
                 });
+            }
+
+            public void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type)
+            {
+                var field = GetField(fieldId, fieldName);
+                RegisterEmptyOrNull(field.Name, type);
             }
             
             void RegisterEmptyOrNull(Slice fieldName,StoredFieldType type)

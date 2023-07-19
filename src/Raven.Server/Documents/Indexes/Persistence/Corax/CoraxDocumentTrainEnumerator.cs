@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -92,6 +93,11 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         }
 
         public void Store(BlittableJsonReaderObject storedValue)
+        {
+            // nothing to do
+        }
+
+        public void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type)
         {
             // nothing to do
         }
