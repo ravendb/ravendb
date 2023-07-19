@@ -215,7 +215,7 @@ function ConnectedClients(props: ConnectedClientsProps) {
 }
 
 export function SubscriptionPanel(props: SubscriptionPanelProps) {
-    const { db, data, connections, dropSubscription, refreshSubscriptionInfo } = props;
+    const { db, data, connections, dropSubscription, refreshSubscriptionInfo, toggleSelection, isSelected } = props;
 
     const { canReadWriteDatabase } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -233,7 +233,11 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
+                        <Input
+                            type="checkbox"
+                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                            checked={isSelected(data.shared.taskName)}
+                        />
                     </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>

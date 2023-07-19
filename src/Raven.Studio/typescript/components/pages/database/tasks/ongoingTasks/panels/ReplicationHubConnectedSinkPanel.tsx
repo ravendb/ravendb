@@ -8,10 +8,8 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-    RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared";
-import { Input } from "reactstrap";
 
 interface ReplicationHubConnectedSinkPanelProps {
     db: database;
@@ -25,9 +23,6 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
-                    </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
                 </RichPanelInfo>
                 <RichPanelActions>

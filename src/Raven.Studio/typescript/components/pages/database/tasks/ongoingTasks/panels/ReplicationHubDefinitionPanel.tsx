@@ -1,5 +1,11 @@
 ﻿import React from "react";
-import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../../shared";
+import {
+    BaseOngoingTaskPanelProps,
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskStatus,
+    useTasksOperations,
+} from "../../shared";
 import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskReplicationHubInfo,
@@ -22,11 +28,7 @@ import genUtils from "common/generalUtils";
 import { Collapse, Input } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
 
-interface ReplicationHubPanelProps {
-    db: database;
-    data: OngoingTaskHubDefinitionInfo;
-    onDelete: (task: OngoingTaskSharedInfo) => void;
-    toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
+interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
     connectedSinks: OngoingTaskReplicationHubInfo[];
 }
 
@@ -63,7 +65,7 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 }
 
 export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
-    const { data, db } = props;
+    const { data, db, toggleSelection, isSelected } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
 
@@ -80,7 +82,11 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
+                        <Input
+                            type="checkbox"
+                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                            checked={isSelected(data.shared.taskName)}
+                        />
                     </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>

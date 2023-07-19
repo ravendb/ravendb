@@ -44,7 +44,7 @@ function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
 }
 
 export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview } = props;
+    const { db, data, showItemPreview, toggleSelection, isSelected } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -69,7 +69,11 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelSelect>
-                        <Input type="checkbox" onChange={() => null} checked={false} />
+                        <Input
+                            type="checkbox"
+                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                            checked={isSelected(data.shared.taskName)}
+                        />
                     </RichPanelSelect>
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
