@@ -194,20 +194,6 @@ namespace Raven.Client
 
             public class Metadata
             {
-                internal static readonly HashSet<string> SystemKeys = new()
-                {
-                    Key,
-                    Projection,
-                    Id,
-                    TimeSeriesNamedValues,
-                    IndexScore,
-                    SpatialResult,
-                    LastModified,
-                    ChangeVector,
-                    Etag,
-                    Flags
-                };
-
                 private Metadata()
                 {
                 }
