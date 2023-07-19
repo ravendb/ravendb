@@ -137,6 +137,13 @@ namespace Raven.Server.ServerWide.Commands
                         record.QueueEtls.Remove(queueEtl);
                     }
                     break;
+                case OngoingTaskType.QueueSink:
+                    var queueSink = record.QueueSinks.Find(x => x.TaskId == TaskId);
+                    if (queueSink != null)
+                    {
+                        record.QueueSinks.Remove(queueSink);
+                    }
+                    break;
             }
         }
 
