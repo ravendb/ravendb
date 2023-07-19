@@ -30,7 +30,7 @@ class ongoingTaskKafkaSinkEditModel extends ongoingTaskQueueSinkEditModel {
                     Disabled: false,
                     Scripts: [],
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSinkDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink);
     }
 }
 
