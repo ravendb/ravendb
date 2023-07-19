@@ -192,6 +192,18 @@ namespace Raven.Server.Web.System
 
             return taskState;
         }
+        
+        internal static OngoingTaskState GetQueueSinkTaskState(QueueSinkConfiguration config)
+        {
+            var taskState = OngoingTaskState.Enabled;
+
+            if (config.Disabled || config.Scripts.All(x => x.Disabled))
+                taskState = OngoingTaskState.Disabled;
+            else if (config.Scripts.Any(x => x.Disabled))
+                taskState = OngoingTaskState.PartiallyEnabled;
+
+            return taskState;
+        }
     }
 
     public sealed class OngoingTasksResult : IDynamicJson

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Raven.Client.Documents.Operations.QueueSink;
 
 namespace Raven.Server.Documents.QueueSink;
@@ -13,7 +15,7 @@ public class RabbitMqQueueSink : QueueSinkProcess
     }
 
     private IModel _channel;
-    private List<ulong> messagesTags = new();
+    private ulong? _latestDeliveryTag = new();
 
     protected override List<byte[]> ConsumeMessages()
     {
@@ -47,7 +49,9 @@ public class RabbitMqQueueSink : QueueSinkProcess
                     var message = _channel.BasicGet(queue, autoAck: false);
                     if (message is null) break;
                     messageBatch.Add(message.Body.ToArray());
-                    messagesTags.Add(message.DeliveryTag);
+                    _latestDeliveryTag = message.DeliveryTag > _latestDeliveryTag // todo: check this if it's ok
+                        ? message.DeliveryTag
+                        : _latestDeliveryTag;
                 }
                 catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
                 {
@@ -68,27 +72,14 @@ public class RabbitMqQueueSink : QueueSinkProcess
             }
         }
         
-        //var message = channel.BasicGet("my_queue", autoAck: false);
-        /*var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (model, ea) =>
-        {
-            var body = ea.Body.ToArray();
-            result.Add(body);
-        }
-
-        foreach (string queue in Script.Queues)
-        {
-            channel.BasicConsume(queue: queue, autoAck: true, consumer: consumer);    
-        };*/
-        
         return messageBatch;
     }
 
     protected override void Commit()
     {
-        foreach (var tag in messagesTags)
+        if (_latestDeliveryTag.HasValue)
         {
-            _channel.BasicAck(tag, false);
+            _channel.BasicAck(_latestDeliveryTag.Value, true);    
         }
     }
 
