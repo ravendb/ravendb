@@ -2726,6 +2726,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddElasticSearchEtlCommand):
                 case nameof(AddOlapEtlCommand):
                 case nameof(AddQueueEtlCommand):
+                case nameof(AddQueueSinkCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):
@@ -2763,6 +2764,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateOlapEtlCommand):
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(UpdateQueueEtlCommand):
+                case nameof(UpdateQueueSinkCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(StartBucketMigrationCommand):
