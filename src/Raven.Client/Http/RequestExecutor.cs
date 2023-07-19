@@ -1254,6 +1254,8 @@ namespace Raven.Client.Http
         private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
             CancellationToken token = default)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+
             long numberOfFailedTasks = 0;
 
             var nodes = _nodeSelector.Topology.Nodes;
@@ -1277,7 +1279,7 @@ namespace Raven.Client.Http
                     Interlocked.Increment(ref NumberOfServerRequests);
 
                     var copy = disposable;
-                    tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
+                    tasks[i] = command.SendAsync(HttpClient, request, cts.Token).ContinueWith(x =>
                     {
                         try
                         {
@@ -1296,7 +1298,7 @@ namespace Raven.Client.Http
                         {
                             copy.Dispose();
                         }
-                    }, token);
+                    }, cts.Token);
                 }
                 catch (Exception)
                 {
@@ -1319,9 +1321,33 @@ namespace Raven.Client.Http
                     numberOfFailedTasks++;
                     continue;
                 }
+
                 _nodeSelector.RecordFastest(index, nodes[index]);
+
+                cts.Cancel();
+
+                // we need to await all the tasks to avoid them running after e.g. session is disposed
+                foreach (var task in tasks)
+                {
+                    if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+                        continue;
+
+                    if (task == NeverEndingRequest)
+                        continue;
+
+                    try
+                    {
+                        await task.ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+
                 return;
             }
+
             // we can reach here if the number of failed task equal to the number
             // of the nodes, in which case we have nothing to do
         }
@@ -1772,7 +1798,7 @@ namespace Raven.Client.Http
 
                 return;
             }
-            
+
             if (serverNode == null)
                 return;
 
@@ -2328,9 +2354,9 @@ namespace Raven.Client.Http
 
             private bool Equals(HttpClientCacheKey other)
             {
-                return _certificateThumbprint == other._certificateThumbprint 
-                       && _useCompression == other._useCompression 
-                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
+                return _certificateThumbprint == other._certificateThumbprint
+                       && _useCompression == other._useCompression
+                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime)
                        && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
                        && _httpClientType == other._httpClientType;
             }
