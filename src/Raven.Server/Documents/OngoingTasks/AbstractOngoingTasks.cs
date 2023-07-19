@@ -533,6 +533,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             Error = error,
             Configuration = queueSink,
             ConnectionStringName = queueSink.ConnectionStringName,
+            Url = connection?.GetUrl()
         };
     }
 }
