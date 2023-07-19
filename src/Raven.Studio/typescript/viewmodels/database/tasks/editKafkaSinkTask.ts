@@ -25,7 +25,7 @@ class kafkaTaskTestMode {
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
 
-    messageText = ko.observable("");
+    messageText = ko.observable("{}");
     
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
