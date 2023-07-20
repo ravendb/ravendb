@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             List<string> errors = new ();
             if (GetConnectionString(configuration, connectionStringType).Validate(ref errors) == false)
             {
-                throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join("\n", errors)}");
+                throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
             }
         }
         
