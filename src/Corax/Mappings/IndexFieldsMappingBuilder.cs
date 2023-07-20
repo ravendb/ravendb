@@ -72,7 +72,7 @@ public class IndexFieldsMappingBuilder : IDisposable
     }
     
     public IndexFieldsMappingBuilder AddBinding(int fieldId, string fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false, bool shouldStore = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         Slice.From(_context, fieldName, out var slice);
         return AddBinding(fieldId, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore , hasSpatial);
