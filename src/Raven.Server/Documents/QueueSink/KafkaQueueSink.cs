@@ -69,7 +69,6 @@ public class KafkaQueueSink : QueueSinkProcess
             }
         }
 
-        if (messageBatch.Count == 0) return messageBatch;
         return messageBatch;
     }
 
