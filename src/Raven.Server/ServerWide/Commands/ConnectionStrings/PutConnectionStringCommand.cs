@@ -70,8 +70,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            // Validate ConnectionString.FactoryName
-            SqlProviderParser.GetSupportedProvider(ConnectionString.FactoryName);
             record.SqlConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
