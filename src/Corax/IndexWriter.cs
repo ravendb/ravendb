@@ -460,7 +460,6 @@ namespace Corax
             private readonly IndexWriter _parent;
             private long _entryId;
             public bool Active;
-            public int Fields;
             private int _buildingList;
             public long EntryId => _entryId;
 
@@ -477,7 +476,6 @@ namespace Corax
             public void Init(long entryId)
             {
                 Active = true;
-                Fields = 0;
                 _entryId = entryId;
             }
 
@@ -499,8 +497,6 @@ namespace Corax
 
             private IndexedField GetField(int fieldId, string path)
             {
-                Fields++;
-
                 var field = fieldId != Constants.IndexWriter.DynamicField
                     ? _parent._knownFieldsTerms[fieldId]
                     : _parent.GetDynamicIndexedField(_parent._entriesAllocator, path);

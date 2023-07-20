@@ -60,7 +60,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
                 
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
-            hasFields = true;
+            hasFields |= innerShouldSkip == false;
                 
             if (storedValue is not null && innerShouldSkip == false)
             {

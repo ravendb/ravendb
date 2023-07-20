@@ -33,6 +33,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         foreach (var indexField in _fields.Values)
         {
             object value;
+            bool innerShouldSkip = false;
             if (indexField.Spatial is AutoSpatialOptions spatialOptions)
             {
                 var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
@@ -58,14 +59,14 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                         throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                 }
 
-                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, out var _);
+                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, out innerShouldSkip);
             }
             else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
             {
-                InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out var _);
+                InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
             }
             
-            hasFields = true;
+            hasFields |= innerShouldSkip == false;
         }
 
         if (key != null)

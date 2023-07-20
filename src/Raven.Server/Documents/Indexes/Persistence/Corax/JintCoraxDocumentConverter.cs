@@ -67,7 +67,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         var indexingScope = CurrentIndexingScope.Current;
         foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
         {
-            hasFields = true;
+            bool innerShouldSkip = false;
             var propertyAsString = property.AsString();
             var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
             var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
@@ -79,10 +79,10 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 do
                 {
                     ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
-                        out shouldSaveAsBlittable, out value, out actualValue, out _);
+                        out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
+                    hasFields |= innerShouldSkip == false;
                     if (shouldSaveAsBlittable)
                         ProcessAsJson(actualValue, field, documentToProcess, out _);
-
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
                 } while (iterator.MoveNext());
@@ -90,7 +90,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             else
             {
                 ProcessObject(propertyDescriptor.Value, propertyAsString, field, indexingScope, documentToProcess,
-                    out shouldSaveAsBlittable, out value, out actualValue, out _);
+                    out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
+                hasFields |= innerShouldSkip == false;
                 if (shouldSaveAsBlittable)
                     ProcessAsJson(actualValue, field, documentToProcess, out _);
                 var disposable = value as IDisposable;
