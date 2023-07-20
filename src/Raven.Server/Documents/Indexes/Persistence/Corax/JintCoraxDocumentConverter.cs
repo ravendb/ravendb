@@ -53,13 +53,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             //nothing to index, finish the job
             return false;
         }
-
-        if (key != null)
-            builder.Write(0, key.AsReadOnlySpan());
-
-        if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
-            builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
-
+        
         if (TryGetBoostedValue(documentToProcess, out var boostedValue, builder))
             documentToProcess = boostedValue.AsObject();
 
@@ -98,6 +92,15 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 disposable?.Dispose();
             }
         }
+        
+        if (hasFields is false && _indexEmptyEntries is false)
+            return false;
+
+        if (key != null)
+            builder.Write(0, key.AsReadOnlySpan());
+
+        if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
+            builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
 
         if (_storeValue)
         {
@@ -106,7 +109,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             builder.Store(storedValue);
         }
 
-        return hasFields || _indexEmptyEntries;
+        return true;
 
         //Helpers
 

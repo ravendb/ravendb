@@ -72,6 +72,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             }
         }
 
+        if (hasFields is false && _indexEmptyEntries is false)
+            return false;
+
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
@@ -84,6 +87,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
         builder.Write(0, string.Empty, id.AsSpan());
         
-        return hasFields || _indexEmptyEntries;
+        return true;
     }
 }

@@ -68,6 +68,9 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             
             hasFields |= innerShouldSkip == false;
         }
+        
+        if (hasFields is false && _indexEmptyEntries is false)
+            return false;
 
         if (key != null)
         {
@@ -89,6 +92,6 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             }
         }
 
-        return hasFields || _indexEmptyEntries;
+        return true;
     }
 }
