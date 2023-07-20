@@ -446,7 +446,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/RabbitMQ SINK/)).toBeInTheDocument();
+            expect(await screen.findByText(/RABBITMQ SINK/)).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
