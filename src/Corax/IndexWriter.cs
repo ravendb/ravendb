@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Unicode;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -461,6 +462,8 @@ namespace Corax
             private long _entryId;
             public bool Active;
             private int _buildingList;
+            private Tree _fieldsTree;
+
             public long EntryId => _entryId;
 
             public IndexEntryBuilder(IndexWriter parent)
@@ -696,21 +699,25 @@ namespace Corax
                     type |= StoredFieldType.List;
                 }
                 ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
-                var fieldsTree = _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, fieldsTree);
 
-                var termId = Container.Allocate(_parent._transaction.LowLevelTransaction, _parent._storedFieldsContainerId,
-                    term.Length, fieldRootPage, out Span<byte> space);
+                _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, _fieldsTree);
+
+                var termId = Container.Allocate(
+                                    _parent._transaction.LowLevelTransaction, 
+                                    _parent._storedFieldsContainerId,
+                                    term.Length, fieldRootPage, 
+                                    out Span<byte> space);
                 term.CopyTo(space);
                 entryTerms.Add(new RecordedTerm
-                {
+                (
                     // why: entryTerms.Count << 8 
                     // we put entries count here because we are sorting the entries afterward
                     // this ensure that stored values are then read using the same order we have for writing them
                     // which is important for storing arrays
-                    TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
-                    Long = termId
-                });
+                    termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    @long: termId
+                ));
             }
 
             public void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type)
@@ -722,18 +729,19 @@ namespace Corax
             void RegisterEmptyOrNull(Slice fieldName,StoredFieldType type)
             {
                 ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
-                var fieldsTree = _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, fieldsTree);
+
+                _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, _fieldsTree);
 
                 entryTerms.Add(new RecordedTerm
-                {
+                (
                     // why: entryTerms.Count << 8 
                     // we put entries count here because we are sorting the entries afterward
                     // this ensure that stored values are then read using the same order we have for writing them
                     // which is important for storing arrays
-                    TermContainerId = entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
-                    Long = fieldRootPage
-                });
+                    termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    @long: fieldRootPage
+                ));
             }
 
             public void IncrementList()
@@ -953,6 +961,19 @@ namespace Corax
             public int CompareTo(RecordedTerm other)
             {
                 return TermContainerId.CompareTo(other.TermContainerId);
+            }
+
+            public RecordedTerm(long termContainerId, long @long)
+            {
+                TermContainerId = termContainerId;
+                Long = @long;
+            }
+
+            public RecordedTerm(long termContainerId, double lat, double lng)
+            {
+                TermContainerId = termContainerId;
+                Lat = lat;
+                Lng = lng;
             }
         }
         
@@ -1450,7 +1471,7 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
+        private void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
         {
             if (indexedField.Spatial == null)
                 return;
@@ -1465,15 +1486,15 @@ namespace Corax
                 list.Sort();
 
                 ref var entryTerms = ref GetEntryTerms(entry);
-                for (int i = 0; i < list.Count; i++)
+                foreach (var item in list)
                 {
-                    var (lat,lng) = list[i];
+                    var (lat,lng) = item;
                     entryTerms.Add(new RecordedTerm
-                    {
-                        TermContainerId = termContainerId,
-                        Lat =  lat,
-                        Lng =  lng
-                    });
+                    (
+                        termContainerId: termContainerId,
+                        lat: lat,
+                        lng: lng
+                    ));
                 }
 
                 {
