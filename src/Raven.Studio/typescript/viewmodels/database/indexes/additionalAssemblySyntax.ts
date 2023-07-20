@@ -17,7 +17,7 @@ class additionalAssemblySyntax extends dialogViewModelBase {
 
     copySample(sampleTitle: string) {
         const sampleText = additionalAssemblySyntax.csharpSamples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard");
     }
 
     static readonly additionalSourceCsharpText =

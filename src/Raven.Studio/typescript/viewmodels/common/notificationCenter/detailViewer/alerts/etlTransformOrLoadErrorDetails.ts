@@ -82,7 +82,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
     }
     
     copyToClipboard(item: Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo) {
-        copyToClipboard.copy(item.Error, "Error has been copied to clipboard", document.getElementById("js-etl-error-details"));
+        copyToClipboard.copy(item.Error, "Error has been copied to clipboard");
     }
 
     private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>> {

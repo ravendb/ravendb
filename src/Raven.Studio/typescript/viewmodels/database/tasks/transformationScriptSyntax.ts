@@ -63,7 +63,7 @@ class transformationScriptSyntax extends dialogViewModelBase {
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
         
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard");
     }
 
     static readonly ravenEtlSamples: Array<sampleCode> = [
