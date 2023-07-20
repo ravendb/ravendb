@@ -879,7 +879,8 @@ person.addCounter(loadCounter('down'));
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "System.Data.SqlClient"
                 };
                 ravenConnectionStrings.Add(ravenConnectionStr);
                 sqlConnectionStrings.Add(sqlConnectionStr);
@@ -914,7 +915,8 @@ person.addCounter(loadCounter('down'));
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                        FactoryName = "System.Data.SqlClient"
                     };
 
                     ravenConnectionStrings.Add(ravenConnectionStr);
@@ -960,6 +962,7 @@ person.addCounter(loadCounter('down'));
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "System.Data.SqlClient"
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -1016,6 +1019,7 @@ person.addCounter(loadCounter('down'));
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "System.Data.SqlClient"
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -1972,7 +1976,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 error = Assert.ThrowsAny<RavenException>(() =>
                 {
-                    SetupLocalOlapEtl(src, script: null, path: "", mentor: "A");
+                    SetupLocalOlapEtl(src, script: "some script", path: "./", mentor: "A");
                 });
 
                 Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
