@@ -32,8 +32,9 @@ namespace SlowTests.Issues
                     id = user.Id;
                     session.SaveChanges();
                 }
-                
-                AssertRequestCountEqual(metadataFor => {
+
+                AssertRequestCountEqual(metadataFor =>
+                {
                     foreach (var keyValue in metadataFor)
                     {
 
@@ -77,21 +78,19 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                AssertRequestCountNotEqual(metadataFor => metadataFor.Remove(Constants.Documents.Metadata.LastModified));
-                AssertRequestCountNotEqual(metadataFor =>
-                    metadataFor.Remove(
-                        new KeyValuePair<string, object>(Constants.Documents.Metadata.LastModified, metadataFor[Constants.Documents.Metadata.LastModified])));
-                AssertRequestCountNotEqual(metadataFor => metadataFor["@last-modified"] = "Users");
-                AssertRequestCountNotEqual(metadataFor =>
+                AssertRequestCount(metadataFor => metadataFor.Remove(Constants.Documents.Metadata.LastModified), requestCountEqual: true);
+                AssertRequestCount(metadataFor => metadataFor.Remove(new KeyValuePair<string, object>(Constants.Documents.Metadata.LastModified, metadataFor[Constants.Documents.Metadata.LastModified])), requestCountEqual: true);
+                AssertRequestCount(metadataFor => metadataFor["@last-modified"] = "Users", requestCountEqual: true);
+                AssertRequestCount(metadataFor =>
                 {
                     metadataFor["@last-modified"] = null;
                     metadataFor["@last-modified"] = "Users";
-                } );
-                AssertRequestCountNotEqual(metadataFor => metadataFor["@1234"] = "Users");
-                AssertRequestCountNotEqual(metadataFor => metadataFor.Add(new KeyValuePair<string, object>("@sfddfdsf", "fgffffg")));
-                AssertRequestCountNotEqual(metadataFor => metadataFor.Add("@ewewrewr", "fdsfdgfdg"));
+                }, requestCountEqual: true);
+                AssertRequestCount(metadataFor => metadataFor["@1234"] = "Users");
+                AssertRequestCount(metadataFor => metadataFor.Add(new KeyValuePair<string, object>("@sfddfdsf", "fgffffg")));
+                AssertRequestCount(metadataFor => metadataFor.Add("@ewewrewr", "fdsfdgfdg"));
 
-                void AssertRequestCountNotEqual(Action<IMetadataDictionary> action)
+                void AssertRequestCount(Action<IMetadataDictionary> action, bool requestCountEqual = false)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -104,7 +103,10 @@ namespace SlowTests.Issues
 
                         session.SaveChanges();
 
-                        Assert.NotEqual(requestsBefore, session.Advanced.NumberOfRequests);
+                        if (requestCountEqual == false)
+                            Assert.NotEqual(requestsBefore, session.Advanced.NumberOfRequests);
+                        else
+                            Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
                     }
                 }
             }

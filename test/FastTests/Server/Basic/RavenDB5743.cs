@@ -13,7 +13,7 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public async Task WillFilterMetadataPropertiesStartingWithAt()
+        public async Task WillNotFilterMetadataPropertiesStartingWithAt()
         {
             using (var store = GetDocumentStore())
             {
@@ -33,7 +33,7 @@ namespace FastTests.Server.Basic
                 {
                     var company3 = await session.LoadAsync<Company>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(company3);
-                    Assert.False(metadata.ContainsKey("@foo"));
+                    Assert.True(metadata.ContainsKey("@foo"));
                     Assert.Equal("should be there", metadata.GetString("custom-info"));
                 }
             }

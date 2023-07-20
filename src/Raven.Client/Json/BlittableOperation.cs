@@ -59,12 +59,12 @@ namespace Raven.Client.Json
 
             foreach (var field in removedFields)
             {
-                if (changes == null)
-                    return true;
                 if (field.Equals(LastModified) ||
                     field.Equals(ChangeVector) ||
                     field.Equals(Id))
                     continue;
+                if (changes == null)
+                    return true;
                 NewChange(fieldPath, field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
