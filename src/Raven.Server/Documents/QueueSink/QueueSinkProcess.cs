@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -12,6 +13,8 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Background;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.QueueSink.Stats;
+using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -23,6 +26,12 @@ namespace Raven.Server.Documents.QueueSink;
 
 public abstract class QueueSinkProcess : BackgroundWorkBase
 {
+    private int _statsId;
+    private QueueSinkStatsAggregator _lastStats;
+
+    private readonly ConcurrentQueue<QueueSinkStatsAggregator> _lastQueueSinkStats =
+        new ConcurrentQueue<QueueSinkStatsAggregator>();
+
     protected QueueSinkProcess(QueueSinkConfiguration configuration, QueueSinkScript script,
         DocumentDatabase database, string resourceName, CancellationToken shutdown)
         : base(resourceName, shutdown)
@@ -54,6 +63,8 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
     public DocumentDatabase Database { get; }
 
     public QueueSinkProcessStatistics Statistics { get; }
+
+    public long TaskId => Configuration.TaskId;
 
     public string Tag { get; }
 
@@ -101,7 +112,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
     {
         ProcessFallback();
         bool batchStopped = false;
-
+        
         List<byte[]> messageBatch = ConsumeMessages();
 
         try
@@ -164,6 +175,14 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
         Statistics.ConsumeSuccess(messageBatch.Count);
         Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+    }
+
+    private void AddPerformanceStats(QueueSinkStatsAggregator stats)
+    {
+        _lastQueueSinkStats.Enqueue(stats);
+
+        while (_lastQueueSinkStats.Count > 25)
+            _lastQueueSinkStats.TryDequeue(out stats);
     }
 
     protected abstract List<byte[]> ConsumeMessages();
@@ -294,5 +313,15 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
             Thread.Sleep(FallbackTime.Value);
             FallbackTime = null;
         }
+    }
+
+    public QueueSinkPerformanceStats[] GetPerformanceStats()
+    {
+        throw new NotImplementedException();
+    }
+
+    public QueueSinkStatsAggregator GetLatestPerformanceStats()
+    {
+        throw new NotImplementedException();
     }
 }
