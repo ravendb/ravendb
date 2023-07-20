@@ -23,7 +23,8 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     private const string DefaultScript = "put(this.Id, this)";
     private readonly List<string> _defaultQueue = new() { "users" };
 
-    [RequiresRabbitMqRetryFact]
+    [Fact]
+    //[RequiresRabbitMqRetryFact]
     public void SimpleScript()
     {
         var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
@@ -66,7 +67,8 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         Assert.Equal("Smith", fetchedUser2.LastName);
     }
     
-    [RequiresRabbitMqRetryFact]
+    [Fact]
+    //[RequiresRabbitMqRetryFact]
     public void SimpleScriptMultiQueues()
     {
         var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
