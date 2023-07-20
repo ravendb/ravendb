@@ -284,7 +284,11 @@ namespace Raven.Server.SqlMigration
                             switch (refInfo.EmbeddedDocumentsSqlKeysStorage)
                             {
                                 case EmbeddedDocumentSqlKeysStorage.OnDocumentMetadata:
-                                    value[Constants.Documents.Metadata.Key] = new DynamicJsonValue{["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues};
+                                    var metadata = (DynamicJsonValue)value[Constants.Documents.Metadata.Key];
+                                    if (metadata is not null) // Prevent metadata overwrites
+                                        metadata["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues;
+                                    else
+                                        value[Constants.Documents.Metadata.Key] = new DynamicJsonValue {["@sql-keys"] = embeddedObjectValue.SpecialColumnsValues};
                                     break;
                                 case EmbeddedDocumentSqlKeysStorage.AsNestedDocumentProperty:
                                     foreach (var specialField in embeddedObjectValue.SpecialColumnsValues.Properties)

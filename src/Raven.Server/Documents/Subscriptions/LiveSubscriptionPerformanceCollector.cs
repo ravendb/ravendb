@@ -220,7 +220,8 @@ namespace Raven.Server.Documents.Subscriptions
                     using (context.OpenReadTransaction())
                     {
                         var inProgressConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
-
+                        if (inProgressConnections != null)
+                        {
                         foreach (var connection in inProgressConnections.GetConnections())
                         {
                             var inProgressBatchStats = connection.Stats.GetBatchPerformanceStats;
@@ -232,6 +233,7 @@ namespace Raven.Server.Documents.Subscriptions
                                 batchAggregators.Add(inProgressBatchStats);
                             }
                         }
+                    }
                     }
 
                     // 3. add to results
