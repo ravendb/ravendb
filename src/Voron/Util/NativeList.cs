@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Sorting = Sparrow.Server.Utils.VxSort.Sort;
 
 namespace Voron.Util;
 
@@ -72,6 +73,17 @@ public unsafe struct NativeList<T> : IDisposable
 
     public readonly void Sort()
     {
-        new Span<T>(RawItems, Count).Sort();
+        if (typeof(T) == typeof(int))
+        {
+            Sorting.Run(new Span<int>(RawItems, Count));
+        }
+        else if (typeof(T) == typeof(long))
+        {
+            Sorting.Run(new Span<long>(RawItems, Count));
+        }
+        else
+        {
+            new Span<T>(RawItems, Count).Sort();
+        }
     }
 }
