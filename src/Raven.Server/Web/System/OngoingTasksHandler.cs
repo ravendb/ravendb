@@ -777,19 +777,16 @@ namespace Raven.Server.Web.System
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
                     var connectionStringType = ConnectionString.GetConnectionStringType(readerObject);
-                    switch (connectionStringType)
-                    {
-                        case ConnectionStringType.Olap:
-                            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                            SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject), feature?.Status);
-                            break;
-                    }
-                    
-                    List<string> errors = new ();
-                    if (GetConnectionString(readerObject, connectionStringType).Validate(ref errors) == false)
+                    var connectionString = GetConnectionString(readerObject, connectionStringType);
+
+                    List<string> errors = new();
+                    if (connectionString.Validate(ref errors) == false)
                     {
                         throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join(Environment.NewLine, errors)}");
                     }
+
+                    var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                    SecurityClearanceValidator.AssertSecurityClearance(connectionString, feature?.Status);
                 });
         }
 
@@ -798,7 +795,7 @@ namespace Raven.Server.Web.System
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    return JsonDeserializationCluster.RavenConnectionString(readerObject); 
+                    return JsonDeserializationCluster.RavenConnectionString(readerObject);
                 case ConnectionStringType.Sql:
                     return JsonDeserializationCluster.SqlConnectionString(readerObject);
                 case ConnectionStringType.Olap:
@@ -812,7 +809,7 @@ namespace Raven.Server.Web.System
                     throw new ArgumentOutOfRangeException(nameof(connectionStringType), connectionStringType, "Unexpected connection string type.");
             }
         }
-        
+
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
