@@ -27,7 +27,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         _isMultiMap = index.IsMultiMap;
     }
 
-    protected override void SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+    protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
         object sourceDocument)
     {
         var boostedValue = doc as BoostedValue;
@@ -50,7 +50,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         if (boostedValue != null)
             builder.Boost(boostedValue.Boost);
 
-        bool shouldSkip = _indexEmptyEntries == false;
+        bool hasFields = false;
         foreach (var property in accessor.GetProperties(documentToProcess))
         {
             var value = property.Value;
@@ -60,8 +60,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
                 
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
-            shouldSkip &= innerShouldSkip;
-                
+            hasFields = true;
                 
             if (storedValue is not null && innerShouldSkip == false)
             {
@@ -73,11 +72,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             }
         }
 
-        if (shouldSkip && builder.IsEmpty && _indexEmptyEntries == false)
-        {
-            return;
-        }
-            
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
@@ -89,5 +83,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
 
         builder.Write(0, string.Empty, id.AsSpan());
+        
+        return hasFields || _indexEmptyEntries;
     }
 }

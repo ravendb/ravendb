@@ -437,7 +437,6 @@ namespace Corax
 
         public interface IIndexEntryBuilder
         {
-            bool IsEmpty { get; }
             void Boost(float boost);
             void WriteNull(int fieldId, string path);
             void Write(int fieldId, ReadOnlySpan<byte> value);
@@ -461,7 +460,6 @@ namespace Corax
             private readonly IndexWriter _parent;
             private long _entryId;
             public bool Active;
-            public bool IsEmpty => Fields == 0;
             public int Fields;
             private int _buildingList;
             public long EntryId => _entryId;

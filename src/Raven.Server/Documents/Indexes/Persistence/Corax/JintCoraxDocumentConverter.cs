@@ -42,68 +42,70 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
-    protected override void SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+    protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
         object sourceDocument)
     {
         // We prepare for the next entry.
         var fieldMapping = GetKnownFieldsForWriter();
 
+        if (doc is not ObjectInstance documentToProcess)
         {
-            if (doc is not ObjectInstance documentToProcess)
+            //nothing to index, finish the job
+            return false;
+        }
+
+        if (key != null)
+            builder.Write(0, key.AsReadOnlySpan());
+
+        if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
+            builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
+
+        if (TryGetBoostedValue(documentToProcess, out var boostedValue, builder))
+            documentToProcess = boostedValue.AsObject();
+
+        bool hasFields = false;
+        var indexingScope = CurrentIndexingScope.Current;
+        foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
+        {
+            hasFields = true;
+            var propertyAsString = property.AsString();
+            var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
+            var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
+            bool shouldSaveAsBlittable;
+            object value;
+            JsValue actualValue;
+            if (isDynamicFieldEnumerable)
             {
-                //nothing to index, finish the job
-                return ;
-            }
-
-            if (key != null)
-                builder.Write(0, key.AsReadOnlySpan());
-
-            if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
-                builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
-
-            if (TryGetBoostedValue(documentToProcess, out var boostedValue, builder))
-                documentToProcess = boostedValue.AsObject();
-
-            var indexingScope = CurrentIndexingScope.Current;
-            foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
-            {
-                var propertyAsString = property.AsString();
-                var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
-                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
-                bool shouldSaveAsBlittable;
-                object value;
-                JsValue actualValue;
-                if (isDynamicFieldEnumerable)
+                do
                 {
-                    do
-                    {
-                        ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
-                            out shouldSaveAsBlittable, out value, out actualValue, out _);
-                        if (shouldSaveAsBlittable)
-                            ProcessAsJson(actualValue, field,  documentToProcess, out _);
-
-                        var disposable = value as IDisposable;
-                        disposable?.Dispose();
-                    } while (iterator.MoveNext());
-                }
-                else
-                {
-                    ProcessObject(propertyDescriptor.Value, propertyAsString, field,  indexingScope, documentToProcess,
+                    ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
                         out shouldSaveAsBlittable, out value, out actualValue, out _);
                     if (shouldSaveAsBlittable)
                         ProcessAsJson(actualValue, field, documentToProcess, out _);
+
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
-                }
+                } while (iterator.MoveNext());
             }
-
-            if (_storeValue)
+            else
             {
-                //Write __stored_fields at the end of entry...
-                var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
-                builder.Store(storedValue);
+                ProcessObject(propertyDescriptor.Value, propertyAsString, field, indexingScope, documentToProcess,
+                    out shouldSaveAsBlittable, out value, out actualValue, out _);
+                if (shouldSaveAsBlittable)
+                    ProcessAsJson(actualValue, field, documentToProcess, out _);
+                var disposable = value as IDisposable;
+                disposable?.Dispose();
             }
         }
+
+        if (_storeValue)
+        {
+            //Write __stored_fields at the end of entry...
+            var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
+            builder.Store(storedValue);
+        }
+
+        return hasFields || _indexEmptyEntries;
 
         //Helpers
 

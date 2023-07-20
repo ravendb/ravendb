@@ -23,12 +23,13 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
     {
     }
 
-    protected override void SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+    protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
         object sourceDocument)
     {
         var document = (Document)doc;
         var id = document.LowerId ?? key;
 
+        bool hasFields = false;
         foreach (var indexField in _fields.Values)
         {
             object value;
@@ -42,7 +43,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                         if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var wktValue) == false)
                             continue;
 
-                        value = StaticIndexBase.CreateSpatialField(spatialField, wktValue);
+                        value = AbstractStaticIndexBase.CreateSpatialField(spatialField, wktValue);
                         break;
                     case AutoSpatialOptions.AutoSpatialMethodType.Point:
                         if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) == false)
@@ -51,7 +52,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                         if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) == false)
                             continue;
 
-                        value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
+                        value = AbstractStaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
@@ -63,6 +64,8 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             {
                 InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out var _);
             }
+            
+            hasFields = true;
         }
 
         if (key != null)
@@ -84,5 +87,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                 }
             }
         }
+
+        return hasFields || _indexEmptyEntries;
     }
 }

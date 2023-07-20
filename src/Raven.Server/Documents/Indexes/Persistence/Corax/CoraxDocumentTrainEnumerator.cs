@@ -26,8 +26,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             _terms = terms;
         }
 
-        public bool IsEmpty => true;
-
         public void Boost(float boost)
         {
             

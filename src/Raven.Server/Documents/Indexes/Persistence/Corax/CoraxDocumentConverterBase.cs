@@ -48,14 +48,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
 
-    protected abstract void SetDocumentFields<TBuilder>(
+    protected abstract bool SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
         TBuilder builder,
         object sourceDocument)
         where TBuilder : IndexWriter.IIndexEntryBuilder;
 
-    public void SetDocument<TBuilder>(
+    public bool SetDocument<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
         TBuilder builder)
@@ -63,7 +63,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
-        SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
+        return SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
     }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,

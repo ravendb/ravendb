@@ -181,7 +181,9 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                     else
                     {
-                        fields = retrieverInput.KnownFields.Where(i => i.FieldNameAsString.In(
+                        fields = retrieverInput.KnownFields
+                            .Where(x=>x.ShouldStore)
+                            .Where(i => i.FieldNameAsString.In(
                                 Constants.Documents.Indexing.Fields.DocumentIdFieldName,
                                 Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
                                 Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
@@ -291,10 +293,9 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                 {
                     // the fields were projected from the index
-                    doc = new Document();
+                    doc = new Document { Id = _context.GetLazyString(lowerId) };
                 }
 
-                doc.Id = _context.GetLazyString(lowerId);
 
 
                 return (ReturnProjection(result, doc, _context, ref retrieverInput), null);

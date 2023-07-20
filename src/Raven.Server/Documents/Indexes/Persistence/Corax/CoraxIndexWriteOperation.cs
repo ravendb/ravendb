@@ -90,9 +90,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (Stats.AddStats.Start())
             {
                 stats.RecordIndexingOutput();
-                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
-
-                if (builder.Fields > 1) 
+                if(_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
                     return;
                 Delete(key, stats);
             }
