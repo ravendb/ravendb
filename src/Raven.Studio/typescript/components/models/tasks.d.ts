@@ -162,6 +162,8 @@ export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskKafkaSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
+export type OngoingTaskRabbitMqSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
     | OngoingTaskOlapEtlInfo
@@ -234,6 +236,12 @@ type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<
     OngoingTaskKafkaSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskKafkaSinkNodeInfoDetails>
 >;
+
+type OngoingTaskRabbitMqSinkInfo = OngoingTaskInfo<
+    OngoingTaskRabbitMqSinkSharedInfo,
+    OngoingTaskNodeInfo<OngoingTaskRabbitMqSinkNodeInfoDetails>
+>;
+
 type OngoingTaskSubscriptionInfo = OngoingTaskInfo<
     OngoingTaskSubscriptionSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>

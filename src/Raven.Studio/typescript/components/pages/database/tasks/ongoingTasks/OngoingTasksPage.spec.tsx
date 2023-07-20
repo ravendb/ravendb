@@ -4,6 +4,7 @@ import React from "react";
 import * as stories from "./OngoingTasksPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";
 import { boundCopy } from "components/utils/common";
+import { OngoingTaskRabbitMqSinkInfo } from "components/models/tasks";
 
 const { EmptyView, FullView } = composeStories(stories);
 
@@ -421,6 +422,43 @@ describe("OngoingTasksPage", function () {
 
         it("can render disabled", async () => {
             const View = boundCopy(stories.KafkaSinkTemplate, {
+                disabled: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+
+            expect(await screen.findByText(/Disabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Enabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+        });
+    });
+
+    describe("RabbitMq Sink", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.RabbitSinkTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/RabbitMQ SINK/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+        });
+
+        it("can render disabled", async () => {
+            const View = boundCopy(stories.RabbitSinkTemplate, {
                 disabled: true,
             });
 

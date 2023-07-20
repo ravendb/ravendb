@@ -655,7 +655,7 @@ class appUrl {
     static forEditRabbitMqSink(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editRabbitSinkMqTask?" + databasePart + taskPart;
+        return "#databases/tasks/editRabbitMqSinkTask?" + databasePart + taskPart;
     }
     
     static forSampleData(db: database): string {
