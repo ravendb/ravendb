@@ -565,7 +565,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out object value) == false)
             {
-                if (fieldToFetch.IsDocumentId)
+                if (fieldToFetch.IsDocumentId && retrieverInput.DocumentId != null)
                 {
                     toFill[name] = retrieverInput.DocumentId;
                     return true;

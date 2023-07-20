@@ -308,9 +308,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     builder.WriteNull(fieldId, path);
                 else
                     shouldSkip = true;
-                
                 break;
-
             case ValueType.Null:
                 builder.WriteNull(fieldId, path);
                 break;

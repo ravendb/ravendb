@@ -74,9 +74,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 {
                     ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
                         out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
-                    hasFields |= innerShouldSkip == false;
                     if (shouldSaveAsBlittable)
-                        ProcessAsJson(actualValue, field, documentToProcess, out _);
+{                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
+                    hasFields |= innerShouldSkip == false;
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
                 } while (iterator.MoveNext());
@@ -85,9 +85,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             {
                 ProcessObject(propertyDescriptor.Value, propertyAsString, field, indexingScope, documentToProcess,
                     out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
-                hasFields |= innerShouldSkip == false;
                 if (shouldSaveAsBlittable)
-                    ProcessAsJson(actualValue, field, documentToProcess, out _);
+                    ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
+                hasFields |= innerShouldSkip == false;
                 var disposable = value as IDisposable;
                 disposable?.Dispose();
             }
@@ -117,7 +117,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                 context: indexContext);
-            InsertRegularField(field, value, indexContext, builder, sourceDocument,  out shouldSkip);
+            InsertRegularField(field, value, indexContext, builder, sourceDocument, out shouldSkip);
         }
 
         static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, TBuilder builder)

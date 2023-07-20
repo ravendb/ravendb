@@ -167,9 +167,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 if (itemEnumerator.MoveNext(_queryContext.Documents, out var mapResults, out var _) == false)
                     break;
 
-                var doc = itemEnumerator.Current.Item as Document;
-                if (doc == null)
-                    continue;
+                var doc = (Document)itemEnumerator.Current.Item;
 
                 var fields = _converter.GetKnownFieldsForWriter();
 
