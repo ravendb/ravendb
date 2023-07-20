@@ -29,21 +29,14 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
         {
             var connectionStringType = ConnectionString.GetConnectionStringType(configuration);
-            switch (ConnectionString.GetConnectionStringType(configuration))
-            {
-                case ConnectionStringType.Olap:
-                    var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-
-                    SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(configuration), authConnection?.Status);
-                    break;
-
-            }
+            var connectionString = GetConnectionString(configuration, connectionStringType);
             
             List<string> errors = new ();
-            if (GetConnectionString(configuration, connectionStringType).Validate(ref errors) == false)
-            {
+            if (connectionString.Validate(ref errors) == false)
                 throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
-            }
+
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            SecurityClearanceValidator.AssertSecurityClearance(connectionString, feature?.Status);
         }
         
         private static ConnectionString GetConnectionString(BlittableJsonReaderObject readerObject, ConnectionStringType connectionStringType)
@@ -51,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    return JsonDeserializationCluster.RavenConnectionString(readerObject); 
+                    return JsonDeserializationCluster.RavenConnectionString(readerObject);
                 case ConnectionStringType.Sql:
                     return JsonDeserializationCluster.SqlConnectionString(readerObject);
                 case ConnectionStringType.Olap:
@@ -65,7 +58,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     throw new ArgumentOutOfRangeException(nameof(connectionStringType), connectionStringType, "Unexpected connection string type.");
             }
         }
-        
 
         protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
