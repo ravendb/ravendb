@@ -432,6 +432,35 @@ export const KafkaSinkDisabled = boundCopy(KafkaSinkTemplate, {
 
 export const KafkaSinkCompleted = boundCopy(KafkaSinkTemplate, {});
 
+export const RabbitSinkTemplate = (args: {
+    disabled?: boolean;
+    customizeTask?: (x: OngoingTaskQueueSinkListView) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const sink = TasksStubs.getRabbitSink();
+        if (args.disabled) {
+            sink.TaskState = "Disabled";
+        }
+        x.OngoingTasks = [sink];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const RabbitSinkDisabled = boundCopy(RabbitSinkTemplate, {
+    disabled: true,
+});
+
+export const RabbitSinkCompleted = boundCopy(RabbitSinkTemplate, {});
+
 export const ReplicationSinkTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskPullReplicationAsSink) => void;

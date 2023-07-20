@@ -131,12 +131,12 @@
                 </div>
                 <div class="hr-title on-base-background margin-top margin-top-lg">
                     <h5><strong>Kafka</strong> Connection Strings</h5><hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka" title="Add a new Kafka ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka" title="Add a new Kafka connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
                 <div data-bind="if: kafkaConnectionStringsNames().length === 0">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
-                        <h3 class="text-center text-muted margin-top">No Kafka ETL connection strings have been defined</h3>
+                        <h3 class="text-center text-muted margin-top">No Kafka connection strings have been defined</h3>
                     </div>
                 </div>
                 <div data-bind="foreach: kafkaConnectionStringsNames">
@@ -162,12 +162,12 @@
                 </div>
                 <div class="hr-title on-base-background margin-top margin-top-lg">
                     <h5><strong>RabbitMQ</strong> Connection Strings</h5><hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq" title="Add a new RabbitMQ ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq" title="Add a new RabbitMQ connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
                 <div data-bind="if: rabbitMqConnectionStringsNames().length === 0">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
-                        <h3 class="text-center text-muted margin-top">No RabbitMQ ETL connection strings have been defined</h3>
+                        <h3 class="text-center text-muted margin-top">No RabbitMQ connection strings have been defined</h3>
                     </div>
                 </div>
                 <div data-bind="foreach: rabbitMqConnectionStringsNames">

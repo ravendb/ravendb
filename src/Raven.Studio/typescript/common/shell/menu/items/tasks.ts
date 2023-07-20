@@ -158,6 +158,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.editKafkaSinkTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/editRabbitMqSinkTask',
+            moduleId: require('viewmodels/database/tasks/editRabbitMqSinkTask'),
+            title: 'RabbitMQ Sink Task',
+            nav: false,
+            dynamicHash: appUrls.editRabbitMqSinkTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
     ];
 
     return new intermediateMenuItem('Tasks', tasksItems, 'icon-tasks-menu');
