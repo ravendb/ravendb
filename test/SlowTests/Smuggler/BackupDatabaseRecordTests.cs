@@ -1326,7 +1326,8 @@ namespace SlowTests.Smuggler
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<ElasticSearchConnectionString>(new ElasticSearchConnectionString
                 {
-                    Name = "elasticsearch-cs"
+                    Name = "elasticsearch-cs",
+                    Nodes = new[]{"http://127.0.0.1:8080" }
                 }));
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
