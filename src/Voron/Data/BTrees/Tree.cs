@@ -487,7 +487,7 @@ namespace Voron.Data.BTrees
 
         private void ThreadCannotAddInReadTx()
         {
-            throw new ArgumentException("Cannot add a value in a read only transaction on " + Name + " in " + _tx?.LowLevelTransaction?.Environment?.Options);
+            throw new ArgumentException("Cannot add a value in a read only transaction on " + Name + " in " + _llt.Flags);
         }
 
         public TreePage ModifyPage(TreePage page)
