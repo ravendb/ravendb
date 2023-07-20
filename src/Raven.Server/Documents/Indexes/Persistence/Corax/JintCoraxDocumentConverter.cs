@@ -105,7 +105,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         if (_storeValue)
         {
             //Write __stored_fields at the end of entry...
-            var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
+            using var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
             builder.Store(storedValue);
         }
 

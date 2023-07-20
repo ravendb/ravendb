@@ -77,7 +77,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
         if (storedValue is not null)
         {
-            var bjo = indexContext.ReadObject(storedValue, "corax field as json");
+            using var bjo = indexContext.ReadObject(storedValue, "corax field as json");
             builder.Store(bjo);
         }
             

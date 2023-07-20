@@ -1162,7 +1162,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 using (closeServerTransaction)
                 {
                     builderParameters = new(IndexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this);
+                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
             }

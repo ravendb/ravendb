@@ -154,7 +154,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             var converter = CreateConverter(_index);
             converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
             var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
-            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, IndexingCompressionMaxTestDocuments);
+            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, Math.Max(100, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation / 10));
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);

@@ -427,7 +427,8 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         {
             MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator.Current.Decoded()),
             MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator.CurrentLong),
-            _ => comparer.CompareNumerical(iterator.CurrentDouble)
+            MultiUnaryItem.DataType.Double => comparer.CompareNumerical(iterator.CurrentDouble),
+            _ => throw new ArgumentOutOfRangeException(comparer.Type.ToString())
         };
     }
 
