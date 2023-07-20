@@ -788,7 +788,7 @@ namespace Raven.Server.Web.System
                     List<string> errors = new ();
                     if (GetConnectionString(readerObject, connectionStringType).Validate(ref errors) == false)
                     {
-                        throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join("\n", errors)}");
+                        throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join(Environment.NewLine, errors)}");
                     }
                 });
         }
