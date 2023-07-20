@@ -40,6 +40,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -129,6 +130,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -198,7 +200,8 @@ namespace SlowTests.Server.Documents.ETL
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                        FactoryName = "Npgsql"
                     };
                     var elasticConnectionStr = new ElasticSearchConnectionString
                     {
@@ -252,7 +255,8 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
                 var elasticConnectionStr = new ElasticSearchConnectionString
                 {
