@@ -209,7 +209,7 @@ namespace Raven.Client.Documents.Session
         void OrElse();
 
         /// <summary>
-        ///   Specifies a boost weight to the last where clause.
+        ///   Specifies a boost weight to the previous where clause.
         ///   The higher the boost factor, the more relevant the term will be.
         /// </summary>
         /// <param name = "boost">boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight</param>
