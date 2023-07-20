@@ -89,8 +89,7 @@ abstract class setupEncryptionKey {
     abstract keyDataText(): string;
     
     copyEncryptionKeyToClipboard() {
-        const container = this.getContainer();
-        copyToClipboard.copy(this.keyDataText(), "Encryption key data was copied to clipboard", container);
+        copyToClipboard.copy(this.keyDataText(), "Encryption key data was copied to clipboard");
     }
 
     downloadEncryptionKey() {

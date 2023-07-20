@@ -7,6 +7,7 @@ import generalUtils = require("common/generalUtils");
 import genericProgress = require("common/helpers/database/genericProgress");
 import delayBackupCommand = require("commands/database/tasks/delayBackupCommand");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import copyToClipboard = require("common/copyToClipboard");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -454,6 +455,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }
         
         return true;
+    }
+
+    copyLogs() {
+        copyToClipboard.copy(this.messagesJoined(), "Copied details to clipboard.");
     }
 }
 
