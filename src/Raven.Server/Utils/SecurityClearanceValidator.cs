@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections;
+using System.Reflection;
 using System.Security.Authentication;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -13,13 +14,27 @@ namespace Raven.Server.Utils
             if (input == null || status == null || status == RavenServer.AuthenticationStatus.ClusterAdmin)
                 return;
 
-            var members = ReflectionUtil.GetPropertiesAndFieldsFor(input.GetType(), BindingFlags.Public | BindingFlags.Instance);
+            var inputType = input.GetType();
+            if (inputType.IsClass == false || inputType.IsPrimitive || inputType == typeof(string))
+                return;
+
+            var members = ReflectionUtil.GetPropertiesAndFieldsFor(inputType, BindingFlags.Public | BindingFlags.Instance);
 
             foreach (var member in members)
             {
                 var type = member.GetMemberType();
-                if (type.IsClass && type.IsPrimitive == false && type != typeof(string))
-                    AssertSecurityClearance(member.GetValue(input), status);
+                var value = member.GetValue(input);
+
+                if (type != typeof(string))
+                {
+                    if (value is IEnumerable enumerable)
+                    {
+                        foreach (var o in enumerable)
+                            AssertSecurityClearance(o, status);
+                    }
+                    else if (type.IsClass && type.IsPrimitive == false)
+                        AssertSecurityClearance(value, status);
+                }
 
                 var securityClearanceAttribute = member.GetCustomAttribute<SecurityClearanceAttribute>();
                 if (securityClearanceAttribute != null)
