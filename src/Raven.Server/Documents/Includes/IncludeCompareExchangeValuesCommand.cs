@@ -63,13 +63,18 @@ namespace Raven.Server.Documents.Includes
             if (_includes == null || _includes.Length == 0)
                 return;
 
-            if (_includedKeys == null)
-                _includedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedKeys, _database.IdentityPartsSeparator);
         }
 
+        public void AddDocument(string id)
+        {
+            _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _includedKeys.Add(id);
+        }
+        
         internal void Materialize()
         {
             if (_includedKeys == null || _includedKeys.Count == 0)

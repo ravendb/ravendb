@@ -816,6 +816,14 @@ more responsive application.
             if (id != null)
                 _knownMissingIds.Remove(id);
 
+            if (TransactionMode == TransactionMode.ClusterWide)
+            {
+                if (changeVector == null)
+                {
+                    GetClusterSession().TryGetMissingAtomicGuardFor(id, out changeVector);
+                }
+            }
+
             var documentInfo = new DocumentInfo
             {
                 Id = id,
