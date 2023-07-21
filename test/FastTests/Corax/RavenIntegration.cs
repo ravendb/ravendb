@@ -571,6 +571,7 @@ public class RavenIntegration : RavenTestBase
         var index = new DynamicFieldIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
+        WaitForUserToContinueTheTest(store);
 
         using (var session = store.OpenSession())
         {

@@ -43,7 +43,7 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
             }
 
@@ -82,7 +82,7 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
             }
 
@@ -117,7 +117,7 @@ namespace FastTests.Corax
             
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
             }
             
@@ -145,7 +145,7 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                Assert.True(indexWriter.TryDeleteEntry("Id", "list/9"));
+                indexWriter.TryDeleteEntry("list/9");
                 indexWriter.Commit();
             }
 
@@ -181,7 +181,7 @@ namespace FastTests.Corax
             }
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
             }
 
@@ -195,13 +195,11 @@ namespace FastTests.Corax
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
-                var entity = indexSearcher.GetEntryReaderFor(ids[0]);
-                Assert.True(entity.GetFieldReaderFor(IndexId).Read(out var idInIndex));
-                Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
+                var termsReader = indexSearcher.TermsReaderFor("Id");
+                Assert.True(termsReader.TryGetTermFor(ids[0], out var term));
+                Assert.Equal("list/0", term);
 
             }
-
-
         }
 
         private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)
@@ -231,25 +229,18 @@ namespace FastTests.Corax
         private void IndexEntries(IndexFieldsMapping knownFields)
         {
             using var indexWriter = new IndexWriter(Env, knownFields);
-            var entryWriter = new IndexEntryWriter(_bsc, knownFields);
 
             foreach (var entry in _longList)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(data.ToSpan());
+                using var builder = indexWriter.Index(Encoding.UTF8.GetBytes(entry.Id));
+                
+                builder.Write(IndexId, null, Encoding.UTF8.GetBytes(entry.Id));
+                builder.Write(ContentId, null, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
             }
 
             indexWriter.Commit();
-            entryWriter.Dispose();
         }
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry, out ByteString output)
-        {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
-            return entryWriter.Finish(out output);
-        }
 
         private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {

@@ -319,7 +319,7 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
             using (var indexWriter = new IndexWriter(Env, knownFields))
             {
-                Assert.True(indexWriter.TryDeleteEntry("Id", "list/1"));
+                indexWriter.TryDeleteEntry("list/1");
                 indexWriter.Commit();
             }
             
@@ -360,10 +360,11 @@ namespace FastTests.Corax
                 var read = sortedMatch.Fill(ids);
 
                 List<long> sortedByCorax = new();
+                var termsReader = searcher.TermsReaderFor("Content1");
+
                 for (int i = 0; i < read; ++i)
                 {
-                    searcher.GetEntryReaderFor(ids[i]).GetFieldReaderFor(Content1).Read(out long value);
-                    sortedByCorax.Add(value);
+                    sortedByCorax.Add(long.Parse(termsReader.GetTermFor(ids[i])));
                 }
 
                 for (int i = 0; i < longList.Count; ++i)
@@ -385,27 +386,19 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
 
             using var indexWriter = new IndexWriter(Env, knownFields);
-            var entryWriter = new IndexEntryWriter(bsc, knownFields);
 
             foreach (var entry in longList)
             {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                if (entry.Boost.HasValue == false)
-                    indexWriter.Index(data.ToSpan());
-                else
-                    indexWriter.Index(data.ToSpan(), entry.Boost.Value);
+                using var builder = indexWriter.Index(Encoding.UTF8.GetBytes(entry.Id));
+                builder.Write(IndexId, null, Encoding.UTF8.GetBytes(entry.Id));
+                builder.Write(Content1, null, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
+                builder.Write(Content2, null, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
+
+                if (entry.Boost.HasValue)
+                    builder.Boost(entry.Boost.Value);
             }
 
             indexWriter.Commit();
-        }
-
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long, long> entry, out ByteString output)
-        {
-            entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
-            entryWriter.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
-            return entryWriter.Finish(out output);
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)

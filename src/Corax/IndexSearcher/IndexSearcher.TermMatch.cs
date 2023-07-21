@@ -125,11 +125,6 @@ public partial class IndexSearcher
         return TermQuery(field, termKey, terms);
     }
 
-    //public TermMatch TermQuery(FieldMetadata field, CompactKey term, CompactTree termsTree = null)
-    //{
-    //    return TermQuery(field, term, termsTree);
-    //}
-
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
     {
         if (tree.TryGetValue(term, out var value) == false)

@@ -71,6 +71,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
 using Voron.Debugging;
@@ -119,6 +120,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
 
+
+
         protected Logger _logger;
 
         internal IndexPersistenceBase IndexPersistence;
@@ -159,7 +162,7 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _initialized;
 
-        protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
+        internal UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         internal StorageEnvironment _environment;
 
@@ -679,6 +682,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public CurrentIndexingScope CreateIndexingScope(TransactionOperationContext indexContext, QueryOperationContext queryContext)
+        {
+            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool);
+        }
+
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
             var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
@@ -864,18 +872,20 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Initialize(documentDatabase, environment);
 
             IndexPersistence?.Dispose();
+
             SearchEngineType = IndexStorage.ReadSearchEngineType(Name, environment);
 
             switch (SearchEngineType)
             {
                 case SearchEngineType.None:
                 case SearchEngineType.Lucene:
-                    IndexPersistence = new LuceneIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Lucene;
+                    IndexPersistence = new LuceneIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
+
                     break;
                 case SearchEngineType.Corax:
-                    IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Corax;
+                    IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     break;
                 default:
                     throw new InvalidDataException($"Cannot read search engine type for {Name}. Please reset the index.");
@@ -885,6 +895,8 @@ namespace Raven.Server.Documents.Indexes
 
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
             IndexFieldsPersistence.Initialize();
+
+            IndexPersistence.OnInitializeComplete();
         }
 
         protected virtual void OnInitialization()
@@ -2342,8 +2354,7 @@ namespace Raven.Server.Documents.Indexes
                 context.SetLongLivedTransactions(true);
 
                 using (var tx = indexContext.OpenWriteTransaction())
-                using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (CurrentIndexingScope.Current = CreateIndexingScope(indexContext, context))
                 {
                     var writeOperation = new Lazy<IndexWriteOperationBase>(() =>
                     {
@@ -4881,7 +4892,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (CurrentIndexingScope.Current = CreateIndexingScope(indexContext, context))
                 using (var txw = indexContext.OpenWriteTransaction())
                 using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                 {

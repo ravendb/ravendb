@@ -50,16 +50,13 @@ namespace Corax
 
         public static class IndexWriter
         {
-            public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
-            private static readonly byte[] DoubleTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'D' };
+            public static ReadOnlySpan<byte> DoubleTreeSuffix => "-D"u8;
 
-            public static ReadOnlySpan<byte> LongTreeSuffix => LongTreeSuffixBytes.AsSpan();
-            private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
-
+            public static ReadOnlySpan<byte> LongTreeSuffix => "-L"u8;
             
-            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice, EntryIdToOffsetSlice, LastEntryIdSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;            public const int IntKnownFieldMask = unchecked((int)0x80000000);
-            public const short ShortKnownFieldMask = unchecked((short)0x8000);
-            public const byte ByteKnownFieldMask = unchecked((byte)0x80);
+            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
+                StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField;            
             public const int DynamicField = -2;
             static IndexWriter()
             {
@@ -68,14 +65,16 @@ namespace Corax
                     Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                     Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
-                    Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
-                    Slice.From(ctx, "EntryIdToOffset", ByteStringType.Immutable, out EntryIdToOffsetSlice);
+                    Slice.From(ctx, "StoredFields", ByteStringType.Immutable, out StoredFieldsSlice);
+                    Slice.From(ctx, "EntriesTerms", ByteStringType.Immutable, out EntriesTermsContainerSlice);
+                    Slice.From(ctx, "EntryIdToLocation", ByteStringType.Immutable, out EntryIdToLocationSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "LastEntryId", ByteStringType.Immutable, out LastEntryIdSlice);
                     Slice.From(ctx, "EntriesToTerms", ByteStringType.Immutable, out EntriesToTermsSlice);
                     Slice.From(ctx, "EntriesToSpatial", ByteStringType.Immutable, out EntriesToSpatialSlice);
                     Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
+                    Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
                 }
             }
         }

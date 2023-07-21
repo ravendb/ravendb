@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
 
-        public Dictionary<string, FieldIndexing> DynamicFields;
+        public Dictionary<string, IndexField> DynamicFields;
 
         private readonly Func<string, SpatialField> _getSpatialField;
 
@@ -41,7 +41,16 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
-        public int CreatedFieldsCount;
+        public event Action OnNewDynamicField;
+        
+        public void IncrementDynamicFields()
+        {
+            _createdFieldsCount++;
+            OnNewDynamicField?.Invoke();
+        }
+
+        private int _createdFieldsCount;
+        public int CreatedFieldsCount => _createdFieldsCount;
 
         static CurrentIndexingScope()
         {

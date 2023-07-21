@@ -120,25 +120,25 @@ public static class CoraxIndexingHelpers
             
             var hasSuggestions = field.HasSuggestions;
             var hasSpatial = field.Spatial is not null;
-            
-            
+            bool shouldStore = field.Storage == FieldStorage.Yes;
+
             switch (field.Indexing)
             {
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, hasSuggestions, FieldIndexingMode.Exact, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, hasSuggestions, FieldIndexingMode.Exact, shouldStore, hasSpatial);
                     break;
 
                 case FieldIndexing.Search:
                     var analyzer = GetCoraxAnalyzer(fieldName, field.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        mappingBuilder.AddBinding(fieldId, fieldNameSlice, analyzer, hasSuggestions, FieldIndexingMode.Search, hasSpatial);
+                        mappingBuilder.AddBinding(fieldId, fieldNameSlice, analyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial);
                         continue;
                     }
 
                     var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, hasSuggestions, FieldIndexingMode.Search, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial);
                     break;
 
                 case FieldIndexing.Default:
@@ -146,11 +146,11 @@ public static class CoraxIndexingHelpers
                     {
                         defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
                     }
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer, hasSuggestions, FieldIndexingMode.Normal, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer, hasSuggestions, FieldIndexingMode.Normal, shouldStore, hasSpatial);
 
                     break;
                 case FieldIndexing.No:
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, null, fieldIndexingMode: FieldIndexingMode.No);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, null, fieldIndexingMode: FieldIndexingMode.No, shouldStore: shouldStore);
                     break;
             }
         }
@@ -164,7 +164,7 @@ public static class CoraxIndexingHelpers
         {
             //Warning: This field has to be at the end of known fields. Changing it will require changing behaviour in Projection since we relays it's at the end.
             //See more at: https://github.com/ravendb/ravendb/pull/16157#discussion_r1158259732
-            mappingBuilder.AddBindingToEnd(storedValueFieldName, fieldIndexingMode: FieldIndexingMode.No);
+            mappingBuilder.AddBindingToEnd(storedValueFieldName, fieldIndexingMode: FieldIndexingMode.No, shouldStore: true);
         }
         
         

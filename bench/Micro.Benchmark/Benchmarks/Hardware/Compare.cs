@@ -32,7 +32,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core60,
+                        Runtime = CoreRuntime.Core70,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }
@@ -54,8 +54,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
         //[Params(7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256, 1024, 2048, 4096)]
         //[Params(15, 31, 39, 48, 50, 63, 90, 117, 127, 190, 255, 256)]
-        //[Params(7, 8, 16, 31, 32, 64, 127, 128, 255, 256, 1024, 2048, 4096, 4096 * 64, 4096 * 256, 4096 * 1024)]
-        [Params(16, 32, 256, 1024, 2048, 4096, 4096 * 64, 4096 * 256, 4096 * 1024)]
+        [Params(7, 8, 16, 31, 32, 64, 127, 128, 255, 256, 1024, 2048, 4096, 4096 * 64, 4096 * 256, 4096 * 1024)]
+        //[Params(16, 32, 256, 1024, 2048, 4096, 4096 * 64, 4096 * 256, 4096 * 1024)]
         //[Params(4096 * 256, 4096 * 1024)]
         public int Length { get; set; }
 
@@ -109,54 +109,66 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             }                
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarXor_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarAltDeBrujain(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarXor_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarAltDeBrujain(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarCmpXorPopCount_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarCmpAltPopCount(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarCmpXorPopCount_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarCmpAltPopCount(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarCmpXorPopCount_Prefetch_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarCmpAltPopCount_Prefetch(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarCmpXorPopCount_Prefetch_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarCmpAltPopCount_Prefetch(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
 
-        //[Benchmark(Baseline = true)]
-        //public int Original()
-        //{
-        //    return CompareOriginal(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark(Baseline = true)]
+        public int Original()
+        {
+            return CompareOriginal(source.Ptr, destination.Ptr, Length);
+        }
 
-        //[Benchmark]
-        //public int Current()
-        //{
-        //    return Memory.CompareInline(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int Current()
+        {
+            return Memory.CompareInline(source.Ptr, destination.Ptr, Length);
+        }
 
-        //[Benchmark]
-        //public int Avx2()
-        //{
-        //    return AdvMemory.CompareAvx2(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int SmallNet7Ref()
+        {
+            return AdvMemory.CompareSmallInlineNet7(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
+        }
+
+        [Benchmark]
+        public int Avx2Ref()
+        {
+            return AdvMemory.CompareAvx2(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
+        }
+
+        [Benchmark]
+        public int Avx2()
+        {
+            return AdvMemory.CompareAvx2(source.Ptr, destination.Ptr, Length);
+        }
 
         [Benchmark]
         public int SpanHelpers()
@@ -165,30 +177,30 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return new ReadOnlySpan<byte>(source.Ptr, length).SequenceCompareTo(new ReadOnlySpan<byte>(destination.Ptr, length));
         }
 
-        //[Benchmark]
-        //public int Original_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareOriginal(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark]
+        public int Original_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareOriginal(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
-        //[Benchmark]
-        //public int Current_WithCacheMisses()
-        //{
-        //    int index = randomLocation[_randomIdx++ % Operations];
-        //    return Memory.Compare(source.Ptr + index, destination.Ptr + index, Length);
-        //}
+        [Benchmark]
+        public int Current_WithCacheMisses()
+        {
+            int index = randomLocation[_randomIdx++ % Operations];
+            return Memory.Compare(source.Ptr + index, destination.Ptr + index, Length);
+        }
 
 
-        //[Benchmark]
-        //public int Avx2_WithCacheMisses()
-        //{
-        //    int index = randomLocation[(_randomIdx++) % Operations];
-        //    return AdvMemory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
-        //}
+        [Benchmark]
+        public int Avx2_WithCacheMisses()
+        {
+            int index = randomLocation[(_randomIdx++) % Operations];
+            return AdvMemory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
+        }
 
         [Benchmark]
         public int SpanHelpers_WithCacheMisses()
@@ -198,29 +210,29 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return new ReadOnlySpan<byte>(source.Ptr + index, length).SequenceCompareTo(new ReadOnlySpan<byte>(destination.Ptr + index, length));
         }
 
-        //[Benchmark]
-        //public int ScalarXor()
-        //{
-        //    return CompareScalarAltDeBrujain(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int ScalarXor()
+        {
+            return CompareScalarAltDeBrujain(source.Ptr, destination.Ptr, Length);
+        }
 
-        //[Benchmark]
-        //public int ScalarXorPopCount()
-        //{
-        //    return CompareScalarAltPopCount(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int ScalarXorPopCount()
+        {
+            return CompareScalarAltPopCount(source.Ptr, destination.Ptr, Length);
+        }
 
-        //[Benchmark]
-        //public int ScalarCmpXorPopCount()
-        //{
-        //    return CompareScalarCmpAltPopCount(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int ScalarCmpXorPopCount()
+        {
+            return CompareScalarCmpAltPopCount(source.Ptr, destination.Ptr, Length);
+        }
 
-        //[Benchmark]
-        //public int ScalarCmpXorPopCount_Prefetch()
-        //{
-        //    return CompareScalarCmpAltPopCount_Prefetch(source.Ptr, destination.Ptr, Length);
-        //}
+        [Benchmark]
+        public int ScalarCmpXorPopCount_Prefetch()
+        {
+            return CompareScalarCmpAltPopCount_Prefetch(source.Ptr, destination.Ptr, Length);
+        }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -512,15 +524,15 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return *bpx - *(bpx + offset);
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarAlt2_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarAlt2(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarAlt2_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarAlt2(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareScalarAlt2(void* p1, void* p2, int size)
         {
@@ -578,15 +590,15 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return 0;
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarAlt3_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarAlt3(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarAlt3_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarAlt3(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareScalarAlt3(void* p1, void* p2, int size)
         {
@@ -700,25 +712,25 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return 0;
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int Numerics32_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareNumerics(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int Numerics32_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareNumerics(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int NumericsAlt32_WithCacheMisses()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareNumericsAlt(source.Ptr + index, destination.Ptr + index, Length);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int NumericsAlt32_WithCacheMisses()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareNumericsAlt(source.Ptr + index, destination.Ptr + index, Length);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareNumericsAlt(void* p1, void* p2, int size)
         {
@@ -822,8 +834,5 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
             return 0;
         }
-
-
-
     }
 }

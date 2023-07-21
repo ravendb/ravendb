@@ -37,7 +37,7 @@ public class TestIndexWriteOperation : IndexWriteOperationBase
         _inner.Optimize(token);
     }
 
-    public override void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+    public override void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
         JsonOperationContext indexContext)
     {
         if (_index.Type.IsMap())
@@ -45,7 +45,7 @@ public class TestIndexWriteOperation : IndexWriteOperationBase
         else
             _testIndexRun.AddReduceResult(document);
         
-        _inner.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+        _inner.UpdateDocument(key, sourceDocumentId, document, stats, indexContext);
     }
 
     public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)

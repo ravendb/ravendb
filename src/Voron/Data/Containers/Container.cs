@@ -209,7 +209,6 @@ namespace Voron.Data.Containers
             var page = AllocateContainerPage(llt);
 
             var root = new Container(page);
-            root.Header.NumberOfPages = 1;
             root.Header.NumberOfOverflowPages = 0;
             root.Header.PageLevelMetadata = -1;
             
@@ -338,17 +337,13 @@ namespace Voron.Data.Containers
 
             var p = rootContainer.GetNextFreePage();
             var activePage = llt.ModifyPage(p);
-            if((p == 698 || p == 699) && size == 1062)
-            {
-                Console.WriteLine();
-            }
             var container = new Container(activePage);
             
             var (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
             bool pageMatch = PageMetadataMatch(container, pageLevelMetadata) &&
                              // we limit the number of entries per page to ensure we always
                              // have the bottom 3 bits free, see also IndexToOffset
-                             pos <= 1024;
+                             pos < 1024;
             if (pageMatch == false || 
                 container.HasEnoughSpaceFor(reqSize) == false)
             {
@@ -367,7 +362,7 @@ namespace Voron.Data.Containers
                     container = MoveToNextPage(llt, containerId, pageLevelMetadata, container, size);
                 
                 (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
-                Debug.Assert(pos <= 1024, "pos <= 1024");
+                Debug.Assert(pos < 1024, "pos < 1024");
             }
 
             if (container.HasEnoughSpaceFor(reqSize) == false)
@@ -380,6 +375,7 @@ namespace Voron.Data.Containers
 
         private long Allocate(int size, int pos, out Span<byte> allocatedSpace)
         {
+            Debug.Assert(pos < 1024, "pos < 1024");
             var reqSize = ComputeRequiredSize(size);
             Debug.Assert(HasEnoughSpaceFor(reqSize));
 
@@ -477,7 +473,6 @@ namespace Voron.Data.Containers
 
             // no existing pages remaining, allocate new one
             var newPage = AllocateContainerPage(llt);
-            rootContainer.Header.NumberOfPages++;
             rootContainer.UpdateNextFreePage(newPage.PageNumber);
             
             container = new Container(newPage);
@@ -598,7 +593,26 @@ namespace Voron.Data.Containers
                 return true;
             }
         }
-        
+
+        public static (Tree AllPages, Tree FreePages) GetPagesFor(LowLevelTransaction llt, long containerId)
+        {
+            var rootPage = llt.GetPage(containerId);
+            var rootContainer = new Container(rootPage);
+
+            Tree allPages;
+            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset))
+            {
+                allPages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
+            }
+            Tree freePages;
+            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.FreeListOffset))
+            {
+                freePages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
+            }
+
+            return (allPages, freePages);
+        }
+
         public static AllPagesIterator GetAllPagesSet(LowLevelTransaction llt, long containerId)
         {
             var rootPage = llt.GetPage(containerId);

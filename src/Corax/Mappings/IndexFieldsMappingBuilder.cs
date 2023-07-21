@@ -43,25 +43,21 @@ public class IndexFieldsMappingBuilder : IDisposable
     }
 
     public IndexFieldsMappingBuilder AddBindingToEnd(string fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         Slice.From(_context, fieldName, out var slice);
-        return AddBinding(_fields.Count, slice, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        return AddBinding(_fields.Count, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore, hasSpatial);
     }
 
     public IndexFieldsMappingBuilder AddBindingToEnd(Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false) =>
-        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false,  bool hasSpatial = false) =>
+        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, shouldStore,  hasSpatial);
 
-    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode)
+    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode, bool shouldStore)
     {
         if (_fields.TryGetValue(fieldName, out var storedBinding) == false)
         {
-            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode);
-        }
-        else
-        {
-            Debug.Assert(storedBinding.FieldIndexingMode == mode);
+            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode, shouldStore: shouldStore);
         }
 
         Analyzer GetAnalyzer() => mode switch
@@ -76,14 +72,14 @@ public class IndexFieldsMappingBuilder : IDisposable
     }
     
     public IndexFieldsMappingBuilder AddBinding(int fieldId, string fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         Slice.From(_context, fieldName, out var slice);
-        return AddBinding(fieldId, slice, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        return AddBinding(fieldId, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore , hasSpatial);
     }
     
     public IndexFieldsMappingBuilder AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         if (_fieldsById.TryGetValue(fieldId, out var storedAnalyzer) == false)
         {
@@ -93,7 +89,7 @@ public class IndexFieldsMappingBuilder : IDisposable
             GetFieldForTotalSum(_context, clonedFieldName,  out var fieldForTotalSum);
 
             var binding = new IndexFieldBinding(fieldId, clonedFieldName, fieldNameLong, fieldNameDouble, fieldForTotalSum, _isForWriter,
-                analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+                analyzer, hasSuggestion, fieldIndexingMode, shouldStore, hasSpatial);
             _fields[clonedFieldName] = binding;
             _fieldsById[fieldId] = binding;
         }

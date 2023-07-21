@@ -20,18 +20,17 @@ namespace Voron.Data.Containers
         [FieldOffset(13)]
         public ExtendedPageType ContainerFlags;
 
-        // this is used only by the first page
         [FieldOffset(14)] 
-        public int NumberOfPages;
+        public bool OnFreeList;
 
-        [FieldOffset(18)]
-        public int NumberOfOverflowPages;
+        [FieldOffset(15)]
+        private readonly byte Reserved;
 
-        [FieldOffset(22)]
+        [FieldOffset(16)]
         public long PageLevelMetadata;
 
-        [FieldOffset(30)]
-        public bool OnFreeList;
+        [FieldOffset(24)]
+        public int NumberOfOverflowPages;
 
         public const int FreeListOffset = 0;
         public const int AllPagesOffset = 1;

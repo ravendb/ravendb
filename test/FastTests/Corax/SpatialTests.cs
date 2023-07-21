@@ -59,13 +59,14 @@ public class SpatialTests : StorageTest
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, _fieldsMapping))
-        {           
-            var entry = new IndexEntryWriter(bsc, _fieldsMapping);
-            entry.Write(IdIndex, Encodings.Utf8.GetBytes(IdString));
-            var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
-            entry.WriteSpatial(CoordinatesIndex, spatialEntry);
-            using var _ = entry.Finish(out var preparedItem);
-            writer.Index(preparedItem.ToSpan());
+        {
+            using (var entry = writer.Index(IdString))
+            {
+                entry.Write(IdIndex, Encodings.Utf8.GetBytes(IdString));
+                var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
+                entry.WriteSpatial(CoordinatesIndex, null, spatialEntry);
+            }
+
             writer.Commit();
         }
 
@@ -77,21 +78,19 @@ public class SpatialTests : StorageTest
                 Span<long> ids = new long[16];
                 var entries = searcher.TermQuery("Coordinates", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
-
-                var reader = searcher.GetEntryReaderFor(ids[0]);
-
-                var fieldType = reader.GetFieldType(CoordinatesIndex, out int intOffset);
-                Assert.Equal(IndexEntryFieldType.SpatialPoint, fieldType);
+                Page p = default;
+                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
+                long fieldRootPage = searcher.FieldCache.GetLookupRootPage(_fieldsMapping.GetByFieldId(CoordinatesIndex).FieldName);
+                Assert.True(reader.FindNextSpatial(fieldRootPage));
                 
-                reader.GetFieldReaderFor(CoordinatesIndex).Read(out (double, double) coords);
-                Assert.Equal(coords.Item1, latitude);
-                Assert.Equal(coords.Item2, longitude);
+                Assert.Equal(reader.Latitude, latitude);
+                Assert.Equal(reader.Longitude, longitude);
             }
         }
 
         using (var writer = new IndexWriter(Env, _fieldsMapping))
         {
-            writer.TryDeleteEntry("Id", IdString);
+            writer.TryDeleteEntry(IdString);
             writer.Commit();
         }
 
@@ -103,44 +102,6 @@ public class SpatialTests : StorageTest
         }
     }
 
-    [Theory]
-    [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
-    public unsafe void WriteAndReadSpatialList(int size, double[] lat, double[] lon)
-    {
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-
-        var entryBuilder = new IndexEntryWriter(bsc, _fieldsMapping);
-        entryBuilder.Write(IdIndex, Encodings.Utf8.GetBytes("item/1"));
-        Span<CoraxSpatialPointEntry> _points = new CoraxSpatialPointEntry[size];
-        for (int i = 0; i < size; ++i)
-            _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-        entryBuilder.WriteSpatial(CoordinatesIndex, _points);
-        using var _ = entryBuilder.Finish(out var buffer);
-        var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
-
-        Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.SpatialPointList));
-        var iterator = reader.ReadManySpatialPoint(CoordinatesIndex);
-        List<CoraxSpatialPointEntry> entriesInIndex = new();
-        
-        while (iterator.ReadNext())
-        {
-            entriesInIndex.Add(iterator.CoraxSpatialPointEntry);
-        }        
-        
-        Assert.Equal(size, entriesInIndex.Count);
-
-        for (int i = 0; i < size; ++i)
-        {
-            var entry = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
-
-            var entryFromBuilder = entriesInIndex.Single(p => p.Geohash == entry.Geohash);
-            Assert.Equal(entry.Latitude, entryFromBuilder.Latitude);
-            Assert.Equal(entry.Longitude, entryFromBuilder.Longitude);
-            entriesInIndex.Remove(entry);
-        }
-        
-        Assert.Empty(entriesInIndex);
-    }
 
     public override void Dispose()
     {

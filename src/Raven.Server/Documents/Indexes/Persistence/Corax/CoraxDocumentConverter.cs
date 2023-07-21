@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using Corax;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -24,85 +23,75 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
     {
     }
 
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
-        LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id,
-        out ByteString output, out float? documentBoost, out int fields)
+    protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+        object sourceDocument)
     {
-        documentBoost = null; // documents in autoindexes cannot have document boost
         var document = (Document)doc;
-        id = document.LowerId ?? key;
+        var id = document.LowerId ?? key;
 
-        var scope = new SingleEntryWriterScope(Allocator);
-
-        // We prepare for the next entry.
-        ref var entryWriter = ref GetEntriesWriter();
-
-        try
+        bool hasFields = false;
+        foreach (var indexField in _fields.Values)
         {
-            foreach (var indexField in _fields.Values)
+            object value;
+            bool innerShouldSkip = false;
+            if (indexField.Spatial is AutoSpatialOptions spatialOptions)
             {
-                object value;
-                if (indexField.Spatial is AutoSpatialOptions spatialOptions)
+                var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
+
+                switch (spatialOptions.MethodType)
                 {
-                    var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
+                    case AutoSpatialOptions.AutoSpatialMethodType.Wkt:
+                        if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var wktValue) == false)
+                            continue;
 
-                    switch (spatialOptions.MethodType)
-                    {
-                        case AutoSpatialOptions.AutoSpatialMethodType.Wkt:
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var wktValue) == false)
-                                continue;
+                        value = AbstractStaticIndexBase.CreateSpatialField(spatialField, wktValue);
+                        break;
+                    case AutoSpatialOptions.AutoSpatialMethodType.Point:
+                        if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) == false)
+                            continue;
 
-                            value = StaticIndexBase.CreateSpatialField(spatialField, wktValue);
-                            break;
-                        case AutoSpatialOptions.AutoSpatialMethodType.Point:
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) == false)
-                                continue;
+                        if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) == false)
+                            continue;
 
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) == false)
-                                continue;
-
-                            value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
-                    }
-
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, sourceDocument, scope, out var _);
+                        value = AbstractStaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                 }
-                else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
-                {
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, sourceDocument, scope, out var _);
-                }
+
+                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, out innerShouldSkip);
             }
-
-            if (key != null)
+            else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
             {
-                Debug.Assert(document.LowerId == null || (key == document.LowerId));
-                scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
+                InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
             }
             
-            if (_storeValue)
-            {
-                unsafe
-                {
-                    using (Allocator.Allocate(document.Data.Size, out Span<byte> blittableBuffer))
-                    {
-                        fixed (byte* bPtr = blittableBuffer)
-                            document.Data.CopyTo(bPtr);
+            hasFields |= innerShouldSkip == false;
+        }
+        
+        if (hasFields is false && _indexEmptyEntries is false)
+            return false;
 
-                        scope.Write(string.Empty, GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
-                    }
+        if (key != null)
+        {
+            Debug.Assert(document.LowerId == null || (key == document.LowerId));
+            builder.Write( 0, string.Empty, id.AsSpan());
+        }
+            
+        if (_storeValue)
+        {
+            unsafe
+            {
+                using (Allocator.Allocate(document.Data.Size, out Span<byte> blittableBuffer))
+                {
+                    fixed (byte* bPtr = blittableBuffer)
+                        document.Data.CopyTo(bPtr);
+
+                    builder.Write( GetKnownFieldsForWriter().Count - 1,string.Empty, blittableBuffer);
                 }
             }
+        }
 
-            fields = entryWriter.CurrentFieldCount();
-            return entryWriter.Finish(out output, _indexImplicitNull);
-        }
-        catch
-        {
-            ResetEntriesWriter();
-            throw;
-        }
+        return true;
     }
 }

@@ -7,12 +7,14 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
+using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
@@ -163,23 +165,25 @@ namespace Raven.Server.Documents.Queries.Results
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
 
-                    if (FieldsToFetch.ExtractAllFromIndex)
-                    {
+                if (FieldsToFetch.ExtractAllFromIndex)
+                {
                     if (retrieverInput.IsLuceneDocument())
                     {
                         fields = retrieverInput.LuceneDocument!.GetFields()
-                        .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
-                                    && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
-                        .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
+                            .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                                        && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
+                                        && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
+                            .Distinct(UniqueFieldNames.Instance)
+                            .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                     }
                     else
                     {
-                        fields = retrieverInput.KnownFields.Where(i => i.FieldNameAsString.In(
+                        fields = retrieverInput.KnownFields
+                            .Where(x=>x.ShouldStore)
+                            .Where(i => i.FieldNameAsString.In(
                                 Constants.Documents.Indexing.Fields.DocumentIdFieldName,
                                 Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
                                 Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
@@ -187,7 +191,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 Constants.Documents.Indexing.Fields.ValueFieldName) == false)
                             .ToDictionary(x => x.FieldNameAsString, x => new FieldsToFetch.FieldToFetch(x.FieldNameAsString, null, null, true
                                 , isDocumentId: false, isTimeSeries: false));
-                }
+                    }
                 }
 
 
@@ -195,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     fields = FieldsToFetch.Fields;
                 }
-                else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
+                else if (FieldsToFetch.Fields is { Count: > 0 })
                 {
                     foreach (var kvp in FieldsToFetch.Fields)
                     {
@@ -208,7 +212,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (fields is not null)
                 {
-                    foreach (var fieldToFetch in fields?.Values)
+                    foreach (var fieldToFetch in fields.Values)
                     {
                         if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here 
                                 TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
@@ -289,11 +293,10 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                 {
                     // the fields were projected from the index
-                    doc = new Document
-                    {
-                        Id = _context.GetLazyString(lowerId)
-                    };
+                    doc = new Document { Id = _context.GetLazyString(lowerId) };
                 }
+
+
 
                 return (ReturnProjection(result, doc, _context, ref retrieverInput), null);
             }
@@ -557,18 +560,19 @@ namespace Raven.Server.Documents.Queries.Results
             // We can always perform projection of ID from Index.
             if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false)
                 return false;
-
-
-            object value = null;
-            if (retrieverInput.KnownFields.TryGetByFieldName(fieldToFetch.Name.Value, out var binding) == false)
-            {
-                if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, Corax.Constants.IndexWriter.DynamicField, ref retrieverInput, out value) == false)
-                    return false;
-            }
-            else if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, binding.FieldId, ref retrieverInput, out value) == false)
-                return false;
             
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+
+            if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, ref retrieverInput, out object value) == false)
+            {
+                if (fieldToFetch.IsDocumentId && retrieverInput.DocumentId != null)
+                {
+                    toFill[name] = retrieverInput.DocumentId;
+                    return true;
+                }
+                return false;
+            }
+            
             toFill[name] = value;
             
             return true;
@@ -619,132 +623,62 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsNumeric;
         }
 
-        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
+        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, ref RetrieverInput retrieverInput, out object value)
         {
-            var fieldReader = fieldId == Corax.Constants.IndexWriter.DynamicField 
-                ? retrieverInput.CoraxEntry.GetFieldReaderFor(Encodings.Utf8.GetBytes(fieldName)) : retrieverInput.CoraxEntry.GetFieldReaderFor(fieldId);
-            var fieldType = fieldReader.Type;
+            long fieldRootPage = retrieverInput.CoraxIndexSearcher.FieldCache.GetLookupRootPage(fieldName);
+            ref var reader = ref retrieverInput.CoraxTermsReader;
+            reader.Reset();
             value = null;
-            switch (fieldType)
+            bool found = false;
+            while (reader.FindNextStored(fieldRootPage))
             {
-            case IndexEntryFieldType.Empty:
-            case IndexEntryFieldType.Null:
-                value = fieldType == IndexEntryFieldType.Null 
-                    ? null :
-                    string.Empty;
-                break;
+                found = true;
+                if (reader.IsList && value is null)
+                {
+                    value = new DynamicJsonArray();
+                }
+                if (reader.StoredField == null)
+                {
+                    SetValue(ref value, null);
+                    continue;
+                }
 
-            case IndexEntryFieldType.TupleListWithNulls:
-            case IndexEntryFieldType.TupleList:
-                if (fieldReader.TryReadMany(out var iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                var tupleList = new DynamicJsonArray();
-                while (iterator.ReadNext())
-            {
-                    if (iterator.IsNull)
+                var span = reader.StoredField.Value;    
+                if (reader.IsRaw)
+                {
+                    if (span.Length == 0)
                     {
-                        tupleList.Add(null);
-                    }
-                    else if (iterator.IsEmptyCollection)
-                    {
-                        throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                        // IsRaw here is possible when storing an empty list
                     }
                     else
                     {
-                        tupleList.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                        var json = new BlittableJsonReaderObject(span.Address, span.Length, context);
+                        SetValue(ref value, json);
                     }
                 }
-
-                value = tupleList;
-                break;
-
-                case IndexEntryFieldType.Tuple:
-                if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-                
-                    break;
-
-            case IndexEntryFieldType.SpatialPointList:
-                if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                var geoList = new DynamicJsonArray();
-                
-                while (spatialIterator.ReadNext())
+                else
                 {
-                    geoList.Add(Encodings.Utf8.GetString(spatialIterator.Geohash));
+                    SetValue(ref value, span.ToStringValue());
                 }
-
-                value = geoList;
-                
-                break;
-
-            case IndexEntryFieldType.SpatialPoint:
-                if (fieldReader.Read(out valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-
-                break;
-
-            case IndexEntryFieldType.ListWithEmpty:
-            case IndexEntryFieldType.ListWithNulls:
-                case IndexEntryFieldType.List:
-                if (fieldReader.TryReadMany(out iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    var array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
-                {
-                    Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
-
-                    if (iterator.IsEmptyString || iterator.IsNull)
-                    {
-                        array.Add(iterator.IsNull ? null : string.Empty);
-                    }
-                    else
-                    {
-                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                    }
-                }
-
-                    value = array;
-                    break;
-                case IndexEntryFieldType.RawList:
-                if (fieldReader.TryReadMany(out iterator) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
-                    {
-                        fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
-                            value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
-                    }
-                    value = array;
-                    break;
-                case IndexEntryFieldType.Raw:
-                if (fieldReader.Read(out Span<byte> blittableBinary) == false)
-                    goto case IndexEntryFieldType.Invalid;
-                
-                    fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-                        value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
-                    break;
-            
-            case IndexEntryFieldType.Invalid:
-                            value = null;
-                return false;
-            default:
-                if (fieldReader.Read(out valueInEntry) == false)
-                    goto case IndexEntryFieldType.Invalid;
-
-                value = Encodings.Utf8.GetString(valueInEntry);
-                    break;
             }
-
             
-            return true;
+            return found;
+
+            void SetValue(ref object value, object newVal)
+            {
+                if (value is DynamicJsonArray a)
+                {
+                    a.Add(newVal);
+                }
+                else if (value is not null)
+                {
+                    value = new DynamicJsonArray { value, newVal };
+                }
+                else
+                {
+                    value = newVal;
+                }
+            }
         }
 
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
@@ -786,7 +720,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -927,21 +861,20 @@ namespace Raven.Server.Documents.Queries.Results
                             }
                             break;
                         case SearchEngineType.Corax:
-                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) == false ||
-                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Name ?? fieldDefinition.OriginalName, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
+                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) && 
+                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Name ?? fieldDefinition.OriginalName, ref retrieverInput, out fieldValue))
                             {
-                                throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
+                                if (fieldValue is IEnumerable<object> enumerable)
+                                {
+                                    foreach (var item in enumerable)
+                                        if (item != null)
+                                            _loadedDocumentIds.Add(item.ToString());
+                                }
+                                else
+                                {
+                                    _loadedDocumentIds.Add(fieldValue?.ToString());
+                                }
                             }
-                            
-                            if (fieldValue is IEnumerable<object> enumerable)
-                            {
-                                foreach (var item in enumerable)
-                                    if (item != null)
-                                        _loadedDocumentIds.Add(item.ToString());
-                            }
-                            else
-                            _loadedDocumentIds.Add(fieldValue?.ToString());
-
                             break;
                         case SearchEngineType.None:
                             throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");

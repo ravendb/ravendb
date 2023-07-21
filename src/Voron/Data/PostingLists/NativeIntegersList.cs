@@ -4,6 +4,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron.Util;
 
 namespace Voron.Data.PostingLists;
 
@@ -100,4 +101,5 @@ public unsafe struct NativeIntegersList : IDisposable
         Count--;
         return val;
     }
+
 }

@@ -41,6 +41,7 @@ public class CoraxJavaScriptProjectionIntegration : RavenTestBase
 
         var index = new TestIndex();
         index.Execute(store);
+        WaitForUserToContinueTheTest(store);
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {

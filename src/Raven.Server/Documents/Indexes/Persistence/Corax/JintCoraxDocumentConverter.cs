@@ -10,13 +10,11 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Server;
 using CoraxLib = global::Corax;
 using JavaScriptFieldName = Raven.Client.Constants.Documents.Indexing.Fields.JavaScript;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -44,101 +42,87 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id, out ByteString output, out float? documentBoost, out int fields)
+    protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
+        object sourceDocument)
     {
-        documentBoost = null;
         // We prepare for the next entry.
-        ref var entryWriter = ref GetEntriesWriter();
         var fieldMapping = GetKnownFieldsForWriter();
 
-        try
+        if (doc is not ObjectInstance documentToProcess)
         {
-            if (doc is not ObjectInstance documentToProcess)
+            //nothing to index, finish the job
+            return false;
+        }
+        
+        if (TryGetBoostedValue(documentToProcess, out var boostedValue, builder))
+            documentToProcess = boostedValue.AsObject();
+
+        bool hasFields = false;
+        var indexingScope = CurrentIndexingScope.Current;
+        foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
+        {
+            bool innerShouldSkip = false;
+            var propertyAsString = property.AsString();
+            var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
+            var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
+            bool shouldSaveAsBlittable;
+            object value;
+            JsValue actualValue;
+            if (isDynamicFieldEnumerable)
             {
-                //nothing to index, finish the job
-                id = null;
-                entryWriter.Finish(out output, _indexEmptyEntries);
-                fields = 0;
-                return default;
-            }
-
-            var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
-            id = key;
-
-            if (key != null)
-                singleEntryWriterScope.Write(string.Empty, 0, key.AsSpan(), ref entryWriter);
-
-            if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
-                singleEntryWriterScope.Write(string.Empty, keyBinding.FieldId, sourceDocumentId.AsSpan(), ref entryWriter);
-
-            if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
-                documentToProcess = boostedValue.AsObject();
-
-            var indexingScope = CurrentIndexingScope.Current;
-            foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
-            {
-                var propertyAsString = property.AsString();
-                var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
-                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
-                bool shouldSaveAsBlittable;
-                object value;
-                JsValue actualValue;
-                if (isDynamicFieldEnumerable)
+                do
                 {
-                    var enumerableScope = CreateEnumerableWriterScope();
-                    enumerableScope.SetAsDynamic();
-                    do
-                    {
-                        ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, indexingScope, documentToProcess,
-                            out shouldSaveAsBlittable, out value, out actualValue, out _);
-                        if (shouldSaveAsBlittable)
-                            ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope, documentToProcess, out _);
-
-                        var disposable = value as IDisposable;
-                        disposable?.Dispose();
-                    } while (iterator.MoveNext());
-
-                    enumerableScope.Finish(field.Name, field.Id, ref entryWriter);
-                }
-                else
-                {
-                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, indexingScope, documentToProcess,
-                        out shouldSaveAsBlittable, out value, out actualValue, out _);
+                    ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
+                        out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
                     if (shouldSaveAsBlittable)
-                        ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope, documentToProcess, out _);
+{                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
+                    hasFields |= innerShouldSkip == false;
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
-                }
+                } while (iterator.MoveNext());
             }
-
-            if (_storeValue)
+            else
             {
-                //Write __stored_fields at the end of entry...
-                StoreValue(indexContext, ref entryWriter, singleEntryWriterScope, documentToProcess);
+                ProcessObject(propertyDescriptor.Value, propertyAsString, field, indexingScope, documentToProcess,
+                    out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
+                if (shouldSaveAsBlittable)
+                    ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
+                hasFields |= innerShouldSkip == false;
+                var disposable = value as IDisposable;
+                disposable?.Dispose();
             }
+        }
+        
+        if (hasFields is false && _indexEmptyEntries is false)
+            return false;
 
-            fields = entryWriter.CurrentFieldCount();
-            return entryWriter.Finish(out output, _indexEmptyEntries);
-        }
-        catch
+        if (key != null)
+            builder.Write(0, key.AsReadOnlySpan());
+
+        if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
+            builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
+
+        if (_storeValue)
         {
-            ResetEntriesWriter();
-            throw;
+            //Write __stored_fields at the end of entry...
+            using var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
+            builder.Store(storedValue);
         }
+
+        return true;
 
         //Helpers
 
-        void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, ObjectInstance documentToProcess, out bool shouldSkip)
+        void ProcessAsJson(JsValue actualValue, IndexField field, ObjectInstance documentToProcess, out bool shouldSkip)
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                 context: indexContext);
-            InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
+            InsertRegularField(field, value, indexContext, builder, sourceDocument, out shouldSkip);
         }
 
-        static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
+        static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, TBuilder builder)
         {
             value = JsValue.Undefined;
-            boost = null;
 
             if (valueToCheck.TryGetValue(JavaScriptFieldName.BoostPropertyName, out var boostValue) == false)
                 return false;
@@ -149,7 +133,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             if (boostValue.IsNumber() == false)
                 return false;
 
-            boost = (float)boostValue.AsNumber();
+            builder.Boost((float)boostValue.AsNumber());
             value = valueValue;
 
             return true;
@@ -160,7 +144,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             return value.IsObject() && value.IsArray() == false;
         }
 
-        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope,
+        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, 
             CurrentIndexingScope indexingScope, ObjectInstance documentToProcess, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
         {
             shouldSkip = false;
@@ -169,7 +153,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             var isObject = IsObject(actualValue);
             if (isObject)
             {
-                if (TryGetBoostedValue(actualValue.AsObject(), out _, out _))
+                if (TryGetBoostedValue(actualValue.AsObject(), out _, builder))
                 {
                     ThrowWhenBoostingIsInDocument();
                 }
@@ -188,7 +172,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                             context: indexContext);
 
-                        InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
+                        InsertRegularField(field, value, indexContext, builder, sourceDocument, out shouldSkip);
 
                         if (value is IDisposable toDispose1)
                         {
@@ -232,7 +216,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         return; //Ignoring bad spatial field
                     }
 
-                    InsertRegularField(field, spatial, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
+                    InsertRegularField(field, spatial, indexContext, builder, sourceDocument, out shouldSkip);
 
                     shouldProcessAsBlittable = false;
                     return;
@@ -253,8 +237,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
             field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
             indexingScope.DynamicFields ??= new();
-            indexingScope.DynamicFields[propertyAsString] = field.Indexing;
-            indexingScope.CreatedFieldsCount++;
+            indexingScope.DynamicFields[propertyAsString] = field;
+            indexingScope.IncrementDynamicFields();
         }
 
         return field;
@@ -278,20 +262,6 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                || valueAsObject.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName);
     }
 
-    private void StoreValue(JsonOperationContext indexContext, ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope, ObjectInstance documentToProcess)
-    {
-        var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
-        unsafe
-        {
-            using (Allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
-            {
-                fixed (byte* bPtr = blittableBuffer)
-                    storedValue.CopyTo(bPtr);
-
-                scope.Write(string.Empty, GetKnownFieldsForWriter().StoredJsonPropertyOffset, blittableBuffer, ref entryWriter);
-            }
-        }
-    }
 
     private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field, CurrentIndexingScope scope)
     {
@@ -361,10 +331,10 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
         }
 
-        if (scope.DynamicFields.TryGetValue(field.Name, out _) == false)
+        if (scope.DynamicFields.ContainsKey(field.Name) == false)
         {
-            scope.DynamicFields[field.Name] = field.Indexing;
-            scope.CreatedFieldsCount++;
+            scope.DynamicFields[field.Name] = field;
+            scope.IncrementDynamicFields();
         }
 
         return value;

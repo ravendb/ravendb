@@ -46,7 +46,7 @@ internal sealed class RavenMoreLikeThis : LuceneMoreLikeThis
     {
         var fieldNames = GetFieldNames() ?? Array.Empty<string>();
 
-        IDictionary<string, Int> termFreqMap = new LuceneProj.Net.Support.HashMap<string, Int>();
+        Dictionary<string, int> termFreqMap = new();
 
         foreach (var fieldName in fieldNames)
         {

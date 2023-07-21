@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Sparrow.Binary;
 using Sparrow.Collections;
 
 namespace Sparrow.Server.Compression
@@ -79,12 +81,30 @@ namespace Sparrow.Server.Compression
                 intervalFrequencies.Add(1);
 
             keys.Reset();
-            while ( keys.MoveNext(out var key) )
+            while (keys.MoveNext(out var key))
             {
                 int pos = 0;
+
+                ref var currentKeyStart = ref MemoryMarshal.GetReference(key);
                 while (pos < key.Length)
                 {
-                    int idx = BinarySearch(key.Slice(pos, Math.Min(4, key.Length - pos)), intervalBoundaries);
+                    int keyAsInteger;
+
+                    ref var currentKey = ref Unsafe.AddByteOffset(ref currentKeyStart, pos);
+                    switch (key.Length - pos)
+                    {
+                        case 1:
+                            keyAsInteger = (currentKey << 16);
+                            break;
+                        case 2:
+                            keyAsInteger = (currentKey << 16 | Unsafe.AddByteOffset(ref currentKey, 1) << 8);
+                            break;
+                        default:
+                            keyAsInteger = (currentKey << 16 | Unsafe.AddByteOffset(ref currentKey, 1) << 8 | Unsafe.AddByteOffset(ref currentKey, 2));
+                            break;
+                    }
+
+                    int idx = BinarySearch(keyAsInteger, intervalBoundaries);
                     intervalFrequencies[idx]++;
                     pos += intervalPrefixes[idx].Length;
                 }
@@ -92,14 +112,17 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int BinarySearch(ReadOnlySpan<byte> key, FastList<Symbol> intervalBoundaries)
+        private int BinarySearch(int key, FastList<Symbol> intervalBoundaries)
         {
             int l = 0;
             int r = intervalBoundaries.Count;
             while (r - l > 1)
             {
                 int m = (l + r) >> 1;
-                int cmp = key.SequenceCompareTo(intervalBoundaries[m].StartKey);
+
+                var mKey = intervalBoundaries[m].StartKeyAsInt >> 8;
+
+                int cmp = (int)(key - mKey);
                 if (cmp < 0)
                 {
                     r = m;
@@ -297,10 +320,8 @@ namespace Sparrow.Server.Compression
                         continue;
 
                     int sliceDescriptor = slice[0] << 16 | slice[1] << 8 | slice[2];
-                    if (!frequencyMap.TryGetValue(sliceDescriptor, out var frequency))
-                        frequency = 0;
-
-                    frequencyMap[sliceDescriptor] = frequency + 1;
+                    ref var freq = ref CollectionsMarshal.GetValueRefOrAddDefault(frequencyMap, sliceDescriptor, out _);
+                    freq++;
                 }
             }          
         }

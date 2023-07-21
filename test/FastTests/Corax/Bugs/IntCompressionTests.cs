@@ -56,7 +56,8 @@ namespace FastTests.Corax.Bugs
             
             var output = stackalloc long[256];
             var idx = 0;
-            using var reader = new FastPForDecoder(allocator, buffer, sizeUsed);
+            using var reader = new FastPForDecoder(allocator);
+            reader.Init(buffer, sizeUsed);
             while (true)
             {
                 var read = reader.Read(output, 256);
@@ -95,7 +96,8 @@ namespace FastTests.Corax.Bugs
                 
                 var output = stackalloc long[256];
                 var idx = 0;
-                using var reader = new FastPForDecoder(allocator, buf, sizeUsed);
+                using var reader = new FastPForDecoder(allocator);
+                reader.Init(buf, sizeUsed);
                 while (true)
                 {
                     var read = reader.Read(output, 256);

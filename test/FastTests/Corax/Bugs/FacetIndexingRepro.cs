@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Corax;
 using Corax.Mappings;
@@ -35,12 +36,13 @@ public class FacetIndexingRepro : StorageTest
         CompactTree idTree = fieldsTree.CompactTreeFor(id);
 
         using var iw = new IndexWriter(wtx, fields);
-        using var entryWriter = new IndexEntryWriter(bsc, fields);
         string entryKey = "users/00000001";
-        entryWriter.Write(0, Encoding.UTF8.GetBytes(entryKey));
-        entryWriter.Finish(out var s);
-        var entryIdEncoded = iw.Index(s.ToSpan());
-        var entryId = EntryIdEncodings.Decode(entryIdEncoded).EntryId;
+        long entryId;
+        using (var builder = iw.Index("entryKey"))
+        {
+            builder.Write(0, Encoding.UTF8.GetBytes(entryKey));
+            entryId = builder.EntryId;
+        }
         iw.Commit();
         
         {
@@ -102,14 +104,14 @@ public class FacetIndexingRepro : StorageTest
     };
 
     [Fact]
-    public void ShouldNotCorrupt()
+    public unsafe void ShouldNotCorrupt()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-corrupt-log.bin");
         using var br = new BinaryReader(stream);
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
-        var fieldsCount = br.Read7BitEncodedInt();
+        var fieldsCount = br.ReadInt32();
         for (int i = 0; i < fieldsCount; i++)
         {
             var name = br.ReadString();
@@ -145,12 +147,19 @@ public class FacetIndexingRepro : StorageTest
                     continue;
                 }
 
-                int len = br.Read7BitEncodedInt();
-                var buffer = br.ReadBytes(len);
-                iw.Index(buffer);
+                using var indexEntryBuilder = iw.Index(id);
+                {
+                    for (int i = 0; i < fieldsCount; i++)
+                    {
+                       int len = br.Read7BitEncodedInt();
+                       var s = br.ReadBytes(len);
+                       indexEntryBuilder.Write(i, s);
+                    }
+                }
                 items++;
             }
 
+            
             using (var rtx = Env.ReadTransaction())
                 QueryAll(rtx);
             
@@ -193,7 +202,7 @@ public class FacetIndexingRepro : StorageTest
     }
     
     [Fact]
-    public void CanSuccessfullyIndexData()
+    public unsafe void CanSuccessfullyIndexData()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-log.bin");
         using var br = new BinaryReader(stream);
@@ -242,9 +251,15 @@ public class FacetIndexingRepro : StorageTest
                     continue;
                 }
 
-                int len = br.Read7BitEncodedInt();
-                var buffer = br.ReadBytes(len);
-                iw.Index(buffer);
+                using var indexEntryBuilder = iw.Index(id);
+                {
+                    for (int i = 0; i < indexFieldsMapping.Count; i++)
+                    {
+                        var len = br.Read7BitEncodedInt();
+                        var b = br.ReadBytes(len);
+                        indexEntryBuilder.Write(i, b);
+                    }
+                }
 
             }
         }
@@ -253,3 +268,4 @@ public class FacetIndexingRepro : StorageTest
     {
     }
 }
+

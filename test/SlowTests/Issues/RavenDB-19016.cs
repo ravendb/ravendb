@@ -18,7 +18,7 @@ public class RavenDB_19016 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Can_Index_Nested_Document_Change_Different_Collections(Options options)
     {
         using (var server = GetNewServer())
@@ -114,9 +114,10 @@ public class RavenDB_19016 : RavenTestBase
                     // users/4 -> users/5
                     await session.StoreAsync(new User {Name = userName4, RelatedUser = userId5}, userId4);
 
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     await session.SaveChangesAsync();
                 }
+
+                Indexes.WaitForIndexing(store);
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var index = database.IndexStore.GetIndex(deployedIndex.IndexName);

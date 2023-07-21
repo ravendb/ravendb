@@ -16,19 +16,27 @@ public unsafe struct FastPForDecoder : IDisposable
     private readonly ByteStringContext _allocator;
     private byte* _input;
     private byte* _metadata;
-    private readonly byte* _end;
-    private readonly uint* _exceptions;
+    private byte* _end;
+    private uint* _exceptions;
     private fixed int _exceptionOffsets[32];
-    private readonly int _prefixShiftAmount;
-    private readonly ushort _sharedPrefix;
+    private int _prefixShiftAmount;
+    private ushort _sharedPrefix;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
     private Vector256<long> _prev;
+    private ByteString _bs;
 
-    public FastPForDecoder(ByteStringContext allocator, byte* input, int size)
+    public FastPForDecoder(ByteStringContext allocator)
+    {
+        _allocator = allocator;
+        const int initialExceptionsSize = 1024;
+        _exceptionsScope = allocator.Allocate(initialExceptionsSize * sizeof(uint), out _bs);
+        _exceptions = (uint*)_bs.Ptr;
+    }
+
+    public void Init( byte* input, int size)
     {
         if (size <= sizeof(PForHeader)) throw new ArgumentOutOfRangeException(nameof(size));
         
-        _allocator = allocator;
         _input = input;
         _end = input + size;
         ref var header = ref Unsafe.AsRef<PForHeader>(input);
@@ -45,13 +53,8 @@ public unsafe struct FastPForDecoder : IDisposable
             _sharedPrefix = header.SharedPrefix;
         }
 
-        _exceptions = null;
-        var exceptionsBufferSize = 1024;
         var exceptionBufferOffset = 0;
-
-        _exceptionsScope = allocator.Allocate(exceptionsBufferSize * sizeof(uint), out ByteString bs);
-        _exceptions = (uint*)bs.Ptr;
-
+      
         var exception = _input + header.ExceptionsOffset;
         for (int i = 2; i <= 32; i++)
         {
@@ -61,11 +64,10 @@ public unsafe struct FastPForDecoder : IDisposable
             var count = Unsafe.Read<ushort>(exception);
             exception += sizeof(ushort);
 
-            if (count + exceptionBufferOffset > exceptionsBufferSize)
+            int sizeRequired = count + exceptionBufferOffset;
+            if (sizeRequired > _bs.Length)
             {
-                exceptionsBufferSize *= 2;
-                allocator.GrowAllocation(ref bs, ref _exceptionsScope, exceptionsBufferSize * sizeof(uint));
-                _exceptions = (uint*)bs.Ptr;
+                GrowAllocation(sizeRequired);
             }
 
             BitPacking.UnpackSegmented(exception, count, _exceptions + exceptionBufferOffset, (uint)i);
@@ -78,6 +80,15 @@ public unsafe struct FastPForDecoder : IDisposable
         _input += sizeof(PForHeader);
         _prev = Vector256.Create(header.Baseline);
 
+    }
+
+    private void GrowAllocation(int size)
+    {
+        do
+        {
+            _allocator.GrowAllocation(ref _bs, ref _exceptionsScope, _bs.Length * 2);
+            _exceptions = (uint*)_bs.Ptr;
+        } while (size > _bs.Length);
     }
 
     public int Read(long* output, int outputCount)

@@ -62,7 +62,7 @@ namespace Voron.Data.PostingLists
         public static void Create(LowLevelTransaction tx, ref PostingListState state, FastPForEncoder encoder)
         {
             var newPage = tx.AllocatePage(1);
-            PostingListLeafPage leafPage = new PostingListLeafPage(newPage);
+            PostingListLeafPage leafPage = new(newPage);
             PostingListLeafPage.InitLeaf(leafPage.Header);
             state.RootObjectType = RootObjectType.Set;
             state.Depth = 1;
@@ -391,6 +391,8 @@ namespace Voron.Data.PostingLists
             var additions = _additions.RawItems;
             var removals = _removals.RawItems;
 
+            var pforDecoder = new FastPForDecoder(_llt.Allocator);
+
             while (additionsCount != 0 || removalsCount != 0)
             {
                 bool hadRemovals = removalsCount > 0;
@@ -440,8 +442,7 @@ namespace Voron.Data.PostingLists
                         continue;
                     }
                     
-                    PostingListLeafPage.Merge(_llt.Allocator, 
-                        leafPage.Header,
+                    PostingListLeafPage.Merge(_llt.Allocator,ref pforDecoder, leafPage.Header,
                         parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
                         parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
                     );
@@ -451,6 +452,7 @@ namespace Voron.Data.PostingLists
             }
             
             tempList.Dispose();
+            pforDecoder.Dispose();
             encoder.Dispose();
         }
         

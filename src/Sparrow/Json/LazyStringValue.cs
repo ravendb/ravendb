@@ -134,12 +134,18 @@ namespace Sparrow.Json
                     StringComparison.OrdinalIgnoreCase);
             }
         }
-        
+
         public Span<byte> AsSpan()
         {
             return new Span<byte>(_buffer, _size);
         }
 
+        public ReadOnlySpan<byte> AsReadOnlySpan()
+        {
+            return new ReadOnlySpan<byte>(_buffer, _size);
+        }
+
+        
         public void CopyTo(byte* dest)
         {
             Memory.Copy(dest, _buffer, _size);

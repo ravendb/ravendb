@@ -1,6 +1,5 @@
-using Sparrow;
+﻿using Sparrow;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
@@ -35,9 +33,10 @@ using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
-using Sparrow.Server.Collections;
+using Voron.Data.Fixed;
 using Voron.Data.Lookups;
-using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;using Voron.Data.RawData;using Voron.Data.PostingLists;
+using Container = Voron.Data.Containers.Container;
 
 namespace Voron
 {
@@ -769,7 +768,6 @@ namespace Voron
             }
         }
 
-        [DoesNotReturn]
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
@@ -1094,6 +1092,209 @@ namespace Voron
             return generator.Generate(detailedReportInput);
         }
 
+        public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
+        {
+            var r = new Dictionary<long, string>();
+            r[tx.LowLevelTransaction.RootObjects.State.RootPageNumber] = "RootObjects";
+            RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
+            for (long pageNumber = NextPageNumber ; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
+            {
+                r[pageNumber] = "Unused Page";
+            }
+
+            var globalAllocator = new NewPageAllocator(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects);
+            RegisterPages(globalAllocator.GetAllocationStorageFst().AllPages(), "Global/PreAllocatedPages/Bitmaps");
+            RegisterPages(globalAllocator.AllPages(), "Global/PreAllocatedPages");
+
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
+            {
+                if (rootIterator.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var currentKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        var type = tx.GetRootObjectType(currentKey);
+                        string name = currentKey.ToString();
+                        switch (type)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                var tree = tx.ReadTree(currentKey);
+                                RegisterPages(tree.AllPages(), name);
+                                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees) ||
+                                    tree.State.Flags.HasFlag(TreeFlags.Lookups))
+                                {
+                                    var it = tree.Iterate(false);
+                                    if (it.Seek(Slices.BeforeAllKeys))
+                                    {
+                                        do
+                                        {
+                                            var rootObjectType = (RootObjectType)it.CreateReaderForCurrent().ReadByte();
+                                             switch (rootObjectType)
+                                            {
+                                                case RootObjectType.Lookup:
+                                                    var lookup = tree.LookupFor<Int64LookupKey>(it.CurrentKey);
+                                                    RegisterLookup(lookup, name);
+                                                    break;
+                                                case RootObjectType.EmbeddedFixedSizeTree:
+                                                    continue; // already accounted for
+                                                case RootObjectType.FixedSizeTree:
+                                                    var nestedFixedSizeHeader = (FixedSizeTreeHeader.Large*)it.CreateReaderForCurrent().Base;
+                                                    var nestedSet = tree.FixedTreeFor(it.CurrentKey, (byte)nestedFixedSizeHeader->ValueSize);
+                                                    RegisterPages(nestedSet.AllPages(), name);
+                                                    break;
+                                                default:
+                                                    throw new ArgumentOutOfRangeException(rootObjectType.ToString());
+
+                                            }
+
+                                        } while (it.MoveNext());
+                                    }
+                                }
+                                break;
+                            case RootObjectType.EmbeddedFixedSizeTree:
+                                break;
+                            case RootObjectType.FixedSizeTree:
+                                if (SliceComparer.AreEqual(currentKey, NewPageAllocator.AllocationStorage)) // will be counted inside pre allocated buffers report
+                                    continue;
+                                RegisterPages(tx.FixedTreeFor(currentKey).AllPages(), name);
+                                break;
+                            case RootObjectType.Table:
+                                var tableTree = tx.ReadTree(currentKey, RootObjectType.Table);
+                                RegisterPages(tableTree.AllPages(), name);
+                                var writtenSchemaData = tableTree.DirectRead(TableSchema.SchemasSlice);
+                                var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                                var tableSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
+                                var table = tx.OpenTable(tableSchema, currentKey);
+                                RegisterPages(table.TablePageAllocator.GetAllocationStorageFst().AllPages(), name +"/PreAllocatedPages/Bitmaps");
+                                RegisterPages(table.TablePageAllocator.AllPages(), name +"/PreAllocatedPages");
+                                if (tableSchema.Key is { IsGlobal: false })
+                                {
+                                    Tree t = GetTableTree(tableTree, tableSchema, tableSchema.Key.Name);
+                                    RegisterPages(t.AllPages(), name + "/" + tableSchema.Key.Name);
+                                }
+
+                                foreach (var index in tableSchema.FixedSizeIndexes.Values)
+                                {
+                                    if (index.IsGlobal)
+                                        continue;
+
+                                    var fixedSizeTree = new FixedSizeTree(tx.LowLevelTransaction, tableTree, index.Name, sizeof(long));
+                                    RegisterPages(fixedSizeTree.AllPages(), name + "/" + index.Name);
+                                }
+
+                                foreach (var index in tableSchema.Indexes.Values)
+                                {
+                                    if (index.IsGlobal)
+                                        continue;
+
+                                    Tree t = GetTableTree(tableTree, tableSchema, index.Name);
+                                    RegisterPages(t.AllPages(), name + "/" + index.Name);
+                                }
+
+                                RegisterTableSection(tableTree, name,TableSchema.ActiveCandidateSectionSlice);
+                                RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
+                                var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
+                                long pageNumber = readResult.Reader.ReadLittleEndianInt64();
+                                var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
+                                // off by one here because of the section header
+                                r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
+                                for (long page = 0; page < activeDataSmallSection.NumberOfPages; page++)
+                                {
+                                    r.Add(activeDataSmallSection.PageNumber + page + 1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
+                                }
+                                break;
+                            case RootObjectType.Container:
+                                long container = tx.OpenContainer(currentKey);
+                                RegisterContainer(container, name);
+                                break;
+                            case RootObjectType.Set:
+                                var set = tx.OpenPostingList(currentKey);
+                                RegisterPages(set.AllPages(), name);
+                                var nestedPages = onPostingList?.Invoke(set);
+                                if (nestedPages != null)
+                                {
+                                    RegisterPages(nestedPages, name);
+                                }
+                                break;
+                            case RootObjectType.Lookup:
+                                 // Here is may be int64, double or compact key, we aren't sure
+                                 var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
+                                 RegisterLookup(numeric, name);
+                                 break;
+                            case RootObjectType.PersistentDictionary:
+                                var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
+                                Page dicPage = tx.LowLevelTransaction.GetPage(header.PageNumber);
+                                var pages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dicPage.OverflowSize);
+                                for (long i = 0; i < pages; i++)
+                                {
+                                    r.Add(header.PageNumber + i, name);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                        }
+                    } while (rootIterator.MoveNext());
+                }
+            }
+
+            return r;
+
+            void RegisterPages(List<long> allPages, string name)
+            {
+                foreach (long page in allPages)
+                {
+                    r.Add(page, name);
+                }
+            }
+
+            Tree GetTableTree(Tree tableTree, TableSchema tableSchema, Slice treeName)
+            {
+                var treeHeader = tableTree.DirectRead(treeName);
+                var t = Tree.Open(tx.LowLevelTransaction, tx, treeName, (TreeRootHeader*)treeHeader);
+                return t;
+            }
+
+            void RegisterTableSection(Tree tableTree, string name, Slice sectionName)
+            {
+                var fixedSizeTree = new FixedSizeTree(tx.LowLevelTransaction, tableTree, sectionName, 0);
+                RegisterPages(fixedSizeTree.AllPages(), name + "/" + sectionName);
+                using var it = fixedSizeTree.Iterate();
+                if (it.Seek(long.MinValue))
+                {
+                    do
+                    {
+                        var section = new RawDataSection(tx.LowLevelTransaction, it.CurrentKey);
+                        r.Add(section.PageNumber , name + "/" + TableSchema.ActiveSectionSlice + "/header");
+                        for (long page = 0; page < section.NumberOfPages; page++)
+                        {
+                            r.Add(section.PageNumber + page+1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
+                        }
+                    } while (it.MoveNext());
+                }
+            }
+
+            void RegisterContainer(long container, string name)
+            {
+                var (allPages, freePages) = Container.GetPagesFor(tx.LowLevelTransaction, container);
+                RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
+                RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
+                var iterator = Container.GetAllPagesSet(tx.LowLevelTransaction, container);
+                while (iterator.TryMoveNext(out var page))
+                {
+                    r.Add(page, name);
+                }
+            }
+
+            void RegisterLookup(Lookup<Int64LookupKey> numeric, string name)
+            {
+                RegisterPages(numeric.AllPages(), name);
+                if (numeric.State.TermsContainerId > 0)
+                {
+                    RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
+                }
+            }
+        }
+        
         public unsafe DetailedReportInput CreateDetailedReportInput(Transaction tx, bool includeDetails)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Nest;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -94,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
                 if (it.MoveNext() == false)
                 {
                     // we have just _one_ entry for the map, can try to optimize
-                    writer.Value.UpdateDocument(Raven.Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+                    writer.Value.UpdateDocument(
                         indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
                     return 1;
                 }

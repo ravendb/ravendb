@@ -303,7 +303,13 @@ namespace Voron.Debugging
 
             RenderAndShowTCompactTree(tree, tree.State.RootPage, $"<p>{headerData}</p>");
         }
-        
+
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(CompactTree tree, string message = null)
+        {
+            RenderAndShow(tree._inner);
+        }
+
         [Conditional("DEBUG")]
         public static void RenderAndShowTCompactTree<TKey>(Lookup<TKey>  tree, long startPageNumber, string headerData = null)
             where TKey : struct, ILookupKey

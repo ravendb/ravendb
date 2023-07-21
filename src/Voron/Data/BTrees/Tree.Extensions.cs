@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 
 namespace Voron.Data.BTrees
 {
@@ -214,6 +216,39 @@ namespace Voron.Data.BTrees
             }
 
             throw new NotSupportedException();
+        }
+
+        public long GetLookupRootPage(Slice name)
+        {
+            var result = Read(name);
+            if (result == null)
+                return -1;
+            var header = (LookupState*)result.Reader.Base;
+            if (header->RootObjectType != RootObjectType.Lookup)
+                return -1;
+            return header->RootPage;
+        }
+
+        public Dictionary<long, string> GetFieldsRootPages()
+        {
+            var dic = new Dictionary<long, string>();
+            using var it = Iterate(prefetch: false);
+            if (it.Seek(Slices.BeforeAllKeys) == false)
+                return dic;
+            do
+            {
+                if(it.GetCurrentDataSize() != sizeof(LookupState))
+                    continue;
+                
+                var header = (LookupState*)it.CreateReaderForCurrent().Base;
+                if(header->RootObjectType != RootObjectType.Lookup)
+                    continue;
+
+                dic[header->RootPage] = it.CurrentKey.ToString();
+
+            } while (it.MoveNext());
+
+            return dic;
         }
     }
 }

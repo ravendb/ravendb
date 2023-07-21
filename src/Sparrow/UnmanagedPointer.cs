@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -33,6 +34,7 @@ namespace Sparrow
         [FieldOffset(0)]
         public readonly double Double;
 
+        public UnmanagedMemoryStream ToStream() => new(Address, Length);
 
         public override string ToString()
         {
@@ -89,6 +91,8 @@ namespace Sparrow
 
         public static implicit operator Span<byte>(UnmanagedSpan pointer) => new Span<byte>(pointer.Address, pointer.Length);
         public static implicit operator ReadOnlySpan<byte>(UnmanagedSpan pointer) => new ReadOnlySpan<byte>(pointer.Address, pointer.Length);
+
+        public string ToStringValue() => Length == 0 ? string.Empty : Encoding.UTF8.GetString(Address, Length);
     }
 
     public unsafe struct UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -32,12 +34,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _converter = converter;
             var knownFields = _converter.GetKnownFieldsForWriter();
             _indexingScope = CurrentIndexingScope.Current;
+            if (_indexingScope != null)
+            {
+                _indexingScope.OnNewDynamicField += UpdateDynamicFieldsBindings;
+                _indexingScope.DynamicFields ??= new Dictionary<string, IndexField>();
+            }
             _allocator = writeTransaction.Allocator;
             try
             {
-                _indexWriter = index.Definition.HasDynamicFields 
-                    ? new IndexWriter(writeTransaction, knownFields, true) 
-                    : new IndexWriter(writeTransaction, knownFields);
+                _indexWriter =  new IndexWriter(writeTransaction, knownFields);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
@@ -47,25 +52,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 throw new IndexWriteException(e);
             }
-            
-            if (index.Definition.HasDynamicFields)
+
+            _dynamicFieldsBuilder = IndexFieldsMappingBuilder.CreateForWriter(true);
+            try
             {
-                _dynamicFieldsBuilder = IndexFieldsMappingBuilder.CreateForWriter(true);
-                try
-                {
-                    _dynamicFieldsBuilder
-                        .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
-                        .AddExactAnalyzer(knownFields.ExactAnalyzer)
-                        .AddSearchAnalyzer(knownFields.SearchAnalyzer);
-                }
-                catch
-                {
-                    _dynamicFieldsBuilder.Dispose();
-                    throw;
-                }
-                _indexingScope.DynamicFields ??= new();
-                UpdateDynamicFieldsBindings();
+                _dynamicFieldsBuilder
+                    .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
+                    .AddExactAnalyzer(knownFields.ExactAnalyzer)
+                    .AddSearchAnalyzer(knownFields.SearchAnalyzer);
             }
+            catch
+            {
+                _dynamicFieldsBuilder.Dispose();
+                throw;
+            }
+
+            UpdateDynamicFieldsBindings();
         }
         
         public override void Commit(IndexingStatsScope stats)
@@ -79,86 +81,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void UpdateDocument(string keyFieldName, 
+        public override void UpdateDocument(
             LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            
-            LazyStringValue lowerId;
-            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
-            ByteString data;
-            float? documentBoost = null;
-            bool shouldSkip;
-            using (Stats.ConvertStats.Start())
-            {
-                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
-            }
-            
-            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
-            }
-            
-            using(scope)
+            using var builder = _indexWriter.Update(key.AsSpan());
+
             using (Stats.AddStats.Start())
             {
-                if (data.Length == 0 || shouldSkip)
-                {
-                    DeleteByField(keyFieldName, key, stats);
-                    return;
-                }
-
-                if (documentBoost.HasValue)
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan(), documentBoost.Value);
-                else
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), data.ToSpan());
-                
                 stats.RecordIndexingOutput();
+                if(_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
+                    return;
+                Delete(key, stats);
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            
-            LazyStringValue lowerId;
-            ByteString data;
-            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
-            float? documentBoost;
-            bool shouldSkip;
-            using (Stats.ConvertStats.Start())
-            {
-                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
-            }
-            
-            using (scope)
-            {
-                if (data.Length == 0 || shouldSkip)
-                    return;
+            using var builder = _indexWriter.Index(key.AsSpan());
 
-                using (Stats.AddStats.Start())
-                {
-                    if (documentBoost.HasValue)
-                        _indexWriter.Index(data.ToSpan(), documentBoost.Value);
-                    else
-                        _indexWriter.Index(data.ToSpan());
-                }
-
+            using (Stats.AddStats.Start())
+            {
+                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
                 stats.RecordIndexingOutput();
-            }
-            
-            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
             }
         }
 
-        private void UpdateDynamicFieldsBindings()
+        public void UpdateDynamicFieldsBindings()
         {
+            if (_indexingScope == null)
+                return; // only from tests
+            
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
                 using var _ = Slice.From(_allocator, fieldName, out var slice);
-                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing));
+                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing.Indexing), fieldIndexing.Storage== FieldStorage.Yes);
             }
 
             _dynamicFields = _dynamicFieldsBuilder.Build();
@@ -189,7 +148,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            DeleteByField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key, stats);
+            EnsureValidStats(stats);
+            
+            using (Stats.DeleteStats.Start())
+                _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
         
         /// <summary>
@@ -200,15 +162,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             
             using (Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture));
+                _indexWriter.TryDeleteEntryByField(fieldName, key.ToString(CultureInfo.InvariantCulture));
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-            
+
             using (var _ = Stats.DeleteStats.Start())
-                _indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, sourceDocumentId.ToString(CultureInfo.InvariantCulture));
+            {
+                _indexWriter.TryDeleteEntryByField(
+                    Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+                    sourceDocumentId.ToString(CultureInfo.InvariantCulture));
+            }
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)

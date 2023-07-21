@@ -43,7 +43,7 @@ namespace Sparrow.Server.Compression
     }
 
     public unsafe struct Encoder3Gram<TEncoderState> : IEncoderAlgorithm
-        where TEncoderState : struct, IEncoderState
+        where TEncoderState : IEncoderState
     {
         private TEncoderState _state;
         private int _entries;
@@ -434,26 +434,28 @@ namespace Sparrow.Server.Compression
             return ref Unsafe.As<byte, Interval3Gram>(ref ptr);
         }
 
-        private unsafe void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
+        private void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
         {
-            EncodingTable.Clear(); // Zero out the memory we are going to be using. 
-
-            // Creating the Binary Tree. 
-            var tree = BinaryTree<short>.Create(_state.DecodingTable);
+            ref var state = ref _state;
 
             int dictSize = symbolCodeList.Count;
             if (dictSize >= short.MaxValue)
                 throw new NotSupportedException($"We do not support dictionaries with more items than {short.MaxValue - 1}");
 
             // We haven't stored it yet. So we are calculating it. 
-            int numberOfEntriesInTable = (_state.EncodingTable.Length - 4) / Unsafe.SizeOf<Interval3Gram>();
+            int numberOfEntriesInTable = (state.EncodingTable.Length - 4) / Unsafe.SizeOf<Interval3Gram>();
             if (numberOfEntriesInTable < dictSize)
             {
-                if (_state.CanGrow)
-                    _state.Grow(dictSize);
+                if (state.CanGrow)
+                    state.Grow((dictSize * Unsafe.SizeOf<Interval3Gram>() + 8) * 2);
                 else
                     throw new InsufficientMemoryException("Not enough memory for the table and the table supplied does not support growing.");
-            }                
+            }
+
+            EncodingTable.Clear(); // Zero out the memory we are going to be using. 
+
+            // Creating the Binary Tree. 
+            var tree = BinaryTree<short>.Create(state.DecodingTable);
 
             int maxBitSequenceLength = 1;
             int minBitSequenceLength = int.MaxValue;

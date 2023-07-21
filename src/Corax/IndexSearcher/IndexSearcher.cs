@@ -14,9 +14,12 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using InvalidOperationException = System.InvalidOperationException;
@@ -30,9 +33,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly IndexFieldsMapping _fieldMapping;
     private Tree _persistedDynamicTreeAnalyzer;
-
-
-    private Page _lastPage = default;
     private long? _numberOfEntries;
 
     /// <summary>
@@ -54,14 +54,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly bool _ownsTransaction;
     private readonly bool _ownsIndexMapping;
 
-    private readonly Tree _metadataTree;
-    private readonly Tree _fieldsTree;
-    private readonly Tree _entriesToTermsTree;
+    private Tree _metadataTree;
+    private Tree _fieldsTree;
+    private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
-    private readonly Lookup<Int64LookupKey> _entryIdToOffset;
+    private long _dictionaryId;
+    private Lookup<Int64LookupKey> _entryIdToLocation;
+    public FieldsCache FieldCache;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
+    
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -69,20 +72,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
-        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        Init();
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
+        Init();
+    }
+
+    private void Init()
+    {
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _entryIdToOffset = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToOffsetSlice);
+        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
+        FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
@@ -98,28 +105,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _fieldMapping = fieldsMapping;
         }
     }
-
-    public UnmanagedSpan GetIndexEntryPointer(long id)
+    
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
+        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, entryId);
-        return data.ToUnmanagedSpan();
-    }
-
-    public IndexEntryReader GetEntryReaderFor(long id)
-    {
-        if (_entryIdToOffset.TryGetValue(id, out var entryId) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-        
-        return GetEntryReaderForEntryContainerId(_transaction, entryId, ref _lastPage, out _);
-    }
-
-    public static IndexEntryReader GetEntryReaderForEntryContainerId(Transaction transaction,  long id, ref Page page,out int rawSize)
-    {
-        var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
-        rawSize = item.Length;
-        return new IndexEntryReader(item.Address, item.Length);
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, item.Address, item.Length, _dictionaryId);
     }
 
 
@@ -369,12 +361,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return FieldMetadata.Build(fieldNameAsSlice, sumName, fieldId, fieldIndexingMode, analyzer, hasBoost);
     }
 
-    public FieldMetadata FieldMetadataBuilder(Slice fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
-        FieldIndexingMode fieldIndexingMode = default)
-    {
-        return FieldMetadata.Build(fieldName, default, fieldId, fieldIndexingMode, analyzer);
-    }
-
     public Slice GetDynamicFieldName(string fieldName)
     {
         _dynamicFieldNameMapping ??= new();
@@ -429,4 +415,35 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
+
+    public bool HasMultipleTermsInField(string fieldName)
+    {
+        using var _ = Slice.From(Allocator, fieldName, out var slice);
+        return HasMultipleTermsInField(slice);
+    }
+
+    private bool HasMultipleTermsInField(Slice fieldName)
+    {
+        using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
+        return it.Seek(fieldName) && SliceComparer.Equals(it.CurrentKey, fieldName);
+    }
+
+    public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+    {
+        var pageToField = new Dictionary<long, string>();
+        var it = _fieldsTree.Iterate(prefetch: false);
+        if (it.Seek(Slices.BeforeAllKeys))
+        {
+            do
+            {
+                var state = (LookupState*)it.CreateReaderForCurrent().Base;
+                if (state->RootObjectType == RootObjectType.Lookup)
+                {
+                    pageToField.Add(state->RootPage, it.CurrentKey.ToString());
+                }
+            } while (it.MoveNext());
+        }
+
+        return pageToField;
+    }
 }

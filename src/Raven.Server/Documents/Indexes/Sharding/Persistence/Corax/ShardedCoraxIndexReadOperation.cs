@@ -52,6 +52,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
         var result = ShardedQueryResultDocument.From(queryResult);
 
+        var reader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
+
         for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];
@@ -66,43 +68,62 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             }
 
             var orderByFieldMetadata = orderByFields[i];
-
-            IndexEntryReader entryReader = IndexSearcher.GetEntryReaderFor(indexEntryId);
-            IndexEntryReader.FieldReader reader = entryReader.GetFieldReaderFor(orderByFieldMetadata.Field);
-
+            reader.Reset();
+            long fieldRootPage = IndexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
+            // Note that in here we have to check for the *lowest* value of the field, if there are multiple terms
+            // for the field, so we always order by the smallest value (regardless of the ascending / descending structure)
             switch (orderByField.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    reader.Read<long>(out var longValue);
-                    result.AddLongOrderByField(longValue);
+                    long l = long.MaxValue;
+                    while (reader.FindNext(fieldRootPage))
+                    {
+                        l = long.Min(l, reader.CurrentLong);
+                    }
+                    result.AddLongOrderByField(l);
                     break;
                 case OrderByFieldType.Double:
-                    reader.Read<double>(out var doubleValue);
-                    result.AddDoubleOrderByField(doubleValue);
+                    double d = double.MaxValue;
+                    while (reader.FindNext(fieldRootPage))
+                    {
+                        d = double.Min(d, reader.CurrentDouble);
+                    }
+                    result.AddDoubleOrderByField(d);
                     break;
                 case OrderByFieldType.Distance:
                 {
-                        var spatialReader = IndexSearcher.SpatialReader(orderByFieldMetadata.Field.FieldName);
-                        double distance;
-                        if (spatialReader.TryGetSpatialPoint(indexEntryId, out var coords) == false)
-                        {
-                            distance = orderByFieldMetadata.Ascending == false ? double.MinValue : double.MaxValue;
-                        }
-                        else
-                        {
-                            distance = SpatialUtils.GetGeoDistance(coords, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
-                        }
-                        
-                        result.AddDoubleOrderByField(distance);
-                        break;
-                    }
-                default:
+                    double m = double.MaxValue;
+                    while (reader.FindNextSpatial(fieldRootPage))
                     {
-                        reader.Read(out var sv);
-                        var stringValue = Encoding.UTF8.GetString(sv);
-                        result.AddStringOrderByField(stringValue);
-                        break;
+                        var coordinates = (reader.Latitude, reader.Longitude);
+                     
+                        var distance = SpatialUtils.GetGeoDistance(in coordinates, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
+                        m = double.Min(m, distance);
                     }
+
+                    result.AddDoubleOrderByField(m);
+                    break;
+                }
+                default:
+                {
+                    string m = null;
+                    while (reader.FindNext(fieldRootPage))
+                    {
+                        // we allocating managed string to make things easier, if this show up in profiling
+                        // we can do the comparisons using CompactKeys
+                        var stringValue = Encoding.UTF8.GetString(reader.Current.Decoded());
+                        m ??= stringValue;
+                        if (string.CompareOrdinal(m, stringValue) < 0)
+                            m = stringValue;
+                    }
+                    result.AddStringOrderByField(m switch
+                    {
+                         Constants.NullValue => null,
+                         Constants.EmptyString =>string.Empty,
+                         _ => m
+                    });
+                    break;
+                }
             }
         }
 

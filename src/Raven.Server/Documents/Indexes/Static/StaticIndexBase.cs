@@ -10,6 +10,7 @@ using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Sharding;
@@ -448,16 +449,17 @@ namespace Raven.Server.Documents.Indexes.Static
             }, allFields, Corax.Constants.IndexWriter.DynamicField);
 
             if (scope.DynamicFields == null)
-                scope.DynamicFields = new Dictionary<string, FieldIndexing>();
+                scope.DynamicFields = new Dictionary<string, IndexField>();
 
-            var fieldAlreadyExists = scope.DynamicFields.ContainsKey(name);
-            if (fieldAlreadyExists == false)
-                scope.CreatedFieldsCount++;
-            else if (fieldAlreadyExists && scope.DynamicFields[name] != field.Indexing)
+            if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
             {
-                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{scope.DynamicFields[name]}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
+                scope.DynamicFields[name] = field;
+                scope.IncrementDynamicFields();
             }
-            scope.DynamicFields[name] = field.Indexing;
+            else if (options.Indexing != null && existing.Indexing != field.Indexing)
+            {
+                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{existing.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
+            }
 
 
             var result = new List<CoraxDynamicItem>();
@@ -489,14 +491,15 @@ namespace Raven.Server.Documents.Indexes.Static
             }, allFields);
 
             if (scope.DynamicFields == null)
-                scope.DynamicFields = new Dictionary<string, FieldIndexing>();
+                scope.DynamicFields = new Dictionary<string, IndexField>();
 
-            scope.DynamicFields[name] = field.Indexing;
+            scope.DynamicFields[name] = field;
 
             if (scope.CreateFieldConverter == null)
                 scope.CreateFieldConverter = new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
-            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount++);
+            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount);
+            scope.IncrementDynamicFields();
             var result = new List<AbstractField>();
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
             return result;

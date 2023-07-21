@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var scope = CurrentIndexingScope.Current;
             if (scope != null)
-                scope.CreatedFieldsCount = 0;
+                scope.IncrementDynamicFields();
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext, writeBuffer, scope?.Source);
             if (_fields.Count > 0)

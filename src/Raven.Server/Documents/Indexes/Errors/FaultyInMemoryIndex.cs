@@ -18,12 +18,11 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    internal class FaultyInMemoryIndex : Index
+    internal sealed class FaultyInMemoryIndex : Index
     {
         private readonly Exception _e;
 

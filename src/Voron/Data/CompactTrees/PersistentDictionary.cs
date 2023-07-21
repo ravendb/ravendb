@@ -16,7 +16,7 @@ using static Sparrow.Hashing;
 namespace Voron.Data.CompactTrees
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct PersistentDictionaryRootHeader
+    public struct PersistentDictionaryRootHeader
     {
         [FieldOffset(0)]
         public RootObjectType RootObjectType;
@@ -26,7 +26,7 @@ namespace Voron.Data.CompactTrees
     }
     
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct PersistentDictionaryHeader
+    public struct PersistentDictionaryHeader
     {
         public const int SizeOf = 32;
 
@@ -35,26 +35,29 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(8)]
         public int TableSize;
         [FieldOffset(16)]
-        public long CurrentId;        
+        public long CurrentId;
         [FieldOffset(24)]
-        public long PreviousId;
+        public long Reserved;
+
 
         public override string ToString()
         {
-            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
+            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(CurrentId)}: {CurrentId}";
         }
     }
 
-    public unsafe partial class PersistentDictionary 
+    public unsafe partial class PersistentDictionary
     {
+        public const int MaxDictionaryEntriesForTraining = 8000;
 
+        public const string DictionaryKey = $"{nameof(PersistentDictionary)}.Current";
         public readonly long DictionaryId;
         
         private readonly HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>> _encoder;
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
-            using var _ = Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
+            using var _ = Slice.From(llt.Allocator, DictionaryKey, out var defaultKey);
 
             long pageNumber;
 
@@ -73,7 +76,6 @@ namespace Voron.Data.CompactTrees
                 PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
                 header->TableSize = DefaultDictionaryTableSize;
                 header->CurrentId = p.PageNumber;
-                header->PreviousId = 0;
 
                 // We retrieve the embedded file from the assembly, copy and checksum the entire thing.             
                 var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
@@ -111,22 +113,28 @@ namespace Voron.Data.CompactTrees
             return pageNumber;
         }
 
-        public static PersistentDictionary CreateIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
+        public static PersistentDictionary ReplaceIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
             where TKeys1 : struct, IReadOnlySpanEnumerator
             where TKeys2 : struct, IReadOnlySpanEnumerator
         {
-            var encoderState = new AdaptiveMemoryEncoderState(DefaultDictionaryTableSize);
+            var encoderState = new AdaptiveMemoryEncoderState();
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
-            encoder.Train(trainEnumerator, MaxDictionaryEntries);                
+            encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);                
             
-            // Test the new dictionary to ensure that we have statistically better compression.
-            using var encodeBufferScope = llt.Allocator.Allocate(Constants.Storage.PageSize, out var encodeBuffer);
-            
+            var encodeBuffer = ArrayPool<byte>.Shared.Rent(Constants.Storage.PageSize);
+
             int incumbentSize = 0;
             int successorSize = 0;
-            var auxEncodeBuffer = encodeBuffer.ToSpan();
+            var auxEncodeBuffer = encodeBuffer.AsSpan();
             while (testEnumerator.MoveNext(out var testValue))
-            {                
+            {
+                if (testValue.Length > encodeBuffer.Length / 2)
+                {
+                    ArrayPool<byte>.Shared.Return(encodeBuffer);
+                    encodeBuffer = ArrayPool<byte>.Shared.Rent(testValue.Length * 2);
+                    auxEncodeBuffer = encodeBuffer.AsSpan();
+                }
+
                 incumbentSize += previousDictionary._encoder.Encode(testValue, auxEncodeBuffer);
                 successorSize += encoder.Encode(testValue, auxEncodeBuffer);
             }
@@ -134,6 +142,9 @@ namespace Voron.Data.CompactTrees
             // If the new dictionary is not at least 5% better, we return the current dictionary.             
             if (incumbentSize < successorSize * 1.05)
                 return previousDictionary;
+
+            if (previousDictionary != null)
+                llt.FreePage(previousDictionary.DictionaryId);
 
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
@@ -144,19 +155,25 @@ namespace Voron.Data.CompactTrees
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
             header->CurrentId = p.PageNumber;
-            header->PreviousId = previousDictionary?.DictionaryId ?? 0;
 
             byte* encodingTablesPtr = p.DataPointer + PersistentDictionaryHeader.SizeOf;
             encoderState.EncodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr, requiredSize / 2));
             encoderState.DecodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr + requiredSize / 2, requiredSize / 2));
 
-            var nativeState = new NativeMemoryEncoderState(encodingTablesPtr, requiredSize);
             header->TableSize = requiredSize;
             header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(ulong), (ulong) (header->TableSize + PersistentDictionaryHeader.SizeOf - sizeof(ulong)));
 
 #if DEBUG
             VerifyTable(p);
 #endif
+
+            using var _ = Slice.From(llt.Allocator, DictionaryKey, out var defaultKey);
+            using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+            *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
+            {
+                RootObjectType = RootObjectType.PersistentDictionary,
+                PageNumber = p.PageNumber
+            };
 
             return new PersistentDictionary(p);
         }

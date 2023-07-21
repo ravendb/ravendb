@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Corax;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -23,19 +24,21 @@ public class EntriesModificationsTests : NoDisposalNeeded
         entries.Removal(1);
         entries.Addition(3);
         entries.Removal(2);
-        entries.PrepareDataForCommiting();
+        entries.Prepare();
 
         AssertEntriesCase(ref entries);
+        Assert.Equal(1, entries.Updates.Count);
+        Assert.Equal(2, entries.Updates.Items[0].EntryId);
     }
     private static void AssertEntriesCase(ref IndexWriter.EntriesModifications entries)
     {
         var additions = entries.Additions;
         var removals = entries.Removals;
 
-        foreach (var add in additions)
-            Assert.True(0 > removals.BinarySearch(add));
+        foreach (var add in additions.ToSpan())
+            Assert.True(0 > removals.ToSpan().BinarySearch(add));
 
-        foreach (var removal in removals)
-            Assert.True(0 > additions.BinarySearch(removal));
+        foreach (var removal in removals.ToSpan())
+            Assert.True(0 > additions.ToSpan().BinarySearch(removal));
     }
 }

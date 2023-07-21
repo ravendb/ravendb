@@ -148,7 +148,8 @@ public class SimdCompressionEncodingTests : NoDisposalNeeded
             Assert.Equal(Data.Length, count);
         }
 
-        using var reader = new FastPForDecoder(allocator, buffer, sizeUsed);
+        using var reader = new FastPForDecoder(allocator);
+        reader.Init(buffer, sizeUsed);
         int idx = 0;
         while (true)
         {

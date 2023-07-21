@@ -56,7 +56,7 @@ public class DeleteTest : StorageTest
 
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
-            indexWriter.TryDeleteEntry("Id", "list/9");
+            indexWriter.TryDeleteEntry("list/9");
             indexWriter.Commit();
         }
 
@@ -114,15 +114,13 @@ public class DeleteTest : StorageTest
 
             Assert.Equal(read, match.Count);
 
+            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(_analyzers.GetByFieldId(0).FieldName);
+            Page p = default;
             for (int i = 0; i < read; i++)
             {
-                var entry = indexSearcher.GetEntryReaderFor(ids[i]);
-                Assert.True(entry.GetFieldReaderFor(0).Read(out Span<byte> id));
-                if (idAsBytes.SequenceEqual(id))
-                {
-                    entry.GetFieldReaderFor(ContentId).Read(out Span<byte> content);
-                    // Assert.False(nine.SequenceEqual(content));
-                }
+                var entry = indexSearcher.GetEntryTermsReader(ids[i], ref p);
+                Assert.True(entry.FindNext(fieldRootPage));
+                Assert.NotEqual(Encoding.UTF8.GetString(idAsBytes), Encoding.UTF8.GetString(entry.Current.Decoded()));
             }
         }
     }
@@ -154,24 +152,16 @@ public class DeleteTest : StorageTest
     private void IndexEntries(IndexFieldsMapping knownFields)
     {
         using var indexWriter = new IndexWriter(Env, knownFields);
-        var entryWriter = new IndexEntryWriter(_bsc, knownFields);
 
         foreach (var entry in _longList)
         {
-            using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-            indexWriter.Index(data.ToSpan());
+            using var builder = indexWriter.Index(Encoding.UTF8.GetBytes(entry.Id));
+            builder.Write(IndexId, null, Encoding.UTF8.GetBytes(entry.Id));
+            builder.Write(ContentId, null, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
         }
 
         indexWriter.Commit();
         knownFields.Dispose();
-    }
-
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-        ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry, out ByteString output)
-    {
-        entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-        entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
-        return entryWriter.Finish(out output);
     }
 
     private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)

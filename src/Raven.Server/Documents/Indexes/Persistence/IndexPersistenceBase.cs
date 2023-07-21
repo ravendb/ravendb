@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Initialize(StorageEnvironment environment);
 
+        public abstract void OnInitializeComplete();
+
         public abstract void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache);
 
         internal abstract IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx);
@@ -42,7 +44,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);
         public abstract void DisposeWriters();
         public abstract void Dispose();
-        
     }
 
 

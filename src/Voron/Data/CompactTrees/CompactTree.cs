@@ -28,7 +28,7 @@ namespace Voron.Data.CompactTrees;
 /// </summary>
 public sealed partial class CompactTree : IPrepareForCommit
 {
-    private Lookup<CompactKeyLookup> _inner;
+    internal readonly Lookup<CompactKeyLookup> _inner;
 
     public CompactTree(Lookup<CompactKeyLookup> inner)
     {
@@ -86,14 +86,17 @@ public sealed partial class CompactTree : IPrepareForCommit
             {
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
-            Key = new CompactKey(llt);
-
+            
+            Key = llt.AcquireCompactKey();
+            Key.Initialize(llt);
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
         
         public int CompareTo<T>(Lookup<T> parent, long currentKeyId) where T : struct, ILookupKey
         {
+            var llt = parent.Llt;
+
             byte* keyPtr;
             int keyLengthInBits;
             if (currentKeyId == 0)
@@ -103,7 +106,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
             else
             {
-                GetEncodedKey(parent.Llt, currentKeyId, out keyLengthInBits, out keyPtr);
+                GetEncodedKey(llt, currentKeyId, out keyLengthInBits, out keyPtr);
             }
 
             var k = GetKey(parent);
@@ -191,7 +194,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             // the term in the container is:  [ metadata -1 byte ] [ term bytes ]
             // the metadata is composed of two nibbles - the first says the *remainder* of bits in the last byte in the term
             // the second nibble is the reference count
-            var id = Container.Allocate(llt, state.TermsContainerId, encodedKey.Length + 1, state.DictionaryId, out var allocated);
+            var id = Container.Allocate(llt, state.TermsContainerId, encodedKey.Length + 1, state.RootPage, out var allocated);
             encodedKey.CopyTo(allocated[1..]);
             var remainderBits = encodedKey.Length * 8 - encodedKeyLengthInBits;
             Debug.Assert(remainderBits is >= 0 and < 8);
@@ -244,6 +247,18 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
+    public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    {
+        _inner.AddAfterTryGetNext(ref lookup, value);
+        return lookup.ContainerId;
+    }
+    
+    public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    {
+        _inner.SetAfterTryGetNext(ref lookup, value);
+    }
+
+
     public long Add(CompactKey key, long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
@@ -273,7 +288,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     }
 
 
-    public static CompactTree InternalCreate(Tree parent, Slice name)
+    public static unsafe CompactTree InternalCreate(Tree parent, Slice name)
     {
         Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
@@ -282,9 +297,28 @@ public sealed partial class CompactTree : IPrepareForCommit
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
-            
-            // This will be created a single time and stored in the root page.                 
-            var dictionaryId = PersistentDictionary.CreateDefault(llt);
+
+            long dictionaryId;
+
+            // This will be created a single time and stored in the root page.
+            using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var defaultKey);
+            var existingDictionary = llt.RootObjects.DirectRead(defaultKey);
+            if (existingDictionary == null)
+            {
+                dictionaryId = PersistentDictionary.CreateDefault(llt);
+
+                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+                *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
+                {
+                    RootObjectType = RootObjectType.PersistentDictionary,
+                    PageNumber = dictionaryId
+                };
+            }
+            else
+            {
+                dictionaryId = ((PersistentDictionaryRootHeader*)existingDictionary)->PageNumber;
+            }
+
             long containerId = Container.Create(llt);
             inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
         }
@@ -295,6 +329,25 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         return new CompactTree(inner);
     }
+
+    public static bool HasDictionary(LowLevelTransaction llt)
+    {
+        using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
+        var existingDictionary = llt.RootObjects.Read(dictionarySlice);
+        return existingDictionary != null;
+    }
+    
+    public static unsafe long GetDictionaryId(LowLevelTransaction llt)
+    {
+        using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
+        var read = llt.RootObjects.Read(dictionarySlice);
+        if (read != null)
+        {
+            return ((PersistentDictionaryRootHeader*)read.Reader.Base)->PageNumber;
+        }
+        return -1;
+    }
+
     public bool TryGetValue(string key, out long value)
     {
         using var _ = Slice.From(_inner.Llt.Allocator, key, out var slice);
@@ -306,18 +359,19 @@ public sealed partial class CompactTree : IPrepareForCommit
     public bool TryGetValue(ReadOnlySpan<byte> key, out long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-
-        return TryGetValue(scope.Key, out value);
+        return _inner.TryGetValue(new CompactKeyLookup(scope.Key), out value);
     }
+
     public bool TryGetValue(CompactKey key, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         return _inner.TryGetValue(new CompactKeyLookup(key), out value);
     }
+
     public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
-        CompactKeyLookup compactKeyLookup = new CompactKeyLookup(key);
+        CompactKeyLookup compactKeyLookup = new(key);
         var result = _inner.TryGetValue(ref compactKeyLookup, out value);
         termContainerId = compactKeyLookup.ContainerId;
         return result;
@@ -338,10 +392,16 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
     {
-        using var compactKey = new CompactKey(_inner.Llt);
+        var compactKey = new CompactKey();
+        compactKey.Initialize(_inner.Llt);
         compactKey.Set(key);
         compactKey.ChangeDictionary(_inner.State.DictionaryId);
         return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);
+    }
+
+    public bool TryRemoveExistingValue(ref CompactKeyLookup key, out long oldValue)
+    {
+        return _inner.TryRemoveExistingValue(ref key, out oldValue);
     }
 
     public void InitializeStateForTryGetNextValue()
@@ -349,13 +409,11 @@ public sealed partial class CompactTree : IPrepareForCommit
         _inner.InitializeCursorState();
     }
 
-    public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyCacheScope cacheScope)
+    public bool TryGetNextValue(CompactKey key, out long termContainerId, out long value,out CompactKeyLookup lookup)
     {
-        cacheScope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-        var encodedKey = cacheScope.Key;
-        encodedKey.ChangeDictionary(_inner.State.DictionaryId);
-
-        var lookup = new CompactKeyLookup(encodedKey);
+        key.ChangeDictionary(DictionaryId);
+        key.EncodedWithCurrent(out _);
+        lookup = new CompactKeyLookup(key);
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;

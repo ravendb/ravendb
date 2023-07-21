@@ -28,6 +28,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
@@ -65,6 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         protected readonly IndexSearcher IndexSearcher;
         private readonly IndexFieldsMapping _fieldMappings;
+        protected Page _lastPage;
         private readonly ByteStringContext _allocator;
         private readonly int _maxNumberOfOutputsPerDocument;
         private TermsReader _documentIdReader;
@@ -370,11 +372,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _alreadySeenProjections ??= new();
 
                     var retriever = _retriever;
+                    Page page = default;
                     foreach (var id in distinctIds)
                     {
-                        var coraxEntry = _searcher.GetEntryReaderFor(id);
+                        var reader = _searcher.GetEntryTermsReader(id, ref page);
+
                         var key = _documentIdReader.GetTermFor(id);
-                        var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, coraxEntry, key, _index.IndexFieldsPersistence);
+                        var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key);
                         var result = retriever.Get(ref retrieverInput, token);
 
                         if (result.Document != null)
@@ -544,6 +548,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     IDisposable releaseServerContext = null;
                     IDisposable closeServerTransaction = null;
                     TransactionOperationContext serverContext = null;
+
                     try
                     {
                         if (query.Metadata.HasCmpXchg)
@@ -574,7 +579,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var scores = Array.Empty<float>();
 
                 using var queryFilter = GetQueryFilter();
-
+                Page page = default;
                 bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
                 totalResults.Value = 0;
 
@@ -632,10 +637,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                     Include:
-                        IndexEntryReader indexEntryReader = IndexSearcher.GetEntryReaderFor(ids[i]);
+                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                         var key = _documentIdReader.GetTermFor(ids[i]);
                         float? documentScore = scores.Length > 0 ? scores[i] : null;
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, indexEntryReader, key, _index.IndexFieldsPersistence, documentScore);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings,  entryTermsReader, key, documentScore);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -1249,7 +1254,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long[] ids = QueryPool.Rent(pageSize);
             var read = 0;
-
+            Page page = default;
             while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
             {
                 for (int i = 0; i < read; i++)
@@ -1260,13 +1265,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (hit == baseDocId)
                         continue;
 
-                    var reader = IndexSearcher.GetEntryReaderFor(hit);
+                    var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
                     var id = _documentIdReader.GetTermFor(hit);
 
                     if (ravenIds.Add(id) == false)
                         continue;
 
-                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, reader, id, _index.IndexFieldsPersistence);
+                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id);
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {
@@ -1308,16 +1313,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
             int docsToLoad = CoraxBufferSize(IndexSearcher, pageSize, query);
-            using var coraxEntryReader = new CoraxIndexedEntriesReader(IndexSearcher, _fieldMappings);
+            using var coraxEntryReader = new CoraxIndexedEntriesReader(documentsContext, IndexSearcher);
             int read;
             long i = Skip();
+            Page page = default;
             while (true)
             {
                 token.ThrowIfCancellationRequested();
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryReaderFor(ids[i]);
+                    var reader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                     var id = _documentIdReader.GetTermFor(ids[i]);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }

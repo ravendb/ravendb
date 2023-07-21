@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using Sparrow.Server.Collections.LockFree;
+using System.Text.RegularExpressions;
 
 namespace Sparrow.Server
 {
@@ -37,6 +39,25 @@ namespace Sparrow.Server
                 return CompareSmallInlineNet6OorLesser(p1, p2, size);
 
             return new ReadOnlySpan<byte>(p1, size).SequenceCompareTo(new ReadOnlySpan<byte>(p2, size));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(ref byte p1, ref byte p2, int size)
+        {
+            if (Avx2.IsSupported)
+            {
+                return CompareAvx2(ref p1, ref p2, size);
+            }
+
+            return CompareSmallInlineNet7(ref p1, ref p2, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(ReadOnlySpan<byte> p1, ReadOnlySpan<byte> p2, int size)
+        {
+            ref byte p1Start = ref MemoryMarshal.GetReference(p1);
+            ref byte p2Start = ref MemoryMarshal.GetReference(p2);
+            return CompareInline(ref p1Start, ref p2Start, size);
         }
 
         private static ReadOnlySpan<byte> LoadMaskTable => new byte[]
@@ -197,6 +218,69 @@ namespace Sparrow.Server
             return 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int CompareAvx2(ref byte p1, ref byte p2, int size)
+        {
+            ref byte bpx = ref p1;
+            ref byte bpy = ref p2;
+            ref byte bpxEnd = ref Unsafe.AddByteOffset(ref p1, size);
+            if (size >= Vector256<byte>.Count)
+            {
+                ref byte loopEnd = ref Unsafe.SubtractByteOffset(ref bpxEnd, (nuint)Vector256<byte>.Count);
+
+                uint matches;
+                while (Unsafe.IsAddressGreaterThan(ref loopEnd, ref bpx))
+                {
+                    matches = (uint)Avx2.MoveMask(
+                        Vector256.Equals(
+                            Vector256.LoadUnsafe(ref bpx),
+                            Vector256.LoadUnsafe(ref bpy)
+                        )
+                    );
+
+                    // Note that MoveMask has converted the equal vector elements into a set of bit flags,
+                    // So the bit position in 'matches' corresponds to the element offset.
+
+                    // 32 elements in Vector256<byte> so we compare to uint.MaxValue to check if everything matched
+                    if (matches == uint.MaxValue)
+                    {
+                        // All matched
+                        bpx = ref Unsafe.AddByteOffset(ref bpx, (nuint)Vector256<byte>.Count);
+                        bpy = ref Unsafe.AddByteOffset(ref bpy, (nuint)Vector256<byte>.Count);
+                        continue;
+                    }
+
+                    goto Difference;
+                }
+
+                // If can happen that we are done so we can avoid the last unaligned access. 
+                if (Unsafe.AreSame(ref bpx, ref bpxEnd))
+                    return 0;
+
+                bpx = ref loopEnd;
+                bpy = ref Unsafe.AddByteOffset(ref p2, size - Vector256<byte>.Count);
+                matches = (uint)Avx2.MoveMask(
+                    Vector256.Equals(
+                        Vector256.LoadUnsafe(ref bpx),
+                        Vector256.LoadUnsafe(ref bpy)
+                    )
+                );
+
+                if (matches == uint.MaxValue)
+                    return 0;
+
+                Difference:
+                // We invert matches to find differences, which are found in the bit-flag. .
+                // We then add offset of first difference to the current offset in order to check that specific byte.
+                var bytesToAdvance = (nuint)BitOperations.TrailingZeroCount(~matches);
+                bpx = ref Unsafe.AddByteOffset(ref bpx, bytesToAdvance);
+                bpy = ref Unsafe.AddByteOffset(ref bpy, bytesToAdvance);
+                return bpx - bpy;
+            }
+
+            return CompareSmallInlineNet7(ref p1, ref p2, size);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal static int CompareSmallInlineNet6OorLesser(void* p1, void* p2, int size)
         {
@@ -286,6 +370,77 @@ namespace Sparrow.Server
             return *bpx - *(bpx + offset);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int CompareSmallInlineNet7(ref byte p1, ref byte p2, int size)
+        {
+            ref byte bpx = ref Unsafe.AddByteOffset(ref p1, size);
+            ref byte bpy = ref Unsafe.AddByteOffset(ref p2, size);
+
+            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            //       hardware instructions without needed an extra register.            
+
+            if (size < sizeof(ulong))
+            {
+                // We know the size is not big enough to be able to do what we intend to do. Therefore,
+                // we will use a very compact code that will be easily inlined and don't bloat the caller site.
+                // If size if big enough, we could easily pay for the actual call to compare as the cost of
+                // the method call can get diluted.
+                while (size > 0)
+                {
+                    byte vx = Unsafe.SubtractByteOffset(ref bpx, size);
+                    byte vy = Unsafe.SubtractByteOffset(ref bpy, size);
+                    // We check the values.
+                    if (vx == vy)
+                    {
+                        size -= 1;
+                        continue;
+                    }
+
+                    return vx - vy;
+                }
+
+                return 0;
+            }
+
+            // We now know that we have enough space to actually do what we want. 
+            ulong rbpx = 0;
+            ulong rbpy = 0;
+            while (size >= sizeof(ulong))
+            {
+                rbpx = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpx, size));
+                rbpy = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpy, size));
+
+                // PERF: JIT will emit: ```{op} {reg}, qword ptr [rdx+rax]```
+                if (rbpx == rbpy)
+                {
+                    size -= sizeof(ulong);
+                    continue;
+                }
+
+                goto DONE;
+            }
+
+            if (size > 0)
+            {
+                size = sizeof(ulong);
+                rbpx = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpx, size));
+                rbpy = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpy, size));
+            }
+
+            DONE:
+            ulong xor = rbpx ^ rbpy;
+
+            // Correctness path for equals. IF the XOR is actually zero, we are done. 
+            if (xor == 0)
+                return 0;
+
+            // PERF: This is a bit twiddling hack. Given that bitwise xor-ing 2 values flag the bits difference, 
+            //       we can use that we know we are running on little endian hardware and the very first bit set 
+            //       will correspond to the first byte which is different. 
+            size -= BitOperations.TrailingZeroCount(xor) / 8;
+
+            return Unsafe.SubtractByteOffset(ref bpx, size) - Unsafe.SubtractByteOffset(ref bpy, size);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static int CompareSmallInlineNet7(void* p1, void* p2, int size)
@@ -298,7 +453,6 @@ namespace Sparrow.Server
             long offset = bpy - bpx;
             byte* bpxEnd = bpx + size;
 
-            long result = 0;
             if (size < sizeof(ulong))
             {
                 // We know the size is not big enough to be able to do what we intend to do. Therefore,
@@ -313,36 +467,37 @@ namespace Sparrow.Server
                         continue;
                     }
 
-                    result = *bpx - *(bpx + offset);
-                    goto DONE;
+                    return *bpx - *(bpx + offset);
                 }
 
-                goto DONE;
+                return 0;
             }
 
             // We now know that we have enough space to actually do what we want. 
-            while (bpx < bpxEnd)
+            ulong xor;
+
+            byte* loopEnd = bpxEnd - sizeof(ulong);
+            while (bpx <= loopEnd)
             {
                 // PERF: JIT will emit: ```{op} {reg}, qword ptr [rdx+rax]```
-                if (*(ulong*)bpx == *(ulong*)(bpx + offset))
-                {
-                    bpx += sizeof(long);
-                    continue;
-                }
+                xor = *(ulong*)bpx ^ *(ulong*)(bpx + offset);
+                if (xor != 0)
+                    goto DONE;
 
-                result = BinaryPrimitives.ReverseEndianness(*(long*)bpx) - BinaryPrimitives.ReverseEndianness(*(long*)(bpx + offset));
-                goto DONE;
+                bpx += 8;
             }
 
-            if (bpx != bpxEnd)
-            {
-                long vx = BinaryPrimitives.ReverseEndianness(*(long*)(bpxEnd - sizeof(ulong)));
-                long vy = BinaryPrimitives.ReverseEndianness(*(long*)(bpxEnd - sizeof(ulong) + offset));
-                result = vx - vy;
-            }
-
+            bpx = loopEnd;
+            xor = *(ulong*)bpx ^ *(ulong*)(bpx + offset);
+            if (xor == 0) // Correctness path for equals. IF the XOR is actually zero, we are done. 
+                return 0;
+            
             DONE:
-            return Math.Sign(result);
+            // PERF: This is a bit twiddling hack. Given that bitwise xoring 2 values flag the bits difference, 
+            //       we can use that we know we are running on little endian hardware and the very first bit set 
+            //       will correspond to the first byte which is different. 
+            bpx += (long)BitOperations.TrailingZeroCount(xor) / 8;
+            return *bpx - *(bpx + offset);
         }
     }
 }
