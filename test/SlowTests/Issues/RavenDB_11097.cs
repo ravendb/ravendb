@@ -405,7 +405,7 @@ public class RavenDB_11097 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void TimeSeriesLinqMap(Options options) => TestMapIndexOnTimeSeries(options,
         new TestIndexParameters()
         {
@@ -421,7 +421,7 @@ public class RavenDB_11097 : RavenTestBase
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void TimeSeriesJsMap(Options options) => TestMapIndexOnTimeSeries(options,
         new TestIndexParameters()
         {
@@ -506,7 +506,7 @@ public class RavenDB_11097 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void TimeSeriesLinqMapReduce(Options options) => TestMapReduceIndexOnTimeSeries(options,
         new TestIndexParameters()
         {
@@ -523,7 +523,7 @@ public class RavenDB_11097 : RavenTestBase
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void TimeSeriesJsMapReduce(Options options) => TestMapReduceIndexOnTimeSeries(options,
         new TestIndexParameters()
         {
@@ -611,7 +611,7 @@ public class RavenDB_11097 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void CountersLinqMap(Options options) => TestMapIndexOnCounters(options,
         new TestIndexParameters()
         {
@@ -626,7 +626,7 @@ public class RavenDB_11097 : RavenTestBase
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void CountersJsMap(Options options) => TestMapIndexOnCounters(options,
         new TestIndexParameters()
         {
@@ -711,7 +711,7 @@ public class RavenDB_11097 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void CountersLinqMapReduce(Options options) => TestMapReduceIndexOnCounters(options,
         new TestIndexParameters()
         {
@@ -728,7 +728,7 @@ public class RavenDB_11097 : RavenTestBase
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void CountersJsMapReduce(Options options) => TestMapReduceIndexOnCounters(options,
         new TestIndexParameters()
         {

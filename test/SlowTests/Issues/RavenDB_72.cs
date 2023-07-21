@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using var store = GetDocumentStore(options);
             {
                 const string searchQuery = "Doe";
 
@@ -49,10 +51,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanWork2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanWork2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using var store = GetDocumentStore(options);
             {
                 const string searchQuery = "Doe";
 
