@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -1038,6 +1039,9 @@ namespace Raven.Server.Web.System
                 {
                     if (rawRecord == null)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName}, it doesn't exist.");
+
+                    if (rawRecord.IsSharded)
+                        throw new NotSupportedInShardingException($"Cannot compact database {compactSettings.DatabaseName} directly, it is a sharded database. Please compact each shard individually.");
 
                     if (rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
