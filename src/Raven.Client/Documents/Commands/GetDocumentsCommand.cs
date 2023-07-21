@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Commands
         private readonly string[] _includes;
         private readonly string[] _counters;
         private readonly bool _includeAllCounters;
+        private bool _includeAtomicGuardsForMissingDocuments;
 
         private readonly IEnumerable<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly IEnumerable<string> _revisionsIncludeByChangeVector;
@@ -102,6 +103,8 @@ namespace Raven.Client.Documents.Commands
                 .Append(node.Database)
                 .Append("/docs?");
 
+            if (_includeAtomicGuardsForMissingDocuments)
+                pathBuilder.Append("&includeAtomicGuardsForMissingDocuments=true");
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)
@@ -265,5 +268,10 @@ namespace Raven.Client.Documents.Commands
         }
 
         public override bool IsReadRequest => true;
+
+        public void IncludeAtomicGuardsForMissingDocuments()
+        {
+            _includeAtomicGuardsForMissingDocuments = true;
+        }
     }
 }

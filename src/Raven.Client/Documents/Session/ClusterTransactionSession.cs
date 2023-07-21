@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
@@ -33,6 +34,21 @@ namespace Raven.Client.Documents.Session
         internal readonly InMemoryDocumentSessionOperations _session;
 
         private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+
+        private Dictionary<string, long> _missingDocumentsToAtomicGuardIndex;
+        private string _clusterTransactionId;
+
+        internal bool TryGetMissingAtomicGuardFor(string docId, out string changeVector)
+        {
+            if (_missingDocumentsToAtomicGuardIndex?.TryGetValue(docId, out var index) == true)
+            {
+                changeVector = $"RAFT:{index}-{_clusterTransactionId}";
+                return true;
+            }
+
+            changeVector = null;
+            return false;
+        }
 
         internal int NumberOfTrackedCompareExchangeValues => _state.Count;
 
@@ -217,7 +233,7 @@ namespace Raven.Client.Documents.Session
             return value;
         }
 
-        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
+        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values, bool includingMissingAtomicGuards)
         {
             if (_session.NoTracking)
                 return;
@@ -231,7 +247,17 @@ namespace Raven.Client.Documents.Session
 
                     var value = propertyDetails.Value as BlittableJsonReaderObject;
 
-                    RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions));
+                    var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
+                    if(includingMissingAtomicGuards  &&
+                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.Index);
+                    }
+                    else
+                    {
+                        RegisterCompareExchangeValue(val);
+                    }
                 }
             }
         }
@@ -531,6 +557,11 @@ namespace Raven.Client.Documents.Session
             {
                 throw new ArgumentException(message);
             }
+        }
+
+        public void SetClusterTransactionId(string clusterTransactionId)
+        {
+            _clusterTransactionId = clusterTransactionId;
         }
     }
 

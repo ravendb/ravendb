@@ -31,6 +31,7 @@ using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow;
@@ -225,7 +226,8 @@ namespace Raven.Server.Documents.Handlers
 
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
 
-            GetCompareExchangeValueQueryString(Database, out var includeCompareExchangeValues);
+            var includeAtomicGuardsForMissingDocuments = GetBoolValueQueryString("includeAtomicGuardsForMissingDocuments", required: false) ?? false;
+            GetCompareExchangeValueQueryString(Database, includeAtomicGuardsForMissingDocuments, out var includeCompareExchangeValues);
 
             using (includeCompareExchangeValues)
             {
@@ -236,13 +238,23 @@ namespace Raven.Server.Documents.Handlers
                     {
                         document = Database.DocumentsStorage.Get(context, id);
                     }
+                    
 
-                    if (document == null && ids.Count == 1)
+                    if (document == null)
                     {
-                        HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
-                        ? (int)HttpStatusCode.NotModified
-                        : (int)HttpStatusCode.NotFound;
-                        return;
+                        if (includeAtomicGuardsForMissingDocuments)
+                        {
+                            Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                            includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
+                            continue;
+                        }
+                        if (ids.Count == 1)
+                        {
+                            HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
+                                ? (int)HttpStatusCode.NotModified
+                                : (int)HttpStatusCode.NotFound;
+                            return;
+                        }
                     }
 
                     documents.Add(document);
@@ -265,11 +277,14 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+             
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
 
-                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
-                    includeCompareExchangeValues?.Results);
+                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly,
+                    documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, 
+                    includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
+                    includeCompareExchangeValues?.Results, includeAtomicGuardsForMissingDocuments);
 
                 if (ShouldAddPagingPerformanceHint(numberOfResults))
                 {
@@ -306,12 +321,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
+        private void GetCompareExchangeValueQueryString(DocumentDatabase database, bool includeAtomicGuardsForMissingDocuments,
+            out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
         {
             includeCompareExchangeValues = null;
 
             var compareExchangeValues = GetStringValuesQueryString("cmpxchg", required: false);
-            if (compareExchangeValues.Count == 0)
+            if (compareExchangeValues.Count == 0 && includeAtomicGuardsForMissingDocuments == false)
                 return;
 
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(database, compareExchangeValues);
@@ -444,7 +460,8 @@ namespace Raven.Server.Documents.Handlers
             Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionByChangeVectorResults,
             Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
-            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
+            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues,
+            bool includeAtomicGuardsForMissingDocuments)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;
@@ -492,6 +509,12 @@ namespace Raven.Server.Documents.Handlers
                     await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
                 }
 
+                if (includeAtomicGuardsForMissingDocuments)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.ClusterTransactionId));
+                    writer.WriteString(Database.ClusterTransactionId);
+                }
                 writer.WriteEndObject();
             }
             return (numberOfResults, totalDocumentsSizeInBytes);
