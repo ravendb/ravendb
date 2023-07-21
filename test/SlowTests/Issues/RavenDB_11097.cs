@@ -147,11 +147,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    private void DocumentJsMapWithoutQueryAndIndexName()
+    private void DocumentJsMapWithoutQueryAndIndexName(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -309,11 +309,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    private void DocumentLinqMultimapReduce()
+    private void DocumentLinqMultimapReduce(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -807,10 +807,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void CheckIfOutputReduceToCollectionDoesNotStoreDocumentsForTestIndex()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CheckIfOutputReduceToCollectionDoesNotStoreDocumentsForTestIndex(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -854,10 +855,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestMaxDocumentsToProcessParameter()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestMaxDocumentsToProcessParameter(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -922,8 +924,9 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestMaxDocumentsToProcessParameterWithMultipleBatches()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestMaxDocumentsToProcessParameterWithMultipleBatches(Options options)
     {
         using (var server = GetNewServer(new ServerCreationOptions()
                {
@@ -933,7 +936,10 @@ public class RavenDB_11097 : RavenTestBase
                    }
                }))
         {
-            using (var store = GetDocumentStore(new Options(){ Server = server }))
+            using (var store = GetDocumentStore(new Options()
+                   {
+                       Server = server,
+                   }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1011,10 +1017,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void MapWithLoadDocument()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MapWithLoadDocument(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -1083,10 +1090,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestQueryParametersParameter()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestQueryParametersParameter(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -1139,10 +1147,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestDocumentsWithNestedProperty()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestDocumentsWithNestedProperty(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -1183,10 +1192,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void InvalidIndexNameInQueryShouldThrow()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void InvalidIndexNameInQueryShouldThrow(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
