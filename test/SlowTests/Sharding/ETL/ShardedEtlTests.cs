@@ -1983,7 +1983,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 error = Assert.ThrowsAny<RavenException>(() =>
                 {
-                    SetupSqlEtl(src, connectionString: "", script: null, mentor: "A");
+                    SetupSqlEtl(src, connectionString: "Test", script: null, mentor: "A");
                 });
 
                 Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
