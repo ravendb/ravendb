@@ -110,7 +110,7 @@ namespace Raven.Server.Config.Categories
         [Description("Specifies the maximum idle time for the database. After this time an idle database will be unloaded from memeory.")]
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxIdleTime { get; set; }
 
         /// <summary>
