@@ -1281,11 +1281,13 @@ namespace Raven.Client.Http
                    command is IBroadcast == false;
         }
 
-        private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
+        internal static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
         private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
             CancellationToken token = default)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+
             long numberOfFailedTasks = 0;
 
             var nodes = _nodeSelector.Topology.Nodes;
@@ -1309,8 +1311,10 @@ namespace Raven.Client.Http
                     Interlocked.Increment(ref NumberOfServerRequests);
 
                     var copy = disposable;
-                    tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
+                    tasks[i] = command.SendAsync(HttpClient, request, cts.Token).ContinueWith(x =>
                     {
+                        ForTestingPurposes?.ExecuteOnAllToFigureOutTheFastestOnTaskCompletion?.Invoke(x);
+
                         try
                         {
                             if (x.Exception != null)
@@ -1328,7 +1332,7 @@ namespace Raven.Client.Http
                         {
                             copy.Dispose();
                         }
-                    }, token);
+                    }, cts.Token);
                 }
                 catch (Exception)
                 {
@@ -1338,6 +1342,8 @@ namespace Raven.Client.Http
                     disposable?.Dispose();
                 }
             }
+
+            ForTestingPurposes?.ExecuteOnAllToFigureOutTheFastestOnBeforeWait?.Invoke(tasks);
 
             while (Interlocked.Read(ref numberOfFailedTasks) < tasks.Length)
             {
@@ -1351,9 +1357,33 @@ namespace Raven.Client.Http
                     numberOfFailedTasks++;
                     continue;
                 }
+
                 _nodeSelector.RecordFastest(index, nodes[index]);
+
+                cts.Cancel();
+
+                // we need to await all the tasks to avoid them running after e.g. session is disposed
+                foreach (var task in tasks)
+                {
+                    if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+                        continue;
+
+                    if (task == NeverEndingRequest)
+                        continue;
+
+                    try
+                    {
+                        await task.ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+
                 return;
             }
+
             // we can reach here if the number of failed task equal to the number
             // of the nodes, in which case we have nothing to do
         }
@@ -2398,6 +2428,10 @@ namespace Raven.Client.Http
             internal int[] NodeSelectorFailures => _requestExecutor._nodeSelector.NodeSelectorFailures;
             internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
             internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
+
+            public Action<Task> ExecuteOnAllToFigureOutTheFastestOnTaskCompletion;
+
+            public Action<Task[]> ExecuteOnAllToFigureOutTheFastestOnBeforeWait;
 
             internal Action<NodeSelector> OnBeforeScheduleSpeedTest;
         }
