@@ -16,7 +16,6 @@ using Xunit.Abstractions;
 using Sparrow.Platform;
 using Raven.Tests.Core.Utils.Entities;
 
-
 namespace SlowTests.Issues
 {
     public class RavenDB_19948 : RavenTestBase
