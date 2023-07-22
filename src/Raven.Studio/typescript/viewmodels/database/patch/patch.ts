@@ -125,6 +125,10 @@ class patch extends shardViewModelBase {
     
     view = require("views/database/patch/patch.html");
 
+    patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");
+    patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
+    patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
+
     staleIndexBehavior = ko.observable("patchStale"); 
     staleTimeout = ko.observable<number>(60);
 

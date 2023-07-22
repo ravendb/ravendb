@@ -5,6 +5,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class patchSyntax extends dialogViewModelBase {
     
     view = require("views/database/patch/patchSyntax.html");
+    patchSyntaxFunctionsView = require("views/database/patch/patchSyntaxFunctions.html");
 
     dialogContainer: Element;
     clientVersion = viewModelBase.clientVersion;

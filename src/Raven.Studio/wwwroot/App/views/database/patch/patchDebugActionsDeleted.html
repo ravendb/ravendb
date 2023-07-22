@@ -1,0 +1,33 @@
+﻿<div>
+    <h2 class="text-center">Deleted Data</h2>
+    <div data-bind="if: deleteDocument().length">
+        <hr>
+        <h3><i class="icon-document"></i><span>Documents</span></h3>
+        <ul data-bind="foreach: deleteDocument">
+            <li class="margin-left margin-left-lg row">
+                <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+            </li>
+        </ul>
+    </div>
+    <div data-bind="if: deleteCounter().length">
+        <hr>
+        <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
+        <ul data-bind="foreach: deleteCounter">
+            <li class="margin-left margin-left-lg row">
+                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+            </li>
+        </ul>
+    </div>
+    <div data-bind="if: deleteTimeSeries().length">
+        <hr>
+        <h3><i class="icon-timeseries"></i><span>Time Series</span></h3>
+        <ul data-bind="foreach: deleteTimeSeries">
+            <li class="margin-left margin-left-lg row">
+                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                <small class="col-sm-3"><label>Entries From:</label><span class="margin-left tab-data" data-bind="text: From"></span></small>
+                <small class="col-sm-3"><label>To:</label><span class="margin-left tab-data" data-bind="text: To"></span></small>
+            </li>
+        </ul>
+    </div>
+    <div data-bind="if: !deletedCount()"><hr>No data available.</div>
+</div>
