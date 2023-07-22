@@ -1,0 +1,23 @@
+﻿<ul class="margin-top margin-top-sm">
+    Documents:
+    <li><code>load(documentIdToLoad)</code> - loads document by ID</li>
+    <li><code>put(documentId, document)</code> - puts document with given name and data</li>
+    <li><code>del(documentIdToRemove)</code> - deletes document by ID</li>
+    Counters:
+    <li><code>counter(document/documentId, name)</code> - get the counter value by document/document ID</li>
+    <li><code>incrementCounter(document/documentId, name, value = 1)</code> - increment a counter by document/document ID</li>
+    <li><code>deleteCounter(document/documentId, name)</code> - delete a counter by document/document ID</li>
+    Time Series:
+    <li><code>timeseries(document/documentId, name).get(from, to)</code> - get timeseries entries</li>
+    <li><code>timeseries(document/documentId, name).append(timestamp, values, tag = null)</code> - add a new entry to a timeseries</li>
+    <li><code>timeseries(document/documentId, name).delete(from, to)</code> - delete entries from a timeseries</li>
+    General:
+    <li><code>output(message)</code> - output debug info when testing</li>
+    <li>
+        <small title="Go to Patch documentation">
+            <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/92U6B5/' + clientVersion() }">
+                <i class="icon-link"></i><span>Patch tutorial</span>
+            </a>
+        </small>
+    </li>
+</ul>

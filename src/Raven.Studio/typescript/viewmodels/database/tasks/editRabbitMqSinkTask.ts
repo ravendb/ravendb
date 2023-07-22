@@ -7,7 +7,6 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import generalUtils = require("common/generalUtils");
 import connectionStringRabbitMqModel = require("models/database/settings/connectionStringRabbitMqModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
@@ -18,6 +17,8 @@ import viewHelpers from "common/helpers/view/viewHelpers";
 import database from "models/resources/database";
 import testQueueSinkCommand from "commands/database/tasks/testQueueSinkCommand";
 import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
+import queueSinkSyntax from "viewmodels/database/tasks/queueSinkSyntax";
+import patchDebugActions from "viewmodels/database/patch/patchDebugActions";
  
 
 class rabbitMqTaskTestMode {
@@ -35,7 +36,7 @@ class rabbitMqTaskTestMode {
         test: ko.observable<boolean>(false)
     };
 
-    testResults = ko.observableArray<any>([]); //TODO:
+    testResults = new patchDebugActions();
     debugOutput = ko.observableArray<string>([]);
 
     constructor(db: KnockoutObservable<database>,
@@ -74,10 +75,13 @@ class rabbitMqTaskTestMode {
             new testQueueSinkCommand(this.db(), dto, "RabbitMq")
                 .execute()
                 .done(simulationResult => {
-                    this.testResults(simulationResult.Actions); //TODO:
+                    this.testResults.fill(simulationResult.Actions);
                     this.debugOutput(simulationResult.DebugOutput);
 
                     this.testAlreadyExecuted(true);
+                })
+                .fail(() => {
+                    this.testResults.reset();
                 })
                 .always(() => this.spinners.test(false));
         }
@@ -426,7 +430,7 @@ class editRabbitMqSinkTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("RabbitMQ"); //TODO: RabbitMq sink!
+        const viewmodel = new queueSinkSyntax();
         app.showBootstrapDialog(viewmodel);
     }
     

@@ -13,6 +13,7 @@ import documentPreviewer = require("models/database/documents/documentPreviewer"
 import queryUtil = require("common/queryUtil");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 import { highlight, languages } from "prismjs";
+import patchDebugActions from "viewmodels/database/patch/patchDebugActions";
 
 type testTabType = "preview" | "loaded" | "modified" | "deleted" | "output";
 
@@ -29,29 +30,9 @@ class patchTester extends viewModelBase {
     beforeDoc = ko.observable<string>("");
     afterDoc = ko.observable<string>("");
 
-    actions = {
-        loadDocument: ko.observableArray<any>(),
-        putDocument: ko.observableArray<any>(),
-        deleteDocument: ko.observableArray<string>(),
+    actions = new patchDebugActions();
 
-        getCounter: ko.observableArray<any>(),
-        incrementCounter: ko.observableArray<any>(),
-        deleteCounter: ko.observableArray<string>(),
-
-        getTimeSeries: ko.observableArray<any>(),
-        appendTimeSeries: ko.observableArray<any>(),
-        deleteTimeSeries: ko.observableArray<any>(),
-        
-        output: ko.observableArray<string>()
-    };
-
-    loadedCount: KnockoutComputed<string>;
-    modifiedCount: KnockoutComputed<string>;
-    deletedCount: KnockoutComputed<string>;
-    
-    showDocumentsInModified = ko.observable<boolean>(false);
-    showTimeSeriesValuesInLoaded = ko.observable<boolean>(false);
-    showTimeSeriesValuesInModified = ko.observable<boolean>(false);
+    output = ko.observableArray<string>();
 
     activeTestTab = ko.observable<testTabType>();
     
@@ -104,18 +85,6 @@ class patchTester extends viewModelBase {
             });
     }
 
-    formatAsJson(input: KnockoutObservable<any> | any) {
-        return ko.pureComputed(() => {
-            const value = ko.unwrap(input);
-            if (_.isUndefined(value)) {
-                return "";
-            } else {
-                const json = JSON.stringify(value, null, 4);
-                return highlight(json, languages.javascript, "js");
-            }
-        });
-    }
-
     private getAutoComplete() {
         const documentIdPrefix = this.documentId();
         this.spinners.autocomplete(true);
@@ -160,36 +129,6 @@ class patchTester extends viewModelBase {
         
         const documentIdDebounced = _.debounce(() => { this.getAutoComplete() }, 600);
         this.documentId.subscribe(() => documentIdDebounced());
-        
-        this.loadedCount = ko.pureComputed(() => {
-            const actions = this.actions;
-
-            const totalLoadedCount = actions.loadDocument().length +
-                                     actions.getCounter().length +
-                                     actions.getTimeSeries().length;
-
-            return totalLoadedCount ? totalLoadedCount.toLocaleString() : "";
-        });
-
-        this.modifiedCount = ko.pureComputed(() => {
-            const actions = this.actions;
-
-            const totalModifiedCount = actions.putDocument().length +
-                                       actions.incrementCounter().length +
-                                       actions.appendTimeSeries().length;
-
-            return totalModifiedCount ? totalModifiedCount.toLocaleString() : "";
-        });
-
-        this.deletedCount = ko.pureComputed(() => {
-            const actions = this.actions;
-
-            const totalDeletedCount = actions.deleteDocument().length +
-                                      actions.deleteCounter().length +
-                                      actions.deleteTimeSeries().length;
-
-            return totalDeletedCount ? totalDeletedCount.toLocaleString() : "";
-        });
     }
 
     closeTestMode() {
@@ -206,19 +145,9 @@ class patchTester extends viewModelBase {
     }
 
     resetForm() {
-        this.actions.loadDocument([]);
-        this.actions.putDocument([]);
-        this.actions.deleteDocument([]);
-
-        this.actions.getCounter([]);
-        this.actions.incrementCounter([]);
-        this.actions.deleteCounter([]);
-
-        this.actions.getTimeSeries([]);
-        this.actions.appendTimeSeries([]);
-        this.actions.deleteTimeSeries([]);
+        this.actions.reset();
         
-        this.actions.output([]);
+        this.output([]);
         this.afterDoc("");
         this.beforeDoc("");
     }
@@ -278,20 +207,9 @@ class patchTester extends viewModelBase {
                         const debug = result.Debug;
                         const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
                         
-                        this.actions.output(debug.Output);
+                        this.output(debug.Output);
+                        this.actions.fill(actions);
                         
-                        this.actions.loadDocument(actions.LoadDocument);
-                        this.actions.putDocument(actions.PutDocument);
-                        this.actions.deleteDocument(actions.DeleteDocument);
-                        
-                        this.actions.getCounter(actions.GetCounter);
-                        this.actions.incrementCounter(actions.IncrementCounter);
-                        this.actions.deleteCounter(actions.DeleteCounter);
-                        
-                        this.actions.getTimeSeries(actions.GetTimeSeries);
-                        this.actions.appendTimeSeries(actions.AppendTimeSeries);
-                        this.actions.deleteTimeSeries(actions.DeleteTimeSeries);
-
                         if (result.Status === "Patched") {
                             messagePublisher.reportSuccess("Test completed");
                         }
