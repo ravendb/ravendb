@@ -6,7 +6,7 @@
     }
 }
 
-.show-test .patch {
+.show-test .patch, .show-test .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
     
     .shadow-style {
         box-shadow: 0 10px 20px 2px fadeout(@gray-base, 55%);
@@ -52,17 +52,15 @@
             .shadow-style;
         }
     }
-
-    #modified, #loaded {
+  
+    #loaded, #modified, #deleted, #output, #testResultsLoaded, #testResultsModified, #testResultsDeleted {
         pre {
             padding: 0 @grid-gutter-width/4;
             border: none;
             flex-grow: 1;
             display: none;
         }
-    }
-  
-    #loaded, #modified, #deleted ,#output {
+        
         ul {
             list-style: none;
             padding: 0;
