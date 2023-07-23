@@ -612,11 +612,9 @@ namespace SlowTests.Sharding.Replication
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(60)));
 
-                var watcher = new ExternalReplication(dst.Database, "connection-1");
-                await AddWatcherToReplicationTopology(src, watcher, new[] { dstLeader.WebUrl });
 
-                var watcher2 = new ExternalReplication(src.Database, "connection-2");
-                await AddWatcherToReplicationTopology(dst, watcher2, src.Urls);
+                await SetupReplicationAsync(src, dst);
+                await SetupReplicationAsync(dst, src);
 
                 Assert.True(WaitForDocument(dst, "users/1", 30_000));
 
@@ -651,11 +649,18 @@ namespace SlowTests.Sharding.Replication
                 var docsCount = storage.GetNumberOfDocuments();
                 Assert.Equal(0, docsCount);
 
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    srcNodes,
+                    src.Database,
+                    "users/2$users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
+
                 foreach (var server in srcNodes)
                 {
                     await Replication.EnsureNoReplicationLoopAsync(source.DatabaseMode, server, src.Database);
                 }
-
+                
                 foreach (var server in dstNodes)
                 {
                     await Replication.EnsureNoReplicationLoopAsync(destination.DatabaseMode, server, dst.Database);

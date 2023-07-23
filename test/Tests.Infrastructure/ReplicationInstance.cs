@@ -98,7 +98,7 @@ namespace Tests.Infrastructure
 
                 var etag2 = _database.DocumentsStorage.GenerateNextEtag();
 
-                Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+                Assert.True(etag1 + 1 == etag2, $"Replication loop found :( prev: {etag1}, current {etag2}");
 
                 var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
                 foreach (var group in groups)
