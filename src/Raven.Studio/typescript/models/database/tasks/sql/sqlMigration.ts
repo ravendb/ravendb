@@ -517,6 +517,10 @@ class sqlMigration {
             const reference = table.findReference(nested);
             reference.name(nested.Name);
             this.onEmbedTable(reference);
+
+            if (nested.SqlKeysStorage) {
+                reference.effectiveInnerTable().sqlKeysStorage(nested.SqlKeysStorage);
+            }
             
             this.applyConfigurationToCollection(reference.effectiveInnerTable(), nested, "embed");
         });
