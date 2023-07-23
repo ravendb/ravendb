@@ -170,16 +170,22 @@
                         </div>
                         <div class="tab-pane fade margin-bottom" id="loaded" data-bind="if: activeTestTab() === 'loaded'">
                             <div data-bind="with: actions">
+                                <h2 class="text-center">Loaded Data</h2>
+                                <hr />
                                 <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>    
                             </div>
                         </div>
                         <div class="tab-pane fade margin-bottom" id="modified" data-bind="if: activeTestTab() === 'modified'">
                             <div data-bind="with: actions">
+                                <h2 class="text-center">Modified Data</h2>
+                                <hr />
                                 <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
                             </div>
                         </div>
                         <div class="tab-pane fade margin-bottom" id="deleted" data-bind="if: activeTestTab() === 'deleted'">
                             <div data-bind="with: actions">
+                                <h2 class="text-center">Deleted Data</h2>
+                                <hr />
                                 <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
                             </div>
                         </div>

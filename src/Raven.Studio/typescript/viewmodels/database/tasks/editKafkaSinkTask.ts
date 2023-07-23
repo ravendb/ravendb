@@ -37,7 +37,7 @@ class kafkaTaskTestMode {
         test: ko.observable<boolean>(false)
     };
 
-    testResults = new patchDebugActions();
+    actions = new patchDebugActions();
     debugOutput = ko.observableArray<string>([]);
 
     constructor(db: KnockoutObservable<database>,
@@ -76,13 +76,13 @@ class kafkaTaskTestMode {
             new testQueueSinkCommand(this.db(), dto, "Kafka")
                 .execute()
                 .done(simulationResult => {
-                    this.testResults.fill(simulationResult.Actions);
+                    this.actions.fill(simulationResult.Actions);
                     this.debugOutput(simulationResult.DebugOutput);
 
                     this.testAlreadyExecuted(true);
                 })
                 .fail(() => {
-                    this.testResults.reset();
+                    this.actions.reset();
                 })
                 .always(() => this.spinners.test(false));
         }
@@ -94,7 +94,11 @@ class editKafkaSinkTask extends viewModelBase {
     view = require("views/database/tasks/editKafkaSinkTask.html");
     connectionStringView = require("views/database/settings/connectionStringKafka.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
-    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html"); 
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
+
+    patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");
+    patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
+    patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
     
     static readonly scriptNamePrefix = "Script_";
 

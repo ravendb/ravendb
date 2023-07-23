@@ -1,7 +1,5 @@
 ﻿<div>
-    <h2 class="text-center">Modified Data</h2>
     <div data-bind="if: putDocument().length">
-        <hr>
         <div class="flex-horizontal">
             <h3><i class="icon-document"></i><span>Documents</span></h3>
             <div class="flex-separator"></div>
@@ -11,8 +9,8 @@
             </div>
         </div>
         <ul data-bind="foreach: putDocument">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
                 <small class="col-sm-2">
                     <label>Put Document:</label>
                     <span class="margin-left tab-data"  data-bind="css: { 'hide' : $parent.showDocumentsInModified }">{ ... }</span>
@@ -25,8 +23,8 @@
         <hr>
         <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
         <ul data-bind="foreach: incrementCounter">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
                 <small class="col-sm-2"><label>Value Before:</label><span class="margin-left tab-data" data-bind="text: Created ? '&lt;None&gt;' : OldValue"></span></small>
                 <small class="col-sm-2"><label>Value After:</label><span class="margin-left tab-data" data-bind="text: NewValue"></span></small>
                 <small class="col-sm-2"><span class="tab-data" data-bind="text: Created ? '&lt;Counter created&gt;' : ''"></span></small>
@@ -44,8 +42,8 @@
             </div>
         </div>
         <ul data-bind="foreach: appendTimeSeries">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
                 <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span></small>
                 <small class="col-sm-3"><label>Timestamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
                 <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><label>Values Appended:</label><span class="margin-left tab-data">{ ... }</span></small>

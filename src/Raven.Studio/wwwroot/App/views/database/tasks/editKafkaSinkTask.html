@@ -284,8 +284,21 @@
         <div class="tabs">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
-                    <a href="#testResults" role="tab" data-toggle="tab">
-                        <i class="icon-admin-logs"></i><span>Test Results</span>
+                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
+                        <i class="icon-import"></i><span>Loaded</span>
+                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.loadedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsModified" role="tab" data-toggle="tab">
+                        <i class="icon-export"></i><span>Modified</span>
+                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.modifiedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsDeleted" role="tab" data-toggle="tab">
+                        <i class="icon-trash"></i><span>Deleted</span>
+                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.deletedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: debugOutput().length">
@@ -296,41 +309,19 @@
             </ul>
         </div>
         <div class="tab-content flex-grow">
-            <div role="tabpanel" class="tab-pane fade" id="testResults">
-                <div data-bind="foreach: testResults">
-                    <div class="result-item margin-bottom">
-                        <div class="header margin-bottom">
-                            <span>Topic Name:</span>
-                            <strong data-bind="text: QueueName"></strong>
-                        </div>
-                        <div data-bind="foreach: Messages" class="test-output">
-                            <div class="header margin-bottom">
-                                <span>Message body:</span>
-                                <pre data-bind="text: Body" class="margin-top"></pre>
-                                <div class="margin-top-sm" data-bind="with: Attributes">
-                                    <div data-bind="visible: Id">
-                                        <span>Id:</span>
-                                        <strong data-bind="text: Id"></strong>
-                                    </div>
-                                    <div data-bind="visible: PartitionKey">
-                                        <span>Partition Key:</span>
-                                        <strong data-bind="text: PartitionKey"></strong>
-                                    </div>
-                                    <div data-bind="visible: Type">
-                                        <span>Type:</span>
-                                        <strong data-bind="text: Type"></strong>
-                                    </div>
-                                    <div data-bind="visible: Source">
-                                        <span>Source:</span>
-                                        <strong data-bind="text: Source"></strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div role="tabpanel" class="tab-pane fade in active" id="testResultsLoaded">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
                 </div>
-                <div data-bind="visible: !testResults().length">
-                    <i class="icon-info"></i> <span>Simulation returned empty result</span>
+            </div>
+            <div class="tab-pane fade margin-bottom" id="testResultsModified">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
+                </div>
+            </div>
+            <div class="tab-pane fade margin-bottom" id="testResultsDeleted">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
                 </div>
             </div>
             <div role="tabpanel" class="tab-pane fade" id="debugOutput">

@@ -1,11 +1,9 @@
 <div>
-    <h2 class="text-center">Loaded Data</h2>
     <div data-bind="if: loadDocument().length">
-        <hr>
         <h3><i class="icon-document"></i><span>Documents</span></h3>
         <ul data-bind="foreach: loadDocument">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data"
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>ID:</label><span class="margin-left tab-data"
                                                                                            data-bind="text: Id"></span></small>
                 <small class="col-sm-2" data-bind="visible: !Exists"><span
                     class="tab-data">&lt;Document not found&gt;</span></small>
@@ -16,17 +14,17 @@
         <hr>
         <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
         <ul data-bind="foreach: getCounter">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>Name:</label><span
                     class="margin-left tab-data" data-bind="text: Name"></span></small>
                 <span data-bind="visible: !Exists">
-                                            <small class="col-sm-2"><span
-                                                class="tab-data">&lt;Counter not found&gt;</span></small>
-                                        </span>
+                    <small class="col-sm-2"><span
+                        class="tab-data">&lt;Counter not found&gt;</span></small>
+                </span>
                 <span data-bind="if: Exists">
-                                            <small class="col-sm-2"><label>Value:</label><span
-                                                class="margin-left tab-data" data-bind="text: Value"></span></small>
-                                        </span>
+                    <small class="col-sm-2"><label>Value:</label><span
+                        class="margin-left tab-data" data-bind="text: Value"></span></small>
+                </span>
             </li>
         </ul>
     </div>
@@ -41,28 +39,28 @@
             </div>
         </div>
         <ul data-bind="foreach: getTimeSeries">
-            <li class="margin-left margin-left-lg row">
-                <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span
+            <li class="row">
+                <small class="col-sm-2 margin-left"><label>Name:</label><span
                     class="margin-left tab-data" data-bind="text: Name"></span></small>
                 <span data-bind="visible: !Exists">
-                                            <small class="col-sm-2"><span
-                                                class="tab-data">&lt;No entries found&gt;</span></small>
-                                        </span>
+                    <small class="col-sm-2"><span
+                        class="tab-data">&lt;No entries found&gt;</span></small>
+                </span>
                 <span data-bind="if: Exists">
-                                            <small class="col-sm-2"><label>Entry Tag:</label><span
-                                                class="margin-left tab-data"
-                                                data-bind="text: Tag || '<None>'"></span></small>
-                                            <small class="col-sm-3"><label>Time Stamp:</label><span
-                                                class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
-                                            <small class="col-sm-2"
-                                                   data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span
-                                                class="margin-left tab-data">{ ... }</span></small>
-                                            <small class="col-sm-2"
-                                                   data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span
-                                                class="margin-left tab-data" data-bind="text: Type"></span></small>
-                                            <pre
-                                                data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
-                                        </span>
+                    <small class="col-sm-2"><label>Entry Tag:</label><span
+                        class="margin-left tab-data"
+                        data-bind="text: Tag || '<None>'"></span></small>
+                    <small class="col-sm-3"><label>Time Stamp:</label><span
+                        class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
+                    <small class="col-sm-2"
+                           data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span
+                        class="margin-left tab-data">{ ... }</span></small>
+                    <small class="col-sm-2"
+                           data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span
+                        class="margin-left tab-data" data-bind="text: Type"></span></small>
+                    <pre
+                        data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
+                </span>
             </li>
         </ul>
     </div>

@@ -36,7 +36,7 @@ class rabbitMqTaskTestMode {
         test: ko.observable<boolean>(false)
     };
 
-    testResults = new patchDebugActions();
+    actions = new patchDebugActions();
     debugOutput = ko.observableArray<string>([]);
 
     constructor(db: KnockoutObservable<database>,
@@ -75,13 +75,13 @@ class rabbitMqTaskTestMode {
             new testQueueSinkCommand(this.db(), dto, "RabbitMq")
                 .execute()
                 .done(simulationResult => {
-                    this.testResults.fill(simulationResult.Actions);
+                    this.actions.fill(simulationResult.Actions);
                     this.debugOutput(simulationResult.DebugOutput);
 
                     this.testAlreadyExecuted(true);
                 })
                 .fail(() => {
-                    this.testResults.reset();
+                    this.actions.reset();
                 })
                 .always(() => this.spinners.test(false));
         }
@@ -93,8 +93,12 @@ class editRabbitMqSinkTask extends viewModelBase {
     view = require("views/database/tasks/editRabbitMqSinkTask.html");
     connectionStringView = require("views/database/settings/connectionStringRabbitMq.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
-    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html"); 
-    
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
+
+    patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");
+    patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
+    patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
+
     static readonly scriptNamePrefix = "Script_";
 
     enableTestArea = ko.observable<boolean>(false);
