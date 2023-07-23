@@ -550,7 +550,17 @@ class ongoingTasks extends viewModelBase {
         const db = this.activeDatabase();
 
         this.confirmationMessage("Disable Task",
-            `You're disabling ${model.taskType()} task:<br><ul><li><strong>${model.taskName()}</strong></li></ul>`, {
+            `You're disabling ${model.taskType()} task:<br><ul><li><strong>${generalUtils.escapeHtml(model.taskName())}</strong></li></ul>
+<div class="margin-top margin-top-lg text-warning bg-warning padding padding-xs flex-horizontal">
+                <div class="flex-start">
+                    <small><i class="icon-warning"></i></small>
+                </div>
+                <div>
+                    <small>Warning: Please note that disabling this task will cause continuous tombstone accumulation until it is re-enabled or deleted, leading to increased disk space usage.</small>
+                </div>
+             </div>
+
+`, {
                 buttons: ["Cancel", "Disable"],
                 html: true
             })
