@@ -25,7 +25,7 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter.Add(AlertRaised.Create(
                 _database, 
                 title: "Blockage in tombstone deletion", 
-                msg: "We have detected a blockage in tombstone deletion. Deletion or enabling certain processes may be required.", 
+                msg: "We have detected a blockage in tombstone deletion due to certain processes being in the disabled, errored, or paused states. Deletion or enabling of certain processes may be required.", 
                 type: AlertType.BlockingTombstones,
                 severity: NotificationSeverity.Warning,
                 key: nameof(AlertType.BlockingTombstones), 

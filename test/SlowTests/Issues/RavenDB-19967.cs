@@ -283,8 +283,6 @@ namespace SlowTests.Issues
         [InlineData(EtlType.Queue)]
         public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
         {
-            string expectedSource = default;
-
             using (var store = GetDocumentStore())
             {
                 // Documents creation
@@ -305,6 +303,7 @@ namespace SlowTests.Issues
                     Script = "loadToUsers(this)"
                 };
 
+                string expectedSource;
                 switch (etlType)
                 {
                     case EtlType.Raven:
