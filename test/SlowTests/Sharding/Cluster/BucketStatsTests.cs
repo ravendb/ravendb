@@ -344,7 +344,7 @@ namespace SlowTests.Sharding.Cluster
                     user.Name = "b";
                     await session.SaveChangesAsync();
 
-                    expectedSize = 2474;
+                    expectedSize = 2470;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -364,7 +364,7 @@ namespace SlowTests.Sharding.Cluster
                     }, id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3540;
+                    expectedSize = 3536;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -381,7 +381,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4826;
+                    expectedSize = 4822;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -393,7 +393,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4937;
+                    expectedSize = 4933;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -403,7 +403,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4921;
+                    expectedSize = 4917;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 2);
@@ -413,7 +413,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id2);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4114;
+                    expectedSize = 4110;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 1);
@@ -423,7 +423,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3635;
+                    expectedSize = 3632;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
@@ -433,7 +433,7 @@ namespace SlowTests.Sharding.Cluster
                     DocumentIds = new[] { id, id2, id3 }
                 }));
 
-                expectedSize = 1889;
+                expectedSize = 1887;
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
