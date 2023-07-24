@@ -1109,7 +1109,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (Logger.IsInfoEnabled)
                         {
-                            await Logger.InfoWithWait("Unable to notify about cluster topology change", e);
+                            Logger.Info("Unable to notify about cluster topology change", e);
                         }
                     }
                 }
