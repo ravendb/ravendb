@@ -152,5 +152,7 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             return PinToMentorNode;
         }
+
+        public override string BlockingSourceName => $"External Replication '{Name}'";
     }
 }

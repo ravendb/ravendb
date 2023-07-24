@@ -1759,27 +1759,16 @@ namespace Raven.Server.Documents.Replication
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var replicationDestination in Destinations)
-            {
-                if (replicationDestination.Disabled)
-                    dict[replicationDestination.FromString()] = tombstoneCollections;
-            }
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var externals = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name)?.ExternalReplications;
-                if (externals != null)
-                {
-                    foreach (var external in externals)
-                    {
-                        if (external.Disabled)
-                        {
-                            dict[external.Name] = tombstoneCollections;
+                var rawDatabase = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name);
+                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, Destinations, tombstoneCollections);
+                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.ExternalReplications, tombstoneCollections);
+                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.HubPullReplications, tombstoneCollections);
+                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.SinkPullReplications, tombstoneCollections);
                         }
-                    }
-                }
-            }
 
             return dict;
         }

@@ -854,33 +854,13 @@ namespace Raven.Server.Documents.ETL
 
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
-            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (ElasticSearchEtlConfiguration config in ElasticSearchDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
-            foreach (OlapEtlConfiguration config in OlapDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
-            foreach (QueueEtlConfiguration config in QueueDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
+            var dict = new Dictionary<string, HashSet<string>>();
 
-            foreach (RavenEtlConfiguration config in RavenDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
-            foreach (SqlEtlConfiguration config in SqlDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, ElasticSearchDestinations, tombstoneCollections);
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, OlapDestinations, tombstoneCollections);
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, QueueDestinations, tombstoneCollections);
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, RavenDestinations, tombstoneCollections);
+            TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, SqlDestinations, tombstoneCollections);
 
             return dict;
         }

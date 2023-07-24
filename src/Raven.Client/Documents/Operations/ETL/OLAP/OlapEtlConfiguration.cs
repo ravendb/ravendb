@@ -27,6 +27,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override EtlType EtlType => EtlType.Olap;
 
+        public override string BlockingSourceName => $"OLAP ETL task '{Name}'";
+
         public override bool UsingEncryptedCommunicationChannel()
         {
             if (Connection.FtpSettings == null)

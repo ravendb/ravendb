@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
+        public override string BlockingSourceName => $"Bucket Migration Replication '{FromString()}'";
+
         public override int GetHashCode() => (int)(CalculateStringHash(Node) ^ (ulong)Hashing.Mix(MigrationIndex));
 
         public override string FromString() => $"Migrating bucket '{Bucket}' to shard '{Shard}' on node '{Node}' @ {MigrationIndex}";

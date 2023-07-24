@@ -88,6 +88,7 @@ using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Handlers;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -261,6 +262,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(HugeDocumentsDetails));
             scripter.AddType(typeof(HugeDocumentInfo));
             scripter.AddType(typeof(MismatchedReferencesLoadWarning));
+            scripter.AddType(typeof(TombstoneNotifications.BlockingTombstoneDetails));
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
             scripter.AddType(typeof(IndexingReferenceLoadWarning));

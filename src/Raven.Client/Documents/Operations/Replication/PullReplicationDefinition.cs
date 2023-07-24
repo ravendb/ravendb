@@ -1,14 +1,15 @@
 ﻿using System;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationDefinition : IDynamicJsonValueConvertible
+    public class PullReplicationDefinition : IDynamicJsonValueConvertible, ITombstoneDeletionBlocker
     {
         public TimeSpan DelayReplicationFor;
-        public bool Disabled;
+        public bool Disabled { get; set; }
 
         public string MentorNode;
 
@@ -98,6 +99,8 @@ namespace Raven.Client.Documents.Operations.Replication
                 TaskId = taskId
             };
         }
+
+        public string BlockingSourceName => $"Replication Hub task '{Name}'";
     }
 
     [Flags]

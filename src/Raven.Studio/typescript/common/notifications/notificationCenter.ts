@@ -57,6 +57,8 @@ import studioSettings = require("common/settings/studioSettings");
 import optimizeIndexDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/optimizeIndexDetails");
 import mismatchedReferenceLoadDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/mismatchedReferenceLoadDetails";
+import blockingTombstonesDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/blockingTombstonesDetails";
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -177,6 +179,7 @@ class notificationCenter {
             newVersionAvailableDetails,
             etlTransformOrLoadErrorDetails,
             mismatchedReferenceLoadDetails,
+            blockingTombstonesDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );

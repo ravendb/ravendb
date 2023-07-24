@@ -15,7 +15,6 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
@@ -4203,6 +4202,8 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
+        public string BlockingSourceName => TombstoneCleanerIdentifier;
+
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
@@ -4223,8 +4224,9 @@ namespace Raven.Server.Documents.Indexes
         public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
-                dict[Name] = Collections;
+
+            if (Status is IndexRunningStatus.Disabled or IndexRunningStatus.Paused)
+                dict[BlockingSourceName] = Collections;
 
             return dict;
         }

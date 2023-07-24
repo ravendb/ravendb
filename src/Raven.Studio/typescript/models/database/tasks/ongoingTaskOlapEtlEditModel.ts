@@ -133,7 +133,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             CustomPartitionValue: this.customPartitionEnabled() ? this.customPartition() : null,
             RunFrequency: this.runFrequency(),
             OlapTables: this.olapTables().map(x => x.toDto()),
-            Format: undefined
+            Format: undefined,
+            BlockingSourceName: this.blockingSourceName()
         };
         
     }

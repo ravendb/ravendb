@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -89,11 +88,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
                 }
             }
-        }
-
-        protected override void ModifyReplicationDestination(ReplicationNode replicationNode)
-        {
-            //replicationNode.SkipIndexReplication = true;
         }
 
         public string TombstoneCleanerIdentifier => nameof(OutputReduceToCollectionReplicationTests);
