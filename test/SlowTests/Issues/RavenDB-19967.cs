@@ -307,7 +307,7 @@ namespace SlowTests.Issues
                 switch (etlType)
                 {
                     case EtlType.Raven:
-                        var ravenConnectionString = new RavenConnectionString { Name = store.Identifier };
+                        var ravenConnectionString = new RavenConnectionString { Name = store.Identifier, Database = store.Database, TopologyDiscoveryUrls = store.Urls };
                         var ravenConfiguration = new RavenEtlConfiguration { Name = _customTaskName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
                         expectedSource = $"RavenDB ETL task '{_customTaskName}'";
@@ -325,14 +325,14 @@ namespace SlowTests.Issues
                         expectedSource = $"OLAP ETL task '{_customTaskName}'";
                         break;
                     case EtlType.ElasticSearch:
-                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier };
+                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080"} };
                         var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = _customTaskName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
                         await AddEtlDisableItAndSetTaskName(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
                         expectedSource = $"ElasticSearch ETL task '{_customTaskName}'";
                         break;
                     case EtlType.Queue:
                         var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
-                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms } };
+                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq};
                         await AddEtlDisableItAndSetTaskName(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
                         expectedSource = $"Queue ETL task '{_customTaskName}'";
                         break;
