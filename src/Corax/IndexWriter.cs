@@ -1058,6 +1058,10 @@ namespace Corax
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
+                //Null/empty is not stored in container, just exists as marker.
+                 if (reader.TermId == -1)
+                     continue;
+                
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
             }
             reader.Reset();
