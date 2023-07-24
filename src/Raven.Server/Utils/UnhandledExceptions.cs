@@ -25,9 +25,8 @@ namespace Raven.Server.Utils
                     task = logger.OperationsWithWait(exceptionString);
                 }
 
-                Console.Error.WriteLine("UnhandledException occured");
+                Console.Error.WriteLine("UnhandledException occurred");
                 Console.Error.WriteLine(args.ExceptionObject);
-
 
                 task.Wait(TimeToWaitForLog);
             };
