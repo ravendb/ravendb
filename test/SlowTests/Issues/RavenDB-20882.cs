@@ -14,9 +14,10 @@ public class RavenDB_20882 : RavenTestBase
 
     
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
     public void AlphanumericalSortCanHandleSurrogateCharacters(Options options)
     {
+        var dto6 = new Dto("Rocket1");
         var dto1 = new Dto("Rocket🚀");
         var dto5 = new Dto("Rocket🚀2");
         var dto4 = new Dto("Rocket🚀3");
@@ -26,6 +27,7 @@ public class RavenDB_20882 : RavenTestBase
         using var store = GetDocumentStore(options);
         using (var session = store.OpenSession())
         {
+            session.Store(dto6);
             session.Store(dto2);
             session.Store(dto1);
             session.Store(dto3);
@@ -35,13 +37,15 @@ public class RavenDB_20882 : RavenTestBase
             session.SaveChanges();
 
             var results = session.Advanced.DocumentQuery<Dto>().OrderBy(i => i.Text, OrderingType.AlphaNumeric).WaitForNonStaleResults().ToList();
-            Assert.Equal(dto1.Id, results[0].Id);
-            Assert.Equal(dto5.Id, results[1].Id);
-            Assert.Equal(dto4.Id, results[2].Id);
+            var idX = 0;
+            Assert.Equal(dto6.Id, results[idX++].Id);
+            Assert.Equal(dto1.Id, results[idX++].Id);
+            Assert.Equal(dto5.Id, results[idX++].Id);
+            Assert.Equal(dto4.Id, results[idX++].Id);
 
-            Assert.Equal(dto3.Id, results[3].Id);
+            Assert.Equal(dto3.Id, results[idX++].Id);
 
-            Assert.Equal(dto2.Id, results[4].Id);
+            Assert.Equal(dto2.Id, results[idX++].Id);
         }
         
     }
