@@ -454,7 +454,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
-        ///     Specifies a boost weight to the last where clause.
+        ///     Specifies a boost weight to the previous where clause.
         ///     The higher the boost factor, the more relevant the term will be.
         /// </summary>
         /// <param name="boost">

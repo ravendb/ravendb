@@ -85,5 +85,7 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             return $"Replication Sink for {HubName}";
         }
+
+        public override string BlockingSourceName => $"Replication Sink task '{Name}'";
     }
 }

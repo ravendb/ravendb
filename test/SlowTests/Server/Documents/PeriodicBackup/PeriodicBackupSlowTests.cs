@@ -3137,7 +3137,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(database);
                 database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
 
-                await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
+                await Backup.RunBackupAsync(leaderServer, taskId, leaderStore, opStatus: OperationStatus.InProgress);
                 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);

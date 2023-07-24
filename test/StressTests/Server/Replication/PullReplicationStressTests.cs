@@ -109,7 +109,6 @@ namespace StressTests.Server.Replication
                 {
                     pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
                 }
-                ModifyReplicationDestination(pull);
                 tasks.Add(AddWatcherToReplicationTopology(sink, pull, store.Urls));
             }
             await Task.WhenAll(tasks);

@@ -122,6 +122,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             PinToMentorNode: this.pinMentorNode(),
             TaskId: this.taskId,
             LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
+            BlockingSourceName: this.blockingSourceName()
         };
     }
 

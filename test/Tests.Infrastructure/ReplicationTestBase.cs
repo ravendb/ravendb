@@ -329,7 +329,6 @@ namespace Tests.Infrastructure
                 {
                     MentorNode = responsibleNode
                 };
-                ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }
             await Task.WhenAll(tasks);
@@ -405,11 +404,7 @@ namespace Tests.Infrastructure
         {
             await UpdateConflictResolver(store, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
         }
-
-        protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
-        {
-        }
-
+        
         protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
         {
             foreach (var node in toNodes)

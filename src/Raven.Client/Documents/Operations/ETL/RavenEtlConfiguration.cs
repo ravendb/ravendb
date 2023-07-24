@@ -11,6 +11,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public override EtlType EtlType => EtlType.Raven;
 
+        public override string BlockingSourceName => $"RavenDB ETL task '{Name}'";
+
         public override string GetDestination()
         {
             return _destination ?? (_destination = $"{Connection.Database}@{string.Join(",",Connection.TopologyDiscoveryUrls)}");
