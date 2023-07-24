@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -98,7 +99,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             private readonly int _stringLength;
             private bool _currentSequenceIsNumber;
             public int CurrentPositionInString;
-            public char CurrentCharacter;
             public int NumberLength;
             public int CurrentSequenceStartPosition;
             public int StringBufferOffset;
@@ -109,7 +109,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 _stringLength = stringLength;
                 _currentSequenceIsNumber = false;
                 CurrentPositionInString = 0;
-                CurrentCharacter = (char)0;
                 NumberLength = 0;
                 CurrentSequenceStartPosition = 0;
                 StringBufferOffset = 0;
@@ -117,8 +116,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             protected abstract int GetStartPosition();
 
-            protected abstract int ReadOneChar(int offset, out char ch);
-
+            protected abstract (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer);
+            
             protected abstract int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<T> string2State);
 
             public int CompareTo(AbstractAlphanumericComparisonState<T> other)
@@ -147,15 +146,16 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 return 0;
             }
 
-            private void ScanNextAlphabeticOrNumericSequence()
+            private unsafe void ScanNextAlphabeticOrNumericSequence()
             {
                 CurrentSequenceStartPosition = GetStartPosition();
-                var used = ReadOneChar(CurrentPositionInString, out CurrentCharacter);
-                _currentSequenceIsNumber = char.IsDigit(CurrentCharacter);
+                Span<char> characters = stackalloc char[4];
+                var (usedBytes, usedChars) = ReadCharacter(CurrentPositionInString, characters);
+                _currentSequenceIsNumber =  usedChars == 1 && char.IsDigit(characters[0]);
                 NumberLength = 0;
 
                 bool currentCharacterIsDigit;
-                var insideZeroPrefix = CurrentCharacter == '0';
+                var insideZeroPrefix = characters[0] == '0';
 
                 // Walk through all following characters that are digits or
                 // characters in BOTH strings starting at the appropriate marker.
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 {
                     if (_currentSequenceIsNumber)
                     {
-                        if (CurrentCharacter != '0')
+                        if (characters[0] != '0')
                         {
                             insideZeroPrefix = false;
                         }
@@ -175,13 +175,13 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                         }
                     }
 
-                    CurrentPositionInString++;
-                    StringBufferOffset += used;
+                    CurrentPositionInString += usedChars;
+                    StringBufferOffset += usedBytes;
 
                     if (CurrentPositionInString < _stringLength)
                     {
-                        used = ReadOneChar(CurrentPositionInString, out CurrentCharacter);
-                        currentCharacterIsDigit = char.IsDigit(CurrentCharacter);
+                        (usedBytes, usedChars) = ReadCharacter(CurrentPositionInString, characters);
+                        currentCharacterIsDigit = usedChars == 1 && char.IsDigit(characters[0]);
                     }
                     else
                     {
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             }
 
-            private int CompareSequence(AbstractAlphanumericComparisonState<T> other)
+            private unsafe int CompareSequence(AbstractAlphanumericComparisonState<T> other)
             {
                 // if both sequences are numbers, compare between them
                 if (_currentSequenceIsNumber && other._currentSequenceIsNumber)
@@ -219,27 +219,34 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 // should be case insensitive
                 var offset1 = CurrentSequenceStartPosition;
                 var offset2 = other.CurrentSequenceStartPosition;
-
+                Span<char> ch1 = stackalloc char[4];
+                Span<char> ch2 = stackalloc char[4];
                 var length1 = StringBufferOffset - CurrentSequenceStartPosition;
                 var length2 = other.StringBufferOffset - other.CurrentSequenceStartPosition;
 
                 while (length1 > 0 && length2 > 0)
                 {
-                    var read1 = ReadOneChar(offset1, out var ch1);
-                    var read2 = other.ReadOneChar(offset2, out var ch2);
+                    var (read1Bytes, read1Chars) = ReadCharacter(offset1, ch1);
+                    var (read2Bytes, read2Chars) = other.ReadCharacter(offset2, ch2);
 
-                    length1 -= read1;
-                    length2 -= read2;
-
-                    var result = char.ToLowerInvariant(ch1) - char.ToLowerInvariant(ch2);
+                    length1 -= read1Bytes;
+                    length2 -= read2Bytes;
+                    
+                    int result = read1Chars switch
+                    {
+                        1 when read2Chars == 1 => char.ToLowerInvariant(ch1[0]) - char.ToLowerInvariant(ch2[0]),
+                        2 when read2Chars == 2 => ch1.Slice(0, read1Chars).SequenceCompareTo(ch2.Slice(0, read2Chars)),
+                        1 => -1, //non-surroagate is always bigger than surrogate character
+                        _ => 1
+                    };
 
                     if (result == 0)
                     {
-                        offset1 += read1;
-                        offset2 += read2;
+                        offset1 += read1Bytes;
+                        offset2 += read2Bytes;
                         continue;
                     }
-
+                    
                     return result;
                 }
 
@@ -267,12 +274,21 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return CurrentPositionInString;
                 }
 
-                protected override int ReadOneChar(int offset, out char ch)
+                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
-                    ch = OriginalString[offset];
-                    return 1;
-                }
+                    //in this overload we don't have bytearray so we've to treat bytes as chars
+                    charactersBuffer[0] = OriginalString[offset];
+                    
+                    if (char.IsSurrogate(OriginalString[offset]) && offset + 1 < OriginalString.Length 
+                                                                 && char.IsSurrogatePair(OriginalString, offset))
+                    {
+                            charactersBuffer[1] = OriginalString[offset + 1];
+                            return (2, 2);
+                    }
 
+                    return (1, 1);
+                }
+                
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<string> other)
                 {
                     return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
@@ -324,24 +340,30 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return StringBufferOffset;
                 }
 
-                protected override unsafe int ReadOneChar(int offset, out char ch)
+                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
+                    var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
                     var str = OriginalString.StringAsBytes;
 
-                    fixed (byte* buffer = str)
-                    fixed (char* c = &ch)
+                    //Numbers and ASCII are always 1 so we will pay the price only in case of UTF-8 characters.
+                    //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
+                    var (byteLengthOfCharacter, charNeededToEncodeCharacters) = str[offset] switch
                     {
-                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
-                        decoder.Convert(buffer + offset, str.Length - offset, c, charCount: 1, flush: true, out var bytesUsed,
-                            out var charUsed, out _);
-
-                        if (charUsed != 1)
-                            ThrowUnexpectedNumberOfCharacters(offset, charUsed, str);
-
-                        return bytesUsed;
-                    }
+                        <= 0b0111_1111 => (1,1), /* 1 byte sequence: 0b0xxxxxxxx */
+                        <= 0b1101_1111 => (2, Encoding.UTF8.GetCharCount(str.Slice(offset, 2))), /* 2 byte sequence: 0b110xxxxxx */
+                        <= 0b1110_1111 => (3, Encoding.UTF8.GetCharCount(str.Slice(offset, 3))), /* 0b1110xxxx: 3 bytes sequence */
+                        <= 0b1111_0111 => (4, Encoding.UTF8.GetCharCount(str.Slice(offset, 4))), /* 0b11110xxx: 4 bytes sequence */
+                        _ => throw new InvalidDataException($"Characters should be between 1 and 4 bytes long and cannot match the specified sequence. This is invalid code.")
+                    };
+                    
+                    Debug.Assert(charactersBuffer.Length >= charNeededToEncodeCharacters, $"Character requires more than {charactersBuffer.Length} space to be decoded.");
+                    
+                    //In case of surrogate we could've to use two characters to convert it.
+                    decoder.Convert(str.Slice(offset, byteLengthOfCharacter), charactersBuffer, flush: true, out int bytesUsed,out int charUsed, out _);
+                    
+                    return (bytesUsed, charUsed);
                 }
-
+                
                 [DoesNotReturn]
                 private static void ThrowUnexpectedNumberOfCharacters(int offset, int charUsed, Span<byte> str)
                 {
