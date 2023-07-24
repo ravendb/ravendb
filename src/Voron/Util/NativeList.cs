@@ -16,12 +16,11 @@ public unsafe struct NativeList<T> : IDisposable
     public int Capacity;
 
     public T* RawItems;
-
-    public Span<T> Items => new(RawItems, Count);
-
+    
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
     public readonly Span<T> ToSpan() => new Span<T>(RawItems, Count);
+    
     public bool IsValid => _ctx != null;
 
     public NativeList(ByteStringContext ctx)
