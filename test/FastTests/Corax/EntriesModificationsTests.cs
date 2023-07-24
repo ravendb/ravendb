@@ -28,7 +28,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
 
         AssertEntriesCase(ref entries);
         Assert.Equal(1, entries.Updates.Count);
-        Assert.Equal(2, entries.Updates.Items[0].EntryId);
+        Assert.Equal(2, entries.Updates.ToSpan()[0].EntryId);
     }
     private static void AssertEntriesCase(ref IndexWriter.EntriesModifications entries)
     {
