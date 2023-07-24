@@ -963,6 +963,13 @@ namespace Corax
                 return TermContainerId.CompareTo(other.TermContainerId);
             }
 
+            public RecordedTerm(long termContainerId)
+            {
+                TermContainerId = termContainerId;
+                Unsafe.SkipInit(out Long);
+                Unsafe.SkipInit(out Double);
+            }
+
             public RecordedTerm(long termContainerId, long @long)
             {
                 TermContainerId = termContainerId;
@@ -1624,37 +1631,39 @@ namespace Corax
 
         private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
         {
-            for (int i = 0; i < entriesForTerm.Count; i++)
+            var entriesForTermCount = entriesForTerm.Count;
+            var rawItems = entriesForTerm.RawItems;
+            
+            for (int i = 0; i < entriesForTermCount; i++)
             {
-                ref var entry = ref entriesForTerm.RawItems[i];
-                ref var entryTerms = ref GetEntryTerms(entry.EntryId);
+                var entry = rawItems[i];
+
+                ref var recordedTerm = ref GetEntryTerms(entry.EntryId).AddByRef();
 
                 Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
-                var recordedTerm = new RecordedTerm
+
+                long recordedTermContainerId = entry.Frequency switch
                 {
-                    TermContainerId = entry.Frequency switch
-                    {
-                        > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
-                               EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
-                               0b100, // marker indicating that we have a term frequency here
-                        _ => termContainerId
-                    }
+                    > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
+                           EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
+                           0b100, // marker indicating that we have a term frequency here
+                    _ => termContainerId
                 };
 
                 if (entries.Long != null)
                 {
-                    recordedTerm.TermContainerId |= 1; // marker!
+                    recordedTermContainerId |= 1; // marker!
                     recordedTerm.Long = entries.Long.Value;
 
                     // only if the double value can not be computed by casting from long, we store it 
-                    if (entries.Double!.Value.Equals((double)entries.Long.Value) == false)
+                    if (entries.Double != null && entries.Double.Value != recordedTerm.Long)
                     {
-                        recordedTerm.TermContainerId |= 2; // marker!
-                        recordedTerm.Double = entries.Double!.Value;
+                        recordedTermContainerId |= 2; // marker!
+                        recordedTerm.Double = entries.Double.Value;
                     }
                 }
 
-                entryTerms.Add(recordedTerm);
+                recordedTerm.TermContainerId = recordedTermContainerId;
             }
         }
 
@@ -1674,6 +1683,7 @@ namespace Corax
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref NativeList<RecordedTerm> GetEntryTerms(long entry)
         {
             ref var entryTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_termsPerEntryId, entry, out var exists);

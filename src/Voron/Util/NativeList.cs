@@ -39,6 +39,16 @@ public unsafe struct NativeList<T> : IDisposable
         RawItems[Count++] = l;
     }
 
+    public ref T AddByRef()
+    {
+        if (Count == Capacity)
+        {
+            GrowListUnlikely(1);
+        }
+
+        return ref RawItems[Count++];
+    }
+
     public void AddKnownCapacity(T l)
     {
         Debug.Assert(Count < Capacity);
@@ -56,7 +66,7 @@ public unsafe struct NativeList<T> : IDisposable
     private void GrowListUnlikely(int addition)
     {
         Capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
-        var scope = _ctx.Allocate(Capacity * sizeof(T), out var mem);
+        var scope = _ctx.AllocateDirect(Capacity * sizeof(T), out var mem);
         if (RawItems != null)
         {
             Memory.Copy(mem.Ptr, RawItems, Count * sizeof(T));

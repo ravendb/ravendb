@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Sparrow;
 using Sparrow.Server;
@@ -31,9 +32,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var keyLen = 8 - BitOperations.LeadingZeroCount((ulong)k) / 8;
         var valLen = 8 - BitOperations.LeadingZeroCount((ulong)v) / 8;
         Debug.Assert(keyLen <= 8 && valLen <= 8);
-        buffer[0] = (byte)(keyLen << 4 | valLen);
-        Memory.Copy(buffer + 1, &k, keyLen);
-        Memory.Copy(buffer + 1 + keyLen, &v, valLen);
+
+        ref var bufferPtr = ref Unsafe.AsRef<byte>(buffer);
+        Unsafe.WriteUnaligned(ref bufferPtr, (byte)(keyLen << 4 | valLen));
+        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref bufferPtr, 1), k);
+        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref bufferPtr, 1 + keyLen), v);
+
         return 1 + keyLen + valLen;
     }
     
