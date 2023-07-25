@@ -1708,15 +1708,9 @@ namespace Raven.Server.Documents
             {
                 // just delete the document
                 var doc = local.Document;
-                if (expectedChangeVector != null)
-                {
-                    var cv = context.GetChangeVector(doc.ChangeVector);
-                    var expected = context.GetChangeVector(expectedChangeVector);
-
-                    if (ChangeVector.CompareVersion(expected, cv) != 0)
-                        ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
-                }
-
+                if (expectedChangeVector != null && ChangeVector.CompareVersion(doc.ChangeVector, expectedChangeVector, context) != 0)
+                    ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
+                
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);

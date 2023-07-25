@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -105,13 +106,12 @@ public class OptimisticConcurrencyAfterResharding : RavenTestBase
 
         const string id = "users/1";
         const string attachmentName = "profile.png";
-        const string contentType = "image/png";
 
         using (var session = store.OpenAsyncSession())
         using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
         {
             await session.StoreAsync(new User(), id);
-            session.Advanced.Attachments.Store(id, attachmentName, profileStream, contentType);
+            session.Advanced.Attachments.Store(id, attachmentName, profileStream, contentType: "image/png");
 
             await session.SaveChangesAsync();
         }
@@ -139,12 +139,12 @@ public class OptimisticConcurrencyAfterResharding : RavenTestBase
             }
         }
 
-        using (var profileStream = new MemoryStream(new byte[] { 4, 5, 6, 7, 8 }))
+        using (var newProfileStream = new MemoryStream(new byte[] { 4, 5, 6 }))
         {
             // update attachment stream with optimistic concurrency 
             // should not throw concurrency exception
 
-            var operation = new PutAttachmentOperation(id, attachmentName, profileStream, contentType + "/new", changeVector: changeVector);
+            var operation = new PutAttachmentOperation(id, attachmentName, newProfileStream, contentType : "image/jpg", changeVector: changeVector);
             await store.Operations.SendAsync(operation);
         }
     }
@@ -220,5 +220,38 @@ public class OptimisticConcurrencyAfterResharding : RavenTestBase
 
         var operation = new DeleteAttachmentOperation(id, attachmentName, changeVector: changeVector);
         await store.Operations.SendAsync(operation);
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+    public async Task OptimisticConcurrencyAfterResharding_DocumentPatch()
+    {
+        using var store = Sharding.GetDocumentStore();
+
+        const string id = "users/1";
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User(), id);
+            await session.SaveChangesAsync();
+        }
+
+        string changeVector;
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<User>(id);
+            changeVector = session.Advanced.GetChangeVectorFor(doc);
+        }
+
+        await Sharding.Resharding.MoveShardForId(store, id);
+        await Sharding.Resharding.MoveShardForId(store, id);
+
+        // patch document with optimistic concurrency 
+        // should not throw concurrency exception
+
+        await store.Operations.SendAsync(new PatchOperation(id, changeVector: changeVector,
+            new PatchRequest
+            {
+                Script = @"this.Name = ayende"
+            }));
     }
 }

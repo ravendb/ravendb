@@ -235,7 +235,19 @@ public class ChangeVector
         return result;
     }
 
-    public static int CompareVersion(ChangeVector changeVector1, ChangeVector changeVector2) => string.CompareOrdinal(changeVector1.Version.AsString(), changeVector2.Version.AsString());
+    public static int CompareVersion(ChangeVector changeVector1, ChangeVector changeVector2) => 
+        string.CompareOrdinal(changeVector1.Version.AsString(), changeVector2.Version.AsString());
+
+    public static int CompareVersion(ChangeVector changeVector1, string changeVector2, IChangeVectorOperationContext context) => 
+        CompareVersion(changeVector1, context.GetChangeVector(changeVector2));
+
+    public static int CompareVersion(string changeVector1, string changeVector2, IChangeVectorOperationContext context)
+    {
+        var cv1 = context.GetChangeVector(changeVector1);
+        var cv2 = context.GetChangeVector(changeVector2);
+
+        return CompareVersion(cv1, cv2);
+    }
 
     public ChangeVector RemoveId(string id, IChangeVectorOperationContext context)
     {
