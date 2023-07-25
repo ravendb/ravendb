@@ -17,6 +17,56 @@ namespace Raven.Server.Documents.Indexes.Static
             _dictionary = dictionary;
         }
 
+        public DynamicDictionary(DynamicBlittableJson dictionary, Func<object, object> keySelector)
+        {
+            var tempDictionary = new Dictionary<object, object>();
+            foreach (var value in dictionary)
+            {
+                var key = keySelector(value);
+                tempDictionary[key] = value;
+            }
+            _dictionary = tempDictionary;
+        }
+
+        public DynamicDictionary(DynamicBlittableJson dictionary, Func<object, object> keySelector, IEqualityComparer<object> comparer)
+        {
+            var tempDictionary = new Dictionary<object, object>(comparer);
+            foreach (var value in dictionary)
+            {
+                var key = keySelector(value);
+                tempDictionary[key] = value;
+            }
+            _dictionary = tempDictionary;
+        }
+
+        public DynamicDictionary(DynamicBlittableJson dictionary, Func<object, object> keySelector, Func<object, object> elementSelector)
+        {
+            var tempDictionary = new Dictionary<object, object>();
+            foreach (var item in dictionary)
+            {
+                var key = keySelector(item);
+                var value = elementSelector(item);
+
+                tempDictionary[key] = value;
+            }
+            _dictionary = tempDictionary;
+        }
+
+        public DynamicDictionary(DynamicBlittableJson dictionary, Func<object, object> keySelector, Func<object, object> elementSelector, IEqualityComparer<object> comparer)
+        {
+            var tempDictionary = new Dictionary<object, object>(comparer);
+            foreach (var item in dictionary)
+            {
+                var key = keySelector(item);
+                var value = elementSelector(item);
+
+                tempDictionary[key] = value;
+            }
+            _dictionary = tempDictionary;
+        }
+
+
+
         public DynamicDictionary(IEnumerable<KeyValuePair<object, object>> dictionary)
         {
             var tempDictionary = new Dictionary<object, object>();

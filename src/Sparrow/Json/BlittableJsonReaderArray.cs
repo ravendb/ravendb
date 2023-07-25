@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -266,27 +264,40 @@ namespace Sparrow.Json
 
             public void Dispose() {}
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public IEnumerator<object> GetEnumerator()
             {
-                return this;
+                return Enumerate();
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return GetEnumerator();
+                return Enumerate();
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public BlittableJsonArrayEnumerator Enumerate()
+            {
+                return this;
             }
         }
 
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator<object> IEnumerable<object>.GetEnumerator()
         {
-            AssertContextNotDisposed();
-
-            return new BlittableJsonArrayEnumerator(this);
+            return GetEnumerator();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        BlittableJsonArrayEnumerator GetEnumerator()
         {
             AssertContextNotDisposed();
 
@@ -303,8 +314,7 @@ namespace Sparrow.Json
             if (ReferenceEquals(this, obj))
                 return true;
 
-            var array = obj as BlittableJsonReaderArray;
-            if (array != null)
+            if (obj is BlittableJsonReaderArray array)
                 return Equals(array);
 
             return false;
