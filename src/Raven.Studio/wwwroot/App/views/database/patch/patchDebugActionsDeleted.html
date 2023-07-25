@@ -1,31 +1,65 @@
 ﻿<div>
     <div data-bind="if: deleteDocument().length">
-        <h3><i class="icon-document"></i><span>Documents</span></h3>
-        <ul data-bind="foreach: deleteDocument">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>ID:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+        <h3 class="d-flex align-items-center">
+            <i class="icon-document"></i>
+            <span>Documents</span>
+            <span data-bind="text: deleteDocument().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: deleteDocument" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">ID</label>
+                    <span class="tab-data" data-bind="text: $data"></span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: deleteCounter().length">
-        <hr>
-        <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
-        <ul data-bind="foreach: deleteCounter">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+    <div data-bind="if: deleteCounter().length" class="margin-top">
+        <h3 class="d-flex align-items-center">
+            <i class="icon-new-counter"></i>
+            <span>Counters</span>
+            <span data-bind="text: deleteCounter().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: deleteCounter" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: $data"></span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: deleteTimeSeries().length">
-        <hr>
-        <h3><i class="icon-timeseries"></i><span>Time Series</span></h3>
-        <ul data-bind="foreach: deleteTimeSeries">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
-                <small class="col-sm-3"><label>Entries From:</label><span class="margin-left tab-data" data-bind="text: From"></span></small>
-                <small class="col-sm-3"><label>To:</label><span class="margin-left tab-data" data-bind="text: To"></span></small>
+    <div data-bind="if: deleteTimeSeries().length" class="margin-top">
+        <h3 class="d-flex align-items-center">
+            <i class="icon-timeseries"></i>
+            <span>Time Series</span>
+            <span data-bind="text: deleteTimeSeries().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: deleteTimeSeries" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: Name"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Entries From</label>
+                    <span class="tab-data" data-bind="text: From"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">To</label>
+                    <span class="tab-data" data-bind="text: To"></span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: !deletedCount()"><hr>No data available.</div>
+    <div data-bind="if: !deletedCount()">
+        <div class="empty-set text-center margin-top-sm margin-bottom-sm mx-auto">
+            <i class="icon-disabled icon-xl m-0"></i>
+            <div class="lead">
+                <span>
+                    No data available
+                </span>
+            </div>
+        </div>
+    </div>
 </div>
