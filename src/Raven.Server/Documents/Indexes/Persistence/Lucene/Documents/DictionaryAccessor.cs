@@ -1,14 +1,15 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using static Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.PropertyAccessor;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class DictionaryAccessor : IPropertyAccessor
     {
-        private readonly Dictionary<string, DictionaryValueAccessor> _properties = new Dictionary<string, DictionaryValueAccessor>();
+        private readonly Dictionary<string, DictionaryValueAccessor> _properties = new();
 
-        private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder =
-            new List<KeyValuePair<string, DictionaryValueAccessor>>();
+        private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder = new();
 
         private DictionaryAccessor(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
@@ -42,12 +43,48 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return new DictionaryAccessor(instance, groupByFields);
         }
 
-        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetProperties(object target)
+        internal struct DictionaryPropertiesEnumerator : IEnumerator<PropertyItem>
         {
-            foreach ((var key, var value) in _propertiesInOrder)
+            private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder;
+            private readonly object _target;
+            private int _currentIdx;
+
+            internal DictionaryPropertiesEnumerator(List<KeyValuePair<string, DictionaryValueAccessor>> properties, object target)
             {
-                yield return (key, value.GetValue(target), value.GroupByField, value.IsGroupByField);
+                _propertiesInOrder = properties;
+                _target = target;
+                _currentIdx = -1;
             }
+
+            public bool MoveNext()
+            {
+                _currentIdx++;
+                return _currentIdx < _propertiesInOrder.Count;
+            }
+
+            public void Reset()
+            {
+                _currentIdx = -1;
+            }
+
+            object IEnumerator.Current => Current;
+
+            public PropertyItem Current
+            {
+                get
+                {
+                    var (key, value) = _propertiesInOrder[_currentIdx];
+                    return new PropertyItem(key, value.GetValue(_target), value.GroupByField, value.IsGroupByField);
+                }
+            }
+
+            public void Dispose() { }
+        }
+
+
+        public IEnumerator<PropertyItem> GetProperties(object target)
+        {
+            return new DictionaryPropertiesEnumerator(_propertiesInOrder, target);
         }
 
         public object GetValue(string name, object target)
@@ -55,10 +92,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (_properties.TryGetValue(name, out DictionaryValueAccessor accessor))
                 return accessor.GetValue(target);
 
-            throw new InvalidOperationException(string.Format("The {0} property was not found", name));
+            throw new InvalidOperationException($"The {name} property was not found");
         }
 
-        private class DictionaryValueAccessor : PropertyAccessor.Accessor
+        internal class DictionaryValueAccessor : PropertyAccessor.Accessor
         {
             private readonly string _propertyName;
 
