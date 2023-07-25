@@ -8,7 +8,7 @@ namespace Voron
 {
     public sealed class SliceComparer : IEqualityComparer<Slice>, IComparer<Slice>
     {
-        public static readonly SliceComparer Instance = new SliceComparer();
+        public static readonly SliceComparer Instance = new();
 
         int IComparer<Slice>.Compare(Slice x, Slice y)
         {

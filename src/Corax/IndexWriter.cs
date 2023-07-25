@@ -30,6 +30,7 @@ using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util;
 using Voron.Util.PFor;
+using static Corax.Constants;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
@@ -51,7 +52,7 @@ namespace Corax
     public unsafe partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
-        private readonly HashSet<ByteString> _indexedEntries = new(new ByteStringEqualityComparer());
+        private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
         private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
         private FixedSizeTree _documentBoost;
@@ -771,15 +772,20 @@ namespace Corax
 
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
-            if (TryDeleteEntry(key, out var entryId))
+            // We do not dispose because we will be storing the slice in the hash set.
+            Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
+
+            if (TryDeleteEntry(keySlice, out var entryId))
             {
                 _numberOfModifications++;
-                RegisterEntryByKey(key, entryId);
             }
             else
             {
-                entryId = InitBuilder(key);
+                entryId = InitBuilder();
             }
+
+            _indexedEntries.Add(keySlice); // Register entry by key. 
+
             _builder.Init(entryId);
             return _builder;
         }
@@ -788,27 +794,26 @@ namespace Corax
         
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
         {
-            long entryId = InitBuilder(key);
+            long entryId = InitBuilder();
+
+            // We do not dispose because we will be storing the slice in the hash set.
+            Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
+            _indexedEntries.Add(keySlice);  // Register entry by key. 
+
             _builder.Init(entryId);
+
             return _builder;
         }
 
-        private long InitBuilder(ReadOnlySpan<byte> key)
+        private long InitBuilder()
         {
             if (_builder.Active)
                 throw new NotSupportedException("You *must* dispose the previous builder before calling it again");
 
             _numberOfModifications++;
             var entryId = ++_lastEntryId;
-            RegisterEntryByKey(key, entryId);
-            return entryId;
-        }
 
-        private void RegisterEntryByKey(ReadOnlySpan<byte> key, long entryId)
-        {
-            _entriesAllocator.Allocate(key.Length, out var keyStr);
-            key.CopyTo(keyStr.ToSpan());
-            _indexedEntries.Add(keyStr);
+            return entryId;
         }
 
         //Document Boost should add priority to some documents but also should not be the main component of boosting.
@@ -1209,7 +1214,7 @@ namespace Corax
 
         private bool TryDeleteEntry(Slice termSlice, out long entryId)
         {
-            if (_indexedEntries.Contains(termSlice.Content) == false)
+            if (_indexedEntries.Contains(termSlice) == false)
             {
                 _compactKeyScope.Key.Set(termSlice);
                 var exists = _primaryKeyTree.TryGetValue(_compactKeyScope.Key, out var containerId);
