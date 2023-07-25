@@ -12,7 +12,6 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Schemas;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -23,7 +22,6 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -213,12 +211,14 @@ namespace Raven.Server.Documents
                     else
                     {
                         var putStream = true;
+                        var attachmentExists = false;
 
                         // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
                         using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
                         {
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
+                                attachmentExists = true;
                                 if (expectedChangeVector != null)
                                 {
                                     var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        if (string.IsNullOrEmpty(expectedChangeVector) == false)
+                        if (attachmentExists == false && string.IsNullOrEmpty(expectedChangeVector) == false)
                         {
                             ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedChangeVector);
                         }
