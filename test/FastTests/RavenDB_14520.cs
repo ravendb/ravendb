@@ -6,7 +6,7 @@ using Raven.Client.Util;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests
+namespace FastTests.Client
 {
     public class RavenDB_14520 : NoDisposalNeeded
     {
