@@ -104,12 +104,20 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         if (batchContinuationResult == Index.CanContinueBatchResult.False)
                                         {
+                                            if (_index.TestRun != null)
+                                                _index.TestRun.HandleCanContinueBatch(batchContinuationResult, collection);
+
                                             keepRunning = false;
                                             break;
                                         }
 
                                         if (batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction)
+                                        {
+                                            if (_index.TestRun != null)
+                                                _index.TestRun.HandleCanContinueBatch(batchContinuationResult, collection);
+
                                             break;
+                                        }
 
                                         if (totalProcessedCount >= pageSize)
                                         {

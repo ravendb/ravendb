@@ -42,6 +42,17 @@ public class TestIndexRun
         return new TestIndexWriteOperation(writer, index);
     }
 
+    public void HandleCanContinueBatch(Index.CanContinueBatchResult result, string collection)
+    {
+        Debug.Assert(result is Index.CanContinueBatchResult.False or Index.CanContinueBatchResult.RenewTransaction, $"{result} is Index.CanContinueBatchResult.False or Index.CanContinueBatchResult.RenewTransaction");
+
+        if (_collectionTracker.TryGetValue(collection, out var stats) == false)
+            return;
+
+        stats.CountOfReturnedItems--;
+        stats.Completed = stats.CountOfReturnedItems > _docsToProcessPerCollection;
+    }
+
     public IEnumerable<IndexItem> CreateEnumeratorWrapper(IEnumerable<IndexItem> enumerator, string collection)
     {
         if (_collectionTracker.TryGetValue(collection, out var stats) == false)
