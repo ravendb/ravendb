@@ -1629,17 +1629,17 @@ namespace Raven.Server.Documents
                     };
 
                 var localCollection = ExtractCollectionName(context, local.Tombstone.Collection);
-                if (collectionName == null)
+                if (collectionName == null || local.Tombstone.Collection.Equals(collectionName.Name))
                 {
                     collectionName = localCollection;
                 }
-                else if (local.Tombstone.Collection.Equals(collectionName.Name) == false)
+                else
                 {
                     // ensure the table for the tombstones is created
                     ExtractCollectionName(context, collectionName.Name);
                 }
 
-                DocumentPut.DeleteTombstoneIfNeeded(context, localCollection, lowerId);
+                DocumentPut.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
 
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
