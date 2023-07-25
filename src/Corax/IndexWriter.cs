@@ -1048,6 +1048,7 @@ namespace Corax
                 RemoveDocumentBoost(entryToDelete);
                 var entryTerms = Container.MaybeGetFromSamePage(llt, ref lastVisitedPage, entryTermsId);
                 RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, compactKey, dicId, entryToDelete);
+                Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
         }
 
