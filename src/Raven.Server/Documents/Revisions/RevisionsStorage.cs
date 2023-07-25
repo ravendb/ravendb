@@ -770,6 +770,8 @@ namespace Raven.Server.Documents.Revisions
 
             if (table.ReadByKey(changeVectorSlice, out TableValueReader tvr))
             {
+                EnsureValidRevisionTable(context, changeVectorSlice, ref table, ref tvr);
+
                 using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out Slice lowerId))
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
@@ -778,17 +780,6 @@ namespace Raven.Server.Documents.Revisions
 
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
 
-                if (table.IsOwned(tvr.Id) == false)
-                {
-                    // We request to delete revision with the wrong collection
-                    var revision = TableValueToRevision(context, ref tvr);
-                    var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
-                    table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
-
-                    if (table.IsOwned(tvr.Id) == false) // this shouldn't happened
-                        throw new VoronErrorException(
-                            $"Failed to remove revision {key} (id:{revision.Id}) of collection '{currentCollection}' from table '{table.Name}', in order to replace with the collection '{collection}'");
-                }
                 table.Delete(tvr.Id);
             }
             else
@@ -958,23 +949,7 @@ namespace Raven.Server.Documents.Revisions
 
         private unsafe void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
         {
-            Document revision = null;
-            if (table.IsOwned(tvr.Id) == false)
-            {
-                // We request to delete revision with the wrong collection
-                revision = TableValueToRevision(context, ref tvr);
-                var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Expected revision '{revision.Id}' with change vector '{revision.ChangeVector}' from table '{table.Name}' but revision is of collection '{currentCollection.Name}'");
-
-                table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
-
-                if (table.IsOwned(tvr.Id) == false || table.ReadByKey(changeVectorSlice, out tvr) == false) // this shouldn't happened
-                    throw new VoronErrorException(
-                        $"Failed to get revision '{revision.Id}' with change vector '{revision.ChangeVector}' of collection '{currentCollection}' from table '{table.Name}'. " +
-                        "This should not happen and is likely a bug.");
-            }
+            EnsureValidRevisionTable(context, changeVectorSlice, ref table, ref tvr);
 
             var revisionCopy = context.GetMemory(tvr.Size);
             // we have to copy it to the side because we might do a defrag during update, and that
@@ -982,7 +957,7 @@ namespace Raven.Server.Documents.Revisions
             Memory.Copy(revisionCopy.Address, tvr.Pointer, tvr.Size);
             var copyTvr = new TableValueReader(revisionCopy.Address, tvr.Size);
 
-            revision ??= TableValueToRevision(context, ref copyTvr);
+            var revision = TableValueToRevision(context, ref copyTvr);
             var flags = revision.Flags | DocumentFlags.Conflicted;
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
             var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr);
@@ -1003,6 +978,26 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add((int)resolvedFlag);
                 tvb.Add(Bits.SwapBytes(revision.LastModified.Ticks));
                 table.Set(tvb);
+            }
+        }
+
+        private void EnsureValidRevisionTable(DocumentsOperationContext context, Slice changeVectorSlice, ref Table table, ref TableValueReader tvr)
+        {
+            if (table.IsOwned(tvr.Id) == false)
+            {
+                // We request to update/remove revision with the wrong collection
+                var revision = TableValueToRevision(context, ref tvr);
+                var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Expected revision '{revision.Id}' with change vector '{revision.ChangeVector}' from table '{table.Name}' but revision is of collection '{currentCollection.Name}'");
+
+                table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
+
+                if (table.IsOwned(tvr.Id) == false || table.ReadByKey(changeVectorSlice, out tvr) == false) // this shouldn't happened
+                    throw new VoronErrorException(
+                        $"Failed to get revision '{revision.Id}' with change vector '{revision.ChangeVector}' of collection '{currentCollection}' from table '{table.Name}'. " +
+                        "This should not happen and is likely a bug.");
             }
         }
 
