@@ -1939,7 +1939,7 @@ namespace Corax
 
         private unsafe void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble);
+            var fieldTree = _fieldsTree.LookupFor<DoubleLookupKey>(indexedField.NameDouble);
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble); 
 
             _entriesAlreadyAdded.Clear();
@@ -1954,27 +1954,26 @@ namespace Corax
                 if (localEntry.HasChanges == false)
                     continue;
 
-                long termAsLong = BitConverter.DoubleToInt64Bits(term);
-                UpdateEntriesForTerm(entries, entriesToTerms, termAsLong);
+                UpdateEntriesForTerm(entries, entriesToTerms,  BitConverter.DoubleToInt64Bits(term));
                 
-                var hasTerm = fieldTree.TryGetValue(termAsLong, out var existing);
+                var hasTerm = fieldTree.TryGetValue(term, out var existing);
 
                 long termId;
                 if (localEntry.Additions.Count > 0 && hasTerm == false) // no existing value
                 {
                     Debug.Assert(localEntry.Removals.Count == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
-                    fieldTree.Add(termAsLong, termId);
+                    fieldTree.Add(term, termId);
                     continue;
                 }
 
                 switch (AddEntriesToTerm(tmpBuf, existing, ref localEntry, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
-                        fieldTree.Add(termAsLong, termId);
+                        fieldTree.Add(term, termId);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.TryRemove(termAsLong);
+                        fieldTree.TryRemove(term);
                         break;
                 }
             }
