@@ -68,7 +68,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                     <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
                                     frequency specified. The actual refresh time can increase (up to) that value.
                                 </p>
-                                <Code code={codeExample} language="javascript"/>
+                                <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"
@@ -156,7 +156,7 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                     <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
                                     frequency specified. The actual refresh time can increase (up to) that value.
                                 </p>
-                                <Code code={codeExample} language="javascript"/>
+                                <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"

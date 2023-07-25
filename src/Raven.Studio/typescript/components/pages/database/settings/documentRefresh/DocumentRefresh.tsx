@@ -147,17 +147,21 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 </p>
                                 <ul>
                                     <li>
-                                        The server scans the database at the specified <strong>frequency</strong>, searching for documents that should be refreshed.
+                                        The server scans the database at the specified <strong>frequency</strong>,
+                                        searching for documents that should be refreshed.
                                     </li>
                                     <li>
-                                        Any document that has a <code>@refresh</code> metadata property whose time has passed at the time of the scan will be modified by removing this property.
+                                        Any document that has a <code>@refresh</code> metadata property whose time has
+                                        passed at the time of the scan will be modified by removing this property.
                                     </li>
                                     <li>
-                                        This modification will trigger any processes related to the document, such as: re-indexing or taking part in an ongoing-task (e.g. Replication, ETL, Subscriptions, etc.), as defined by your configuration.
+                                        This modification will trigger any processes related to the document, such as:
+                                        re-indexing or taking part in an ongoing-task (e.g. Replication, ETL,
+                                        Subscriptions, etc.), as defined by your configuration.
                                     </li>
                                 </ul>
                                 <p>Sample document:</p>
-                                <Code code={codeExample} language="javascript"/>
+                                <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/1PKUYJ/6.0/Csharp" target="_blank">
