@@ -163,12 +163,9 @@ namespace Raven.Server.Documents
 
                     oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                     
-                    if (expectedChangeVector != null)
-                    {
-                        var expected = context.GetChangeVector(expectedChangeVector);
-                        if (ChangeVector.CompareVersion(expected, oldChangeVector) != 0)
-                            ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
-                    }
+                    if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                        ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
+                    
                     if (oldChangeVectorForClusterTransactionIndexCheck == null)
                     {
                         compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVector);
