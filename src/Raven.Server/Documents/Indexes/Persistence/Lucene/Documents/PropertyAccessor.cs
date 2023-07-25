@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -7,9 +8,9 @@ using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
-using Raven.Server.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -18,18 +19,57 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     public class PropertyAccessor : IPropertyAccessor
     {
-        private readonly Dictionary<string, Accessor> Properties = new Dictionary<string, Accessor>();
+        private readonly Dictionary<string, Accessor> Properties = new();
 
-        private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
-            new List<KeyValuePair<string, Accessor>>();
+        private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder = new();
 
-        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetProperties(object target)
+
+        public struct PropertiesEnumerator : IEnumerator<PropertyItem>
         {
-            foreach ((var key, var value) in _propertiesInOrder)
+            private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder;
+            private readonly object _target;
+            private int _currentIdx;
+
+            public PropertiesEnumerator(List<KeyValuePair<string, Accessor>> properties, object target)
             {
-                yield return (key, value.GetValue(target), value.GroupByField, value.IsGroupByField);
+                _propertiesInOrder = properties;
+                _target = target;
+                _currentIdx = -1;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                _currentIdx++;
+                return _currentIdx < _propertiesInOrder.Count;
+            }
+
+            public void Reset()
+            {
+                _currentIdx = -1;
+            }
+
+            object IEnumerator.Current => Current;
+
+            public PropertyItem Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get
+                {
+                    var (key, value) = _propertiesInOrder[_currentIdx];
+                    return new PropertyItem(key, value.GetValue(_target), value.GroupByField, value.IsGroupByField);
+                }
+            }
+
+            public void Dispose() {}
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IEnumerator<PropertyItem> GetProperties(object target)
+        {
+            return new PropertiesEnumerator(_propertiesInOrder, target);
+        }
+
 
         public static IPropertyAccessor Create(Type type, object instance)
         {
@@ -47,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (Properties.TryGetValue(name, out Accessor accessor))
                 return accessor.GetValue(target);
 
-            throw new InvalidOperationException(string.Format("The {0} property was not found", name));
+            throw new InvalidOperationException($"The {name} property was not found");
         }
 
         protected PropertyAccessor(Type type, Dictionary<string, CompiledIndexField> groupByFields = null)
@@ -63,12 +103,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     foreach (var groupByField in groupByFields.Values)
                     {
-                        if (groupByField.IsMatch(prop.Name))
-                        {
-                            getMethod.GroupByField = groupByField;
-                            getMethod.IsGroupByField = true;
-                            break;
-                        }
+                        if (!groupByField.IsMatch(prop.Name)) 
+                            continue;
+
+                        getMethod.GroupByField = groupByField;
+                        getMethod.IsGroupByField = true;
+                        break;
                     }
                 }
 
@@ -88,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var getMethod = propertyInfo.GetGetMethod();
 
             if (getMethod == null)
-                throw new InvalidOperationException(string.Format("Could not retrieve GetMethod for the {0} property of {1} type", propertyInfo.Name, type.FullName));
+                throw new InvalidOperationException($"Could not retrieve GetMethod for the {propertyInfo.Name} property of {type.FullName} type");
 
             var arguments = new[]
             {
@@ -171,20 +211,55 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _groupByFields = groupByFields;
         }
 
-        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetProperties(object target)
+        internal struct JintPropertiesEnumerator : IEnumerator<PropertyItem>
+        {
+            private readonly ObjectInstance _objectInstance;
+            private readonly Dictionary<string, CompiledIndexField> _groupByFields;
+            private IEnumerator<KeyValuePair<JsValue, PropertyDescriptor>> _enumerable;
+
+            internal JintPropertiesEnumerator(ObjectInstance oi, Dictionary<string, CompiledIndexField> groupByFields)
+            {
+                _objectInstance = oi;
+                _groupByFields = groupByFields;
+                _enumerable = oi.GetOwnProperties().GetEnumerator();
+            }
+
+            public bool MoveNext()
+            {
+                return _enumerable.MoveNext();
+            }
+
+            public void Reset()
+            {
+                _enumerable = _objectInstance.GetOwnProperties().GetEnumerator();
+            }
+
+            object IEnumerator.Current => Current;
+
+            public PropertyItem Current
+            {
+                get
+                {
+                    var property = _enumerable.Current;
+                    var propertyAsString = property.Key.AsString();
+
+                    CompiledIndexField field = null;
+                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
+
+                    return new PropertyItem(propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
+                }
+            }
+
+            public void Dispose() { }
+        }
+
+
+        public IEnumerator<PropertyItem> GetProperties(object target)
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
 
-            foreach (var property in oi.GetOwnProperties())
-            {
-                var propertyAsString = property.Key.AsString();
-
-                CompiledIndexField field = null;
-                var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
-
-                yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
-            }
+            return new JintPropertiesEnumerator(oi, _groupByFields);
         }
 
         public object GetValue(string name, object target)
