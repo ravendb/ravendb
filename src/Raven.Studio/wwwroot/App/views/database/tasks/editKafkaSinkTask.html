@@ -121,7 +121,7 @@
                                 <div>Successfully connected to Kafka server</div>
                             </div>
                             <div data-bind="if: !Success">
-                                <div class="padding bg-danger small">
+                                <div class="padding bg-danger small word-break">
                                     <h2>Connection test failed!</h2>
                                     <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
                                     <div>
@@ -196,7 +196,7 @@
                             </div>
                         </div>
                         <label><strong>Script:</strong></label>
-                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                        <span class="pull-right"><a href="#" class="syntax-help" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
                         <div data-bind="validationElement: script">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 250px;"></pre>
@@ -283,27 +283,27 @@
         </div>
         <div class="tabs">
             <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
                     <a href="#testResultsLoaded" role="tab" data-toggle="tab">
                         <i class="icon-import"></i><span>Loaded</span>
-                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.loadedCount() || ''"></span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
                     <a href="#testResultsModified" role="tab" data-toggle="tab">
                         <i class="icon-export"></i><span>Modified</span>
-                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.modifiedCount() || ''"></span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
                     <a href="#testResultsDeleted" role="tab" data-toggle="tab">
                         <i class="icon-trash"></i><span>Deleted</span>
-                        <span class="label label-info margin-left margin-left-sm" data-bind="text: actions.deletedCount() || ''"></span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.deletedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: debugOutput().length">
                     <a href="#debugOutput" role="tab" data-toggle="tab">
-                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span>
                     </a>
                 </li>
             </ul>

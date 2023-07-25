@@ -1,62 +1,68 @@
-﻿@external-replication-color: @color-1-1;
-@external-replication-color-dark: @brand-primary-dark;
-@external-replication-color-light: @brand-primary-light;
+﻿@external-replication-color: @color-5;
+@external-replication-color-dark: darken(@external-replication-color, 10%);
+@external-replication-color-light: lighten(@external-replication-color, 5%);
 
-@pull-replication-hub-color: @color-3-2; 
+@pull-replication-hub-color: @color-5-1;
 @pull-replication-hub-color-dark: darken(@pull-replication-hub-color, 10%);
 @pull-replication-hub-color-light: lighten(@pull-replication-hub-color, 5%);
 
-@pull-replication-sink-color: @color-3-3;
+@pull-replication-sink-color: @color-5-2;
 @pull-replication-sink-color-dark: darken(@pull-replication-sink-color, 10%);
 @pull-replication-sink-color-light:lighten(@pull-replication-sink-color, 5%);
 
-@sql-etl-color: @color-4;
-@sql-etl-color-dark: darken(@color-4, 10%);
-@sql-etl-color-light: lighten(@color-4, 5%);
+@ravendb-etl-color: @color-1-1;
+@ravendb-etl-color-dark: darken(@ravendb-etl-color, 10%);
+@ravendb-etl-color-light: lighten(@ravendb-etl-color, 5%);
 
-@olap-etl-color: @color-1-2;
-@olap-etl-color-dark: darken(@color-1-2, 10%);
-@olap-etl-color-light: lighten(@color-1-2, 5%);
+@elastic-etl-color: @color-1-2;
+@elastic-etl-color-dark: darken(@elastic-etl-color, 10%);
+@elastic-etl-color-light: lighten(@elastic-etl-color, 5%);
 
-@elastic-etl-color: @color-5-2;
-@elastic-etl-color-dark: darken(@color-5-2, 10%);
-@elastic-etl-color-light: lighten(@color-5-2, 5%);
+@kafka-etl-color: @color-1-3;
+@kafka-etl-color-dark: darken(@kafka-etl-color, 10%);
+@kafka-etl-color-light: lighten(@kafka-etl-color, 3%);
 
-@ravendb-etl-color: @color-2;
-@ravendb-etl-color-dark: darken(@color-2, 10%);
-@ravendb-etl-color-light: lighten(@color-2, 5%);
+@sql-etl-color: @color-2;
+@sql-etl-color-dark: darken(@sql-etl-color, 10%);
+@sql-etl-color-light: lighten(@sql-etl-color, 5%);
 
-@kafka-etl-color: @color-2-3;
-@kafka-etl-color-dark: darken(@color-2-3, 10%);
-@kafka-etl-color-light: lighten(@color-2-3, 3%);
+@olap-etl-color: @color-2-1;
+@olap-etl-color-dark: darken(@olap-etl-color, 10%);
+@olap-etl-color-light: lighten(@olap-etl-color, 5%);
 
-@rabbitmq-etl-color: @color-4-2;
-@rabbitmq-etl-color-dark: darken(@color-4-2, 5%);
-@rabbitmq-etl-color-light: lighten(@color-4-2, 5%);
+@rabbitmq-etl-color: @color-2-2;
+@rabbitmq-etl-color-dark: darken(@rabbitmq-etl-color, 10%);
+@rabbitmq-etl-color-light: lighten(@rabbitmq-etl-color, 5%);
 
-@kafka-sink-color: @color-2-3; 
-@kafka-sink-color-dark: darken(@color-2-3, 10%);
-@kafka-sink-color-light: lighten(@color-2-3, 3%);
+@kafka-sink-color: @color-3;
+@kafka-sink-color-dark: darken(@kafka-sink-color, 10%);
+@kafka-sink-color-light: lighten(@kafka-sink-color, 3%);
 
-@rabbitmq-sink-color: @color-4-2; 
-@rabbitmq-sink-color-dark: darken(@color-4-2, 5%);
-@rabbitmq-sink-color-light: lighten(@color-4-2, 5%);
+@rabbitmq-sink-color: @color-3-1;
+@rabbitmq-sink-color-dark: darken(@rabbitmq-sink-color, 5%);
+@rabbitmq-sink-color-light: lighten(@rabbitmq-sink-color, 5%);
 
-@backup-color: @color-5;
-@backup-color-dark: darken(@color-5, 10%);
-@backup-color-light: lighten(@color-5, 5%);
+@backup-color: @color-4;
+@backup-color-dark: darken(@backup-color, 10%);
+@backup-color-light: lighten(@backup-color, 5%);
 
-@subscription-color: @color-3;
-@subscription-color-dark: darken(@color-3, 10%);
-@subscription-color-light: lighten(@color-3, 5%);
+@subscription-color: @color-4-1;
+@subscription-color-dark: darken(@subscription-color, 10%);
+@subscription-color-light: lighten(@subscription-color, 5%);
 
 .bigbtn-variant(@color, @color-dark) {
-    background-color: fadeout(@color-dark,80%);
+    background-color: fadeout(@color-dark,90%);
     color: @color;
+    h4 {
+        color: @color;
+    }
 
     &:hover {
-        background-color: fadeout(@color-dark,0%);
-        color: @gray-lighter;
+        background-color: fadeout(@color-dark,10%);
+        color: white;
+        h4 {
+            color: white;
+        }
     }
 }
 
@@ -78,11 +84,14 @@
         align-items: center;
         flex-direction: column;
         padding: @gutter-sm;
-        transition: background-color .2s ease, color .1s;
         border-radius: @gutter-xxs;
+        transition: none;
 
         i {
             font-size: 48px;
+        }
+        &:hover {
+            transition: background-color 0.5s cubic-bezier(0, 0.67, 0.76, 1.04), color 0.1s;
         }
     }
 
@@ -820,4 +829,34 @@
     &.test-mode {
         z-index: @zindex-modal;
     }
+}
+
+.test-result-item {
+    display: flex;
+    flex-grow: 1;
+    width: 100%;
+    max-width: calc((100%/3) - @gutter-xxs);
+    word-break: break-all;
+    &.show-document {
+        max-width: 100%;
+    }
+    .tab-data, pre {
+        font-size: 12px;
+    }
+    small {
+        padding: @gutter-xxs;
+    }
+    pre {
+        background-color: var(--well-bg);
+        border-radius: @gutter-xxs;
+        flex-grow: 1;
+    }
+    pre:not(:empty).show + small:not(:empty) {
+        margin-top: @gutter-xxs;
+    }
+}
+
+.test-result-item > * + *:not(:empty),
+.test-result-item > span > * + small:not(:empty) {
+    border-top: 1px solid var(--border-color-light);
 }

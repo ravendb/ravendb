@@ -1,56 +1,103 @@
 ﻿<div>
     <div data-bind="if: putDocument().length">
         <div class="flex-horizontal">
-            <h3><i class="icon-document"></i><span>Documents</span></h3>
+            <h3 class="d-flex align-items-center">
+                <i class="icon-document"></i>
+                <span>Documents</span>
+                <span data-bind="text: putDocument().length" class="label label-info margin-left-xxs"></span>
+            </h3>
             <div class="flex-separator"></div>
             <div class="toggle toggle-inline">
                 <input type="checkbox" id="showDocuments" data-bind="checked: showDocumentsInModified">
                 <label for="showDocuments">Show documents</label>
             </div>
         </div>
-        <ul data-bind="foreach: putDocument">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
-                <small class="col-sm-2">
-                    <label>Put Document:</label>
-                    <span class="margin-left tab-data"  data-bind="css: { 'hide' : $parent.showDocumentsInModified }">{ ... }</span>
+        <ul data-bind="foreach: putDocument" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item" data-bind="css: { 'show-document' : $parent.showDocumentsInModified }">
+                <small class="flex-vertical">
+                    <label class="small-label">ID</label>
+                    <span class="tab-data" data-bind="text: Id"></span>
                 </small>
-                <pre data-bind="html: $parent.formatAsJson(Data), css: { 'show' : $parent.showDocumentsInModified }"></pre>
+                <small class="flex-vertical">
+                    <label class="small-label">Put Document</label>
+                    <span class="tab-data" data-bind="css: { 'hide' : $parent.showDocumentsInModified }">{ ... }</span>
+                </small>
+                <pre class="hide" data-bind="html: $parent.formatAsJson(Data), css: { 'show' : $parent.showDocumentsInModified }"></pre>
             </li>
         </ul>
     </div>
-    <div data-bind="if: incrementCounter().length">
-        <hr>
-        <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
-        <ul data-bind="foreach: incrementCounter">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
-                <small class="col-sm-2"><label>Value Before:</label><span class="margin-left tab-data" data-bind="text: Created ? '&lt;None&gt;' : OldValue"></span></small>
-                <small class="col-sm-2"><label>Value After:</label><span class="margin-left tab-data" data-bind="text: NewValue"></span></small>
-                <small class="col-sm-2"><span class="tab-data" data-bind="text: Created ? '&lt;Counter created&gt;' : ''"></span></small>
+    <div data-bind="if: incrementCounter().length" class="margin-top">
+        <h3 class="d-flex align-items-center">
+            <i class="icon-new-counter"></i>
+            <span>Counters</span>
+            <span data-bind="text: incrementCounter().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: incrementCounter" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: Name"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Value Before</label>
+                    <span class="tab-data" data-bind="text: Created ? '&lt;None&gt;' : OldValue"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Value After</label>
+                    <span class="tab-data" data-bind="text: NewValue"></span>
+                </small>
+                <small class="flex-vertical" data-bind="visible: Created">
+                    <span class="tab-data text-success" data-bind="text: Created ? '&lt;Counter created&gt;' : ''"></span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: appendTimeSeries().length">
-        <hr>
+    <div data-bind="if: appendTimeSeries().length" class="margin-top">
         <div class="flex-horizontal">
-            <h3><i class="icon-document"></i><span>Time Series</span></h3>
+            <h3 class="d-flex align-items-center">
+                <i class="icon-document"></i>
+                <span>Time Series</span>
+                <span data-bind="text: appendTimeSeries().length" class="label label-info margin-left-xxs"></span>
+            </h3>
             <div class="flex-separator"></div>
             <div class="toggle toggle-inline">
                 <input type="checkbox" id="showValuesInModified" data-bind="checked: showTimeSeriesValuesInModified">
                 <label for="showValuesInModified">Show values</label>
             </div>
         </div>
-        <ul data-bind="foreach: appendTimeSeries">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
-                <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span></small>
-                <small class="col-sm-3"><label>Timestamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
-                <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><label>Values Appended:</label><span class="margin-left tab-data">{ ... }</span></small>
-                <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><span class="tab-data" data-bind="text: Created ? '&lt;Time series created&gt;' : ''"></span></small>
-                <pre data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInModified }"></pre>
+        <ul data-bind="foreach: appendTimeSeries" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: Name"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Entry Tag</label>
+                    <span class="tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Timestamp</label>
+                    <span class="tab-data" data-bind="text: Timestamp"></span>
+                </small>
+                <small class="flex-vertical">
+                    <label class="small-label">Values Appended</label>
+                    <span class="tab-data" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }">{ ... }</span>
+                </small>
+                <pre class="hide" data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInModified }"></pre>
+                <small class="flex-vertical" data-bind="visible: Created">
+                    <span class="tab-data text-success" data-bind="text: Created ? '&lt;Time series created&gt;' : ''"></span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: !modifiedCount()"><hr>No data available.</div>
+    <div data-bind="if: !modifiedCount()">
+        <div class="empty-set text-center margin-top-sm margin-bottom-sm mx-auto">
+            <i class="icon-disabled icon-xl m-0"></i>
+            <div class="lead">
+                <span>
+                    No data available
+                </span>
+            </div>
+        </div>
+    </div>
 </div>

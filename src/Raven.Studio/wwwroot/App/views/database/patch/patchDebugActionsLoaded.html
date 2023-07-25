@@ -1,72 +1,102 @@
 <div>
     <div data-bind="if: loadDocument().length">
-        <h3><i class="icon-document"></i><span>Documents</span></h3>
-        <ul data-bind="foreach: loadDocument">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>ID:</label><span class="margin-left tab-data"
-                                                                                           data-bind="text: Id"></span></small>
-                <small class="col-sm-2" data-bind="visible: !Exists"><span
-                    class="tab-data">&lt;Document not found&gt;</span></small>
+        <h3 class="d-flex align-items-center">
+            <i class="icon-document"></i>
+            <span>Documents</span>
+            <span data-bind="text: loadDocument().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: loadDocument" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">ID</label>
+                    <span class="tab-data" data-bind="text: Id"></span>
+                </small>
+                <small class="flex-vertical" data-bind="visible: !Exists">
+                    <span class="tab-data text-warning">&lt;Document not found&gt;</span>
+                </small>
             </li>
         </ul>
     </div>
-    <div data-bind="if: getCounter().length">
-        <hr>
-        <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
-        <ul data-bind="foreach: getCounter">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span
-                    class="margin-left tab-data" data-bind="text: Name"></span></small>
+    <div data-bind="if: getCounter().length" class="margin-top">
+        <h3 class="d-flex align-items-center">
+            <i class="icon-new-counter"></i>
+            <span>Counters</span>
+            <span data-bind="text: getCounter().length" class="label label-info margin-left-xxs"></span>
+        </h3>
+        <ul data-bind="foreach: getCounter" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: Name"></span>
+                </small>
                 <span data-bind="visible: !Exists">
-                    <small class="col-sm-2"><span
-                        class="tab-data">&lt;Counter not found&gt;</span></small>
+                    <small class="flex-vertical">
+                        <span class="tab-data text-warning">&lt;Counter not found&gt;</span>
+                    </small>
                 </span>
                 <span data-bind="if: Exists">
-                    <small class="col-sm-2"><label>Value:</label><span
-                        class="margin-left tab-data" data-bind="text: Value"></span></small>
+                    <small class="flex-vertical">
+                        <label class="small-label">Value</label>
+                        <span class="tab-data" data-bind="text: Value"></span>
+                    </small>
                 </span>
             </li>
         </ul>
     </div>
-    <div data-bind="if: getTimeSeries().length">
-        <hr>
+    <div data-bind="if: getTimeSeries().length" class="margin-top">
         <div class="flex-horizontal">
-            <h3><i class="icon-document"></i><span>Time Series</span></h3>
+            <h3 class="d-flex align-items-center">
+                <i class="icon-document"></i>
+                <span>Time Series</span>
+                <span data-bind="text: getTimeSeries().length" class="label label-info margin-left-xxs"></span>
+            </h3>
             <div class="flex-separator"></div>
             <div class="toggle toggle-inline">
                 <input type="checkbox" id="showValuesInLoaded" data-bind="checked: showTimeSeriesValuesInLoaded">
                 <label for="showValuesInLoaded">Show values</label>
             </div>
         </div>
-        <ul data-bind="foreach: getTimeSeries">
-            <li class="row">
-                <small class="col-sm-2 margin-left"><label>Name:</label><span
-                    class="margin-left tab-data" data-bind="text: Name"></span></small>
+        <ul data-bind="foreach: getTimeSeries" class="d-flex flex-wrap gap-1 p-0">
+            <li class="d-flex flex-vertical panel-bg-1 padding-xs border-radius-xs test-result-item">
+                <small class="flex-vertical">
+                    <label class="small-label">Name</label>
+                    <span class="tab-data" data-bind="text: Name"></span>
+                </small>
                 <span data-bind="visible: !Exists">
-                    <small class="col-sm-2"><span
-                        class="tab-data">&lt;No entries found&gt;</span></small>
+                    <small class="flex-vertical">
+                        <span class="tab-data text-warning">&lt;No entries found&gt;</span>
+                    </small>
                 </span>
                 <span data-bind="if: Exists">
-                    <small class="col-sm-2"><label>Entry Tag:</label><span
-                        class="margin-left tab-data"
-                        data-bind="text: Tag || '<None>'"></span></small>
-                    <small class="col-sm-3"><label>Time Stamp:</label><span
-                        class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
-                    <small class="col-sm-2"
-                           data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span
-                        class="margin-left tab-data">{ ... }</span></small>
-                    <small class="col-sm-2"
-                           data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span
-                        class="margin-left tab-data" data-bind="text: Type"></span></small>
-                    <pre
-                        data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
+                    <small class="flex-vertical">
+                        <label class="small-label">Entry Tag</label>
+                        <span class="tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span>
+                    </small>
+                    <small class="flex-vertical">
+                        <label class="small-label">Time Stamp</label>
+                        <span class="tab-data" data-bind="text: Timestamp"></span>
+                    </small>
+                    <small class="flex-vertical">
+                        <label class="small-label">Values</label>
+                        <span class="tab-data" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }">{ ... }</span>
+                    </small>
+                    <pre class="hide" data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
+                    <small class="flex-vertical">
+                        <label class="small-label">Type</label>
+                        <span class="tab-data" data-bind="text: Type"></span>
+                    </small>
                 </span>
             </li>
         </ul>
     </div>
     <div data-bind="if: !loadedCount()">
-        <hr>
-        No data available.
+        <div class="empty-set text-center margin-top-sm margin-bottom-sm mx-auto">
+            <i class="icon-disabled icon-xl m-0"></i>
+            <div class="lead">
+                <span>
+                    No data available
+                </span>
+            </div>
+        </div>
     </div>
 </div>
-                        
