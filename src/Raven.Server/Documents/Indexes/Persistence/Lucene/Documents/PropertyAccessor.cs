@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public delegate object DynamicGetter(object target);
 
-    public class PropertyAccessor : IPropertyAccessor
+    public sealed class PropertyAccessor : IPropertyAccessor
     {
         private readonly Dictionary<string, Accessor> Properties = new();
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException($"The {name} property was not found");
         }
 
-        protected PropertyAccessor(Type type, Dictionary<string, CompiledIndexField> groupByFields = null)
+        private PropertyAccessor(Type type, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             var isValueType = type.IsValueType;
             foreach (var prop in type.GetProperties())
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return new ClassAccessor((DynamicGetter)getterMethod.CreateDelegate(typeof(DynamicGetter)));
         }
 
-        private class ValueTypeAccessor : Accessor
+        private sealed class ValueTypeAccessor : Accessor
         {
             private readonly CallSite<Func<CallSite, object, object>> _callSite;
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private class ClassAccessor : Accessor
+        private sealed class ClassAccessor : Accessor
         {
             private readonly DynamicGetter _dynamicGetter;
 
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
     }
 
-    internal class JintPropertyAccessor : IPropertyAccessor
+    internal sealed class JintPropertyAccessor : IPropertyAccessor
     {
         private readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
