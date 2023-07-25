@@ -197,7 +197,8 @@ namespace Raven.Server.Documents
                         if (expectedChangeVector != null)
                         {
                             var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
-                            if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
+                            var expected = context.GetChangeVector(expectedChangeVector);
+                            if (ChangeVector.CompareVersion(oldChangeVector, expected) != 0) 
                                 ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
                         }
 
@@ -222,7 +223,8 @@ namespace Raven.Server.Documents
                                 if (expectedChangeVector != null)
                                 {
                                     var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
-                                    if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
+                                    var expected = context.GetChangeVector(expectedChangeVector);
+                                    if (ChangeVector.CompareVersion(oldChangeVector, expected) != 0)
                                         ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
                                 }
 
@@ -1243,13 +1245,20 @@ namespace Raven.Server.Documents
               : default(ByteStringContext.InternalScope))
             using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
             {
-                if (expectedChangeVector != null && currentChangeVector != expectedChangeVector)
+                if (expectedChangeVector != null)
                 {
-                    throw new ConcurrencyException($"Attachment {name} with key '{key}' has change vector '{currentChangeVector}', but Delete was called with change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
+                    var current = context.GetChangeVector(currentChangeVector);
+                    var expected = context.GetChangeVector(expectedChangeVector);
+
+                    if (ChangeVector.CompareVersion(current, expected) != 0)
                     {
-                        ActualChangeVector = currentChangeVector,
-                        ExpectedChangeVector = expectedChangeVector
-                    };
+                        throw new ConcurrencyException($"Attachment {name} with key '{key}' has change vector '{currentChangeVector}', but Delete was called with change vector '{expectedChangeVector}'. " +
+                                                       "Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualChangeVector = currentChangeVector,
+                            ExpectedChangeVector = expectedChangeVector
+                        };
+                    }
                 }
 
                 DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
