@@ -111,20 +111,30 @@ namespace Raven.Server.Documents.Indexes.Static
             get { return ElementAt(i); }
         }
 
-        IEnumerator<object> IEnumerable<object>.GetEnumerator()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IEnumerator<object> GetEnumerator()
         {
-            return GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public DynamicArrayIterator GetEnumerator()
-        {
+            var enumerator = _inner.GetEnumerator();
+            switch (enumerator)
+            {
+                case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
+                    return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
+            }
             return new DynamicArrayIterator(_inner);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            var enumerator = _inner.GetEnumerator();
+            switch (enumerator)
+            {
+                case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
+                    return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
+            }
+            return new DynamicArrayIterator(_inner);
+        }
+
 
         public int Count() => _inner.Count();
 
@@ -769,73 +779,72 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Intersect(this, second.Cast<object>()));
         }
 
-        public unsafe struct DynamicArrayIterator : IEnumerator<object>
+
+        public struct DynamicArrayIterator<T> : IEnumerator<object>
+            where T : struct, IEnumerator<object>
         {
-            private readonly delegate*<ref DynamicArrayIterator, bool> _iteratorMoveNextFunc;
-            private IEnumerator<object> _inner;
+            private T _inner;
 
-            public DynamicArrayIterator(IEnumerable<object> items)
+            public DynamicArrayIterator(T inner)
             {
-                _inner = items.GetEnumerator();
-                switch (_inner)
-                {
-                    case BlittableJsonReaderArray.BlittableJsonArrayEnumerator _:
-                        _iteratorMoveNextFunc = &InterfaceMoveNext<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>;
-                        break;
-                    default:
-                        _iteratorMoveNextFunc = &InterfaceMoveNext;
-                        break;
-                }
-
-                Current = null;
-            }
-
-            private static bool InterfaceMoveNext(ref DynamicArrayIterator iterator)
-            {
-                if (iterator._inner.MoveNext() == false)
-                    return false;
-
-                iterator.Current = TypeConverter.ToDynamicType(iterator._inner.Current);
-                return true;
-            }
-
-            private static bool InterfaceMoveNext<T>(ref DynamicArrayIterator iterator) 
-                where T : struct, IEnumerator<object>
-            {
-                if (iterator._inner is T inner)
-                {
-                    bool result = false;
-                    if (inner.MoveNext())
-                    {
-                        iterator.Current = TypeConverter.ToDynamicType(inner.Current);
-                        result = true;
-                    }
-
-                    iterator._inner = inner;
-                    return result;
-                }
-
-                return false;
+                _inner = inner;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
-                return _iteratorMoveNextFunc(ref this);
+                bool result = false;
+                if (_inner.MoveNext())
+                {
+                    Current = TypeConverter.ToDynamicType(_inner.Current);
+                    result = true;
+                }
+
+                return result;
             }
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                _inner.Reset();
             }
 
             public object Current { get; private set; }
 
             object IEnumerator.Current => Current;
 
-            public void Dispose()
+            public void Dispose() { }
+        }
+
+        public struct DynamicArrayIterator : IEnumerator<object>
+        {
+            private IEnumerator<object> _inner;
+
+            public DynamicArrayIterator(IEnumerable<object> items)
             {
+                _inner = items.GetEnumerator();
+                Current = null;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                if (_inner.MoveNext() == false)
+                    return false;
+
+                Current = TypeConverter.ToDynamicType(_inner.Current);
+                return true;
+            }
+
+            public void Reset()
+            {
+                _inner.Reset();
+            }
+
+            public object Current { get; private set; }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() { }
         }
 
         public override bool Equals(object obj)
@@ -846,9 +855,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (ReferenceEquals(this, obj))
                 return true;
 
-            var array = obj as DynamicArray;
-
-            if (array != null)
+            if (obj is DynamicArray array)
                 return Equals(_inner, array._inner);
 
             return Equals(_inner, obj);

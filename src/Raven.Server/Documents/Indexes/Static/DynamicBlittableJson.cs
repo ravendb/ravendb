@@ -223,22 +223,22 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector));
+            return new DynamicDictionary(this, keySelector);
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, IEqualityComparer<object> comparer)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, comparer));
+            return new DynamicDictionary(this, keySelector, comparer);
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, elementSelector));
+            return new DynamicDictionary(this, keySelector, elementSelector);
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector, IEqualityComparer<object> comparer)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, elementSelector, comparer));
+            return new DynamicDictionary(this, keySelector, elementSelector, comparer);
         }
 
         public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
@@ -352,14 +352,15 @@ namespace Raven.Server.Documents.Indexes.Static
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool FastCompare(string name, int fieldLookup)
         {
-            if (name.Length != PrecomputedTable[fieldLookup].Length)
+            ref var tableItem = ref PrecomputedTable[fieldLookup];
+            if (name.Length != tableItem.Length)
                 return false;
 
-            int prefixGroup = PrecomputedTable[fieldLookup].PrefixGroupIndex;
-            if (name[prefixGroup] != PrecomputedTable[fieldLookup].PrefixValue)
+            int prefixGroup = tableItem.PrefixGroupIndex;
+            if (name[prefixGroup] != tableItem.PrefixValue)
                 return false;
 
-            return string.Compare(name, PrecomputedTable[fieldLookup].Key, StringComparison.Ordinal) == 0;
+            return string.Compare(name, tableItem.Key, StringComparison.Ordinal) == 0;
         }
     }
 }
