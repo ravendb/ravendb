@@ -131,7 +131,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 Validate1(storeA, baseline);
                 Validate1(storeB, baseline);
@@ -150,7 +150,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await Validate2(storeA, baseline);
                 await Validate2(storeB, baseline);
