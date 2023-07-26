@@ -255,13 +255,12 @@ export function BackupsPage(props: BackupsPageProps) {
         [database, tasksService, reload]
     );
 
-    // TODO kalczur
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
         onDelete: deleteTask,
         toggleState: toggleOngoingTask,
-        isSelected: () => false,
-        toggleSelection: () => false,
+        isSelected: () => null,
+        toggleSelection: () => null,
     };
 
     const createNewPeriodicBackupTask = () => {
@@ -372,6 +371,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                     {backups.map((x) => (
                                         <PeriodicBackupPanel
                                             forceReload={reload}
+                                            allowSelect={false}
                                             {...sharedPanelProps}
                                             key={taskKey(x.shared)}
                                             data={x}

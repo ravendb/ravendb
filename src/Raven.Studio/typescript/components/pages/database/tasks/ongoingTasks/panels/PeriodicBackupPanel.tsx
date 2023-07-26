@@ -34,7 +34,10 @@ import { Badge, Collapse, Input } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
 
-type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
+interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
+    forceReload: () => void;
+    allowSelect: boolean;
+}
 
 const neverBackedUpText = "Never backed up";
 
@@ -225,7 +228,7 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    const { db, data, toggleSelection, isSelected } = props;
+    const { db, data, allowSelect, toggleSelection, isSelected } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -242,13 +245,15 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelSelect>
-                        <Input
-                            type="checkbox"
-                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
-                            checked={isSelected(data.shared.taskName)}
-                        />
-                    </RichPanelSelect>
+                    {allowSelect && canEdit && (
+                        <RichPanelSelect>
+                            <Input
+                                type="checkbox"
+                                onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                                checked={isSelected(data.shared.taskName)}
+                            />
+                        </RichPanelSelect>
+                    )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>

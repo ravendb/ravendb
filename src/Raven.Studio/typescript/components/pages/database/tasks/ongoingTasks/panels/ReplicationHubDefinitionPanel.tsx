@@ -6,12 +6,7 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../../shared";
-import {
-    OngoingTaskHubDefinitionInfo,
-    OngoingTaskReplicationHubInfo,
-    OngoingTaskSharedInfo,
-} from "components/models/tasks";
-import database from "models/resources/database";
+import { OngoingTaskHubDefinitionInfo, OngoingTaskReplicationHubInfo } from "components/models/tasks";
 import {
     RichPanel,
     RichPanelActions,
@@ -81,13 +76,15 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelSelect>
-                        <Input
-                            type="checkbox"
-                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
-                            checked={isSelected(data.shared.taskName)}
-                        />
-                    </RichPanelSelect>
+                    {canEdit && (
+                        <RichPanelSelect>
+                            <Input
+                                type="checkbox"
+                                onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                                checked={isSelected(data.shared.taskName)}
+                            />
+                        </RichPanelSelect>
+                    )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
