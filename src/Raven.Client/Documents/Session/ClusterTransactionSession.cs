@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
         {
             if (_missingDocumentsToAtomicGuardIndex?.TryGetValue(docId, out var index) == true)
             {
-                changeVector = $"RAFT:{index}-{_clusterTransactionId}";
+                changeVector = $"TXRN:{index}-{_clusterTransactionId}";
                 return true;
             }
 

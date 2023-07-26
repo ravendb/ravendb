@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session.Operations
                     _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
 
             if (_session.TransactionMode == TransactionMode.ClusterWide)
-                cmd.IncludeAtomicGuardsForMissingDocuments();
+                cmd.FromClusterWideTx();
             return cmd;
         }
 
