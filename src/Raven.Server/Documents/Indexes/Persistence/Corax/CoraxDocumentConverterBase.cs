@@ -110,7 +110,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         return KnownFieldsForWriter ?? CreateKnownFieldsForWriter();
     }
-    
+
+    [SkipLocalsInit]
     protected void InsertRegularField<TBuilder>(IndexField field, object value, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
         out bool shouldSkip)
         where TBuilder : IndexWriter.IIndexEntryBuilder
@@ -140,38 +141,38 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
                 else
                 {
-                    using (Allocator.Allocate(128, out var buffer))
+                    // PERF: Stackalloc when used with SkipLocalsInit would use a `lea` instruction instead of `push 0` repeatedly.
+                    // For big stack allocations the usage of SkipLocalsInit is a must unless there is a hard requirement for zeroing the memory. 
+                    Span<byte> buffer = stackalloc byte[128];
+
+                    var length = 0;
+                    switch (value)
                     {
-                        var length = 0;
-                        switch (value)
-                        {
-                            case double d:
-                                if (Utf8Formatter.TryFormat(d, buffer.ToSpan(), out length, StandardFormat) == false)
-                                    throw new Exception($"Cannot convert {field.Name} as double into bytes.");
-                                @double = d;
-                                @long = (long)d;
-                                break;
-                            case decimal dm:
-                                if (Utf8Formatter.TryFormat(dm, buffer.ToSpan(), out length, StandardFormat) == false)
-                                    throw new Exception($"Cannot convert {field.Name} as decimal into bytes.");
-                                @double = (double)dm;
-                                @long = (long)@double;
-                                break;
-                            case float f:
-                                if (Utf8Formatter.TryFormat(f, buffer.ToSpan(), out length, StandardFormat) == false)
-                                    throw new Exception($"Cannot convert {field.Name} as float into bytes.");
-                                @double = f;
-                                @long = (long)@double;
-                                break;
-                            default:
-                                @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-                                @long = (long)@double;
-                                break;
-                        }
-                        buffer.Truncate(length);
-                        builder.Write(fieldId,path,  buffer.ToSpan(), @long, @double);
-                        break;
+                        case double d:
+                            if (Utf8Formatter.TryFormat(d, buffer, out length, StandardFormat) == false)
+                                throw new Exception($"Cannot convert {field.Name} as double into bytes.");
+                            @double = d;
+                            @long = (long)d;
+                            break;
+                        case decimal dm:
+                            if (Utf8Formatter.TryFormat(dm, buffer, out length, StandardFormat) == false)
+                                throw new Exception($"Cannot convert {field.Name} as decimal into bytes.");
+                            @double = (double)dm;
+                            @long = (long)@double;
+                            break;
+                        case float f:
+                            if (Utf8Formatter.TryFormat(f, buffer, out length, StandardFormat) == false)
+                                throw new Exception($"Cannot convert {field.Name} as float into bytes.");
+                            @double = f;
+                            @long = (long)@double;
+                            break;
+                        default:
+                            @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                            @long = (long)@double;
+                            break;
                     }
+                    builder.Write(fieldId, path, buffer.Slice(0, length), @long, @double);
+                    break;
                 }
 
             case ValueType.Numeric:
@@ -238,18 +239,19 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.TimeSpan:
+            {
                 var timeSpan = (TimeSpan)value;
-                using (Allocator.Allocate(256, out var buffer))
-                {
-                    if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, TimeSpanFormat) == false)
-                        throw new Exception($"Cannot convert {field.Name} as double into bytes.");
-                    buffer.Truncate(bytesWritten);
-                    builder.Write(fieldId,path, buffer.ToSpan(), timeSpan.Ticks, timeSpan.Ticks);
-                    _index.IndexFieldsPersistence.MarkHasTimeValue(path);
-                }
+
+                Span<byte> buffer = stackalloc byte[256];
+
+                if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, TimeSpanFormat) == false)
+                    throw new Exception($"Cannot convert {field.Name} as double into bytes.");
+
+                builder.Write(fieldId, path, buffer.Slice(0, bytesWritten), timeSpan.Ticks, timeSpan.Ticks);
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
 
                 break;
-            
+            }
             case ValueType.DateOnly:
                 var dateOnly = ((DateOnly)value);
                 var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
