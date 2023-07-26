@@ -28,8 +28,6 @@ interface OngoingTaskSelectActionsProps {
 export default function OngoingTaskSelectActions(props: OngoingTaskSelectActionsProps) {
     const { allTasks, selectedTasks, setSelectedTasks, onTaskOperation, isTogglingState, isDeleting } = props;
 
-    const { isOperatorOrAbove } = useAccessManager();
-
     const anythingSelected = selectedTasks.length > 0;
     const selectionState = genUtils.getSelectionState(allTasks, selectedTasks);
 
@@ -81,17 +79,15 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                             </DropdownMenu>
                         </UncontrolledDropdown>
 
-                        {isOperatorOrAbove() && (
-                            <ButtonWithSpinner
-                                color="danger"
-                                onClick={() => onTaskOperation("delete")}
-                                className="rounded-pill flex-grow-0"
-                                isSpinning={isDeleting}
-                                icon="trash"
-                            >
-                                Delete
-                            </ButtonWithSpinner>
-                        )}
+                        <ButtonWithSpinner
+                            color="danger"
+                            onClick={() => onTaskOperation("delete")}
+                            className="rounded-pill flex-grow-0"
+                            isSpinning={isDeleting}
+                            icon="trash"
+                        >
+                            Delete
+                        </ButtonWithSpinner>
                     </ButtonGroup>
                     <Button onClick={() => setSelectedTasks([])} color="link">
                         Cancel

@@ -66,7 +66,7 @@ interface OngoingTasksPageProps {
 export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { database } = props;
 
-    const { canReadWriteDatabase, isClusterAdminOrClusterNode } = useAccessManager();
+    const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
@@ -256,7 +256,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     // TODO kalczur - remove old methods
     // TODO kalczur - styling
-    // TODO kalczur - hide checkbox when no access
 
     const { value: isDeleting, toggle: toggleIsDeleting } = useBoolean(false);
     const { value: isTogglingState, toggle: toggleIsTogglingState } = useBoolean(false);
@@ -389,14 +388,16 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {allTasksCount === 0 ? (
                         <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                     ) : (
-                        <OngoingTaskSelectActions
-                            allTasks={filteredTaskNames}
-                            selectedTasks={selectedTaskNames}
-                            setSelectedTasks={setSelectedTaskNames}
-                            onTaskOperation={onTaskOperation}
-                            isTogglingState={isTogglingState}
-                            isDeleting={isDeleting}
-                        />
+                        isAdminAccessOrAbove(database) && (
+                            <OngoingTaskSelectActions
+                                allTasks={filteredTaskNames}
+                                selectedTasks={selectedTaskNames}
+                                setSelectedTasks={setSelectedTaskNames}
+                                onTaskOperation={onTaskOperation}
+                                isTogglingState={isTogglingState}
+                                isDeleting={isDeleting}
+                            />
+                        )
                     )}
 
                     {externalReplications.length > 0 && (
@@ -536,6 +537,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             {backups.map((x) => (
                                 <PeriodicBackupPanel
                                     forceReload={reload}
+                                    allowSelect
                                     {...sharedPanelProps}
                                     key={taskKey(x.shared)}
                                     data={x}

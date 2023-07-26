@@ -76,13 +76,15 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelSelect>
-                        <Input
-                            type="checkbox"
-                            onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
-                            checked={isSelected(data.shared.taskName)}
-                        />
-                    </RichPanelSelect>
+                    {canEdit && (
+                        <RichPanelSelect>
+                            <Input
+                                type="checkbox"
+                                onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                                checked={isSelected(data.shared.taskName)}
+                            />
+                        </RichPanelSelect>
+                    )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
