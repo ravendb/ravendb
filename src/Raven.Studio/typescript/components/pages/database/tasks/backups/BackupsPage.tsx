@@ -240,6 +240,7 @@ export function BackupsPage(props: BackupsPageProps) {
     const deleteTask = useCallback(
         async (task: OngoingTaskSharedInfo) => {
             await tasksService.deleteOngoingTask(database, task);
+            // TODO kalczur message success
             await reload();
         },
         [tasksService, reload, database]
@@ -248,15 +249,19 @@ export function BackupsPage(props: BackupsPageProps) {
     const toggleOngoingTask = useCallback(
         async (task: OngoingTaskSharedInfo, enable: boolean) => {
             await tasksService.toggleOngoingTask(database, task, enable);
+            // TODO kalczur message success
             await reload();
         },
         [database, tasksService, reload]
     );
 
+    // TODO kalczur
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
         onDelete: deleteTask,
         toggleState: toggleOngoingTask,
+        isSelected: () => false,
+        toggleSelection: () => false,
     };
 
     const createNewPeriodicBackupTask = () => {
