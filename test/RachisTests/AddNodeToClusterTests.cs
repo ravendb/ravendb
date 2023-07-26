@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -22,7 +22,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -33,7 +32,6 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static RachisTests.AddNodeToClusterTests;
 
 namespace RachisTests
 {
@@ -895,7 +893,52 @@ namespace RachisTests
                     return;
             }
         }
-        
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task ThrowForSelectedNodeTagOperationWhenNodeIsInRehab()
+        {
+            var name = GetDatabaseName();
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
+            var (index, dbNodes) = await CreateDatabaseInCluster(name, replicationFactor: 3, leader.WebUrl);
+
+            var dbNode = nodes.First(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag);
+
+            using (var store = new DocumentStore()
+                   {
+                       Urls = new string[] { leader.WebUrl },
+                       Database = name,
+                       Conventions = new DocumentConventions()
+                       {
+                           DisableTopologyUpdates = false
+                       }
+                   })
+            {
+                store.Initialize();
+                //take down node
+                await DisposeServerAndWaitForFinishOfDisposalAsync(dbNode);
+
+                var re = store.GetRequestExecutor(store.Database);
+                await AssertWaitForTrueAsync(() =>
+                {
+                    return Task.FromResult(re.TopologyNodes != null &&
+                                           re.TopologyNodes.Count == 3);
+                });
+
+                //wait for it to enter rehab
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    if (record.Topology.Rehabs.Contains(dbNode.ServerStore.NodeTag))
+                        return true;
+
+                    return false;
+                }, true);
+                
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new GetStatisticsOperation("test", dbNode.ServerStore.NodeTag)));
+                Assert.Contains("No connection could be made because the target machine actively refused it", error.Message);
+            }
+        }
+
         [Fact]
         public async Task AddNodeToClusterWithoutError()
         {

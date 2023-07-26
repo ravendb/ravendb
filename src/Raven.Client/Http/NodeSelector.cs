@@ -111,20 +111,13 @@ namespace Raven.Client.Http
             for (int i = 0; i < len; i++)
             {
                 Debug.Assert(string.IsNullOrEmpty(serverNodes[i].Url) == false, $"Expected serverNodes Url not null or empty but got: \'{serverNodes[i].Url}\'");
-                if (stateFailures[i] == 0)
+                if (stateFailures[i] == 0 && serverNodes[i].ServerRole == ServerNode.Role.Member)
                 {
                     return (i, serverNodes[i]);
                 }
             }
 
             return UnlikelyEveryoneFaultedChoice(state);
-        }
-
-        internal (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
-        {
-            var state = _state;
-            var preferredNode = GetPreferredNodeInternal(state);
-            return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
         }
 
         internal int[] NodeSelectorFailures => _state.Failures;
