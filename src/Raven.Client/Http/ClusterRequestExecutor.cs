@@ -58,6 +58,8 @@ namespace Raven.Client.Http
                 _disableClientConfigurationUpdates = true,
                 _topologyHeaderName = Constants.Headers.ClusterTopologyEtag
             };
+            // This is just to fetch the cluster tag
+            executor._firstTopologyUpdate = executor.SingleTopologyUpdateAsync(initialUrls, null);
             return executor;
         }
 
@@ -108,26 +110,8 @@ namespace Raven.Client.Http
                         Nodes = nodes,
                         Etag = results.Etag
                     };
-
-                    TopologyEtag = results.Etag;
-
-                    if (_nodeSelector == null)
-                    {
-                        _nodeSelector = new NodeSelector(newTopology);
-                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
-                        {
-                            _nodeSelector.ScheduleSpeedTest();
-                        }
-                    }
-                    else if (_nodeSelector.OnUpdateTopology(newTopology, forceUpdate: parameters.ForceUpdate))
-                    {
-                        DisposeAllFailedNodesTimers();
-
-                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
-                        {
-                            _nodeSelector.ScheduleSpeedTest();
-                        }
-                    }
+                    
+                    UpdateNodeSelector(newTopology, parameters.ForceUpdate);
 
                     OnTopologyUpdatedInvoke(newTopology);
                 }
