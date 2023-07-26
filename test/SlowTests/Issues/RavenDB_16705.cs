@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -18,17 +17,22 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task BatchingWithMissingAttachmentsShouldNotCauseReplicationLoop()
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BatchingWithMissingAttachmentsShouldNotCauseReplicationLoop(Options options)
         {
             using (var source = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = "1"
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = "1";
+                    options.ModifyDatabaseRecord?.Invoke(record);
+                }
             }))
-            using (var destination = GetDocumentStore())
+            using (var destination = GetDocumentStore(options))
             {
                 const string documentId1 = "users/1-A";
-                const string documentId2 = "users/2-A";
+                const string documentId2 = "users/2-A$users/1-A";
                 const string attachmentName1 = "foo1.png";
                 const string attachmentName2 = "foo2.png";
                 const string contentType = "image/png";
@@ -53,7 +57,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(source));
+                var documentDatabase = await GetDocumentDatabaseInstanceForAsync(source, options.DatabaseMode, documentId1);
                 var documentsStorage = documentDatabase.DocumentsStorage;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -85,7 +89,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId2, attachmentName1, 15 * 1000));
                 Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId2, attachmentName2, 15 * 1000));
 
-                await EnsureNoReplicationLoop(Server, destination.Database);
+                await EnsureNoReplicationLoopAsync(destination, options.DatabaseMode);
             }
 
             static void ModifyAttachment(AttachmentsStorage attachmentStorage, DocumentsOperationContext context, string documentId, string attachmentName, string contentType)
