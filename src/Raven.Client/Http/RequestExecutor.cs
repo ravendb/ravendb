@@ -487,6 +487,11 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null);
+                    ForTestingPurposes?.SetCommandTimeout?.Invoke(command);
+
+                    if (DefaultTimeout.HasValue && DefaultTimeout.Value > command.Timeout)
+                        command.Timeout = DefaultTimeout.Value;
+
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -995,6 +1000,7 @@ namespace Raven.Client.Http
                         cts.CancelAfter(timeout.Value);
                         try
                         {
+                            ForTestingPurposes?.DelayRequest?.Invoke();
                             return await SendAsync(chosenNode, command, sessionInfo, request, cts.Token).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException e)
@@ -2404,6 +2410,10 @@ namespace Raven.Client.Http
             public Action<Task[]> ExecuteOnAllToFigureOutTheFastestOnBeforeWait;
 
             internal Action<NodeSelector> OnBeforeScheduleSpeedTest;
+
+            internal Action DelayRequest;
+
+            internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
         }
     }
 }
