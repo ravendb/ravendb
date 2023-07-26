@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Google.Apis.Util;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
@@ -74,20 +75,25 @@ namespace Raven.Server.Documents.Includes
             _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             _includedKeys.Add(id);
         }
+
+        public long? GetAtomicGuardIndex(string key, long maxAllowedRaftId)
+        {
+            if (_serverContext == null) CreateServerContext();
+            var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, key));
+
+            if(value.Index > maxAllowedRaftId)
+                return null; // we are seeing partially committed value, skip it
+            if (value.Index < 0)
+                return null; 
+            return value.Index;
+        }
         
-        internal void Materialize()
+        internal void Materialize(long maxAllowedRaftId)
         {
             if (_includedKeys == null || _includedKeys.Count == 0)
                 return;
 
-            if (_serverContext == null)
-            {
-                if (_throwWhenServerContextIsAllocated)
-                    throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
-
-                _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
-                _serverContext.OpenReadTransaction();
-            }
+            if (_serverContext == null) CreateServerContext();
 
             foreach (var includedKey in _includedKeys)
             {
@@ -96,11 +102,23 @@ namespace Raven.Server.Documents.Includes
 
                 var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, includedKey));
 
+                if(value.Index > maxAllowedRaftId)
+                    continue; // we are seeing partially committed value, skip it
+                
                 if (Results == null)
                     Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
                 Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
             }
+        }
+
+        private void CreateServerContext()
+        {
+            if (_throwWhenServerContextIsAllocated)
+                throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
+
+            _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+            _serverContext.OpenReadTransaction();
         }
 
         public void Dispose()
