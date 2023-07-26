@@ -95,7 +95,8 @@ namespace Raven.Client.Http
                 nodes.Add(new ServerNode
                 {
                     Url = member.Value,
-                    ClusterTag = member.Key
+                    ClusterTag = member.Key,
+                    ServerRole = Role.Member
                 });
             }
 
@@ -104,7 +105,8 @@ namespace Raven.Client.Http
                 nodes.Add(new ServerNode
                 {
                     Url = watcher.Value,
-                    ClusterTag = watcher.Key
+                    ClusterTag = watcher.Key,
+                    ServerRole = Role.Member
                 });
             }
 

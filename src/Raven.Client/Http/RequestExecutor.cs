@@ -724,6 +724,7 @@ namespace Raven.Client.Http
                         await ExecuteAsync(serverNode, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None)
                             .ConfigureAwait(false);
                         serverNode.ClusterTag = command.Result.NodeTag;
+                        serverNode.ServerRole = ServerNode.Role.Member;
                     }
                 }
                 catch (AuthorizationException)
@@ -806,6 +807,7 @@ namespace Raven.Client.Http
                 {
                     Url = url,
                     Database = _databaseName,
+                    ServerRole = ServerNode.Role.Member,
                     ClusterTag = "!"
                 }).ToList(),
                 Etag = TopologyEtag
