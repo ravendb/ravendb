@@ -34,7 +34,6 @@ class toggleOngoingTaskCommand extends commandBase {
         const operationText = this.disable ? "disable" : "enable";
      
         return this.post(url + this.urlEncodeArgs(args), null, this.db)
-            .done(() => this.reportSuccess(`Successfully ${operationText}d ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to ${operationText} ${this.taskType} task. `, response.responseText));
     }
 }

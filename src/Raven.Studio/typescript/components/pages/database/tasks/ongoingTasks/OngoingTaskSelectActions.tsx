@@ -1,6 +1,5 @@
 import React from "react";
 import genUtils from "common/generalUtils";
-import { OngoingTaskSharedInfo } from "components/models/tasks";
 import { useAccessManager } from "components/hooks/useAccessManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { Icon } from "components/common/Icon";
@@ -15,46 +14,35 @@ import {
     DropdownItem,
     Button,
 } from "reactstrap";
+import { OngoingTaskToggleStateConfirmOperationType } from "./OngoingTaskToggleStateConfirm";
 
 interface OngoingTaskSelectActionsProps {
-    allTasks: OngoingTaskSharedInfo[];
-    selectedTasks: OngoingTaskSharedInfo[];
-    setSelectedTasks: (x: OngoingTaskSharedInfo[]) => void;
+    allTasks: string[];
+    selectedTasks: string[];
+    setSelectedTasks: (x: string[]) => void;
+    onTaskOperation: (x: OngoingTaskToggleStateConfirmOperationType) => void;
+    isTogglingState: boolean;
+    isDeleting: boolean;
 }
 
 export default function OngoingTaskSelectActions(props: OngoingTaskSelectActionsProps) {
-    const { allTasks, selectedTasks, setSelectedTasks } = props;
+    const { allTasks, selectedTasks, setSelectedTasks, onTaskOperation, isTogglingState, isDeleting } = props;
 
     const { isOperatorOrAbove } = useAccessManager();
 
     const anythingSelected = selectedTasks.length > 0;
-    const selectionState = genUtils.getSelectionState(
-        allTasks.map((x) => x.taskName),
-        selectedTasks.map((x) => x.taskName)
-    );
+    const selectionState = genUtils.getSelectionState(allTasks, selectedTasks);
 
     const toggleSelectAll = () => {
         if (selectionState === "Empty") {
             setSelectedTasks([...selectedTasks, ...allTasks]);
         } else {
-            setSelectedTasks(selectedTasks.filter((x) => !allTasks.map((x) => x.taskName).includes(x.taskName)));
+            setSelectedTasks(selectedTasks.filter((x) => !allTasks.includes(x)));
         }
     };
 
-    const onToggleTasks = (enable: boolean) => {
-        console.log("kalczur onToggleTasks", enable);
-    };
-
-    const onDelete = () => {
-        console.log("kalczur onDelete");
-    };
-
-    // TODO kalczur
-    const isTogglingState = false;
-    const isDeleting = false;
-
     return (
-        <div className="position-relative mt-3">
+        <div className="position-relative mt-3 ms-3">
             <Checkbox
                 selected={selectionState === "AllSelected"}
                 indeterminate={selectionState === "SomeSelected"}
@@ -62,7 +50,6 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                 color="primary"
                 title="Select all or none"
                 size="lg"
-                className="ms-5"
             >
                 <span className="small-label">Select All</span>
             </Checkbox>
@@ -83,12 +70,12 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                                 {isTogglingState ? <Spinner size="sm" /> : <Icon icon="play" />} Set state
                             </DropdownToggle>
                             <DropdownMenu>
-                                <DropdownItem title="Enable" onClick={() => onToggleTasks(true)}>
-                                    <Icon icon="play" />
+                                <DropdownItem title="Enable" onClick={() => onTaskOperation("enable")}>
+                                    <Icon icon="play" color="success" />
                                     <span>Enable</span>
                                 </DropdownItem>
-                                <DropdownItem title="Disable" onClick={() => onToggleTasks(false)}>
-                                    <Icon icon="stop" />
+                                <DropdownItem title="Disable" onClick={() => onTaskOperation("disable")}>
+                                    <Icon icon="stop" color="danger" />
                                     <span>Disable</span>
                                 </DropdownItem>
                             </DropdownMenu>
@@ -97,7 +84,7 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                         {isOperatorOrAbove() && (
                             <ButtonWithSpinner
                                 color="danger"
-                                onClick={onDelete}
+                                onClick={() => onTaskOperation("delete")}
                                 className="rounded-pill flex-grow-0"
                                 isSpinning={isDeleting}
                                 icon="trash"
