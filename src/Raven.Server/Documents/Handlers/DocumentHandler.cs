@@ -255,21 +255,20 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         }
                     }
-                    else if (loadFromClusterWideTx && 
-                             document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
+                    else
                     {
-                        Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                        long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
-                        if (guardIndex != null)
+                        string changeVector = document.ChangeVector;
+                        if (loadFromClusterWideTx && 
+                            changeVector.Contains(Database.ClusterTransactionId) == false)
                         {
-                            var list = document.ChangeVector.ToChangeVectorList();
-                            list.Add(new ChangeVectorEntry
+                            Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                            long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
+                            if (guardIndex != null)
                             {
-                                Etag = guardIndex.Value,
-                                DbId = Database.ClusterTransactionId,
-                                NodeTag = ChangeVectorParser.TrxnInt
-                            });
-                            document.ChangeVector = list.SerializeVector();
+                                var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, Database.ClusterTransactionId, guardIndex.Value, changeVector);
+                                Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
+                                document.ChangeVector = cv;
+                            }
                         }
                     }
 
