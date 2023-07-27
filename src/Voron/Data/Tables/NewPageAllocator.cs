@@ -338,6 +338,9 @@ namespace Voron.Data.Tables
             var fst = _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
 
             var results = new List<long>();
+
+            if (fst.PageCount == 0)
+                return results;
             
             using (var it = fst.Iterate())
             {
