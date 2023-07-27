@@ -25,6 +25,8 @@ using Voron.Debugging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text;
 
 namespace Voron.Impl
 {
@@ -1032,6 +1034,7 @@ namespace Voron.Impl
 
             try
             {
+                TrackOverflowPageRemoval(pageNumber);
                 UntrackPage(pageNumber);
                 Debug.Assert(pageNumber >= 0);
 
@@ -1089,6 +1092,8 @@ namespace Voron.Impl
 
         public void Commit()
         {
+            ValidateOverflowPagesRemoval();
+            
             if (Flags != TransactionFlags.ReadWrite)
                 return;// nothing to do
 
@@ -1440,7 +1445,66 @@ namespace Voron.Impl
             AfterCommitWhenNewTransactionsPrevented?.Invoke(this);
         }
 
+#if DEBUG
+        //overflowPageId, Parent
+        private readonly Dictionary<long, long> _overflowPagesToBeRemoved = new();
+        [Conditional("DEBUG")]
+        private void ValidateOverflowPagesRemoval()
+        {
+            if (_overflowPagesToBeRemoved.Count == 0)
+                return;
+            
+            StringBuilder sb = new();
+            var pagesMissed = from overflowPage in _overflowPagesToBeRemoved
+                group overflowPage.Key by overflowPage.Value
+                into g
+                select new {
+                    Parent = g.Key, 
+                    OverflowPages = g.Select(i => i).ToArray()
+                };
 
+            sb.AppendLine("We commit but we still have not deleted all overflow pages to retrieve used storage. Missed pages: ");
+            foreach (var pageMissed in pagesMissed)
+            {
+                sb.AppendLine($"Parent: {pageMissed.Parent}, Overflow pages: {string.Join(",", pageMissed.OverflowPages)}");
+            }
+
+            VoronUnrecoverableErrorException.Raise(_env, sb.ToString());
+        }
+
+        [Conditional("DEBUG")]
+        private void TrackOverflowPageRemoval(long pageId)
+        {
+            if (_overflowPagesToBeRemoved.ContainsKey(pageId))
+            {
+                _overflowPagesToBeRemoved.Remove(pageId);
+                return;
+            }
+            
+            if (_state.Root.PageCount < pageId)
+                return;
+            
+            var page = GetPage(pageId);
+            if (page.IsOverflow == false)
+                return;
+            
+            int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+            for (int pageOffset = 1; pageOffset < numberOfOverflowPages; ++pageOffset)
+            {
+                _overflowPagesToBeRemoved.Add(pageId + pageOffset, pageId);
+            }
+        }
+
+#else
+        [Conditional("DEBUG")]
+        private void ValidateOverflowPagesRemoval(){}
+
+        [Conditional("DEBUG")]
+        private void TrackOverflowPageRemoval(long pageId){}
+
+#endif
+        
+        
 #if VALIDATE_PAGES
 
         private Dictionary<long, ulong> readOnlyPages = new Dictionary<long, ulong>();
