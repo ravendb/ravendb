@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -11,8 +13,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
 using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -23,12 +23,12 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Storage.Schema;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.TrafficWatch;
 
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -182,6 +182,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetNodeInfo()
         {
+            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -242,6 +243,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
                         ["CurrentState"] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
+                        [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
                         ["NodeLicenseDetails"] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()

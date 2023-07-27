@@ -46,6 +46,16 @@ namespace Raven.Client.Http
             
         }
 
+        internal ServerNode.Role GetServerRoleForTag(string nodeTag)
+        {
+            if (Members.ContainsKey(nodeTag) || Watchers.ContainsKey(nodeTag))
+                return ServerNode.Role.Member;
+            if (Promotables.ContainsKey(nodeTag))
+                return ServerNode.Role.Promotable;
+
+            throw new InvalidOperationException($"The node tag {nodeTag} does not belong to the cluster");
+        }
+
         public bool Contains(string node)
         {
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
