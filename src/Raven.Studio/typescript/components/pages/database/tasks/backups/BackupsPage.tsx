@@ -8,8 +8,8 @@ import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../ongoingT
 import useInterval from "hooks/useInterval";
 import useTimeout from "hooks/useTimeout";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo, OngoingTaskSharedInfo } from "components/models/tasks";
-import { BaseOngoingTaskPanelProps, taskKey } from "../shared";
+import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo } from "components/models/tasks";
+import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared";
 import router from "plugins/router";
 import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
 import { loadableData } from "components/models/common";
@@ -22,6 +22,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+import OngoingTaskToggleStateConfirm from "../ongoingTasks/OngoingTaskToggleStateConfirm";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -237,30 +238,16 @@ export function BackupsPage(props: BackupsPageProps) {
         router.navigate(url);
     };
 
-    const deleteTask = useCallback(
-        async (task: OngoingTaskSharedInfo) => {
-            await tasksService.deleteOngoingTask(database, task);
-            // TODO kalczur message success
-            await reload();
-        },
-        [tasksService, reload, database]
-    );
-
-    const toggleOngoingTask = useCallback(
-        async (task: OngoingTaskSharedInfo, enable: boolean) => {
-            await tasksService.toggleOngoingTask(database, task, enable);
-            // TODO kalczur message success
-            await reload();
-        },
-        [database, tasksService, reload]
-    );
+    const { onTaskOperation, operationConfirm, cancelOperationConfirm, isDeleting, isTogglingState } =
+        useOngoingTasksOperations(database, reload);
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
-        onDelete: deleteTask,
-        toggleState: toggleOngoingTask,
-        isSelected: () => null,
-        toggleSelection: () => null,
+        onTaskOperation: onTaskOperation,
+        isDeleting,
+        isTogglingState,
+        isSelected: notImplemented,
+        toggleSelection: notImplemented,
     };
 
     const createNewPeriodicBackupTask = () => {
@@ -277,6 +264,10 @@ export function BackupsPage(props: BackupsPageProps) {
 
     return (
         <div className="flex-grow-1 flex-stretch-items">
+            {operationConfirm && (
+                <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
+            )}
+
             <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (
                     <div className="flex-shrink-0 hstack gap-2 mb-4">
@@ -388,3 +379,8 @@ export function BackupsPage(props: BackupsPageProps) {
         </div>
     );
 }
+
+const notImplemented = (): boolean => {
+    console.error("Not implemented for backup page");
+    return false;
+};

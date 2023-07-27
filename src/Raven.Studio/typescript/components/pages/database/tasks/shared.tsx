@@ -6,24 +6,39 @@ import {
     OngoingTaskSharedInfo,
 } from "../../../models/tasks";
 import useBoolean from "hooks/useBoolean";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import router from "plugins/router";
 import { withPreventDefault } from "../../../utils/common";
 import { RichPanelDetailItem, RichPanelName } from "../../../common/RichPanel";
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
-import viewHelpers from "common/helpers/view/viewHelpers";
-import genUtils from "common/generalUtils";
-import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Spinner,
+    UncontrolledDropdown,
+} from "reactstrap";
 import { Icon } from "components/common/Icon";
+import { OngoingTaskToggleStateConfirmOperationType } from "./ongoingTasks/OngoingTaskToggleStateConfirm";
+import assertUnreachable from "components/utils/assertUnreachable";
+import messagePublisher from "common/messagePublisher";
+import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
+import { useServices } from "components/hooks/useServices";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
     data: T;
     isSelected: (taskName: string) => boolean;
     toggleSelection: (checked: boolean, taskName: OngoingTaskSharedInfo) => void;
-    onDelete: (task: OngoingTaskSharedInfo) => void;
-    toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
     onToggleDetails?: (newState: boolean) => void;
+    onTaskOperation: (
+        type: OngoingTaskToggleStateConfirmOperationType,
+        taskSharedInfos: OngoingTaskSharedInfo[]
+    ) => void;
+    isDeleting: (taskName: string) => boolean;
+    isTogglingState: (taskName: string) => boolean;
 }
 
 export interface ICanShowTransformationScriptPreview {
@@ -31,57 +46,12 @@ export interface ICanShowTransformationScriptPreview {
 }
 
 export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelProps<OngoingTaskInfo>) {
-    const { onDelete, data, toggleState, onToggleDetails } = props;
+    const { onToggleDetails } = props;
     const { value: detailsVisible, toggle: toggleDetailsVisible } = useBoolean(false);
 
     const onEdit = useCallback(() => {
         router.navigate(editUrl);
     }, [editUrl]);
-
-    const onDeleteHandler = useCallback(() => {
-        const task = data.shared;
-        const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
-        viewHelpers
-            .confirmationMessage(
-                "Delete Ongoing Task?",
-                `You're deleting ${taskType} task: <br /><ul><li><strong>${genUtils.escapeHtml(
-                    task.taskName
-                )}</strong></li></ul>`,
-                {
-                    buttons: ["Cancel", "Delete"],
-                    html: true,
-                }
-            )
-            .done((result) => {
-                if (result.can) {
-                    onDelete(task);
-                }
-            });
-    }, [onDelete, data.shared]);
-
-    const toggleStateHandler = useCallback(
-        (enable: boolean) => {
-            const task = data.shared;
-            const confirmationTitle = enable ? "Enable Task" : "Disable Task";
-            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
-            const confirmationMsg = enable
-                ? `You&apos;re enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
-                : `You&apos;re disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
-            const confirmButtonText = enable ? "Enable" : "Disable";
-
-            viewHelpers
-                .confirmationMessage(confirmationTitle, confirmationMsg, {
-                    buttons: ["Cancel", confirmButtonText],
-                    html: true,
-                })
-                .done((result) => {
-                    if (result.can) {
-                        toggleState(task, enable);
-                    }
-                });
-        },
-        [toggleState, data.shared]
-    );
 
     const toggleDetails = useCallback(() => {
         toggleDetailsVisible();
@@ -92,8 +62,6 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
         detailsVisible,
         toggleDetails,
         onEdit,
-        onDeleteHandler,
-        toggleStateHandler,
     };
 }
 
@@ -153,26 +121,32 @@ export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean
     );
 }
 
-export function OngoingTaskStatus(props: {
+interface OngoingTaskStatusProps {
     task: OngoingTaskInfo;
     canEdit: boolean;
-    toggleState: (enabled: boolean) => void;
-}) {
-    const { task, canEdit, toggleState } = props;
+    onTaskOperation: (
+        type: OngoingTaskToggleStateConfirmOperationType,
+        taskSharedInfos: OngoingTaskSharedInfo[]
+    ) => void;
+    isTogglingState: boolean;
+}
+
+export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
+    const { task, canEdit, onTaskOperation, isTogglingState } = props;
     return (
         <UncontrolledDropdown>
             <DropdownToggle
                 caret
-                disabled={!canEdit}
+                disabled={!canEdit || isTogglingState}
                 color={task.shared.taskState === "Disabled" ? "warning" : "secondary"}
             >
-                {task.shared.taskState}
+                {isTogglingState && <Spinner size="sm" />} {task.shared.taskState}
             </DropdownToggle>
             <DropdownMenu>
-                <DropdownItem onClick={withPreventDefault(() => toggleState(true))}>
+                <DropdownItem onClick={withPreventDefault(() => onTaskOperation("enable", [task.shared]))}>
                     <Icon icon="play" /> Enable
                 </DropdownItem>
-                <DropdownItem onClick={withPreventDefault(() => toggleState(false))}>
+                <DropdownItem onClick={withPreventDefault(() => onTaskOperation("disable", [task.shared]))}>
                     <Icon icon="stop" />
                     Disable
                 </DropdownItem>
@@ -181,14 +155,20 @@ export function OngoingTaskStatus(props: {
     );
 }
 
-export function OngoingTaskActions(props: {
+interface OngoingTaskActionsProps {
     canEdit: boolean;
     task: OngoingTaskInfo;
     toggleDetails: () => void;
     onEdit: () => void;
-    onDelete: () => void;
-}) {
-    const { canEdit, task, onEdit, onDelete, toggleDetails } = props;
+    onTaskOperation: (
+        type: OngoingTaskToggleStateConfirmOperationType,
+        taskSharedInfos: OngoingTaskSharedInfo[]
+    ) => void;
+    isDeleting: boolean;
+}
+
+export function OngoingTaskActions(props: OngoingTaskActionsProps) {
+    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting } = props;
 
     return (
         <div className="actions">
@@ -201,13 +181,20 @@ export function OngoingTaskActions(props: {
                         <Icon icon="edit" margin="m-0" />
                     </Button>
                 )}
+                {!task.shared.serverWide && (
+                    <ButtonWithSpinner
+                        color="danger"
+                        disabled={!canEdit}
+                        isSpinning={isDeleting}
+                        onClick={() => onTaskOperation("delete", [task.shared])}
+                        title="Delete task"
+                        icon={{
+                            icon: "trash",
+                            margin: "m-0",
+                        }}
+                    ></ButtonWithSpinner>
+                )}
             </ButtonGroup>
-
-            {!task.shared.serverWide && (
-                <Button color="danger" className="ms-1" disabled={!canEdit} onClick={onDelete} title="Delete task">
-                    <Icon icon="trash" margin="m-0" />
-                </Button>
-            )}
         </div>
     );
 }
@@ -283,4 +270,110 @@ function findScriptsWithOutMatchingDocuments(
 export function taskKey(task: OngoingTaskSharedInfo) {
     // we don't want to use taskId here - as it changes after edit
     return task.taskType + "-" + task.taskName;
+}
+
+interface OperationConfirm {
+    type: OngoingTaskToggleStateConfirmOperationType;
+    onConfirm: () => void;
+    taskSharedInfos: OngoingTaskSharedInfo[];
+}
+
+export function useOngoingTasksOperations(database: database, reload: () => void) {
+    const { tasksService } = useServices();
+
+    const [togglingTaskNames, setTogglingTaskNames] = useState<string[]>([]);
+    const [deletingTaskNames, setDeletingTaskNames] = useState<string[]>([]);
+
+    const [operationConfirm, setOperationConfirm] = useState<OperationConfirm>(null);
+
+    const toggleOngoingTasks = async (enable: boolean, taskSharedInfos: OngoingTaskSharedInfo[]) => {
+        try {
+            setTogglingTaskNames((names) => [...names, ...taskSharedInfos.map((x) => x.taskName)]);
+            const toggleRequests: Promise<ModifyOngoingTaskResult>[] = [];
+
+            for (const task of taskSharedInfos) {
+                if ((task.taskState === "Enabled" || task.taskState === "PartiallyEnabled") && enable) {
+                    continue;
+                }
+                if (task.taskState === "Disabled" && !enable) {
+                    continue;
+                }
+
+                toggleRequests.push(tasksService.toggleOngoingTask(database, task, enable));
+            }
+
+            if (toggleRequests.length === 0) {
+                return;
+            }
+
+            await Promise.all(toggleRequests);
+            messagePublisher.reportSuccess(
+                `${toggleRequests.length === 1 ? "Task" : "Tasks"} ${enable ? "enabled" : "disabled"} successfully.`
+            );
+            reload();
+        } finally {
+            setTogglingTaskNames((names) => names.filter((x) => !taskSharedInfos.map((x) => x.taskName).includes(x)));
+        }
+    };
+
+    const deleteOngoingTasks = async (taskSharedInfos: OngoingTaskSharedInfo[]) => {
+        try {
+            setDeletingTaskNames((names) => [...names, ...taskSharedInfos.map((x) => x.taskName)]);
+
+            const deleteRequests: Promise<ModifyOngoingTaskResult>[] = taskSharedInfos.map((task) =>
+                tasksService.deleteOngoingTask(database, task)
+            );
+
+            await Promise.all(deleteRequests);
+
+            messagePublisher.reportSuccess(`${deleteRequests.length === 1 ? "Task" : "Tasks"} deleted successfully.`);
+            reload();
+        } finally {
+            setDeletingTaskNames((names) => names.filter((x) => !taskSharedInfos.map((x) => x.taskName).includes(x)));
+        }
+    };
+
+    const onTaskOperation = (
+        type: OngoingTaskToggleStateConfirmOperationType,
+        taskSharedInfos: OngoingTaskSharedInfo[]
+    ) => {
+        switch (type) {
+            case "enable": {
+                setOperationConfirm({
+                    type: "enable",
+                    onConfirm: () => toggleOngoingTasks(true, taskSharedInfos),
+                    taskSharedInfos,
+                });
+                break;
+            }
+            case "disable": {
+                setOperationConfirm({
+                    type: "disable",
+                    onConfirm: () => toggleOngoingTasks(false, taskSharedInfos),
+                    taskSharedInfos,
+                });
+                break;
+            }
+            case "delete": {
+                setOperationConfirm({
+                    type: "delete",
+                    onConfirm: () => deleteOngoingTasks(taskSharedInfos),
+                    taskSharedInfos,
+                });
+                break;
+            }
+            default:
+                assertUnreachable(type);
+        }
+    };
+
+    return {
+        onTaskOperation,
+        operationConfirm,
+        cancelOperationConfirm: () => setOperationConfirm(null),
+        isDeleting: (taskName: string) => deletingTaskNames.includes(taskName),
+        isTogglingState: (taskName: string) => togglingTaskNames.includes(taskName),
+        isDeletingAny: deletingTaskNames.length > 0,
+        isTogglingStateAny: deletingTaskNames.length > 0,
+    };
 }

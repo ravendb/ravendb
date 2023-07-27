@@ -51,7 +51,8 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
 }
 
 export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview, toggleSelection, isSelected } = props;
+    const { db, data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } =
+        props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -59,10 +60,7 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editElasticSearchEtl(data.shared.taskId)();
 
-    const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
-        editUrl,
-        props
-    );
+    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     const showPreview = useCallback(
         (transformationName: string) => {
@@ -88,13 +86,19 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
                 </RichPanelInfo>
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
-                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskStatus
+                        task={data}
+                        canEdit={canEdit}
+                        onTaskOperation={onTaskOperation}
+                        isTogglingState={isTogglingState(data.shared.taskName)}
+                    />
                     <OngoingTaskActions
                         task={data}
                         canEdit={canEdit}
                         onEdit={onEdit}
-                        onDelete={onDeleteHandler}
+                        onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
+                        isDeleting={isDeleting(data.shared.taskName)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

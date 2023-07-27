@@ -215,7 +215,18 @@ function ConnectedClients(props: ConnectedClientsProps) {
 }
 
 export function SubscriptionPanel(props: SubscriptionPanelProps) {
-    const { db, data, connections, dropSubscription, refreshSubscriptionInfo, toggleSelection, isSelected } = props;
+    const {
+        db,
+        data,
+        connections,
+        dropSubscription,
+        refreshSubscriptionInfo,
+        toggleSelection,
+        isSelected,
+        onTaskOperation,
+        isDeleting,
+        isTogglingState,
+    } = props;
 
     const { canReadWriteDatabase } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -223,10 +234,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
     const canEdit = canReadWriteDatabase(db) && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editSubscription(data.shared.taskId, data.shared.taskName)();
 
-    const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
-        editUrl,
-        props
-    );
+    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     return (
         <RichPanel>
@@ -245,13 +253,19 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                 </RichPanelInfo>
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
-                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskStatus
+                        task={data}
+                        canEdit={canEdit}
+                        onTaskOperation={onTaskOperation}
+                        isTogglingState={isTogglingState(data.shared.taskName)}
+                    />
                     <OngoingTaskActions
                         task={data}
                         canEdit={canEdit}
                         onEdit={onEdit}
-                        onDelete={onDeleteHandler}
+                        onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
+                        isDeleting={isDeleting(data.shared.taskName)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

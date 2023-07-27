@@ -60,17 +60,14 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 }
 
 export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
-    const { data, db, toggleSelection, isSelected } = props;
+    const { data, db, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
 
     const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editReplicationHub(data.shared.taskId)();
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
-        editUrl,
-        props
-    );
+    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     return (
         <RichPanel>
@@ -88,13 +85,19 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskStatus
+                        task={data}
+                        canEdit={canEdit}
+                        onTaskOperation={onTaskOperation}
+                        isTogglingState={isTogglingState(data.shared.taskName)}
+                    />
                     <OngoingTaskActions
                         task={data}
                         canEdit={canEdit}
                         onEdit={onEdit}
-                        onDelete={onDeleteHandler}
+                        onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
+                        isDeleting={isDeleting(data.shared.taskName)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

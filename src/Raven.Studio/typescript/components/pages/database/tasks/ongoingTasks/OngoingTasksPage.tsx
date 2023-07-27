@@ -31,7 +31,7 @@ import { ReplicationSinkPanel } from "./panels/ReplicationSinkPanel";
 import { ReplicationHubDefinitionPanel } from "./panels/ReplicationHubDefinitionPanel";
 import useBoolean from "hooks/useBoolean";
 import { OngoingTaskProgressProvider } from "./OngoingTaskProgressProvider";
-import { BaseOngoingTaskPanelProps, taskKey } from "../shared";
+import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import "./OngoingTaskPage.scss";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
@@ -48,16 +48,7 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import { InputItem } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
-import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
-import messagePublisher = require("common/messagePublisher");
-import OngoingTaskToggleStateConfirm, {
-    OngoingTaskToggleStateConfirmOperationType,
-} from "./OngoingTaskToggleStateConfirm";
-
-interface ToggleStateConfirm {
-    type: OngoingTaskToggleStateConfirmOperationType;
-    onConfirm: () => void;
-}
+import OngoingTaskToggleStateConfirm from "./OngoingTaskToggleStateConfirm";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -122,22 +113,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         app.showBootstrapDialog(addOngoingTaskView);
     }, [database]);
 
-    const deleteTask = useCallback(
-        async (task: OngoingTaskSharedInfo) => {
-            await tasksService.deleteOngoingTask(database, task);
-            await reload();
-        },
-        [tasksService, database, reload]
-    );
-
-    const toggleOngoingTask = useCallback(
-        async (task: OngoingTaskSharedInfo, enable: boolean) => {
-            await tasksService.toggleOngoingTask(database, task, enable);
-            await reload();
-        },
-        [database, reload, tasksService]
-    );
-
     const onEtlProgress = useCallback(
         (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => {
             dispatch({
@@ -183,30 +158,17 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             .filter((x) => selectedTaskNames.includes(x.shared.taskName))
             .map((x) => x.shared);
 
-    const filteredTaskNames = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
+    const filteredDatabaseTaskNames = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
         .flat()
+        .filter((x) => !x.shared.serverWide)
         .map((x) => x.shared.taskName);
 
-    const [selectedTaskNames, setSelectedTaskNames] = useState<string[]>(filteredTaskNames);
+    const [selectedTaskNames, setSelectedTaskNames] = useState<string[]>(filteredDatabaseTaskNames);
 
     const allTasksCount =
         tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +
         tasks.replicationHubs.length +
         tasks.subscriptions.length;
-
-    const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
-        db: database,
-        onDelete: deleteTask,
-        toggleState: toggleOngoingTask,
-        isSelected: (taskName: string) => selectedTaskNames.includes(taskName),
-        toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
-            if (checked) {
-                setSelectedTaskNames((selectedNames) => [...selectedNames, taskShardedInfo.taskName]);
-            } else {
-                setSelectedTaskNames((selectedNames) => selectedNames.filter((x) => x !== taskShardedInfo.taskName));
-            }
-        },
-    };
 
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
         const loadTasks = database.nodes().map(async (nodeInfo) => {
@@ -254,89 +216,31 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
     };
 
-    // TODO kalczur - remove old methods
     // TODO kalczur - styling
 
-    const { value: isDeleting, toggle: toggleIsDeleting } = useBoolean(false);
-    const { value: isTogglingState, toggle: toggleIsTogglingState } = useBoolean(false);
+    const {
+        onTaskOperation,
+        operationConfirm,
+        cancelOperationConfirm,
+        isTogglingState,
+        isDeleting,
+        isTogglingStateAny,
+        isDeletingAny,
+    } = useOngoingTasksOperations(database, reload);
 
-    const [toggleStateConfirm, setToggleStateConfirm] = useState<ToggleStateConfirm>(null);
-
-    const toggleOngoingTasks = async (enable: boolean) => {
-        try {
-            toggleIsTogglingState();
-
-            const toggleRequests: Promise<ModifyOngoingTaskResult>[] = [];
-
-            for (const task of getSelectedTaskShardedInfos()) {
-                if ((task.taskState === "Enabled" || task.taskState === "PartiallyEnabled") && enable) {
-                    continue;
-                }
-                if (task.taskState === "Disabled" && !enable) {
-                    continue;
-                }
-
-                toggleRequests.push(tasksService.toggleOngoingTask(database, task, enable));
+    const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
+        db: database,
+        onTaskOperation,
+        isSelected: (taskName: string) => selectedTaskNames.includes(taskName),
+        toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
+            if (checked) {
+                setSelectedTaskNames((selectedNames) => [...selectedNames, taskShardedInfo.taskName]);
+            } else {
+                setSelectedTaskNames((selectedNames) => selectedNames.filter((x) => x !== taskShardedInfo.taskName));
             }
-
-            if (toggleRequests.length === 0) {
-                return;
-            }
-
-            await Promise.all(toggleRequests);
-            messagePublisher.reportSuccess(
-                `${toggleRequests.length === 1 ? "Task" : "Tasks"} ${enable ? "enabled" : "disabled"} successfully.`
-            );
-
-            reload();
-        } finally {
-            toggleIsTogglingState();
-        }
-    };
-
-    const deleteOngoingTasks = async () => {
-        try {
-            toggleIsDeleting();
-
-            const deleteRequests: Promise<ModifyOngoingTaskResult>[] = getSelectedTaskShardedInfos().map((task) =>
-                tasksService.deleteOngoingTask(database, task)
-            );
-
-            await Promise.all(deleteRequests);
-
-            messagePublisher.reportSuccess(`${deleteRequests.length === 1 ? "Task" : "Tasks"} deleted successfully.`);
-            reload();
-        } finally {
-            toggleIsDeleting();
-        }
-    };
-
-    const onTaskOperation = (type: OngoingTaskToggleStateConfirmOperationType) => {
-        switch (type) {
-            case "enable": {
-                setToggleStateConfirm({
-                    type: "enable",
-                    onConfirm: () => toggleOngoingTasks(true),
-                });
-                break;
-            }
-            case "disable": {
-                setToggleStateConfirm({
-                    type: "disable",
-                    onConfirm: () => toggleOngoingTasks(false),
-                });
-                break;
-            }
-            case "delete": {
-                setToggleStateConfirm({
-                    type: "delete",
-                    onConfirm: deleteOngoingTasks,
-                });
-                break;
-            }
-            default:
-                assertUnreachable(type);
-        }
+        },
+        isTogglingState,
+        isDeleting,
     };
 
     return (
@@ -351,12 +255,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         </Button>
                     )}
 
-                    {toggleStateConfirm && (
-                        <OngoingTaskToggleStateConfirm
-                            {...toggleStateConfirm}
-                            tasks={getSelectedTaskShardedInfos()}
-                            toggle={() => setToggleStateConfirm(null)}
-                        />
+                    {operationConfirm && (
+                        <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
                     )}
 
                     {allTasksCount > 0 && (
@@ -390,12 +290,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     ) : (
                         isAdminAccessOrAbove(database) && (
                             <OngoingTaskSelectActions
-                                allTasks={filteredTaskNames}
+                                allTasks={filteredDatabaseTaskNames}
                                 selectedTasks={selectedTaskNames}
                                 setSelectedTasks={setSelectedTaskNames}
-                                onTaskOperation={onTaskOperation}
-                                isTogglingState={isTogglingState}
-                                isDeleting={isDeleting}
+                                onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
+                                isTogglingState={isTogglingStateAny}
+                                isDeleting={isDeletingAny}
                             />
                         )
                     )}

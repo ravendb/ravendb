@@ -31,15 +31,15 @@ interface AffectedTasksGrouped {
 
 interface OngoingTaskToggleStateConfirmProps {
     type: OngoingTaskToggleStateConfirmOperationType;
-    tasks: OngoingTaskSharedInfo[];
+    taskSharedInfos: OngoingTaskSharedInfo[];
     toggle: () => void;
     onConfirm: () => void;
 }
 
 export default function OngoingTaskToggleStateConfirm(props: OngoingTaskToggleStateConfirmProps) {
-    const { type, tasks, toggle, onConfirm } = props;
+    const { type, taskSharedInfos, toggle, onConfirm } = props;
 
-    const taskGroups = getTaskGroups(type, tasks).filter((x) => x.tasks.length > 0);
+    const taskGroups = getTaskGroups(type, taskSharedInfos).filter((x) => x.tasks.length > 0);
 
     const onSubmit = () => {
         onConfirm();
