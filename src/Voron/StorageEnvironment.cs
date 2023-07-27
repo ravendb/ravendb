@@ -1275,13 +1275,22 @@ namespace Voron
 
             void RegisterContainer(long container, string name)
             {
+                var overflowName = $"{name}/OverflowPage";
                 var (allPages, freePages) = Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
                 RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
                 var iterator = Container.GetAllPagesSet(tx.LowLevelTransaction, container);
                 while (iterator.TryMoveNext(out var page))
                 {
+                    var pageObject = tx.LowLevelTransaction.GetPage(page);
                     r.Add(page, name);
+                    if (pageObject.IsOverflow == false)
+                        continue;
+                    
+
+                    var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageObject.OverflowSize);
+                    for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
+                        r.Add(page + overflowPage, overflowName);
                 }
             }
 
