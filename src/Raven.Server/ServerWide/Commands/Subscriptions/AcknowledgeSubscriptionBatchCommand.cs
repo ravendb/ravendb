@@ -76,11 +76,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return context.ReadObject(existingValue, SubscriptionName);
             }
 
-            if (string.IsNullOrEmpty(ShardName) == false)
-            {
-                CheckConcurrencyForBatchCv(currentState, subscriptionName);
-            }
-
             if (IsLegacyCommand())
             {
                 if (LastKnownSubscriptionChangeVector != currentState.ChangeVectorForNextBatchStartingPoint)
@@ -100,9 +95,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 currentState.ChangeVectorForNextBatchStartingPoint =
                     ChangeVectorUtils.MergeVectors(changeVector.Order.StripMoveTag(context), currentState.ChangeVectorForNextBatchStartingPoint);
 
-                var orchestratorCv = context.GetChangeVector(LastKnownSubscriptionChangeVector);
-                currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator = 
-                    ChangeVectorUtils.MergeVectors(orchestratorCv.Order.StripMoveTag(context), currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator);
+                if (string.IsNullOrEmpty(LastKnownSubscriptionChangeVector) == false)
+                {
+                    var orchestratorCv = context.GetChangeVector(LastKnownSubscriptionChangeVector);
+                    currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator =
+                        ChangeVectorUtils.MergeVectors(orchestratorCv.Order.StripMoveTag(context), currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator);
+                }
             }
 
             currentState.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
@@ -114,19 +112,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             return BatchId == null || // from an old version CSM
                    BatchId == ISubscriptionConnection.NonExistentBatch; // from noop ack
-        }
-
-        private void CheckConcurrencyForBatchCv(SubscriptionState state, string subscriptionName)
-        {
-            if (state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage)) 
-            {
-                if (cvInStorage != ChangeVector)
-                {
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't apply {nameof(AcknowledgeSubscriptionBatchCommand)} for sharded subscription with name '{subscriptionName}' on shard '{ShardName}' due to inconsistency in change vector progress. " +
-                                                                                 $"Probably there was an admin intervention that changed the change vector value." +
-                                                                                 $" Stored value: '{cvInStorage}', received value: '{ChangeVector}'.");
-                }
-            }
         }
 
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)

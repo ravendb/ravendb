@@ -10,6 +10,7 @@ using FastTests;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
@@ -32,18 +33,19 @@ using Sparrow;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Subscriptions
 {
-    public class ShardedSubscriptionSlowTests : RavenTestBase
+    public class ShardedSubscriptionSlowTests : ClusterTestBase
     {
         public ShardedSubscriptionSlowTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(30);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
@@ -1517,6 +1519,240 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        public async Task AssertCanResendOnlyFromResendList()
+        {
+            using (var store = Sharding.GetDocumentStore(
+                       new Options
+                       {
+                           ModifyDatabaseRecord = record =>
+                           {
+                               record.Sharding ??= new ShardingConfiguration()
+                               {
+                                   Shards = new Dictionary<int, DatabaseTopology>() { { 0, new DatabaseTopology() }, { 1, new DatabaseTopology() } }
+                               };
+                           }
+                       }
+                   ))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < 128; i++)
+                    {
+                        await bulkInsert.StoreAsync(new Order { Freight = i }, $"orders/{i}-A");
+                    }
+                }
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                var docs = collectionStats.Collections["Orders"];
+                Assert.Equal(128, docs);
+
+                var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = "from 'Orders'" });
+
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                });
+                var mre = new AsyncManualResetEvent();
+                var mre2 = new AsyncManualResetEvent();
+                var exceptions = new List<Exception>();
+                subscription.OnUnexpectedSubscriptionError += exception =>
+                {
+                    exceptions.Add(exception);
+                };
+                var t = subscription.Run(async x =>
+                {
+                    mre.Set();
+                    Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "await mre2.WaitAsync(_reasonableWaitTime)");
+                });
+
+
+                Assert.True(await mre.WaitAsync(_reasonableWaitTime), "await mre.WaitAsync(_reasonableWaitTime)");
+                await subscription.DisposeAsync(false);
+                try
+                {
+                    mre2.Set();
+                    await t;
+                }
+                catch (Exception)
+                {
+                    // no one cares
+                }
+
+                await Sharding.Subscriptions.AssertNoOpenSubscriptionConnectionsAsync(store, sub, Server);
+
+                Assert.True(exceptions.Count == 0, $"{string.Join(Environment.NewLine, exceptions.Select(x => x.ToString()))}");
+
+                await Sharding.Subscriptions.AssertNumberOfItemsInTheResendQueueAsync(store, sub, 128);
+
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16), MaxDocsPerBatch = 1
+                });
+                try
+                {
+                    var items = new HashSet<string>();
+                    subscription.AfterAcknowledgment += batch =>
+                    {
+                        foreach (var item in batch.Items)
+                        {
+                            items.Add(item.Id);
+                        }
+
+                        return Task.CompletedTask;
+                    };
+                    t = subscription.Run(x => Task.CompletedTask);
+
+
+                    Assert.Equal(128, await WaitForValueAsync(() => items.Count, docs, timeout: 60_000));
+
+                    await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, sub);
+                }
+                finally
+                {
+                    await subscription.DisposeAsync();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding | RavenTestCategory.Cluster)]
+        public async Task CanContinueSubscriptionAfterNodeIsDown()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 2, orchestratorReplicationFactor: 2);
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Created" });
+
+                HashSet<string> ids = new HashSet<string>();
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() { Age = 11 });
+                    await session.StoreAsync(new User() { Age = 12 });
+                    await session.StoreAsync(new User() { Age = 13 });
+                    await session.StoreAsync(new User() { Age = 20 });
+                    await session.StoreAsync(new User() { Age = 21 });
+                    await session.StoreAsync(new User() { Age = 22 });
+
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+
+                    await session.SaveChangesAsync();
+                }
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+                var mre2 = new AsyncManualResetEvent();
+                var exceptions1 = new Dictionary<string, List<Exception>>();
+                var sp = Stopwatch.StartNew();
+                var worker1 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
+                {
+                    MaxDocsPerBatch = 1, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(1000)
+                });
+                try
+                {
+                    var mre = new AsyncManualResetEvent();
+                    worker1.AfterAcknowledgment += batch =>
+                    {
+                        foreach (var x in batch.Items)
+                        {
+                            ids.Add(x.Id);
+                        }
+
+                        return Task.CompletedTask;
+                    };
+                    worker1.OnSubscriptionConnectionRetry += e =>
+                    {
+                        if (exceptions1.TryGetValue("OnSubscriptionConnectionRetry_1", out var exceptions))
+                        {
+                            exceptions.Add(e);
+                        }
+                        else
+                        {
+                            exceptions1.Add("OnSubscriptionConnectionRetry_1", new List<Exception>() { e });
+                        }
+                    };
+
+                    var t = worker1.Run(async batch =>
+                    {
+                        if (ids.Count == 3)
+                        {
+                            mre.Set();
+                            Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "mre2");
+                        }
+
+                        await Task.Delay(16);
+                    });
+                    Assert.True(await mre.WaitAsync(_reasonableWaitTime), "mre" + Environment.NewLine +
+                                                                          PrintException(exceptions1));
+                }
+                finally
+                {
+                    await worker1.DisposeAsync(false);
+                }
+
+
+                var nodeToTakeDown = nodes.First(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(nodeToTakeDown);
+
+                mre2.Set();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() { Age = 26 });
+                    await session.StoreAsync(new User() { Age = 25 });
+                    await session.SaveChangesAsync();
+                }
+
+                var worker2 = store.Subscriptions.GetSubscriptionWorker<User>(
+                    new SubscriptionWorkerOptions(state.SubscriptionName) { MaxDocsPerBatch = 1, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(1000) });
+                try
+                {
+                    worker2.AfterAcknowledgment += batch =>
+                    {
+                        foreach (var x in batch.Items)
+                        {
+                            ids.Add(x.Id);
+                        }
+
+                        return Task.CompletedTask;
+                    };
+
+                    worker2.OnSubscriptionConnectionRetry += e =>
+                    {
+                        if (exceptions1.TryGetValue("OnSubscriptionConnectionRetry_2", out var exceptions))
+                        {
+                            exceptions.Add(e);
+                        }
+                        else
+                        {
+                            exceptions1.Add("OnSubscriptionConnectionRetry_2", new List<Exception>() { e });
+                        }
+                    };
+                    var t = worker2.Run(async batch =>
+                    {
+                        await Task.Delay(16);
+                    });
+                    var res = await WaitForValueAsync(() => Task.FromResult(ids.Count), 8, timeout: 60_000);
+
+                    Assert.True(res == 8, $"{res} == 8" + Environment.NewLine + PrintException(exceptions1));
+                }
+                finally
+                {
+                    await worker2.DisposeAsync(false);
+                }
+            }
+        }
+
+        private static string PrintException(Dictionary<string, List<Exception>> exceptions1)
+        {
+            return string.Join($"{Environment.NewLine}-----------{Environment.NewLine}",
+                exceptions1.Select(x => $"{x.Key}:{Environment.NewLine} {string.Join(Environment.NewLine, x.Value.Select(y => y.ToString()))}"));
         }
 
         private class Dog
