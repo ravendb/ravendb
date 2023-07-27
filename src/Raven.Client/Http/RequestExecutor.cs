@@ -748,7 +748,8 @@ namespace Raven.Client.Http
                 catch (Exception e)
                 {
                     serverNode.ClusterTag = "!";
-                    Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
+                    if(Logger.IsInfoEnabled)
+                        Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
                 }
 
                 topology.Nodes.Add(serverNode);
