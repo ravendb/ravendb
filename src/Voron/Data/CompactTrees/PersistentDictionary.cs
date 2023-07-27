@@ -144,7 +144,22 @@ namespace Voron.Data.CompactTrees
                 return previousDictionary;
 
             if (previousDictionary != null)
-                llt.FreePage(previousDictionary.DictionaryId);
+            {
+                var previousDictionaryPage = llt.GetPage(previousDictionary.DictionaryId);
+                if (previousDictionaryPage.IsOverflow == false)
+                {
+                    llt.FreePage(previousDictionary.DictionaryId);
+                }
+                else
+                {
+                    var overflowPageNumber = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(previousDictionaryPage.OverflowSize);
+                    for (long pageToRelease = previousDictionary.DictionaryId; pageToRelease < previousDictionary.DictionaryId + overflowPageNumber; ++pageToRelease)
+                    {
+                        llt.FreePage(pageToRelease);
+                    }
+                }
+                
+            }
 
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
