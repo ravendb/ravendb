@@ -169,8 +169,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
             TaskId: this.taskId,
             BrokerType: broker,
             SkipAutomaticQueueDeclaration: this.skipAutomaticQueueDeclaration(),
-            Queues: this.queueOptionsToDto(),
-            BlockingSourceName: this.blockingSourceName()
+            Queues: this.queueOptionsToDto()
         };
     }
 

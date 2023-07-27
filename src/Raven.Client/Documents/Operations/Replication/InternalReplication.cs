@@ -41,7 +41,5 @@ namespace Raven.Client.Documents.Operations.Replication
                 return hashCode;
             }
         }
-
-        public override string BlockingSourceName => $"Internal Replication '{FromString()}'";
     }
 }

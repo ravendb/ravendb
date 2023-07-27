@@ -56,8 +56,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Url: undefined,
             Disabled: this.taskState() === "Disabled",
-            Database: undefined,
-            BlockingSourceName: this.blockingSourceName(),
+            Database: undefined
         };
     }
 

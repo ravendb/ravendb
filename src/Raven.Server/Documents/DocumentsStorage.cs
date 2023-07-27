@@ -33,7 +33,6 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
 {
@@ -1324,7 +1323,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        private Table GetTombstoneTableForCollection(DocumentsOperationContext context, string collection)
         {
             string tableName;
 
@@ -1337,16 +1336,25 @@ namespace Raven.Server.Documents
             {
                 var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
-                    return 0;
+                    return null;
 
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
-            if (table == null)
-                return 0;
+            return table;
+        }
 
-            return table.NumberOfEntries;
+        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        {
+            var table = GetTombstoneTableForCollection(context, collection);
+            return table?.NumberOfEntries ?? 0;
+        }
+
+        public long TombstonesSizeForCollection(DocumentsOperationContext context, string collection)
+        {
+            var table = GetTombstoneTableForCollection(context, collection);
+            return table?.GetReport(includeDetails: false).DataSizeInBytes ?? 0;
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(

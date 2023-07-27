@@ -376,7 +376,7 @@ namespace FastTests.Server.Replication
         {
             await UpdateConflictResolver(store, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
         }
-        
+
         protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
         {
             foreach (var node in toNodes)

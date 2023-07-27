@@ -163,8 +163,7 @@ class periodicBackupConfiguration extends backupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
-            FtpSettings: this.ftpSettings().toDto(),
-            BlockingSourceName: this.blockingSourceName()
+            FtpSettings: this.ftpSettings().toDto()
         };
     }
 

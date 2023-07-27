@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationDefinition : IDynamicJsonValueConvertible, ITombstoneDeletionBlocker
+    public class PullReplicationDefinition : IDynamicJsonValueConvertible
     {
         [Obsolete("You cannot use Certificates on the PullReplicationDefinition any more, please use the dedicated commands: RegisterReplicationHubAccessOperation and UnregisterReplicationHubAccessOperation")]
         public Dictionary<string, string> Certificates; // <thumbprint, base64 cert>
 
         public TimeSpan DelayReplicationFor;
-        public bool Disabled { get; set; }
+        public bool Disabled;
 
         public string MentorNode;
 
@@ -113,8 +112,6 @@ namespace Raven.Client.Documents.Operations.Replication
                 TaskId = taskId
             };
         }
-
-        public string BlockingSourceName => $"Replication Hub task '{Name}'";
     }
 
     [Flags]
