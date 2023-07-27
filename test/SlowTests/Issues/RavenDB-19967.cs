@@ -113,8 +113,8 @@ namespace SlowTests.Issues
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
                 Assert.Equal(0, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.Index, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
-                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
             }
         }
 
@@ -175,8 +175,8 @@ namespace SlowTests.Issues
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
                 Assert.Equal(externalList.First().TaskId, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
-                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
             }
         }
 
@@ -253,8 +253,8 @@ namespace SlowTests.Issues
                 Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
                 Assert.Equal(sinkCreationTaskId, sinkNotificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink, sinkNotificationDetails.First().BlockerType);
-                Assert.True(sinkNotificationDetails.First().SizeOfTombstones > 0,
-                    $"Expected the size of tombstones to be greater than 0, but it was {sinkNotificationDetails.First().SizeOfTombstones}");
+                Assert.True(sinkNotificationDetails.First().SizeOfTombstonesInBytes > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {sinkNotificationDetails.First().SizeOfTombstonesInBytes}");
 
                 // Assert 'Hub' BlockingTombstones notification and its details.
                 var hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
@@ -268,8 +268,8 @@ namespace SlowTests.Issues
                 Assert.Equal(hubTombstonesCount, hubNotificationDetails.First().NumberOfTombstones);
                 Assert.Equal(hubCreationTaskId, hubNotificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub, hubNotificationDetails.First().BlockerType);
-                Assert.True(hubNotificationDetails.First().SizeOfTombstones > 0,
-                    $"Expected the size of tombstones to be greater than 0, but it was {hubNotificationDetails.First().SizeOfTombstones}");
+                Assert.True(hubNotificationDetails.First().SizeOfTombstonesInBytes > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {hubNotificationDetails.First().SizeOfTombstonesInBytes}");
             }
         }
 
@@ -380,8 +380,8 @@ namespace SlowTests.Issues
                 Assert.Equal(_customTaskName, notificationDetails.First().Source);
                 Assert.Equal(taskId, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(blockerType, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstones > 0, 
-                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0, 
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
 
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
@@ -451,8 +451,8 @@ namespace SlowTests.Issues
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
                 Assert.Equal(config.TaskId, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.Backup, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
-                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
             }
         }
 

@@ -151,7 +151,7 @@ namespace Raven.Server.Documents
                 detailsSet.AddRange(
                     from collectionName in collections
                     let tombstonesCount = GetTombstoneDataForCollection(tombstonesCountsPerCollection, collectionName, context, _documentDatabase.DocumentsStorage.TombstonesCountForCollection)
-                    let tombstonesSize = GetTombstoneDataForCollection(tombstonesSizePerCollection, collectionName, context, _documentDatabase.DocumentsStorage.TombstonesSizeForCollection)
+                    let tombstonesSizeInBytes = GetTombstoneDataForCollection(tombstonesSizePerCollection, collectionName, context, _documentDatabase.DocumentsStorage.TombstonesSizeForCollectionInBytes)
                     where tombstonesCount > 0
                     select new BlockingTombstoneDetails
                     {
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents
                         BlockerTaskId = source.TaskId,
                         Collection = collectionName,
                         NumberOfTombstones = tombstonesCount,
-                        SizeOfTombstones = tombstonesSize
+                        SizeOfTombstonesInBytes = tombstonesSizeInBytes
                     });
             }
         }
