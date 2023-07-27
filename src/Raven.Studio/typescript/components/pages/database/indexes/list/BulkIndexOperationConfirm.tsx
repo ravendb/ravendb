@@ -50,7 +50,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
-    const indexGroups = getIndexGroups(type, indexes);
+    const indexGroups = getIndexGroups(type, indexes).filter((x) => x.indexes.length > 0);
 
     const onSubmit = () => {
         onConfirm(selectedActionContexts);
@@ -78,50 +78,44 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                 <div className="position-absolute m-2 end-0 top-0">
                     <Button close onClick={toggle} />
                 </div>
-                {indexGroups.map((indexGroup, index) => {
-                    if (indexGroup.indexes.length === 0) {
-                        return;
-                    }
-
-                    return (
-                        <div key={"indexGroup" + index}>
-                            <div className="text-center lead">{indexGroup.title}</div>
-                            <div className="vstack gap-1 my-4">
-                                {indexGroup.indexes.map((index) => (
-                                    <div key={index.name} className="d-flex">
-                                        <div
-                                            className={classNames(
-                                                "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
-                                            )}
-                                        >
-                                            <Icon
-                                                icon={getStatusIcon(index.currentStatus)}
-                                                color={getStatusColor(index.currentStatus)}
-                                                margin="m-0"
-                                            />
-                                            {indexGroup.destinationStatus && (
-                                                <>
-                                                    <Icon
-                                                        icon="arrow-thin-right"
-                                                        margin="mx-1"
-                                                        className="fs-6 align-self-center"
-                                                    />
-                                                    <Icon
-                                                        icon={getStatusIcon(indexGroup.destinationStatus)}
-                                                        color={getStatusColor(indexGroup.destinationStatus)}
-                                                        margin="m-0"
-                                                    />
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="word-break align-self-center">{index.name}</div>
+                {indexGroups.map((indexGroup, idx) => (
+                    <div key={"indexGroup" + idx}>
+                        <div className="text-center lead">{indexGroup.title}</div>
+                        <div className="vstack gap-1 my-4">
+                            {indexGroup.indexes.map((index) => (
+                                <div key={index.name} className="d-flex">
+                                    <div
+                                        className={classNames(
+                                            "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                        )}
+                                    >
+                                        <Icon
+                                            icon={getStatusIcon(index.currentStatus)}
+                                            color={getStatusColor(index.currentStatus)}
+                                            margin="m-0"
+                                        />
+                                        {indexGroup.destinationStatus && (
+                                            <>
+                                                <Icon
+                                                    icon="arrow-thin-right"
+                                                    margin="mx-1"
+                                                    className="fs-6 align-self-center"
+                                                />
+                                                <Icon
+                                                    icon={getStatusIcon(indexGroup.destinationStatus)}
+                                                    color={getStatusColor(indexGroup.destinationStatus)}
+                                                    margin="m-0"
+                                                />
+                                            </>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                            <hr className="m-0" />
+                                    <div className="word-break align-self-center">{index.name}</div>
+                                </div>
+                            ))}
                         </div>
-                    );
-                })}
+                        {idx < indexGroups.length - 1 && <hr className="m-0" />}
+                    </div>
+                ))}
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>
