@@ -55,7 +55,7 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                 <span className="small-label">Select All</span>
             </Checkbox>
 
-            <SelectionActions active={anythingSelected && !isTogglingState}>
+            <SelectionActions active={anythingSelected}>
                 <div className="d-flex align-items-center justify-content-center flex-wrap gap-2">
                     <div className="lead text-nowrap">
                         <strong className="text-emphasis me-1">{selectedTasks.length}</strong> selected
