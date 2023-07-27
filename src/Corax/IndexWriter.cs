@@ -1863,11 +1863,20 @@ namespace Corax
             if (numberOfEntries == 0)
             {
                 llt.FreePage(postingListState.RootPage);
+                
                 Container.Delete(llt, _postingListContainerId, containerId);
+                RemovePostingListFromLargePostingListsSet(containerId);
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
             return AddEntriesToTermResult.NothingToDo;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void RemovePostingListFromLargePostingListsSet(long containerId)
+        {
+            _largePostingListSet ??= _transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
+            _largePostingListSet.Remove(containerId);
         }
 
         private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
