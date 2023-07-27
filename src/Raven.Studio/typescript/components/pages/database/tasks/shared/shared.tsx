@@ -8,7 +8,6 @@ import {
 import useBoolean from "hooks/useBoolean";
 import React, { useCallback, useState } from "react";
 import router from "plugins/router";
-import { withPreventDefault } from "../../../../utils/common";
 import { RichPanelDetailItem, RichPanelName } from "../../../../common/RichPanel";
 import {
     Button,
