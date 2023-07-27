@@ -39,7 +39,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Button } from "reactstrap";
+import { Button, Col, Row } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -49,6 +49,7 @@ import { InputItem } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import OngoingTaskToggleStateConfirm from "./OngoingTaskToggleStateConfirm";
+import { StickyHeader } from "components/common/StickyHeader";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -216,8 +217,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
     };
 
-    // TODO kalczur - styling
-
     const {
         onTaskOperation,
         operationConfirm,
@@ -246,29 +245,30 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     return (
         <div>
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
-            <div className="flex-vertical">
-                <div className="flex-header flex-horizontal justify-content-between align-items-center gap-3">
-                    {canReadWriteDatabase(database) && (
-                        <Button onClick={addNewOngoingTask} color="primary" className="rounded-pill">
-                            <Icon icon="plus" />
-                            Add a Database Task
-                        </Button>
-                    )}
-
-                    {operationConfirm && (
-                        <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
-                    )}
-
-                    {allTasksCount > 0 && (
-                        <OngoingTasksFilter
-                            filter={filter}
-                            setFilter={setFilter}
-                            filterByStatusOptions={getFilterByStatusOptions(tasks)}
-                            tasksCount={allTasksCount}
-                        />
-                    )}
-
-                    <div>
+            {operationConfirm && (
+                <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
+            )}
+            <StickyHeader>
+                <Row>
+                    <Col sm="auto" className="align-self-center">
+                        {canReadWriteDatabase(database) && (
+                            <Button onClick={addNewOngoingTask} color="primary" className="rounded-pill">
+                                <Icon icon="plus" />
+                                Add a Database Task
+                            </Button>
+                        )}
+                    </Col>
+                    <Col>
+                        {allTasksCount > 0 && (
+                            <OngoingTasksFilter
+                                filter={filter}
+                                setFilter={setFilter}
+                                filterByStatusOptions={getFilterByStatusOptions(tasks)}
+                                tasksCount={allTasksCount}
+                            />
+                        )}
+                    </Col>
+                    <Col sm="auto" className="align-self-center">
                         {canNavigateToServerWideTasks && (
                             <Button
                                 color="link"
@@ -282,8 +282,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                 Server-Wide Tasks
                             </Button>
                         )}
-                    </div>
-                </div>
+                    </Col>
+                </Row>
+            </StickyHeader>
+            <div className="flex-vertical">
                 <div className="scroll flex-grow">
                     {allTasksCount === 0 ? (
                         <EmptySet>No tasks have been created for this Database Group.</EmptySet>
