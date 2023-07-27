@@ -6,6 +6,7 @@ import { ManageDatabaseGroupPage } from "components/pages/resources/manageDataba
 import ClientDatabaseConfiguration from "components/pages/database/settings/clientConfiguration/ClientDatabaseConfiguration";
 import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
 import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
+import DocumentExpiration from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 
 export = getSettingsMenuItem;
 
@@ -90,12 +91,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/expiration',
-            moduleId: require('viewmodels/database/settings/expiration'),
+            moduleId: bridgeToReact(DocumentExpiration, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Document Expiration',
             nav: true,
             css: 'icon-document-expiration',
-            dynamicHash: appUrls.expiration
+            dynamicHash: appUrls.expiration,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',

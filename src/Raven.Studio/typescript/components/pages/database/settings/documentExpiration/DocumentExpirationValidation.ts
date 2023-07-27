@@ -4,13 +4,13 @@ import { yupResolver } from "@hookform/resolvers/yup";
 const schema = yup
     .object({
         isDocumentExpirationEnabled: yup.boolean(),
-        isExpirationFrequencyEnabled: yup.boolean(),
-        expirationFrequency: yup
+        isDeleteFrequencyEnabled: yup.boolean(),
+        deleteFrequency: yup
             .number()
             .nullable()
             .positive()
             .integer()
-            .when("isExpirationFrequencyEnabled", {
+            .when("isDeleteFrequencyEnabled", {
                 is: true,
                 then: (schema) => schema.required(),
             }),
