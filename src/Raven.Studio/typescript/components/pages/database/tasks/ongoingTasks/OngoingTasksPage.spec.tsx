@@ -484,7 +484,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/Replication Sink/)).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: /Replication Sink/ })).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
@@ -509,7 +509,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/Replication Hub/)).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: /Replication Hub/ })).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
@@ -528,7 +528,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/Replication Hub/)).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: /Replication Hub/ })).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
@@ -577,7 +577,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/External Replication/)).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: /External Replication/ })).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
@@ -618,7 +618,7 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/Subscription/)).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: /Subscription/ })).toBeInTheDocument();
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
 
