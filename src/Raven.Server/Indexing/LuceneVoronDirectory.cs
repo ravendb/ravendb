@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Sparrow.Utils;
 using Voron;
 using Voron.Impl;
 
@@ -25,6 +27,12 @@ namespace Raven.Server.Indexing
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, LuceneIndexInputType indexInputType) : this(tx, environment, tempFileCache, "Files", indexInputType)
         { }
+
+        static LuceneVoronDirectory()
+        {
+            ArrayHolder.OnArrayHolderCreated = NativeMemory.IncrementLuceneManagedAllocations;
+            ArrayHolder.OnArrayHolderDisposed = NativeMemory.DecrementLuceneManagedAllocations;
+        }
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name, LuceneIndexInputType indexInputType)
         {
