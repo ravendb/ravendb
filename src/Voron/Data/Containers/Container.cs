@@ -693,9 +693,13 @@ namespace Voron.Data.Containers
 
             if (page.IsOverflow)
             {
-               rootContainer.Header.NumberOfOverflowPages -= VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                rootContainer.Header.NumberOfOverflowPages -= numberOfOverflowPages;
                 ModifyMetadataList(llt, rootContainer, ContainerPageHeader.AllPagesOffset, add: false, pageNum);
-                llt.FreePage(pageNum);
+                
+                for (var pageToRelease = pageNum; pageToRelease < pageNum + numberOfOverflowPages; ++pageToRelease)
+                    llt.FreePage(pageToRelease);
+                
                 return;
             }
 

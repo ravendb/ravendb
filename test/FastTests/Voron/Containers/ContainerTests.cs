@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Voron;
 using Voron.Data.Containers;
+using Voron.Global;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,11 +30,11 @@ namespace FastTests.Voron
             expected.CopyTo(space);
 
             var actual = Container.Get(wtx.LowLevelTransaction, id);
-            
+
             Assert.Equal(expected.ToArray(), actual.ToSpan().ToArray());
         }
 
-        
+
         [Fact]
         public void CanScanValues()
         {
@@ -135,6 +137,49 @@ namespace FastTests.Voron
             {
                 var data = Container.Get(wtx.LowLevelTransaction, itemId);
                 Assert.True(data.ToSpan().Slice(0, 4).SequenceEqual(expected));
+            }
+        }
+
+        [Fact]
+        public void CanStoreDeleteAndRecoverSpaceForOverflowPage()
+        {
+            long containerItemId;
+            long containerId;
+            long pageId;
+            int overflowPageCount;
+            const string name = "maciej";
+
+            Span<byte> expected = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, (10 * 1024) / name.Length).Select(i => name)));
+
+            {
+                using var wtx = Env.WriteTransaction();
+                containerId = Container.Create(wtx.LowLevelTransaction);
+                containerItemId = Container.Allocate(wtx.LowLevelTransaction, containerId, expected.Length, out var s);
+                expected.CopyTo(s);
+                wtx.Commit();
+            }
+
+            {
+                using var wtx = Env.WriteTransaction();
+                var container = Container.GetMutable(wtx.LowLevelTransaction, containerItemId);
+                (pageId, _) = Math.DivRem(containerItemId, Constants.Storage.PageSize);
+                var page = wtx.LowLevelTransaction.ModifyPage(pageId);
+                Assert.True(page.IsOverflow);
+                overflowPageCount = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                Container.Delete(wtx.LowLevelTransaction, containerId, containerItemId);
+                wtx.Commit();
+            }
+
+            {
+                using var wtx = Env.WriteTransaction();
+                var currentAllocations = Env.GetPageOwners(wtx);
+
+                for (long releasedPage = pageId; releasedPage < pageId + overflowPageCount; ++releasedPage)
+                {
+                    Assert.Contains(releasedPage, currentAllocations.Keys);
+                    Assert.Equal(currentAllocations[releasedPage], "Freed Page");
+                }
+                
             }
         }
     }
