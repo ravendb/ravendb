@@ -77,7 +77,7 @@ namespace Raven.Server.NotificationCenter
                         [nameof(BlockingTombstoneDetails.BlockerTaskId)] = tombstoneDetails.BlockerTaskId,
                         [nameof(BlockingTombstoneDetails.Collection)] = tombstoneDetails.Collection,
                         [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = tombstoneDetails.NumberOfTombstones,
-                        [nameof(BlockingTombstoneDetails.SizeOfTombstones)] = tombstoneDetails.SizeOfTombstones
+                        [nameof(BlockingTombstoneDetails.SizeOfTombstonesInBytes)] = tombstoneDetails.SizeOfTombstonesInBytes
                     });
                 }
 
@@ -96,8 +96,8 @@ namespace Raven.Server.NotificationCenter
         public long BlockerTaskId { get; set; }
         public string Collection { get; set; }
         public long NumberOfTombstones { get; set; }
-        public long SizeOfTombstones { get; set; }
-        public string SizeOfTombstonesHumane => new Size(SizeOfTombstones, SizeUnit.Bytes).ToString();
+        public long SizeOfTombstonesInBytes { get; set; }
+        public string SizeOfTombstonesHumane => new Size(SizeOfTombstonesInBytes, SizeUnit.Bytes).ToString();
     }
 
     public class TombstoneDeletionBlockageSource : IEquatable<TombstoneDeletionBlockageSource>

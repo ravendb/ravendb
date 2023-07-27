@@ -1351,7 +1351,7 @@ namespace Raven.Server.Documents
             return table?.NumberOfEntries ?? 0;
         }
 
-        public long TombstonesSizeForCollection(DocumentsOperationContext context, string collection)
+        public long TombstonesSizeForCollectionInBytes(DocumentsOperationContext context, string collection)
         {
             var table = GetTombstoneTableForCollection(context, collection);
             return table?.GetReport(includeDetails: false).DataSizeInBytes ?? 0;
