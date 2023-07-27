@@ -8,10 +8,10 @@ using Raven.Client;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
-using static Raven.Server.NotificationCenter.TombstoneNotifications;
 
 namespace Raven.Server.Documents
 {
@@ -124,6 +124,7 @@ namespace Raven.Server.Documents
         {
             var detailsSet = new List<BlockingTombstoneDetails>();
             var tombstonesCountsPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var tombstonesSizePerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -131,7 +132,7 @@ namespace Raven.Server.Documents
                 foreach (var disabledSubscribers in _subscriptions
                              .Select(x => x.GetDisabledSubscribersCollections(tombstoneCollections.Tombstones.Keys.ToHashSet())))
                 {
-                    FillDetailsSet(detailsSet, disabledSubscribers, tombstonesCountsPerCollection, context);
+                    FillDetailsSet(detailsSet, disabledSubscribers, tombstonesCountsPerCollection, tombstonesSizePerCollection, context);
                 }
             }
 
@@ -140,34 +141,43 @@ namespace Raven.Server.Documents
 
         private void FillDetailsSet(
             List<BlockingTombstoneDetails> detailsSet,
-            Dictionary<string, HashSet<string>> disabledSubscribers,
+            Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> disabledSubscribers,
             IDictionary<string, long> tombstonesCountsPerCollection,
+            IDictionary<string, long> tombstonesSizePerCollection,
             DocumentsOperationContext context)
         {
-            foreach ((string source, HashSet<string> collections) in disabledSubscribers)
+            foreach ((TombstoneDeletionBlockageSource source, HashSet<string> collections) in disabledSubscribers)
             {
                 detailsSet.AddRange(
-                    from collectionName in collections 
-                    let tombstonesCount = GetTombstonesCountForCollection(tombstonesCountsPerCollection, collectionName, context) 
-                    where tombstonesCount > 0 
+                    from collectionName in collections
+                    let tombstonesCount = GetTombstoneDataForCollection(tombstonesCountsPerCollection, collectionName, context, _documentDatabase.DocumentsStorage.TombstonesCountForCollection)
+                    let tombstonesSize = GetTombstoneDataForCollection(tombstonesSizePerCollection, collectionName, context, _documentDatabase.DocumentsStorage.TombstonesSizeForCollection)
+                    where tombstonesCount > 0
                     select new BlockingTombstoneDetails
                     {
-                        Source = source, 
-                        Collection = collectionName, 
-                        NumberOfTombstones = tombstonesCount
+                        Source = source.Name,
+                        BlockerType = source.Type,
+                        BlockerTaskId = source.TaskId,
+                        Collection = collectionName,
+                        NumberOfTombstones = tombstonesCount,
+                        SizeOfTombstones = tombstonesSize
                     });
             }
         }
 
-        private long GetTombstonesCountForCollection(IDictionary<string, long> tombstonesCountsPerCollection, string collectionName, DocumentsOperationContext context)
+        private static long GetTombstoneDataForCollection(
+            IDictionary<string, long> dataPerCollection,
+            string collectionName,
+            DocumentsOperationContext context,
+            Func<DocumentsOperationContext, string, long> retrieveDataFunc)
         {
-            if (tombstonesCountsPerCollection.TryGetValue(collectionName, out var tombstonesCount)) 
-                return tombstonesCount;
+            if (dataPerCollection.TryGetValue(collectionName, out var data))
+                return data;
 
-            tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, collectionName);
-            tombstonesCountsPerCollection[collectionName] = tombstonesCount;
+            data = retrieveDataFunc(context, collectionName);
+            dataPerCollection[collectionName] = data;
 
-            return tombstonesCount;
+            return data;
         }
 
         private void UpdateNotifications(List<BlockingTombstoneDetails> detailsSet)
@@ -288,15 +298,6 @@ namespace Raven.Server.Documents
                     default:
                         throw new NotSupportedException($"Tombstone type '{type}' is not supported.");
                 }
-            }
-        }
-
-        internal static void AssignTombstonesToDisabledConfigs<T>(Dictionary<string, HashSet<string>> dict, IEnumerable<T> destinations, HashSet<string> tombstoneCollections)
-            where T : ITombstoneDeletionBlocker
-        {
-            foreach (var config in destinations.Where(config => config.Disabled))
-            {
-                dict[config.BlockingSourceName] = tombstoneCollections;
             }
         }
 
@@ -513,13 +514,28 @@ namespace Raven.Server.Documents
 
         Dictionary<string, long> GetLastProcessedTombstonesPerCollection(TombstoneType type);
 
-        Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections);
+        Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections);
 
         public enum TombstoneType
         {
             Documents,
             TimeSeries,
             Counters
+        }
+
+        public enum TombstoneDeletionBlockerType
+        {
+            ExternalReplication,
+            InternalReplication,
+            RavenEtl,
+            SqlEtl,
+            OlapEtl,
+            ElasticSearchEtl,
+            QueueEtl,
+            Backup,
+            PullReplicationAsHub,
+            PullReplicationAsSink,
+            Index
         }
     }
 }

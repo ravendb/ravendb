@@ -6,18 +6,16 @@
 
 using System.Diagnostics;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJsonValueConvertible, ITombstoneDeletionBlocker
+    public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJsonValueConvertible
     {
         public string Name { get; set; }
         public long TaskId { get; set; }
         public bool Disabled { get; set; }
-        public string BlockingSourceName => $"{BackupType} '{Name}'";
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }

@@ -1,6 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -35,26 +41,16 @@ namespace Raven.Server.NotificationCenter
         public List<BlockingTombstoneDetails> GetNotificationDetails(string id)
         {
             var list = new List<BlockingTombstoneDetails>();
-            using (_notificationsStorage.Read(id, out var value))
+            using (_notificationsStorage.Read(id, out var notification))
             {
-                if (value == null ||
-                    value.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
+                if (notification == null ||
+                    notification.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
                     details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false) 
                     return list;
 
-                foreach (BlittableJsonReaderObject detail in blockingTombstonesDetails)
-                {
-                    detail.TryGet(nameof(BlockingTombstoneDetails.Source), out string source);
-                    detail.TryGet(nameof(BlockingTombstoneDetails.Collection), out string collection);
-                    detail.TryGet(nameof(BlockingTombstoneDetails.NumberOfTombstones), out long numOfTombstones);
-
-                    list.Add(new BlockingTombstoneDetails
-                    {
-                        Source = source,
-                        Collection = collection,
-                        NumberOfTombstones = numOfTombstones
-                    });
-                }
+                list.AddRange(
+                    from BlittableJsonReaderObject detail in blockingTombstonesDetails 
+                    select JsonDeserializationServer.BlockingTombstoneDetails(detail));
             }
 
             return list;
@@ -77,8 +73,11 @@ namespace Raven.Server.NotificationCenter
                     jsonArray.Add( new DynamicJsonValue
                     {
                         [nameof(BlockingTombstoneDetails.Source)] = tombstoneDetails.Source,
+                        [nameof(BlockingTombstoneDetails.BlockerType)] = tombstoneDetails.BlockerType,
+                        [nameof(BlockingTombstoneDetails.BlockerTaskId)] = tombstoneDetails.BlockerTaskId,
                         [nameof(BlockingTombstoneDetails.Collection)] = tombstoneDetails.Collection,
-                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = tombstoneDetails.NumberOfTombstones
+                        [nameof(BlockingTombstoneDetails.NumberOfTombstones)] = tombstoneDetails.NumberOfTombstones,
+                        [nameof(BlockingTombstoneDetails.SizeOfTombstones)] = tombstoneDetails.SizeOfTombstones
                     });
                 }
 
@@ -88,12 +87,55 @@ namespace Raven.Server.NotificationCenter
                 };
             }
         }
+    }
 
-        public class BlockingTombstoneDetails
+    public class BlockingTombstoneDetails
+    {
+        public string Source { get; set; }
+        public ITombstoneAware.TombstoneDeletionBlockerType BlockerType { get; set; }
+        public long BlockerTaskId { get; set; }
+        public string Collection { get; set; }
+        public long NumberOfTombstones { get; set; }
+        public long SizeOfTombstones { get; set; }
+        public string SizeOfTombstonesHumane => new Size(SizeOfTombstones, SizeUnit.Bytes).ToString();
+    }
+
+    public class TombstoneDeletionBlockageSource : IEquatable<TombstoneDeletionBlockageSource>
+    {
+        public long TaskId { get; }
+        public ITombstoneAware.TombstoneDeletionBlockerType Type { get; }
+        public string Name { get; }
+
+        public TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType blockerType, string name = null, long taskId = 0)
         {
-            public string Source { get; set; }
-            public string Collection { get; set; }
-            public long NumberOfTombstones { get; set; }
+            TaskId = taskId;
+            Type = blockerType;
+            Name = name;
+        }
+
+        public bool Equals(TombstoneDeletionBlockageSource other)
+        {
+            if (ReferenceEquals(null, other))
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+            return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
+                   && Type == other.Type
+                   && TaskId == other.TaskId;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            return obj.GetType() == GetType() && Equals((TombstoneDeletionBlockageSource)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Name?.ToLowerInvariant(), (int)Type, TaskId);
         }
     }
 }

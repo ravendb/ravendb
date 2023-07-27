@@ -46,8 +46,6 @@ abstract class backupConfiguration {
     locationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     folderPathOptions = ko.observableArray<string>([]);
 
-    blockingSourceName = ko.observable<string>();
-
     spinners = {
         locationInfoLoading: ko.observable<boolean>(false)
     };
@@ -207,7 +205,6 @@ abstract class backupConfiguration {
             BackupEncryptionSettings: null,
             SnapshotSettings: null,
             RetentionPolicy: null,
-            BlockingSourceName: null,
         }
     }
 }

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using SlowTests.Server.Replication;
 using Xunit;
@@ -107,9 +108,13 @@ namespace SlowTests.Issues
 
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
-                Assert.Equal($"Index '{nameof(UserByName)}'", notificationDetails.First().Source);
+                Assert.Equal(nameof(UserByName), notificationDetails.First().Source);
                 Assert.Equal("Users", notificationDetails.First().Collection);
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
+                Assert.Equal(0, notificationDetails.First().BlockerTaskId);
+                Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.Index, notificationDetails.First().BlockerType);
+                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
             }
         }
 
@@ -165,9 +170,13 @@ namespace SlowTests.Issues
 
                 var notificationDetails = srcDocumentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
-                Assert.Equal($"External Replication 'External Replication to ConnectionString-{Server.WebUrl} (DB: {destDocumentDatabase.Name})'", notificationDetails.First().Source);
+                Assert.Equal($"External Replication to ConnectionString-{Server.WebUrl} (DB: {destDocumentDatabase.Name})", notificationDetails.First().Source);
                 Assert.Equal("users", notificationDetails.First().Collection);
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
+                Assert.Equal(externalList.First().TaskId, notificationDetails.First().BlockerTaskId);
+                Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication, notificationDetails.First().BlockerType);
+                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
             }
         }
 
@@ -240,8 +249,12 @@ namespace SlowTests.Issues
                 var sinkNotificationDetails = sinkDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, sinkNotificationDetails.Count);
                 Assert.Equal("users", sinkNotificationDetails.First().Collection);
-                Assert.Equal($"Replication Sink task 'Replication Sink for {taskName}'", sinkNotificationDetails.First().Source);
+                Assert.Equal($"Replication Sink for {taskName}", sinkNotificationDetails.First().Source);
                 Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
+                Assert.Equal(sinkCreationTaskId, sinkNotificationDetails.First().BlockerTaskId);
+                Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink, sinkNotificationDetails.First().BlockerType);
+                Assert.True(sinkNotificationDetails.First().SizeOfTombstones > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {sinkNotificationDetails.First().SizeOfTombstones}");
 
                 // Assert 'Hub' BlockingTombstones notification and its details.
                 var hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
@@ -251,8 +264,12 @@ namespace SlowTests.Issues
                 var hubNotificationDetails = hubDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, hubNotificationDetails.Count);
                 Assert.Equal("users", hubNotificationDetails.First().Collection);
-                Assert.Equal($"Replication Hub task '{taskName}'", hubNotificationDetails.First().Source);
+                Assert.Equal($"{taskName}", hubNotificationDetails.First().Source);
                 Assert.Equal(hubTombstonesCount, hubNotificationDetails.First().NumberOfTombstones);
+                Assert.Equal(hubCreationTaskId, hubNotificationDetails.First().BlockerTaskId);
+                Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub, hubNotificationDetails.First().BlockerType);
+                Assert.True(hubNotificationDetails.First().SizeOfTombstones > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {hubNotificationDetails.First().SizeOfTombstones}");
             }
         }
 
@@ -303,38 +320,39 @@ namespace SlowTests.Issues
                     Script = "loadToUsers(this)"
                 };
 
-                string expectedSource;
+                long taskId;
+                ITombstoneAware.TombstoneDeletionBlockerType blockerType;
                 switch (etlType)
                 {
                     case EtlType.Raven:
                         var ravenConnectionString = new RavenConnectionString { Name = store.Identifier, Database = store.Database, TopologyDiscoveryUrls = store.Urls };
                         var ravenConfiguration = new RavenEtlConfiguration { Name = _customTaskName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
-                        await AddEtlDisableItAndSetTaskName(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
-                        expectedSource = $"RavenDB ETL task '{_customTaskName}'";
+                        taskId = await AddEtlAndDisableIt(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl;
                         break;
                     case EtlType.Sql:
                         var sqlConnectionString = new SqlConnectionString { Name = store.Identifier, FactoryName = "System.Data.SqlClient", ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;" };
                         var sqlConfiguration = new SqlEtlConfiguration { Name = _customTaskName, ConnectionStringName = sqlConnectionString.Name, Transforms = { transforms }, SqlTables = { new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id" } } };
-                        await AddEtlDisableItAndSetTaskName(store, sqlConnectionString, sqlConfiguration, OngoingTaskType.SqlEtl);
-                        expectedSource = $"SQL ETL task '{_customTaskName}'";
+                        taskId = await AddEtlAndDisableIt(store, sqlConnectionString, sqlConfiguration, OngoingTaskType.SqlEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SqlEtl;
                         break;
                     case EtlType.Olap:
                         var olapConnectionString = new OlapConnectionString { Name = store.Identifier };
                         var olapConfiguration = new OlapEtlConfiguration { Name = _customTaskName, ConnectionStringName = olapConnectionString.Name, Transforms = { transforms } };
-                        await AddEtlDisableItAndSetTaskName(store, olapConnectionString, olapConfiguration, OngoingTaskType.OlapEtl);
-                        expectedSource = $"OLAP ETL task '{_customTaskName}'";
+                        taskId = await AddEtlAndDisableIt(store, olapConnectionString, olapConfiguration, OngoingTaskType.OlapEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.OlapEtl;
                         break;
                     case EtlType.ElasticSearch:
                         var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080"} };
                         var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = _customTaskName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
-                        await AddEtlDisableItAndSetTaskName(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
-                        expectedSource = $"ElasticSearch ETL task '{_customTaskName}'";
+                        taskId = await AddEtlAndDisableIt(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.ElasticSearchEtl;
                         break;
                     case EtlType.Queue:
                         var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
                         var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq};
-                        await AddEtlDisableItAndSetTaskName(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
-                        expectedSource = $"Queue ETL task '{_customTaskName}'";
+                        taskId = await AddEtlAndDisableIt(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(etlType), etlType, "New EtlType values detected");
@@ -359,17 +377,24 @@ namespace SlowTests.Issues
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
                 Assert.Equal("users", notificationDetails.First().Collection);
-                Assert.Equal(expectedSource, notificationDetails.First().Source);
+                Assert.Equal(_customTaskName, notificationDetails.First().Source);
+                Assert.Equal(taskId, notificationDetails.First().BlockerTaskId);
+                Assert.Equal(blockerType, notificationDetails.First().BlockerType);
+                Assert.True(notificationDetails.First().SizeOfTombstones > 0, 
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
+
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
             }
 
-            async Task AddEtlDisableItAndSetTaskName<T>(IDocumentStore store, T connectionString, EtlConfiguration<T> configuration, OngoingTaskType type) where T : ConnectionString
+            async Task<long> AddEtlAndDisableIt<T>(IDocumentStore store, T connectionString, EtlConfiguration<T> configuration, OngoingTaskType type) where T : ConnectionString
             {
                 var putResult = store.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
                 Assert.NotNull(putResult.RaftCommandIndex);
 
                 var addResult = store.Maintenance.Send(new AddEtlOperation<T>(configuration));
                 await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
+
+                return addResult.TaskId;
             }
         }
 
@@ -377,7 +402,6 @@ namespace SlowTests.Issues
         public async Task TombstoneCleaningAfterPeriodicBackupDisabled()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var backupTaskName = $"Backup {Guid.NewGuid()}";
 
             using (var store = GetDocumentStore())
             {
@@ -396,7 +420,7 @@ namespace SlowTests.Issues
                     backupPath: backupPath, 
                     backupType: BackupType.Backup, 
                     incrementalBackupFrequency: "0 0 1 1 *", 
-                    name: backupTaskName);
+                    name: _customTaskName);
 
                 config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
                 config.Disabled = true;
@@ -423,8 +447,12 @@ namespace SlowTests.Issues
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
                 Assert.Equal("users", notificationDetails.First().Collection);
-                Assert.Equal($"{config.BackupType} '{backupTaskName}'", notificationDetails.First().Source);
+                Assert.Equal(_customTaskName, notificationDetails.First().Source);
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
+                Assert.Equal(config.TaskId, notificationDetails.First().BlockerTaskId);
+                Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.Backup, notificationDetails.First().BlockerType);
+                Assert.True(notificationDetails.First().SizeOfTombstones > 0,
+                    $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstones}");
             }
         }
 

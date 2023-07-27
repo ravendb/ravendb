@@ -6,6 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
@@ -100,7 +101,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             };
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             throw new NotImplementedException();
         }
