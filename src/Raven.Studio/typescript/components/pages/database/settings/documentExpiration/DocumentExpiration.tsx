@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
-import { Card, CardBody, Col, Form, InputGroup, InputGroupText, Row } from "reactstrap";
+import { Card, CardBody, Col, Form, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { FormCheckbox, FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -17,18 +17,20 @@ import { LoadError } from "components/common/LoadError";
 import { todo } from "common/developmentHelper";
 import Code from "components/common/Code";
 import { NonShardedViewProps } from "components/models/common";
+import { useAsyncCallback } from "react-async-hook";
+import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 
 export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
 
-    // const asyncGetExpirationConfiguration = useAsyncCallback<DocumentExpirationFormData>(async () =>
-    //     mapToFormData(await databasesService.getExpirationConfiguration(db))
-    // );
+    const asyncGetExpirationConfiguration = useAsyncCallback<DocumentExpirationFormData>(async () =>
+        mapToFormData(await databasesService.getExpirationConfiguration(db))
+    );
 
     const { handleSubmit, control, formState, reset, setValue } = useForm<DocumentExpirationFormData>({
         resolver: documentExpirationYupResolver,
         mode: "all",
-        // defaultValues: asyncGetExpirationConfiguration.execute,
+        defaultValues: asyncGetExpirationConfiguration.execute,
     });
 
     useDirtyFlag(formState.isDirty);
@@ -37,16 +39,16 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { isAdminAccessOrAbove } = useAccessManager();
 
     useEffect(() => {
-        if (!formValues.isExpirationFrequencyEnabled && formValues.expirationFrequency !== null) {
-            setValue("expirationFrequency", null, { shouldValidate: true });
+        if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {
+            setValue("deleteFrequency", null, { shouldValidate: true });
         }
-        if (!formValues.isDocumentExpirationEnabled && formValues.isExpirationFrequencyEnabled) {
-            setValue("isExpirationFrequencyEnabled", false, { shouldValidate: true });
+        if (!formValues.isDocumentExpirationEnabled && formValues.isDeleteFrequencyEnabled) {
+            setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
         }
     }, [
         formValues.isDocumentExpirationEnabled,
-        formValues.isExpirationFrequencyEnabled,
-        formValues.expirationFrequency,
+        formValues.isDeleteFrequencyEnabled,
+        formValues.deleteFrequency,
         setValue,
     ]);
 
@@ -54,30 +56,30 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("expiration-configuration", "save");
 
-            // await databasesService.saveExpirationConfiguration(db, {
-            //     Disabled: !formData.isDocumentExpirationEnabled,
-            //     RefreshFrequencyInSec: formData.isExpirationFrequencyEnabled ? formData.expirationFrequency : null,
-            // });
+            await databasesService.saveExpirationConfiguration(db, {
+                Disabled: !formData.isDocumentExpirationEnabled,
+                DeleteFrequencyInSec: formData.isDeleteFrequencyEnabled ? formData.deleteFrequency : null,
+            });
 
-            // messagePublisher.reportSuccess("Expiration configuration saved successfully");
-            // db.hasExpirationConfiguration(formData.isDocumentExpirationEnabled);
+            messagePublisher.reportSuccess("Expiration configuration saved successfully");
+            db.hasExpirationConfiguration(formData.isDocumentExpirationEnabled);
 
             reset(formData);
         });
     };
 
-    // if (asyncGetExpirationConfiguration.status === "not-requested" || asyncGetExpirationConfiguration.status === "loading") {
-    //     return <LoadingView />;
-    // }
+    if (
+        asyncGetExpirationConfiguration.status === "not-requested" ||
+        asyncGetExpirationConfiguration.status === "loading"
+    ) {
+        return <LoadingView />;
+    }
 
-    // if (asyncGetExpirationConfiguration.status === "error") {
-    //     return <LoadError error="Unable to load document expiration" refresh={asyncGetExpirationConfiguration.execute} />;
-    // }
-
-    todo("Feature", "Damian", "Migrate logic");
-    todo("Feature", "Damian", "Connect view to studio");
-    todo("Feature", "Damian", "Remove old view");
-    todo("Feature", "Damian", "Render you do not have permission to this view");
+    if (asyncGetExpirationConfiguration.status === "error") {
+        return (
+            <LoadError error="Unable to load document expiration" refresh={asyncGetExpirationConfiguration.execute} />
+        );
+    }
 
     return (
         <div className="content-margin">
@@ -105,7 +107,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                             </FormSwitch>
                                             <div>
                                                 <FormSwitch
-                                                    name="isExpirationFrequencyEnabled"
+                                                    name="isDeleteFrequencyEnabled"
                                                     control={control}
                                                     className="mb-3"
                                                     disabled={
@@ -116,12 +118,11 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                                     Set custom expiration frequency
                                                 </FormSwitch>
                                                 <FormInput
-                                                    name="expirationFrequency"
+                                                    name="deleteFrequency"
                                                     control={control}
                                                     type="number"
                                                     disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isExpirationFrequencyEnabled
+                                                        formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
                                                     }
                                                     placeholder="Default (60)"
                                                     addonText="seconds"
@@ -170,21 +171,21 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     );
 }
 
-// function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFormData {
-//     if (!dto) {
-//         return {
-//             isDocumentExpirationEnabled: false,
-//             isExpirationFrequencyEnabled: false,
-//             expirationFrequency: null,
-//         };
-//     }
+function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFormData {
+    if (!dto) {
+        return {
+            isDocumentExpirationEnabled: false,
+            isDeleteFrequencyEnabled: false,
+            deleteFrequency: null,
+        };
+    }
 
-//     return {
-//         isDocumentExpirationEnabled: !dto.Disabled,
-//         isExpirationFrequencyEnabled: dto.DeleteFrequencyInSec != null,
-//         expirationFrequency: dto.DeleteFrequencyInSec,
-//     };
-// }
+    return {
+        isDocumentExpirationEnabled: !dto.Disabled,
+        isDeleteFrequencyEnabled: dto.DeleteFrequencyInSec != null,
+        deleteFrequency: dto.DeleteFrequencyInSec,
+    };
+}
 
 const codeExample = `{
     "Example": "Set a timestamp in the @expires metadata property",

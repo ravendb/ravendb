@@ -26,6 +26,9 @@ import killOperationCommand = require("commands/operations/killOperationCommand"
 import getRefreshConfigurationCommand = require("commands/database/documents/getRefreshConfigurationCommand");
 import saveRefreshConfigurationCommand = require("commands/database/documents/saveRefreshConfigurationCommand");
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
+import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
+import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -101,5 +104,13 @@ export default class DatabasesService {
 
     async saveRefreshConfiguration(db: database, dto: RefreshConfiguration) {
         return new saveRefreshConfigurationCommand(db, dto).execute();
+    }
+
+    async getExpirationConfiguration(db: database) {
+        return new getExpirationConfigurationCommand(db).execute();
+    }
+
+    async saveExpirationConfiguration(db: database, dto: ExpirationConfiguration) {
+        return new saveExpirationConfigurationCommand(db, dto).execute();
     }
 }
