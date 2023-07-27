@@ -174,15 +174,17 @@ namespace SlowTests.Sharding.Cluster
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(2, record.Sharding.Orchestrator.Topology.Members.Count);
 
-                var server = Servers.Single(x => record.Sharding.Orchestrator.Topology.Members.First() == x.ServerStore.NodeTag);
+                var server = Servers.First(x =>
+                    record.Sharding.Orchestrator.Topology.Members.Contains(x.ServerStore.NodeTag) && cluster.Leader.ServerStore.NodeTag != x.ServerStore.NodeTag);
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+                var upServer = Servers.First(x => x != server);
 
                 await AssertWaitForValueAsync(async () =>
                 {
-                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    record = await store.Maintenance.Server.ForNode(upServer.ServerStore.NodeTag).SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return record.Sharding.Orchestrator.Topology.Members.Count;
                 }, 1);
-                
+
                 var top = record.Sharding.Orchestrator.Topology;
                 Assert.Equal(2, top.ReplicationFactor);
                 Assert.Equal(1, top.Members.Count);
@@ -196,10 +198,10 @@ namespace SlowTests.Sharding.Cluster
                 //wait for dynamic node distribution to kick in and choose a different node
                 await AssertWaitForValueAsync(async () =>
                 {
-                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    record = await store.Maintenance.Server.ForNode(upServer.ServerStore.NodeTag).SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return record.Sharding.Orchestrator.Topology.Members.Count;
                 }, 2);
-
+                
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 top = record.Sharding.Orchestrator.Topology;
                 Assert.Equal(2, top.Members.Count);
