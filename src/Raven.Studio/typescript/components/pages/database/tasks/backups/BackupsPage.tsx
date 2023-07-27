@@ -9,7 +9,7 @@ import useInterval from "hooks/useInterval";
 import useTimeout from "hooks/useTimeout";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo } from "components/models/tasks";
-import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared";
+import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared/shared";
 import router from "plugins/router";
 import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
 import { loadableData } from "components/models/common";
@@ -22,7 +22,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import OngoingTaskToggleStateConfirm from "../ongoingTasks/OngoingTaskToggleStateConfirm";
+import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -264,9 +264,7 @@ export function BackupsPage(props: BackupsPageProps) {
 
     return (
         <div className="flex-grow-1 flex-stretch-items">
-            {operationConfirm && (
-                <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
-            )}
+            {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
 
             <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (

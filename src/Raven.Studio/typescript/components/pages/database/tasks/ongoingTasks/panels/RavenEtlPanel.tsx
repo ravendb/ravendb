@@ -17,10 +17,10 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-} from "../../shared";
+} from "../../shared/shared";
 import { useAppUrls } from "hooks/useAppUrls";
 import { OngoingTaskRavenEtlInfo } from "components/models/tasks";
-import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared";
+import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 

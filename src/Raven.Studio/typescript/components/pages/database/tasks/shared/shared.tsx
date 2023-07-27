@@ -4,12 +4,12 @@ import {
     OngoingEtlTaskNodeInfo,
     OngoingTaskInfo,
     OngoingTaskSharedInfo,
-} from "../../../models/tasks";
+} from "../../../../models/tasks";
 import useBoolean from "hooks/useBoolean";
 import React, { useCallback, useState } from "react";
 import router from "plugins/router";
-import { withPreventDefault } from "../../../utils/common";
-import { RichPanelDetailItem, RichPanelName } from "../../../common/RichPanel";
+import { withPreventDefault } from "../../../../utils/common";
+import { RichPanelDetailItem, RichPanelName } from "../../../../common/RichPanel";
 import {
     Button,
     ButtonGroup,
@@ -20,7 +20,7 @@ import {
     UncontrolledDropdown,
 } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import { OngoingTaskToggleStateConfirmOperationType } from "./ongoingTasks/OngoingTaskToggleStateConfirm";
+import { OngoingTaskOperationConfirmType } from "./OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
 import messagePublisher from "common/messagePublisher";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
@@ -33,10 +33,7 @@ export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     isSelected: (taskName: string) => boolean;
     toggleSelection: (checked: boolean, taskName: OngoingTaskSharedInfo) => void;
     onToggleDetails?: (newState: boolean) => void;
-    onTaskOperation: (
-        type: OngoingTaskToggleStateConfirmOperationType,
-        taskSharedInfos: OngoingTaskSharedInfo[]
-    ) => void;
+    onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: (taskName: string) => boolean;
     isTogglingState: (taskName: string) => boolean;
 }
@@ -124,10 +121,7 @@ export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean
 interface OngoingTaskStatusProps {
     task: OngoingTaskInfo;
     canEdit: boolean;
-    onTaskOperation: (
-        type: OngoingTaskToggleStateConfirmOperationType,
-        taskSharedInfos: OngoingTaskSharedInfo[]
-    ) => void;
+    onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isTogglingState: boolean;
 }
 
@@ -160,10 +154,7 @@ interface OngoingTaskActionsProps {
     task: OngoingTaskInfo;
     toggleDetails: () => void;
     onEdit: () => void;
-    onTaskOperation: (
-        type: OngoingTaskToggleStateConfirmOperationType,
-        taskSharedInfos: OngoingTaskSharedInfo[]
-    ) => void;
+    onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: boolean;
 }
 
@@ -273,7 +264,7 @@ export function taskKey(task: OngoingTaskSharedInfo) {
 }
 
 interface OperationConfirm {
-    type: OngoingTaskToggleStateConfirmOperationType;
+    type: OngoingTaskOperationConfirmType;
     onConfirm: () => void;
     taskSharedInfos: OngoingTaskSharedInfo[];
 }
@@ -333,10 +324,7 @@ export function useOngoingTasksOperations(database: database, reload: () => void
         }
     };
 
-    const onTaskOperation = (
-        type: OngoingTaskToggleStateConfirmOperationType,
-        taskSharedInfos: OngoingTaskSharedInfo[]
-    ) => {
+    const onTaskOperation = (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => {
         switch (type) {
             case "enable": {
                 setOperationConfirm({

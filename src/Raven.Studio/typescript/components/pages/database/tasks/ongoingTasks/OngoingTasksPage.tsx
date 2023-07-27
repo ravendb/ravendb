@@ -31,7 +31,7 @@ import { ReplicationSinkPanel } from "./panels/ReplicationSinkPanel";
 import { ReplicationHubDefinitionPanel } from "./panels/ReplicationHubDefinitionPanel";
 import useBoolean from "hooks/useBoolean";
 import { OngoingTaskProgressProvider } from "./OngoingTaskProgressProvider";
-import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared";
+import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared/shared";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import "./OngoingTaskPage.scss";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
@@ -48,7 +48,7 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import { InputItem } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
-import OngoingTaskToggleStateConfirm from "./OngoingTaskToggleStateConfirm";
+import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { StickyHeader } from "components/common/StickyHeader";
 
 interface OngoingTasksPageProps {
@@ -242,12 +242,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
     };
 
+    // TODO kalczur fix selected count after removing task
+
     return (
         <div>
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
-            {operationConfirm && (
-                <OngoingTaskToggleStateConfirm {...operationConfirm} toggle={cancelOperationConfirm} />
-            )}
+            {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <Row>
                     <Col sm="auto" className="align-self-center">

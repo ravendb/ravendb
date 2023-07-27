@@ -9,7 +9,7 @@ import {
     RichPanelHeader,
     RichPanelInfo,
 } from "components/common/RichPanel";
-import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared";
+import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
 
 interface ReplicationHubConnectedSinkPanelProps {
     db: database;
