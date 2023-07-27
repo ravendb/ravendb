@@ -167,10 +167,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const [selectedTaskNames, setSelectedTaskNames] = useState<string[]>(filteredDatabaseTaskNames);
 
     useEffect(() => {
-        setSelectedTaskNames((selectedNames) =>
-            selectedNames.filter((name) => filteredDatabaseTaskNames.includes(name))
-        );
-    }, [filteredDatabaseTaskNames]);
+        const updatedSelectedTaskNames = selectedTaskNames.filter((name) => filteredDatabaseTaskNames.includes(name));
+
+        if (!_.isEqual(updatedSelectedTaskNames, selectedTaskNames)) {
+            setSelectedTaskNames(updatedSelectedTaskNames);
+        }
+    }, [filteredDatabaseTaskNames, selectedTaskNames]);
 
     const allTasksCount =
         tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +

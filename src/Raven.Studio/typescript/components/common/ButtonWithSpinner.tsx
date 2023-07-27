@@ -7,10 +7,13 @@ import classNames from "classnames";
 interface ButtonWithSpinnerProps extends ButtonProps {
     isSpinning: boolean;
     icon?: IconName | IconProps;
+    spinnerMargin?: string;
 }
 
 export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
     const { isSpinning, icon, className, children, size, disabled, ...rest } = props;
+
+    const spinnerMargin = props.spinnerMargin ?? "me-1";
 
     let IconElement: JSX.Element = null;
 
@@ -25,7 +28,7 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
             {...rest}
             disabled={disabled || isSpinning}
         >
-            {isSpinning ? <Spinner size="sm" className="me-1" /> : IconElement}
+            {isSpinning ? <Spinner size="sm" className={spinnerMargin} /> : IconElement}
             {children}
         </Button>
     );

@@ -137,11 +137,11 @@ export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
                 {isTogglingState && <Spinner size="sm" />} {task.shared.taskState}
             </DropdownToggle>
             <DropdownMenu>
-                <DropdownItem onClick={withPreventDefault(() => onTaskOperation("enable", [task.shared]))}>
-                    <Icon icon="play" /> Enable
+                <DropdownItem onClick={() => onTaskOperation("enable", [task.shared])}>
+                    <Icon icon="play" color="success" /> Enable
                 </DropdownItem>
-                <DropdownItem onClick={withPreventDefault(() => onTaskOperation("disable", [task.shared]))}>
-                    <Icon icon="stop" />
+                <DropdownItem onClick={() => onTaskOperation("disable", [task.shared])}>
+                    <Icon icon="stop" color="danger" />
                     Disable
                 </DropdownItem>
             </DropdownMenu>
@@ -179,6 +179,7 @@ export function OngoingTaskActions(props: OngoingTaskActionsProps) {
                         isSpinning={isDeleting}
                         onClick={() => onTaskOperation("delete", [task.shared])}
                         title="Delete task"
+                        spinnerMargin="m-0"
                         icon={{
                             icon: "trash",
                             margin: "m-0",
@@ -362,6 +363,6 @@ export function useOngoingTasksOperations(database: database, reload: () => void
         isDeleting: (taskName: string) => deletingTaskNames.includes(taskName),
         isTogglingState: (taskName: string) => togglingTaskNames.includes(taskName),
         isDeletingAny: deletingTaskNames.length > 0,
-        isTogglingStateAny: deletingTaskNames.length > 0,
+        isTogglingStateAny: togglingTaskNames.length > 0,
     };
 }

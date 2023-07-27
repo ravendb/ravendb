@@ -1,5 +1,5 @@
-import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 
 class ongoingTasks extends shardViewModelBase {
     view = {
