@@ -392,7 +392,8 @@ namespace Raven.Client.Http
                         new ServerNode
                         {
                             Database = databaseName,
-                            Url = url
+                            Url = url,
+                            ServerRole = ServerNode.Role.Member
                         }
                     }
                 }),
@@ -404,13 +405,16 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        internal static RequestExecutor CreateForFixedTopology(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        internal static RequestExecutor CreateForFixedTopologyForShortTermUse(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            // This request executor doesn't call SingleTopologyUpdate so it won't attempt to reach the server of the url before it knows our certificate
+            // It's topology will also not have cluster tags populated so it cannot be used long term for operations with SelectedNodeTag
             var urls = ValidateUrls(initialUrls, certificate);
             var nodes = urls.Select(u => new ServerNode
             {
                 Database = databaseName,
-                Url = u
+                Url = u,
+                ServerRole = ServerNode.Role.Member
             }).ToList();
             var executor = new RequestExecutor(databaseName, certificate, conventions, urls)
             {
@@ -423,7 +427,7 @@ namespace Raven.Client.Http
                 _disableTopologyUpdates = true,
                 _disableClientConfigurationUpdates = true
             };
-            executor._firstTopologyUpdate = executor.SingleTopologyUpdateAsync(initialUrls, GlobalApplicationIdentifier);
+            executor._firstTopologyUpdate = Task.CompletedTask;
             return executor;
         }
 
@@ -720,11 +724,11 @@ namespace Raven.Client.Http
                 {
                     using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        var command = new GetClusterTopologyCommand("single-topology-update");
+                        var command = new GetNodeInfoCommand(GlobalHttpClientTimeout);
                         await ExecuteAsync(serverNode, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None)
                             .ConfigureAwait(false);
                         serverNode.ClusterTag = command.Result.NodeTag;
-                        serverNode.ServerRole = ServerNode.Role.Member;
+                        serverNode.ServerRole = command.Result.ServerRole;
                     }
                 }
                 catch (AuthorizationException)

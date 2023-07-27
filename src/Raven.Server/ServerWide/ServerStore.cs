@@ -2924,10 +2924,11 @@ namespace Raven.Server.ServerWide
         public NodeInfo GetNodeInfo()
         {
             var memoryInformation = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
+            var clusterTopology = GetClusterTopology();
             return new NodeInfo
             {
                 NodeTag = NodeTag,
-                TopologyId = GetClusterTopology().TopologyId,
+                TopologyId = clusterTopology.TopologyId,
                 Certificate = Server.Certificate.CertificateForClients,
                 NumberOfCores = ProcessorInfo.ProcessorCount,
                 InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
@@ -2936,6 +2937,7 @@ namespace Raven.Server.ServerWide
                 OsInfo = LicenseManager.OsInfo,
                 ServerId = GetServerId(),
                 CurrentState = CurrentRachisState,
+                ServerRole = clusterTopology.GetServerRoleForTag(NodeTag),
                 HasFixedPort = HasFixedPort,
                 ServerSchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion
             };
