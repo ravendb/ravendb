@@ -6,6 +6,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Processor;
+using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -32,7 +33,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
     protected override SubscriptionFetcher<Document> CreateFetcher()
     {
         _sharding = _database.ShardingConfiguration;
-        return base.CreateFetcher();
+        return new ShardDocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
     }
 
     protected override ConflictStatus GetConflictStatus(string changeVector)
