@@ -1,6 +1,5 @@
 import React from "react";
 import genUtils from "common/generalUtils";
-import { useAccessManager } from "components/hooks/useAccessManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
@@ -27,6 +26,10 @@ interface OngoingTaskSelectActionsProps {
 
 export default function OngoingTaskSelectActions(props: OngoingTaskSelectActionsProps) {
     const { allTasks, selectedTasks, setSelectedTasks, onTaskOperation, isTogglingState, isDeleting } = props;
+
+    if (allTasks.length === 0) {
+        return null;
+    }
 
     const anythingSelected = selectedTasks.length > 0;
     const selectionState = genUtils.getSelectionState(allTasks, selectedTasks);
