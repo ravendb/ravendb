@@ -15,10 +15,10 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-} from "../../shared";
+} from "../../shared/shared";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared";
+import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import genUtils from "common/generalUtils";
 import { Collapse, Input } from "reactstrap";
 

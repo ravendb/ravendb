@@ -13,13 +13,13 @@ import {
     DropdownItem,
     Button,
 } from "reactstrap";
-import { OngoingTaskToggleStateConfirmOperationType } from "./OngoingTaskToggleStateConfirm";
+import { OngoingTaskOperationConfirmType } from "../shared/OngoingTaskOperationConfirm";
 
 interface OngoingTaskSelectActionsProps {
     allTasks: string[];
     selectedTasks: string[];
     setSelectedTasks: (x: string[]) => void;
-    onTaskOperation: (x: OngoingTaskToggleStateConfirmOperationType) => void;
+    onTaskOperation: (x: OngoingTaskOperationConfirmType) => void;
     isTogglingState: boolean;
     isDeleting: boolean;
 }

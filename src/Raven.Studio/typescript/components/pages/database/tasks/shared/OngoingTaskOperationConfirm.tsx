@@ -8,7 +8,7 @@ import classNames = require("classnames");
 import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 
-export type OngoingTaskToggleStateConfirmOperationType = "enable" | "disable" | "delete";
+export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
 type DestinationStatus = Exclude<OngoingTaskState, "None" | "PartiallyEnabled"> | "Removed";
 
@@ -29,14 +29,14 @@ interface AffectedTasksGrouped {
     skipping?: AffectedTasksInfo[];
 }
 
-interface OngoingTaskToggleStateConfirmProps {
-    type: OngoingTaskToggleStateConfirmOperationType;
+interface OngoingTaskOperationConfirmProps {
+    type: OngoingTaskOperationConfirmType;
     taskSharedInfos: OngoingTaskSharedInfo[];
     toggle: () => void;
     onConfirm: () => void;
 }
 
-export default function OngoingTaskToggleStateConfirm(props: OngoingTaskToggleStateConfirmProps) {
+export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationConfirmProps) {
     const { type, taskSharedInfos, toggle, onConfirm } = props;
 
     const taskGroups = getTaskGroups(type, taskSharedInfos).filter((x) => x.tasks.length > 0);
@@ -119,11 +119,11 @@ export default function OngoingTaskToggleStateConfirm(props: OngoingTaskToggleSt
     );
 }
 
-function getInfinitiveForType(type: OngoingTaskToggleStateConfirmOperationType) {
+function getInfinitiveForType(type: OngoingTaskOperationConfirmType) {
     return capitalize(type);
 }
 
-function getTypeColor(type: OngoingTaskToggleStateConfirmOperationType): string {
+function getTypeColor(type: OngoingTaskOperationConfirmType): string {
     switch (type) {
         case "enable":
             return "success";
@@ -135,7 +135,7 @@ function getTypeColor(type: OngoingTaskToggleStateConfirmOperationType): string 
     }
 }
 
-function getTypeIcon(type: OngoingTaskToggleStateConfirmOperationType): IconName {
+function getTypeIcon(type: OngoingTaskOperationConfirmType): IconName {
     switch (type) {
         case "enable":
             return "start";
@@ -173,7 +173,7 @@ function getStatusIcon(status: OngoingTaskState | DestinationStatus): IconName {
     }
 }
 
-function getTaskGroups(type: OngoingTaskToggleStateConfirmOperationType, tasks: OngoingTaskSharedInfo[]): TaskGroup[] {
+function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTaskSharedInfo[]): TaskGroup[] {
     switch (type) {
         case "enable": {
             const affectedTaskGrouped = tasks.reduce(

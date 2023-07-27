@@ -5,7 +5,7 @@ import {
     OngoingTaskName,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../../shared";
+} from "../../shared/shared";
 import { OngoingTaskHubDefinitionInfo, OngoingTaskReplicationHubInfo } from "components/models/tasks";
 import {
     RichPanel,
