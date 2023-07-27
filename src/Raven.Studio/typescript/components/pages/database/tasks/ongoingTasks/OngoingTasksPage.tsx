@@ -166,6 +166,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const [selectedTaskNames, setSelectedTaskNames] = useState<string[]>(filteredDatabaseTaskNames);
 
+    useEffect(() => {
+        setSelectedTaskNames((selectedNames) =>
+            selectedNames.filter((name) => filteredDatabaseTaskNames.includes(name))
+        );
+    }, [filteredDatabaseTaskNames]);
+
     const allTasksCount =
         tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +
         tasks.replicationHubs.length +
@@ -241,8 +247,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isTogglingState,
         isDeleting,
     };
-
-    // TODO kalczur fix selected count after removing task
 
     return (
         <div>
