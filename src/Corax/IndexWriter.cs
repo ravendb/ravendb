@@ -1498,7 +1498,7 @@ namespace Corax
                 list.Sort();
 
                 ref var entryTerms = ref GetEntryTerms(entry);
-                foreach (var item in list)
+                foreach (var item in CollectionsMarshal.AsSpan(list))
                 {
                     var (lat,lng) = item;
                     entryTerms.Add(new RecordedTerm

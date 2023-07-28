@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     foreach (var groupByField in groupByFields.Values)
                     {
-                        if (!groupByField.IsMatch(prop.Name)) 
+                        if (groupByField.IsMatch(prop.Name) == false) 
                             continue;
 
                         getMethod.GroupByField = groupByField;
