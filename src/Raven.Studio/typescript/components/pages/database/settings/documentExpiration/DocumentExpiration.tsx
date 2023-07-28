@@ -9,12 +9,10 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { tryHandleSubmit } from "components/utils/common";
 import { DocumentExpirationFormData, documentExpirationYupResolver } from "./DocumentExpirationValidation";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
-import { useAccessManager } from "components/hooks/useAccessManager";
 import { useServices } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import { todo } from "common/developmentHelper";
 import Code from "components/common/Code";
 import { NonShardedViewProps } from "components/models/common";
 import { useAsyncCallback } from "react-async-hook";
@@ -36,7 +34,6 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
-    const { isAdminAccessOrAbove } = useAccessManager();
 
     useEffect(() => {
         if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {
@@ -93,7 +90,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={!formState.isDirty || !isAdminAccessOrAbove}
+                                disabled={!formState.isDirty}
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
