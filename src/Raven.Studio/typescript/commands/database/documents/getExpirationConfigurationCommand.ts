@@ -4,8 +4,11 @@ import endpoints = require("endpoints");
 
 class getExpirationConfigurationCommand extends commandBase {
 
-    constructor(private db: database) {
+    private readonly db: database;
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration> {
