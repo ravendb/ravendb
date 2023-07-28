@@ -21,7 +21,8 @@ public static class MemoryUtils
             TryAppend(() => sb.Append("Dirty memory: ").Append(memoryInfo.TotalScratchDirtyMemory).Append(", "));
             TryAppend(() => sb.Append("Managed memory: ").Append(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)).Append(", "));
             TryAppend(() => sb.Append("Unmanaged allocations: ").Append(new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)).Append(", "));
-            TryAppend(() => sb.Append("Lucene unmanaged allocations: ").Append(new Size(NativeMemory.TotalAllocatedMemoryByLucene, SizeUnit.Bytes)));
+            TryAppend(() => sb.Append("Lucene managed allocations for term cache: ").Append(new Size(NativeMemory.TotalLuceneManagedAllocationsForTermCache, SizeUnit.Bytes)));
+            TryAppend(() => sb.Append("Lucene unmanaged allocations for sorting: ").Append(new Size(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting, SizeUnit.Bytes)));
 
             try
             {

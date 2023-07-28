@@ -37,10 +37,12 @@ namespace Sparrow.Utils
         }
 
         internal static long _totalAllocatedMemory;
-        internal static long _totalAllocatedMemoryByLucene;
+        private static long _totalLuceneManagedAllocationsForTermCache;
+        private static long _totalLuceneUnmanagedAllocationsForSorting;
 
         public static long TotalAllocatedMemory => _totalAllocatedMemory;
-        public static long TotalAllocatedMemoryByLucene => _totalAllocatedMemoryByLucene;
+        public static long TotalLuceneManagedAllocationsForTermCache => _totalLuceneManagedAllocationsForTermCache;
+        public static long TotalLuceneUnmanagedAllocationsForSorting => _totalLuceneUnmanagedAllocationsForSorting;
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
 
@@ -123,22 +125,9 @@ namespace Sparrow.Utils
             Free(ptr, size, ThreadAllocations.Value);
         }
 
-        public static void FreeMemoryByLucene(byte* ptr, long size)
-        {
-            Interlocked.Add(ref _totalAllocatedMemoryByLucene, -size);
-            Free(ptr, size, ThreadAllocations.Value);
-        }
-
         public static byte* AllocateMemory(long size)
         {
             ThreadStats _;
-            return AllocateMemory(size, out _);
-        }
-
-        public static byte* AllocateMemoryByLucene(long size)
-        {
-            ThreadStats _;
-            Interlocked.Add(ref _totalAllocatedMemoryByLucene, size);
             return AllocateMemory(size, out _);
         }
 
@@ -164,6 +153,29 @@ namespace Sparrow.Utils
             {
                 return ThrowFailedToAllocate(size, thread, e);
             }
+        }
+
+        public static void IncrementLuceneManagedAllocations(long size)
+        {
+            Interlocked.Add(ref _totalLuceneManagedAllocationsForTermCache, size);
+        }
+
+        public static void DecrementLuceneManagedAllocations(long size)
+        {
+            Interlocked.Add(ref _totalLuceneManagedAllocationsForTermCache, -size);
+        }
+
+        public static byte* AllocateMemoryByLucene(long size)
+        {
+            ThreadStats _;
+            Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForSorting, size);
+            return AllocateMemory(size, out _);
+        }
+
+        public static void FreeMemoryByLucene(byte* ptr, long size)
+        {
+            Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForSorting, -size);
+            Free(ptr, size, ThreadAllocations.Value);
         }
 
         private static byte* ThrowFailedToAllocate(long size, ThreadStats thread, OutOfMemoryException e)

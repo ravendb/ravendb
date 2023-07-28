@@ -5,13 +5,12 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public abstract class EtlConfiguration<T> : IDynamicJsonValueConvertible, IDatabaseTask, ITombstoneDeletionBlocker where T : ConnectionString
+    public abstract class EtlConfiguration<T> : IDynamicJsonValueConvertible, IDatabaseTask where T : ConnectionString
     {
         private bool _initialized;
 
@@ -42,9 +41,7 @@ namespace Raven.Client.Documents.Operations.ETL
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
 
         public bool Disabled { get; set; }
-
-        public abstract string BlockingSourceName { get; }
-
+        
         public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
             if (validateConnection && _initialized == false)

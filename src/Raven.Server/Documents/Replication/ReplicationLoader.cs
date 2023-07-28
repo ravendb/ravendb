@@ -29,6 +29,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -1756,19 +1757,41 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
-            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
+                foreach (var _ in Destinations.Where(config => config.Disabled))
+                {
+                    var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication);
+                    dict[source] = tombstoneCollections;
+                }
+                
                 var rawDatabase = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name);
-                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, Destinations, tombstoneCollections);
-                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.ExternalReplications, tombstoneCollections);
-                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.HubPullReplications, tombstoneCollections);
-                TombstoneCleaner.AssignTombstonesToDisabledConfigs(dict, rawDatabase?.SinkPullReplications, tombstoneCollections);
-                        }
+                if (rawDatabase == null)
+                    return dict;
+
+                foreach (var config in rawDatabase.ExternalReplications.Where(config => config.Disabled))
+                {
+                    var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication, config.Name, config.TaskId);
+                    dict[source] = tombstoneCollections;
+                }
+
+                foreach (var config in rawDatabase.HubPullReplications.Where(config => config.Disabled))
+                {
+                    var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub, config.Name, config.TaskId);
+                    dict[source] = tombstoneCollections;
+                }
+
+                foreach (var config in rawDatabase.SinkPullReplications.Where(config => config.Disabled))
+                {
+                    var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink, config.Name, config.TaskId);
+                    dict[source] = tombstoneCollections;
+                }
+            }
 
             return dict;
         }
