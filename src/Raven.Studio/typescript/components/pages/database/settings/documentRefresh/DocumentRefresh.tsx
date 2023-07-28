@@ -10,7 +10,6 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { tryHandleSubmit } from "components/utils/common";
 import { DocumentRefreshFormData, documentRefreshYupResolver } from "./DocumentRefreshValidation";
 import Code from "components/common/Code";
-import { todo } from "common/developmentHelper";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { NonShardedViewProps } from "components/models/common";
@@ -74,8 +73,6 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     if (asyncGetRefreshConfiguration.status === "error") {
         return <LoadError error="Unable to load document refresh" refresh={asyncGetRefreshConfiguration.execute} />;
     }
-
-    todo("Feature", "Damian", "Render you do not have permission to this view");
 
     return (
         <div className="content-margin">

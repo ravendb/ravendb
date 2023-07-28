@@ -18,11 +18,8 @@ import { studioEnvironmentOptions } from "components/common/studioConfiguration/
 import { useServices } from "components/hooks/useServices";
 import appUrl from "common/appUrl";
 import { NonShardedViewProps } from "components/models/common";
-import { useAccessManager } from "components/hooks/useAccessManager";
-import { todo } from "common/developmentHelper";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
-    const { isAdminAccessOrAbove } = useAccessManager();
     const { databasesService } = useServices();
 
     const asyncDatabaseSettings = useAsyncCallback<StudioDatabaseConfigurationFormData>(async () => {
@@ -65,8 +62,6 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
         return <LoadError error="Unable to load studio configuration" refresh={onRefresh} />;
     }
 
-    todo("Feature", "Damian", "Render you do not have permission to this view");
-
     return (
         <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
             <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
@@ -76,7 +71,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                         color="primary"
                         className="mb-3"
                         icon="save"
-                        disabled={!formState.isDirty || !isAdminAccessOrAbove(db)}
+                        disabled={!formState.isDirty}
                         isSpinning={formState.isSubmitting}
                     >
                         Save

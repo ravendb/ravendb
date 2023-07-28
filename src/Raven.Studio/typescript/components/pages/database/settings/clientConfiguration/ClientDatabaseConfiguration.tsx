@@ -83,8 +83,6 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const canEditDatabaseConfig = formValues.overrideConfig || !globalConfig;
 
-    todo("Feature", "Damian", "Render you do not have permission to this view");
-
     return (
         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
             <div className="content-margin">
