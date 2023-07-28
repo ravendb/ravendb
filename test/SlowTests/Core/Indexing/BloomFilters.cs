@@ -38,7 +38,7 @@ namespace SlowTests.Core.Indexing
                             Age = 37
                         }, i.ToString());
                     }
-                    
+
                     await session.SaveChangesAsync();
                 }
 
@@ -78,6 +78,8 @@ namespace SlowTests.Core.Indexing
 
                     await session.SaveChangesAsync();
                 }
+
+                Indexes.WaitForIndexing(store);
 
                 using (var context = new TransactionOperationContext(index._environment, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
                 {
@@ -144,10 +146,10 @@ namespace SlowTests.Core.Indexing
             {
                 Map = users => from user in users
                                where user.Age != 37
-                                select new
-                                {
-                                    user.Age
-                                };
+                               select new
+                               {
+                                   user.Age
+                               };
             }
         }
     }

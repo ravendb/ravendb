@@ -12,6 +12,8 @@ interface WarningItem {
     source: string;
     collection: string;
     count: number;
+    type: string;
+    size: number;
 }
 
 class blockingTombstonesDetails extends abstractAlertDetails {
@@ -26,12 +28,14 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         super(alert, notificationCenter);
 
         const warning = this.alert.details() as any;
-        const detailsList = warning.BlockingTombstones as Raven.Server.NotificationCenter.TombstoneNotifications.BlockingTombstoneDetails[];
+        const detailsList = warning.BlockingTombstones as Raven.Server.NotificationCenter.BlockingTombstoneDetails[];
         
         this.tableItems = detailsList.map(x => ({
+            type: x.BlockerType,
             source: x.Source,
             collection: x.Collection,
-            count: x.NumberOfTombstones
+            count: x.NumberOfTombstones,
+            size: x.SizeOfTombstonesInBytes
         }));
     }
     
@@ -42,15 +46,22 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         grid.headerVisible(true);
 
         grid.init(() => this.fetcher(), () => {
-            const sourceColumn = new textColumn<WarningItem>(grid, x => x.source, "Source", "35%", {
+            const typeColumn = new textColumn<WarningItem>(grid, x => x.type, "Type", "15%", {
+                sortable: x => x.type
+            });
+            const sourceColumn = new textColumn<WarningItem>(grid, x => x.source, "Source", "20%", {
                 sortable: x => x.source
             });
-            const collectionColumn = new textColumn<WarningItem>(grid, x => x.collection, "Collection", "40%", {
+            const collectionColumn = new textColumn<WarningItem>(grid, x => x.collection, "Collection", "20%", {
                 sortable: x => x.collection
             });
-            const countColumn = new textColumn<WarningItem>(grid, x => x.count, "Tombstones count", "25%");
+            const countColumn = new textColumn<WarningItem>(grid, x => x.count, "Tombstones count", "20%");
+            const sizeColumn = new textColumn<WarningItem>(grid, x => x.size, "Size", "20%", {
+                sortable: x => x.size,
+                transformValue: genUtils.formatBytesToSize
+            });
 
-            return [sourceColumn, collectionColumn, countColumn];
+            return [typeColumn, sourceColumn, collectionColumn, countColumn, sizeColumn];
         });
         
         

@@ -1292,7 +1292,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        private Table GetTombstoneTableForCollection(DocumentsOperationContext context, string collection)
         {
             string tableName;
 
@@ -1305,16 +1305,25 @@ namespace Raven.Server.Documents
             {
                 var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
-                    return 0;
+                    return null;
 
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
-            if (table == null)
-                return 0;
+            return table;
+        }
 
-            return table.NumberOfEntries;
+        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        {
+            var table = GetTombstoneTableForCollection(context, collection);
+            return table?.NumberOfEntries ?? 0;
+        }
+
+        public long TombstonesSizeForCollectionInBytes(DocumentsOperationContext context, string collection)
+        {
+            var table = GetTombstoneTableForCollection(context, collection);
+            return table?.GetReport(includeDetails: false).AllocatedSpaceInBytes ?? 0;
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(
@@ -1711,7 +1720,7 @@ namespace Raven.Server.Documents
                 var doc = local.Document;
                 if (expectedChangeVector != null && ChangeVector.CompareVersion(doc.ChangeVector, expectedChangeVector, context) != 0)
                     ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
-                
+
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
@@ -1846,7 +1855,7 @@ namespace Raven.Server.Documents
                                            "Optimistic concurrency violation, transaction will be aborted.")
             {
                 Id = id,
-                ActualChangeVector = actual, 
+                ActualChangeVector = actual,
                 ExpectedChangeVector = expected
             };
         }
@@ -2616,7 +2625,7 @@ namespace Raven.Server.Documents
             context.LastDatabaseChangeVector = clone.Order;
             return true;
         }
-        
+
         private ChangeVector SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, ChangeVector oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
@@ -2630,7 +2639,7 @@ namespace Raven.Server.Documents
 
         public DocumentFlags GetFlagsFromOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return newFlags;
 
             newFlags = newFlags.Strip(DocumentFlags.FromReplication);

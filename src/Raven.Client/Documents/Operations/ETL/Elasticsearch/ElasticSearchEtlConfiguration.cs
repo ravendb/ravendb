@@ -23,8 +23,6 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
         public override EtlType EtlType => EtlType.ElasticSearch;
 
-        public override string BlockingSourceName => $"ElasticSearch ETL task '{Name}'";
-
         public override bool UsingEncryptedCommunicationChannel()
         {
             foreach (var url in Connection.Nodes)

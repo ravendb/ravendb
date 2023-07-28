@@ -349,7 +349,6 @@ export class TasksStubs {
             Name: "hub1",
             WithFiltering: false,
             PinToMentorNode: false,
-            BlockingSourceName: null,
         };
     }
 

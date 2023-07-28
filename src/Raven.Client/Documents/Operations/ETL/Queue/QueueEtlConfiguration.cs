@@ -35,8 +35,6 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         }
 
         public override EtlType EtlType => EtlType.Queue;
-
-        public override string BlockingSourceName => $"Queue ETL task '{Name}'";
         
         public override bool UsingEncryptedCommunicationChannel()
         {

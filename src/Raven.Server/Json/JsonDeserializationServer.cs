@@ -69,6 +69,7 @@ using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
+using Raven.Server.NotificationCenter;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
@@ -267,6 +268,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestIndexParameters> TestIndexParameters = GenerateJsonDeserializationRoutine<TestIndexParameters>();
         
         internal static readonly Func<BlittableJsonReaderObject, AutoSpatialOptions> AutoSpatialOptions = GenerateJsonDeserializationRoutine<AutoSpatialOptions>();
+
+        public static readonly Func<BlittableJsonReaderObject, BlockingTombstoneDetails> BlockingTombstoneDetails = GenerateJsonDeserializationRoutine<BlockingTombstoneDetails>();
 
         public static readonly Func<BlittableJsonReaderObject, WaitForIndexNotificationRequest> WaitForIndexNotificationRequest = GenerateJsonDeserializationRoutine<WaitForIndexNotificationRequest>();
 

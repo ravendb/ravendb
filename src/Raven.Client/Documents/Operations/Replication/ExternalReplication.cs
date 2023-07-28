@@ -1,11 +1,10 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class ExternalReplication : ExternalReplicationBase, IExternalReplication, ITombstoneDeletionBlocker
+    public class ExternalReplication : ExternalReplicationBase, IExternalReplication
     {
         public ExternalReplication()
         {
