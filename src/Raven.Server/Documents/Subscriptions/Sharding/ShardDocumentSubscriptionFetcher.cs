@@ -14,18 +14,17 @@ public class ShardDocumentSubscriptionFetcher : DocumentSubscriptionFetcher
         var records = new SortedDictionary<long, Document>();
         foreach (var document in base.FetchFromResend())
         {
-            var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, document.Id, throwOnConflict: false);
-            using (current.Document)
-            using (current.Tombstone)
+            var current = Database.DocumentsStorage.Get(DocsContext, document.Id, fields: DocumentFields.Default, throwOnConflict: false);
+            using (current)
             {
-                if (current.Missing || current.Document == null)
+                if (current == null)
                 {
                     document.Dispose();
                     // items from another shard or might be already deleted
                     continue;
                 }
 
-                records.Add(current.Document.Etag, document);
+                records.Add(current.Etag, document);
             }
         }
 

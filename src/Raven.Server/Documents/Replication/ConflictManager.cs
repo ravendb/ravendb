@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -82,7 +81,7 @@ namespace Raven.Server.Documents.Replication
                         };
                         conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
 
-                        var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
+                        var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, throwOnConflict: false);
                         var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
                         if (local != null)
                             conflicts.Add(local);
@@ -113,7 +112,7 @@ namespace Raven.Server.Documents.Replication
             }
             if (existing.Tombstone != null)
             {
-                if (string.Equals(existing.Tombstone.Collection,collection, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(existing.Tombstone.Collection, collection, StringComparison.OrdinalIgnoreCase))
                     return true;
                 if (existing.Tombstone.Collection == null)
                     return string.Equals(collection, Client.Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase);
@@ -178,8 +177,8 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                 _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, incoming: conflict);
-                 return true;
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, incoming: conflict);
+                return true;
             }
 
             return false;
@@ -262,7 +261,7 @@ namespace Raven.Server.Documents.Replication
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
 
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector,
-                    flags: existingDoc.Flags | DocumentFlags.Resolved, 
+                    flags: existingDoc.Flags | DocumentFlags.Resolved,
                     nonPersistentFlags: nonPersistentFlags);
                 return true;
             }

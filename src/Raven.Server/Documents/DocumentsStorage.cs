@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, string id, bool throwOnConflict = true)
+        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return GetDocumentOrTombstone(context, lowerId, throwOnConflict);
+                return GetDocumentOrTombstone(context, lowerId, fields, throwOnConflict);
             }
         }
 
@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents
             public bool Missing => Document == null && Tombstone == null;
         }
 
-        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true)
+        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
             {
@@ -1042,7 +1042,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var doc = Get(context, lowerId);
+                var doc = Get(context, lowerId, fields);
                 if (doc != null)
                     return new DocumentOrTombstone { Document = doc };
             }
