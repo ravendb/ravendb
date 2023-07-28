@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, string id, bool throwOnConflict = true)
+        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return GetDocumentOrTombstone(context, lowerId, throwOnConflict);
+                return GetDocumentOrTombstone(context, lowerId, fields, throwOnConflict);
             }
         }
 
@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents
             public bool Missing => Document == null && Tombstone == null;
         }
 
-        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true)
+        public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
             {
@@ -1042,7 +1042,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var doc = Get(context, lowerId);
+                var doc = Get(context, lowerId, fields);
                 if (doc != null)
                     return new DocumentOrTombstone { Document = doc };
             }
@@ -1711,7 +1711,7 @@ namespace Raven.Server.Documents
                 var doc = local.Document;
                 if (expectedChangeVector != null && ChangeVector.CompareVersion(doc.ChangeVector, expectedChangeVector, context) != 0)
                     ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
-                
+
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
@@ -1846,7 +1846,7 @@ namespace Raven.Server.Documents
                                            "Optimistic concurrency violation, transaction will be aborted.")
             {
                 Id = id,
-                ActualChangeVector = actual, 
+                ActualChangeVector = actual,
                 ExpectedChangeVector = expected
             };
         }
@@ -2616,7 +2616,7 @@ namespace Raven.Server.Documents
             context.LastDatabaseChangeVector = clone.Order;
             return true;
         }
-        
+
         private ChangeVector SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, ChangeVector oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
@@ -2630,7 +2630,7 @@ namespace Raven.Server.Documents
 
         public DocumentFlags GetFlagsFromOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return newFlags;
 
             newFlags = newFlags.Strip(DocumentFlags.FromReplication);
