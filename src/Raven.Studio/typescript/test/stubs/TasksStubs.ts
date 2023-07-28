@@ -348,8 +348,7 @@ export class TasksStubs {
             PreventDeletionsMode: "None",
             Name: "hub1",
             WithFiltering: false,
-            PinToMentorNode: false,
-            BlockingSourceName: null,
+            PinToMentorNode: false
         };
     }
 
