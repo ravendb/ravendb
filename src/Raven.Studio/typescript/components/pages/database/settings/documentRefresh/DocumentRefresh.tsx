@@ -17,7 +17,6 @@ import ServerRefreshConfiguration = Raven.Client.Documents.Operations.Refresh.Re
 import messagePublisher = require("common/messagePublisher");
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -34,7 +33,6 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
-    const { isAdminAccessOrAbove } = useAccessManager();
 
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
@@ -86,7 +84,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={!formState.isDirty || !isAdminAccessOrAbove}
+                                disabled={!formState.isDirty}
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
