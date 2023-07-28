@@ -16,8 +16,8 @@ import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
-// TODO: show modal on exit intent if is dirty
 export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
     const asyncGetGlobalClientConfiguration = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
@@ -37,6 +37,8 @@ export default function ClientGlobalConfiguration() {
             reset(formValues);
         }
     }, [formState.isSubmitSuccessful, reset, formValues]);
+
+    useDirtyFlag(formState.isDirty);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {

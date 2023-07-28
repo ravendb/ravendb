@@ -20,13 +20,12 @@ import { tryHandleSubmit } from "components/utils/common";
 import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
-import { todo } from "common/developmentHelper";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
 }
 
-// TODO: show modal on exit intent if is dirty
 export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfigurationProps) {
     const { manageServerService } = useServices();
     const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
@@ -40,6 +39,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         defaultValues: async () =>
             ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false),
     });
+
+    useDirtyFlag(formState.isDirty);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
