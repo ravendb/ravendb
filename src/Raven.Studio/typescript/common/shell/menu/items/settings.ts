@@ -48,7 +48,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Client Configuration',
             nav: true,
             css: 'icon-database-client-configuration',
-            dynamicHash: appUrls.clientConfiguration
+            dynamicHash: appUrls.clientConfiguration,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
