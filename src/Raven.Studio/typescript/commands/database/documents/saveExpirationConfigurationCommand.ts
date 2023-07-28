@@ -1,10 +1,17 @@
 import database = require("models/resources/database");
 import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
+import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 
 class saveExpirationConfigurationCommand extends commandBase {
-    constructor(private db: database, private expirationConfiguration: Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration) {
+
+    private readonly db: database;
+    private readonly expirationConfiguration: ExpirationConfiguration
+
+    constructor(db: database, expirationConfiguration: ExpirationConfiguration) {
         super();
+        this.db = db;
+        this.expirationConfiguration = expirationConfiguration;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
