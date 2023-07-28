@@ -11,5 +11,5 @@ internal abstract class AbstractSubscriptionsHandlerProcessorForPerformanceLive<
     {
     }
 
-    protected override string GetRemoteEndpointUrl(string databaseName) => $"/databases/{databaseName}/etl/performance/live";
+    protected override string GetRemoteEndpointUrl(string databaseName) => $"/databases/{databaseName}/subscriptions/performance/live";
 }
