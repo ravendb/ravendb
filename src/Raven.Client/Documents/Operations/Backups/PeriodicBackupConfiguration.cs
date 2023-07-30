@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
         /// <summary>
         /// Frequency of full backup jobs in cron format
