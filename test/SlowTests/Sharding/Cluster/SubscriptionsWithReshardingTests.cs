@@ -17,6 +17,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -384,8 +385,9 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
-        public async Task ContinueSubscriptionAfterReshardingAndFailover()
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task ContinueSubscriptionAfterReshardingAndFailover(Options options)
         {
             /*
             shard1 send some doc
@@ -393,15 +395,22 @@ namespace SlowTests.Sharding.Cluster
             this doc get resharded (stays in resend list)
             shard1 got it, and start processing 
                 */
-            using var store = Sharding.GetDocumentStore();
+
+            using var server = GetNewServer(new ServerCreationOptions()
+            {
+                RunInMemory = false,
+                CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5" }
+            });
+
+            var servers = new List<RavenServer>() { server };
+            options.RunInMemory = false;
+            options.Server = server;
+
+            using var store = Sharding.GetDocumentStore(options);
             var conf = await Sharding.GetShardingConfigurationAsync(store);
-            int shardNumber1;
-            int shardNumber2;
             var tuple = GetIdsOnDifferentShards(conf);
-            shardNumber1 = tuple.Tuple1.ShardNumber;
             var id1 = tuple.Tuple1.Id;
             var id2 = tuple.Tuple2.Id;
-            shardNumber2 = tuple.Tuple2.ShardNumber;
             var idsList = new List<(string, int)>() { tuple.Tuple1, tuple.Tuple2 };
             using (var session = store.OpenSession())
             {
@@ -410,9 +419,7 @@ namespace SlowTests.Sharding.Cluster
                 session.SaveChanges();
             }
 
-
             var id = await store.Subscriptions.CreateAsync<User>();
-            var users = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var mre0 = new ManualResetEventSlim(false);
             var mre = new ManualResetEventSlim(false);
             var mre2 = new ManualResetEventSlim(false);
@@ -438,26 +445,45 @@ namespace SlowTests.Sharding.Cluster
                     if (batchNumber > 0)
                     {
                         mre0.Set();
-                        mre2.Wait(TimeSpan.FromSeconds(60));
+                        Assert.True(mre2.Wait(TimeSpan.FromSeconds(60)));
                     }
                 });
 
-                mre.Wait(TimeSpan.FromSeconds(60)); // process 1 doc from shard 1
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(60))); // process 1 doc from shard 1
                 var notProcessed = idsList.First(x => x.Item1 != proceesed);
-                mre0.Wait(TimeSpan.FromSeconds(60)); // hold 1 doc from shard 2
-
-                await Sharding.Resharding.MoveShardForId(store, notProcessed.Item1);
+                Assert.True(mre0.Wait(TimeSpan.FromSeconds(60))); // hold 1 doc from shard 2
+                await Sharding.Resharding.MoveShardForId(store, notProcessed.Item1, servers: servers);
                 List<ShardedDocumentDatabase> shards = new List<ShardedDocumentDatabase>();
-                await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+                await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store, servers: servers))
                 {
                     if (db.ShardNumber == notProcessed.Item2)
                     {
-                        db.Dispose();
+                        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnBeforeDocumentDatabaseInitialization += database =>
+                        {
+                            if (db.Name == database.Name)
+                            {
+                                // hold db load until it get into rehab
+                                Assert.True(mre2.Wait(TimeSpan.FromSeconds(60)));
+                            }
+                        };
+                        server.ServerStore.DatabasesLandlord.UnloadDirectly(db.Name); // dispose db
+
                         continue;
                     }
 
                     shards.Add(db);
                 }
+
+                Assert.Equal(1, await WaitForValueAsync(() =>
+                {
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var rehabs = server.ServerStore.Cluster.ReadDatabaseTopologyForShard(context, store.Database, notProcessed.Item2).Rehabs;
+
+                        return Task.FromResult(rehabs.Count);
+                    }
+                }, 1, interval: 333));
 
                 mre2.Set();
                 var count = await WaitForValueAsync(() => proceesedList.Count, 2, timeout: 60_000);
