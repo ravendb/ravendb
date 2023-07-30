@@ -185,7 +185,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly Timer _timer;
         private DateTime _lastWriteToStream;
         private readonly SemaphoreSlim _streamLock;
-        private static readonly TimeSpan HeartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultWriteTimeout.TotalSeconds / 3);
+        private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultWriteTimeout.TotalSeconds / 3);
 
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
@@ -277,14 +277,17 @@ namespace Raven.Client.Documents.BulkInsert
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
 
-
             _streamLock = new SemaphoreSlim(1, 1);
             _lastWriteToStream = DateTime.UtcNow;
             var timerState = new TimerState { Parent = new(this) };
+
+            if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
+                _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval);
+
             _timer = new Timer(HandleHeartbeat,
                 timerState,
-                HeartbeatCheckInterval,
-                HeartbeatCheckInterval);
+                _heartbeatCheckInterval,
+                _heartbeatCheckInterval);
             timerState.Timer = _timer;
         }
 
@@ -302,13 +305,12 @@ namespace Raven.Client.Documents.BulkInsert
                 timerState.Timer.Dispose();
                 return;
             }
-
             _ = bulkInsert.SendHeartBeatAsync();
         }
 
         private async Task SendHeartBeatAsync()
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < HeartbeatCheckInterval.Ticks)
+            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
                 return;
 
             if (_streamLock.Wait(0) == false)
@@ -317,7 +319,7 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
                 EndPreviousCommandIfNeeded();
-                ForTestingPurposes?.StartStore?.Invoke();
+                _options.ForTestingPurposes?.Store?.Invoke();
                 if (CheckServerVersion(_requestExecutor.LastServerVersion) == false)
                     return;
 
@@ -1200,22 +1202,6 @@ namespace Raven.Client.Documents.BulkInsert
                 _bulkInsertOperation._streamLock.Release();
                 Interlocked.CompareExchange(ref _bulkInsertOperation._concurrentCheck, 0, 1);
             }
-        }
-
-        internal TestingStuff ForTestingPurposes;
-
-        internal TestingStuff ForTestingPurposesOnly()
-        {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
-
-            return ForTestingPurposes = new TestingStuff();
-        }
-
-        internal class TestingStuff
-        {
-            public Action StartStore;
-
         }
     }
 }
