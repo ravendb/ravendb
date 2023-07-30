@@ -132,8 +132,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 {
                     if (TryToTrimTrailingZeros(ldv, indexContext, out var doubleAsString) == false)
                         doubleAsString = ldv.Inner;
-                    @long = (long)ldv;
                     @double = ldv.ToDouble(CultureInfo.InvariantCulture);
+                    @long = (long)@double;
                     builder.Write( fieldId, path,doubleAsString.AsSpan(), @long, @double);
                     break;
                 }
@@ -160,8 +160,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                                 break;
                         }
 
-                        @long = Convert.ToInt64(value);
                         @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                        @long = (long)@double;
                         buffer.Truncate(length);
                         builder.Write(fieldId,path,  buffer.ToSpan(), @long, @double);
                         break;
