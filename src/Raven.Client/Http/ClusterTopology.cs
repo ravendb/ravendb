@@ -52,8 +52,8 @@ namespace Raven.Client.Http
                 return ServerNode.Role.Member;
             if (Promotables.ContainsKey(nodeTag))
                 return ServerNode.Role.Promotable;
-
-            throw new InvalidOperationException($"The node tag {nodeTag} does not belong to the cluster");
+            
+            return ServerNode.Role.None;
         }
 
         public bool Contains(string node)

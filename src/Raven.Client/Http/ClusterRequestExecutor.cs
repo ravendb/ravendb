@@ -39,7 +39,7 @@ namespace Raven.Client.Http
         public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
         {
             var initialUrls = new[] { url };
-            url = ValidateUrls(initialUrls, certificate)[0];
+            var urls = ValidateUrls(initialUrls, certificate);
             var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
             {
                 _nodeSelector = new NodeSelector(new Topology
@@ -49,7 +49,8 @@ namespace Raven.Client.Http
                     {
                         new ServerNode
                         {
-                            Url = url
+                            Url = urls[0],
+                            ServerRole = ServerNode.Role.Member
                         }
                     }
                 }),
@@ -59,7 +60,35 @@ namespace Raven.Client.Http
                 _topologyHeaderName = Constants.Headers.ClusterTopologyEtag
             };
             // This is just to fetch the cluster tag
-            executor._firstTopologyUpdate = executor.SingleTopologyUpdateAsync(initialUrls, null);
+            executor._firstTopologyUpdate = executor.SingleTopologyUpdateAsync(urls, null);
+            return executor;
+        }
+
+        internal static ClusterRequestExecutor CreateForShortTermUse(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
+        {
+            var initialUrls = new[] { url };
+            var urls = ValidateUrls(initialUrls, certificate);
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
+            {
+                _nodeSelector = new NodeSelector(new Topology
+                {
+                    Etag = -1,
+                    Nodes = new List<ServerNode>
+                    {
+                        new ServerNode
+                        {
+                            Url = urls[0],
+                            ServerRole = ServerNode.Role.Member
+                        }
+                    }
+                }),
+                TopologyEtag = -2,
+                _disableTopologyUpdates = true,
+                _disableClientConfigurationUpdates = true,
+                _topologyHeaderName = Constants.Headers.ClusterTopologyEtag
+            };
+            // Not fetching the node tag because this executor could be used during the cluster creation still
+            executor._firstTopologyUpdate = Task.CompletedTask;
             return executor;
         }
 

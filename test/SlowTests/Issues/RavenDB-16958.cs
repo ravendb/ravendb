@@ -221,7 +221,7 @@ namespace SlowTests.Issues
             var cluster = await CreateRaftClusterWithSsl(1, watcherCluster: true);
             var serverB = CreateSecuredServer(cluster.Leader.ServerStore.GetNodeTcpServerUrl(), uniqueCerts: false);
 
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(cluster.Leader.WebUrl, cluster.Leader.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(cluster.Leader.WebUrl, cluster.Leader.Certificate.Certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
             {
                 string database = GetDatabaseName();

@@ -200,8 +200,6 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                WaitForUserToContinueTheTest(store);
-
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 1);
                 Assert.Equal(1, val);
 
