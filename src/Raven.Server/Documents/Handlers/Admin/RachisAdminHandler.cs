@@ -182,7 +182,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetNodeInfo()
         {
-            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -324,7 +323,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Client.ServerWide.Commands.NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 
@@ -696,7 +695,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         var cmd = new RemoveEntryFromRaftLogCommand(index);
-                        using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                         {
                             await requestExecutor.ExecuteAsync(cmd, context);
                             nodeList.AddRange(cmd.Result);

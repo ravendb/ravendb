@@ -1033,7 +1033,7 @@ namespace Tests.Infrastructure
         private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
         {
             string[] urls;
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(leadersUrl, store.Certificate, DocumentConventions.DefaultForServer))
             {
                 try
                 {

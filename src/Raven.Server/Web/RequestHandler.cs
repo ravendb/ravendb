@@ -186,7 +186,7 @@ namespace Raven.Server.Web
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
