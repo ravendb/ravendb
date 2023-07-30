@@ -162,10 +162,10 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return false;
     }
 
-    protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
+    protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector, out string reason)
     {
         reason = null;
-        if (item.Document == null)
+        if (item == null)
         {
             // the document was delete while it was processed by the client
             ItemsToRemoveFromResend.Add(id);
@@ -173,11 +173,11 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
             return false;
         }
 
-        var cv = context.GetChangeVector(item.Document.ChangeVector);
+        var cv = context.GetChangeVector(item.ChangeVector);
         if (cv.IsSingle)
             return base.ShouldFetchFromResend(context, id, item, currentChangeVector, out reason);
 
-        item.Document.ChangeVector = context.GetChangeVector(cv.Version, cv.Order.RemoveId(_sharding.DatabaseId, context));
+        item.ChangeVector = context.GetChangeVector(cv.Version, cv.Order.RemoveId(_sharding.DatabaseId, context));
 
         return base.ShouldFetchFromResend(context, id, item, currentChangeVector, out reason);
     }
