@@ -405,7 +405,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        internal static RequestExecutor CreateForFixedTopologyForShortTermUse(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        internal static RequestExecutor CreateForShortTermUse(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             // This request executor doesn't call SingleTopologyUpdate so it won't attempt to reach the server of the url before it knows our certificate
             // It's topology will also not have cluster tags populated so it cannot be used long term for operations with SelectedNodeTag
