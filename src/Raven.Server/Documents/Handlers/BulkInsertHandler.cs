@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -52,6 +53,12 @@ namespace Raven.Server.Documents.Handlers
                     {
                         currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                         var requestBodyStream = RequestBodyStream();
+
+                        if (Database.ForTestingPurposes?.StreamWriteTimeout > 0)
+                        {
+                            var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
+                            streamWithTimeout.WriteTimeout = Database.ForTestingPurposes.StreamWriteTimeout;
+                        }
 
                         using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer, token))
                         {
