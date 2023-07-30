@@ -205,6 +205,7 @@ abstract class backupConfiguration {
             BackupEncryptionSettings: null,
             SnapshotSettings: null,
             RetentionPolicy: null,
+            CreatedAt: null,
         }
     }
 }

@@ -36,6 +36,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
                 // this is a new backup configuration
                 newTask = true;
                 Configuration.TaskId = etag;
+                Configuration.CreatedAt = DateTime.UtcNow;
             }
             else
             {

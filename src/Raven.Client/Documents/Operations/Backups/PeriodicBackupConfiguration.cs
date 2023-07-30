@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -19,6 +20,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }
+        public DateTime CreatedAt { get; set; }
 
         /// <summary>
         /// Frequency of full backup jobs in cron format
@@ -91,6 +93,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(FullBackupFrequency)] = FullBackupFrequency;
             json[nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency;
             json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
+            json[nameof(CreatedAt)] = CreatedAt;
             return json;
         }
 

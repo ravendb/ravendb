@@ -25,6 +25,8 @@ class periodicBackupConfiguration extends backupConfiguration {
 
     retentionPolicy = ko.observable<retentionPolicy>();
 
+    createdAt = ko.observable<string>();
+
     constructor(databaseName: KnockoutObservable<string>,
                 dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration |
                      Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration,
@@ -163,7 +165,8 @@ class periodicBackupConfiguration extends backupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
-            FtpSettings: this.ftpSettings().toDto()
+            FtpSettings: this.ftpSettings().toDto(),
+            CreatedAt: this.createdAt(),
         };
     }
 
