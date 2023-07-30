@@ -14,6 +14,7 @@ using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -2935,6 +2936,63 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     delayUntil < nextFullBackup 
                         ? taskBackupInfo.OnGoingBackup.StartTime    // until the next scheduled backup time.
                         : nextFullBackup.Value.ToUniversalTime());  // after the next scheduled backup.
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task ShouldHaveFailoverForFirstBackupInNewBackupTask()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store.OpenAsyncSession())
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(database);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                var taskId = store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)).Result.TaskId;
+
+                OngoingTaskBackup taskBackupInfo = null;
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(server.WebUrl, null, DocumentConventions.DefaultForServer))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                        return taskBackupInfo?.OnGoingBackup != null;
+                    },
+                        expectedVal: true,
+                        timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds,
+                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
+
+                    Assert.NotNull(taskBackupInfo);
+                    Assert.Null(taskBackupInfo.LastFullBackup);
+                    Assert.NotNull(taskBackupInfo.OnGoingBackup);
+
+                    await store.GetRequestExecutor(store.Database)
+                        .ExecuteAsync(new KillOperationCommand(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, server.ServerStore.NodeTag), ctx);
+
+                    database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution?.SetResult(null);
+                }
+
+                PeriodicBackupStatus backupStatus = null;
+                await WaitForValueAsync(async () =>
+                {
+                    backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    return backupStatus != null;
+                }, true);
+
+                Assert.True(backupStatus != null,
+                    $"The cluster did not display data about the successful completion of at least one backup at the designated time. The {nameof(backupStatus)} is null.");
+                Assert.True(backupStatus.LastOperationId > taskBackupInfo.OnGoingBackup.RunningBackupTaskId,
+                    "The first backup operation unexpectedly completed successfully. " +
+                    "We were testing failover behavior and expected the first operation to be cancelled, followed by successful completion of the second operation. " +
+                    "This scenario should never occur.");
             }
         }
 
