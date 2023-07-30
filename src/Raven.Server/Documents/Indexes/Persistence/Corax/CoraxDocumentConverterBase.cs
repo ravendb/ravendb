@@ -147,21 +147,26 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                             case double d:
                                 if (Utf8Formatter.TryFormat(d, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as double into bytes.");
+                                @double = d;
+                                @long = (long)d;
                                 break;
-
                             case decimal dm:
                                 if (Utf8Formatter.TryFormat(dm, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as decimal into bytes.");
+                                @double = (double)dm;
+                                @long = (long)@double;
                                 break;
-
                             case float f:
                                 if (Utf8Formatter.TryFormat(f, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as float into bytes.");
+                                @double = f;
+                                @long = (long)@double;
+                                break;
+                            default:
+                                @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                                @long = (long)@double;
                                 break;
                         }
-
-                        @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-                        @long = (long)@double;
                         buffer.Truncate(length);
                         builder.Write(fieldId,path,  buffer.ToSpan(), @long, @double);
                         break;
