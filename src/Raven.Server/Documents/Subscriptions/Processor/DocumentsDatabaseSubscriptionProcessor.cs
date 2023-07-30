@@ -150,25 +150,24 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
-                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, id, throwOnConflict: false);
+                var current = Database.DocumentsStorage.Get(DocsContext, id, throwOnConflict: false);
                 if (ShouldFetchFromResend(DocsContext, id, current, item.ChangeVector, out reason) == false)
                 {
                     result.Document.ChangeVector = string.Empty;
-                    current.Document?.Dispose();
-                    current.Tombstone?.Dispose();
+                    current?.Dispose();
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
-                Debug.Assert(current.Document != null, "Document does not exist");
+                Debug.Assert(current != null, "Document does not exist");
 
                 result.Document.Dispose();
                 result.Document = new Document()
                 {
-                    Data = current.Document.Data, 
-                    Id = current.Document.Id, // use proper casing
-                    LowerId = current.Document.LowerId, 
-                    ChangeVector = current.Document.ChangeVector
+                    Data = current.Data, 
+                    Id = current.Id, // use proper casing
+                    LowerId = current.LowerId, 
+                    ChangeVector = current.ChangeVector
                 };
             }
 
@@ -208,10 +207,10 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
         }
 
-        protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
+        protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector, out string reason)
         {
             reason = null;
-            if (item.Document == null)
+            if (item == null)
             {
                 // the document was delete while it was processed by the client
                 ItemsToRemoveFromResend.Add(id);
@@ -219,38 +218,38 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 return false;
             }
 
-            var status = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
+            var status = Database.DocumentsStorage.GetConflictStatus(context, item.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
             switch (status)
             {
                 case ConflictStatus.Update:
                     // If document was updated, but the subscription went too far.
-                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent, ChangeVectorMode.Order);
+                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(context, item.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent, ChangeVectorMode.Order);
                     if (resendStatus == ConflictStatus.Update)
                     {
                         // we can clear it from resend list, and it will processed as regular document
                         ItemsToRemoveFromResend.Add(id);
-                        reason = $"document '{id}' was updated ({item.Document.ChangeVector}), but the subscription went too far and skipped from resend (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+                        reason = $"document '{id}' was updated ({item.ChangeVector}), but the subscription went too far and skipped from resend (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
                         return false;
                     }
 
                     // We need to resend it
                     var fetch = resendStatus == ConflictStatus.AlreadyMerged;
                     if (fetch == false)
-                        reason = $"document '{id}' is in status {resendStatus} (local: {item.Document.ChangeVector}) with the subscription progress (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+                        reason = $"document '{id}' is in status {resendStatus} (local: {item.ChangeVector}) with the subscription progress (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
 
                     return fetch;
 
                 case ConflictStatus.AlreadyMerged:
-                    if (CheckIfNewerInResendList(context, item.Document.Id, item.Document.ChangeVector, currentChangeVector))
+                    if (CheckIfNewerInResendList(context, item.Id, item.ChangeVector, currentChangeVector))
                     {
-                        reason = $"document '{id}' is older in storage (cv: '{item.Document.ChangeVector}') then in resend list (cv: '{currentChangeVector}'), probably there is a active migration. sub progress: {SubscriptionConnectionsState.LastChangeVectorSent}";
+                        reason = $"document '{id}' is older in storage (cv: '{item.ChangeVector}') then in resend list (cv: '{currentChangeVector}'), probably there is a active migration. sub progress: {SubscriptionConnectionsState.LastChangeVectorSent}";
                         return false;
                     }
 
                     return true;
 
                 case ConflictStatus.Conflict:
-                    reason = $"document '{id}' is in conflict, CV in storage '{item.Document.ChangeVector}' CV in resend list '{currentChangeVector}' (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+                    reason = $"document '{id}' is in conflict, CV in storage '{item.ChangeVector}' CV in resend list '{currentChangeVector}' (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
                     return false;
 
                 default:
