@@ -1498,10 +1498,11 @@ namespace SlowTests.Sharding.Subscriptions
                 }
                 else if (cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime))
                 {
-                    Assert.Equal(2, await WaitForValueAsync(() => ids.Count, 2));
+                    Assert.Equal(3, await WaitForValueAsync(() => ids.Count, 3));
                     Assert.Contains(id2, ids);
                     Assert.DoesNotContain(id1, ids);
                     Assert.Contains(res, ids);
+                    Assert.Contains("users/322", ids);
                 }
                 else if (cv == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument))
                 {
