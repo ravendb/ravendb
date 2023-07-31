@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Corax.Mappings;
-using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
@@ -21,21 +17,34 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
+        private readonly CompactKey _startWithLimit;
+        private bool _firstRun;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
-
-        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
+        private bool _termModified;
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey startsWithLimit)
         {
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate<TLookupIterator>();
             _startWith = startWith;
+            _startWithLimit = startsWithLimit;
             _tree = tree;
 
-            _iterator.Seek(_startWith);
+            Reset();
         }
 
-        public void Reset() => _iterator.Seek(_startWith);
+        public void Reset()
+        {
+            if (default(TLookupIterator).IsForward)
+            {
+                _iterator.Seek(_startWith);
+                return;
+            }
+            
+            _firstRun = true;
+            _iterator.Seek(_startWithLimit);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term)
@@ -47,6 +56,16 @@ namespace Corax.Queries
             }
 
             var key = compactKey.Decoded();
+            
+            //For backward iterator we can have two possibilities:
+            //a) we're already on valid last term (when startsWith starts with [255]...[255][...] or our prefix is the last in tree)
+            //b) we're on next term from our initial startsWith (e.g. for prefix 'ab' we have to seek a['b'+1])
+            if (_firstRun && default(TLookupIterator).IsForward == false && key.StartsWith(_startWith.Decoded()) == false)
+            {
+                _firstRun = false;
+                return Next(out term);
+            }
+
             if (key.StartsWith(_startWith.Decoded()) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);

@@ -108,7 +108,8 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
         else
         {
             _complexMatches ??= new();
-            _complexMatches.Add(itemToAdd.Materialize());
+            CoraxQueryBuilder.StreamingOptimization disableOptimization = default;
+            _complexMatches.Add(itemToAdd.Materialize(ref disableOptimization));
         }
 
         return true;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Corax.Mappings;
+using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
@@ -32,6 +33,10 @@ namespace Corax.Queries
         {            
             _iterator = _tree.Iterate<TLookupIterator>();
             _iterator.Reset();
+
+            //We've to jump to after all keys
+            if (default(TLookupIterator).IsForward == false)
+                _iterator.Seek(Slices.AfterAllKeys);
         }
 
         public bool Next(out TermMatch term)

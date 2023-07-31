@@ -65,7 +65,7 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(stack[0]);
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms)));
+        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(this, field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms), streamingEnabled: false));
     }
 
     public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms) => AllInQuery(FieldMetadataBuilder(field), allInTerms);
@@ -172,6 +172,6 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public AndNotMatch NotInQuery<TInner>(FieldMetadata field, TInner inner, List<string> notInTerms) where TInner : IQueryMatch
     {
-        return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider<string>>(field, _transaction.Allocator, new InTermProvider<string>(this, field, notInTerms))));
+        return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider<string>>(this, field, _transaction.Allocator, new InTermProvider<string>(this, field, notInTerms), streamingEnabled: false)));
     }
 }

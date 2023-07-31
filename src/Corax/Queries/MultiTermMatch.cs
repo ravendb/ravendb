@@ -27,6 +27,10 @@ namespace Corax.Queries
 
         private Bm25Relevance[] _frequenciesHolder;
         private int _currentFreqIdx;
+        
+        //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MTM is not in Binary AST and single document has only 1 term.
+        private bool _doNotSortResultsDueToStreaming;
+        
         private int FrequenciesHolderSize => _frequenciesHolder?.Length ?? 0;
        
         
@@ -46,7 +50,7 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => _confidence;
 
-        public MultiTermMatch(in FieldMetadata field, ByteStringContext context, TTermProvider inner, long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low)
+        public MultiTermMatch(IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled, long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low)
         {
             _inner = inner;
             _context = context;
@@ -59,6 +63,8 @@ namespace Corax.Queries
                 _current = QueryMatch.Invalid;
             
             _isBoosting = field.HasBoost;
+            _doNotSortResultsDueToStreaming = streamingEnabled;
+            
             if (_isBoosting)
             {
                 var pool = Bm25Relevance.RelevancePool ??= ArrayPool<Bm25Relevance>.Create();
@@ -101,7 +107,7 @@ namespace Corax.Queries
             _current = count != 0 ? buffer[count - 1] : QueryMatch.Invalid;
 
         End:
-            if (_doNotSortResults == false && requiresSort && count > 1)
+            if (_doNotSortResultsDueToStreaming == false && _doNotSortResults == false && requiresSort && count > 1)
             {
                 count = Sorting.SortAndRemoveDuplicates(buffer[0..count]);                         
             }

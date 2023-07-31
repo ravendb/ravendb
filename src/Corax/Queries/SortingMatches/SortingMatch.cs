@@ -71,6 +71,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     }
     private struct RandomDirection : ILookupIterator
     {
+        
+        public bool IsForward => throw new NotSupportedException($"{nameof(RandomDirection)} has no direction and should not be used in parts of code where it is required.");
+
         public void Init<T>(T parent)
         {
             throw new NotImplementedException();
@@ -109,6 +112,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     private struct NoIterationOptimization : ILookupIterator
     {
+        public bool IsForward => throw new NotSupportedException($"{nameof(NoIterationOptimization)} has no direction and should not be used in parts of code where it is required.");
+
+        
         public void Init<T>(T parent)
         {
             throw new NotImplementedException();
