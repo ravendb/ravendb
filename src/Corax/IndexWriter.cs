@@ -11,8 +11,10 @@ using System.Text;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
+using Newtonsoft.Json.Linq;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -30,6 +32,7 @@ using Voron.Impl;
 using Voron.Util;
 using Voron.Util.PFor;
 using InvalidOperationException = System.InvalidOperationException;
+
 
 namespace Corax
 {
@@ -325,9 +328,10 @@ namespace Corax
         private sealed class IndexedField
         {
             public Dictionary<long, List<(double, double)>> Spatial;
-            public readonly Dictionary<Slice, EntriesModifications> Textual;
-            public readonly Dictionary<long, EntriesModifications> Longs;
-            public readonly Dictionary<double, EntriesModifications> Doubles;
+            public readonly FastList<EntriesModifications> Storage;
+            public readonly Dictionary<Slice, int> Textual;
+            public readonly Dictionary<long, int> Longs;
+            public readonly Dictionary<double, int> Doubles;
             public Dictionary<Slice, int> Suggestions;
             public readonly Analyzer Analyzer;
             public readonly Slice Name;
@@ -361,9 +365,10 @@ namespace Corax
                 Analyzer = analyzer;
                 HasSuggestions = hasSuggestions;
                 ShouldStore = shouldStore;
-                Textual = new Dictionary<Slice, EntriesModifications>(SliceComparer.Instance);
-                Longs = new Dictionary<long, EntriesModifications>();
-                Doubles = new Dictionary<double, EntriesModifications>();
+                Storage = new FastList<EntriesModifications>();
+                Textual = new Dictionary<Slice, int>(SliceComparer.Instance);
+                Longs = new Dictionary<long, int>();
+                Doubles = new Dictionary<double, int>();
                 FieldIndexingMode = fieldIndexingMode;
             }
 
@@ -573,10 +578,11 @@ namespace Corax
 
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
-                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
+                ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_parent._entriesAllocator, value.Length);
+                    termLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, value.Length));
                     scope = null; // We don't want the fieldname (slice) to be returned.
                 }
 
@@ -585,6 +591,7 @@ namespace Corax
                     field.HasMultipleTermsPerField = true;
                 }
 
+                ref var term = ref field.Storage.GetAsRef(termLocation);
                 term.Addition(_entryId);
 
                 if (field.HasSuggestions)
@@ -598,16 +605,26 @@ namespace Corax
             void NumericInsert(IndexedField field, long lVal, double dVal)
             {
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
+                ref var doublesTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(double));
-                doublesTerms.Addition(_entryId);
+                {
+                    doublesTermsLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(double)));
+                }
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
+                ref var longsTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
                 if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(_parent._entriesAllocator, sizeof(long));
-                longsTerms.Addition(_entryId);
+                {
+                    longsTermsLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(long)));
+                }
+
+                ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
+                doublesTerm.Addition(_entryId);
+
+                ref var longsTerm = ref field.Storage.GetAsRef(longsTermsLocation);
+                longsTerm.Addition(_entryId);
             }
 
             private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -1119,7 +1136,7 @@ namespace Corax
             }
         }
 
-        private unsafe void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
             long entryToDelete)
         {
             var reader = new EntryTermsReader(llt, entryTerms.Address, entryTerms.Length, dicId);
@@ -1145,33 +1162,39 @@ namespace Corax
                 if(field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
                 
-                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+                ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_entriesAllocator, decodedKey.Length);
+                    termLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, decodedKey.Length));
                     scope = default; // We dont want to reclaim the term name
                 }
 
+                ref var term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(entryToDelete, reader.Frequency);
                 scope.Dispose();
                 
                 if(reader.HasNumeric == false)
                     continue;
-                
-                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
+
+                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_entriesAllocator, sizeof(long));
+                    termLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
                 }
 
+                term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(entryToDelete);
-                
-                term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
+
+                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_entriesAllocator, sizeof(long));
+                    termLocation = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
                 }
 
+                term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(entryToDelete);
             }
         }
@@ -1595,8 +1618,10 @@ namespace Corax
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
-                ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
-                Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
+                ref var entriesLocation = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
+                Debug.Assert(Unsafe.IsNullRef(ref entriesLocation) == false);
+                
+                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
                 entries.Prepare();
                 
                 UpdateEntriesForTerm(ref entriesForTerm, ref entriesForTermScope, entries);
@@ -1976,8 +2001,10 @@ namespace Corax
 
             _entriesAlreadyAdded.Clear();
             
-            foreach (var (term, entries) in indexedField.Longs)
+            foreach (var (term, entriesLocation) in indexedField.Longs)
             {
+                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
+
                 // We are not going to be using these entries anymore after this. 
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
@@ -2043,8 +2070,10 @@ namespace Corax
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble); 
 
             _entriesAlreadyAdded.Clear();
-            foreach (var (term, entries) in indexedField.Doubles)
+            foreach (var (term, entriesLocation) in indexedField.Doubles)
             {
+                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
+
                 // We are not going to be using these entries anymore after this. 
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
@@ -2079,7 +2108,7 @@ namespace Corax
             }
         }
         
-        private unsafe bool TryEncodingToBuffer(long * additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
+        private bool TryEncodingToBuffer(long * additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             fixed (byte* pOutput = tmpBuf)
             {
