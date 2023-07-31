@@ -47,6 +47,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnection : SubscriptionConnectionBase<DatabaseIncludesCommandImpl>
     {
+        private static readonly ParserOptions DefaultParserOptions = ParserOptions.Default with { AllowReturnOutsideFunction = true };
+
         private readonly DocumentDatabase _database;
 
         public long CurrentBatchId;
@@ -346,7 +348,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             try
             {
-                new JavaScriptParser().ParseScript(script);
+                new JavaScriptParser(DefaultParserOptions).ParseScript(script);
             }
             catch (Exception e)
             {

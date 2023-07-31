@@ -2882,6 +2882,7 @@ function execute(doc, args){
             ScriptValidator validator = new(this, parameters);
             JavaScriptParser parser = new(new ParserOptions
             {
+                AllowReturnOutsideFunction = true,
                 OnNodeCreated = n => validator.Visit(n)
             });
             Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);

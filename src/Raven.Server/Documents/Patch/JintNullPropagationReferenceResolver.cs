@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
-            JsValue referencedName = reference.GetReferencedName();
+            JsValue referencedName = reference.ReferencedName;
 
             if (referencedName.IsString() == false)
             {
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Patch
                 if (name == "length")
                     value = _numberPositiveZero;
                 else
-                    value = reference.IsPropertyReference() ? JsValue.Undefined : JsValue.Null;
+                    value = reference.IsPropertyReference ? JsValue.Undefined : JsValue.Null;
                 return true;
             }
 
@@ -42,14 +42,14 @@ namespace Raven.Server.Documents.Patch
 
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
-            JsValue referencedName = reference.GetReferencedName();
+            JsValue referencedName = reference.ReferencedName;
 
             if (referencedName.IsString() == false)
                 return false;
 
             var name = referencedName.AsString();
             if (name == Constants.Documents.Metadata.Key &&
-                reference.GetBase() is BlittableObjectInstance boi)
+                reference.Base is BlittableObjectInstance boi)
             {
                 value = engine.Invoke(ScriptRunner.SingleRun.GetMetadataMethod, boi);
                 return true;
@@ -74,12 +74,12 @@ namespace Raven.Server.Documents.Patch
         {
             if (callee is Reference reference)
             {
-                var baseValue = reference.GetBase();
+                var baseValue = reference.Base;
 
                 if (baseValue.IsUndefined() ||
                     baseValue.IsArray() && baseValue.AsArray().Length == 0)
                 {
-                    JsValue referencedName = reference.GetReferencedName();
+                    JsValue referencedName = reference.ReferencedName;
 
                     if (referencedName.IsString() == false)
                     {
