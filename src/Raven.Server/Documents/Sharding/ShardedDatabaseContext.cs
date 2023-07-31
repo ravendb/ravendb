@@ -120,6 +120,7 @@ namespace Raven.Server.Documents.Sharding
 
             if (DictionaryExtensions.KeysEqual(record.Sharding.Shards, _record.Sharding.Shards) == false)
             {
+                ShardExecutor.ForgetAbout();
                 ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
             }
             else
@@ -139,6 +140,7 @@ namespace Raven.Server.Documents.Sharding
 
             if (CheckForTopologyChangesAndRaiseNotification(record.Sharding.Orchestrator.Topology, _record.Sharding.Orchestrator.Topology))
             {
+                AllOrchestratorNodesExecutor.ForgetAbout();
                 AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
             }
 
@@ -171,8 +173,10 @@ namespace Raven.Server.Documents.Sharding
             // we explicitly do not dispose the old executors here to avoid possible memory invalidation and since this is expected to be rare.
             // So we rely on the GC to dispose them via the finalizer
             
+            ShardExecutor.ForgetAbout();
             ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
 
+            AllOrchestratorNodesExecutor.ForgetAbout();
             AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
         }
 

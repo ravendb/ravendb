@@ -33,6 +33,12 @@ public abstract class AbstractExecutor : IDisposable
         ServerStore.Server.ServerCertificateChanged += OnCertificateChange;
     }
 
+    public void ForgetAbout()
+    {
+        // the event handler holds a strong reference to this object, so it will not be collected by the gc
+        ServerStore.Server.ServerCertificateChanged -= OnCertificateChange;
+    }
+
     public abstract RequestExecutor GetRequestExecutorAt(int position);
 
     protected abstract Memory<int> GetAllPositions();
