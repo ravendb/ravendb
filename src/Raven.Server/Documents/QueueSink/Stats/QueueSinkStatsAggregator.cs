@@ -22,7 +22,16 @@ public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, Queue
 
     public QueueSinkPerformanceStats ToPerformanceStats()
     {
-        throw new System.NotImplementedException();
+        if (_performanceStats != null)
+            return _performanceStats;
+
+        lock (Stats)
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            return _performanceStats = CreatePerformanceStats(completed: true);
+        }
     }
 
     public QueueSinkPerformanceStats ToPerformanceLiveStatsWithDetails()

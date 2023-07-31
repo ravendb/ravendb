@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.QueueSink
     {
         None,
         ScriptsCount = 1 << 1,
-        TransformationCollectionsCount = 1 << 2, // queue count
+        QueueCount = 1 << 2,
         ScriptName = 1 << 3,
         Script = 1 << 4,
         ScriptDisabled = 1 << 5,

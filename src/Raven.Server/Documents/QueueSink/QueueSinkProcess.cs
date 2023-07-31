@@ -295,7 +295,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
             FallbackTime = TimeSpan.FromSeconds(5);
         else
         {
-            // double the fallback time (but don't cross Etl.MaxFallbackTime)
+            // double the fallback time (but don't cross QueueSink.MaxFallbackTimeInSec)
             var secondsSinceLastError =
                 (Database.Time.GetUtcNow() - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
 

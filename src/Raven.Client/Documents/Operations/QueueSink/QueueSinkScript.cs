@@ -32,7 +32,7 @@ public class QueueSinkScript
         }
 
         if (queues.Count != 0)
-            differences |= QueueSinkConfigurationCompareDifferences.TransformationCollectionsCount;
+            differences |= QueueSinkConfigurationCompareDifferences.QueueCount;
 
         if (script.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
             differences |= QueueSinkConfigurationCompareDifferences.ScriptName;
