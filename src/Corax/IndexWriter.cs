@@ -8,7 +8,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Unicode;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -30,7 +29,6 @@ using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util;
 using Voron.Util.PFor;
-using static Corax.Constants;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
@@ -91,12 +89,19 @@ namespace Corax
         
         internal struct EntriesModifications : IDisposable
         {
+            private readonly ByteStringContext _context;
+
             public long? Long;
             public double? Double;
             public readonly int TermSize;
+
             public NativeList<TermInEntryModification> Additions;
             public NativeList<TermInEntryModification> Removals;
             public NativeList<TermInEntryModification> Updates;
+
+            public ByteStringContext<ByteStringMemoryCache>.InternalScope AdditionsScope;
+            public ByteStringContext<ByteStringMemoryCache>.InternalScope RemovalsScope;
+            public ByteStringContext<ByteStringMemoryCache>.InternalScope UpdatesScope;
 
             private bool _needToSortToDeleteDuplicates;
 
@@ -116,24 +121,35 @@ namespace Corax
 
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
+                _context = context;
+
                 TermSize = size;
                 _needToSortToDeleteDuplicates = true;
-                Additions = new(context);
-                Removals = new(context);
-                Updates = new(context);
+                Additions = new();
+                AdditionsScope = Additions.Initialize(context);
+                Removals = new();
+                RemovalsScope = Removals.Initialize(context);
+                Updates = new();
+                UpdatesScope = Updates.Initialize(context);
             }
 
             public void Addition(long entryId, short freq = 1)
             {
+                if (Additions.HasCapacityFor(1) == false)
+                    Additions.Grow(_context, 1, ref AdditionsScope);
+
                 AddToList(ref Additions, entryId, freq);
             }
             
             public void Removal(long entryId, short freq = 1)
             {
+                if (Removals.HasCapacityFor(1) == false)
+                    Removals.Grow(_context, 1, ref RemovalsScope);
+
                 AddToList(ref Removals, entryId, freq);
             }
 
-            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq)
+            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq )
             {
                 AssertPreparationIsNotFinished();
                 _needToSortToDeleteDuplicates = true;
@@ -156,7 +172,8 @@ namespace Corax
                     }
                 }
 
-                list.Add(new TermInEntryModification { EntryId = entryId, Frequency = freq });
+                var term = new TermInEntryModification { EntryId = entryId, Frequency = freq };
+                list.PushUnsafe(term);
             }
 
             private void DeleteAllDuplicates()
@@ -167,8 +184,12 @@ namespace Corax
                 
                 Additions.Sort();
                 Removals.Sort();
-                var oldUpdates = Updates.Count;
 
+                // We need to be sure we can update all the cases. 
+                if (Updates.HasCapacityFor(Updates.Count) == false)
+                    Updates.Grow(_context, Additions.Count + Removals.Count, ref UpdatesScope);
+
+                var oldUpdates = Updates.Count;
                 int additionPos = 0, removalPos = 0;
                 var additions = Additions.RawItems;
                 var removals = Removals.RawItems;
@@ -182,7 +203,7 @@ namespace Corax
                     //This is made for Set structure.
                     if (currentAdd.EntryId == currentRemoval.EntryId && currentAdd.Frequency == currentRemoval.Frequency)
                     {
-                        Updates.Add(currentAdd);
+                        Updates.PushUnsafe(currentAdd);
                         rem++;
                         continue;
                     }
@@ -208,8 +229,8 @@ namespace Corax
                 {
                     removals[removalPos++] = removals[rem];
                 }
-                Additions.Count = additionPos;
-                Removals.Count = removalPos;
+                Additions.Shrink(additionPos);
+                Removals.Shrink(removalPos);
 
                 Debug.Assert(oldUpdates == Updates.Count || oldUpdates == 0 && Updates.Count > 0,
                     "New updates on *second* call here should not be possible");
@@ -295,9 +316,9 @@ namespace Corax
 
             public void Dispose()
             {
-                Additions.Dispose();
-                Removals.Dispose();
-                Updates.Dispose();
+                AdditionsScope.Dispose();
+                RemovalsScope.Dispose();
+                UpdatesScope.Dispose();
             }
         }
 
@@ -709,15 +730,22 @@ namespace Corax
                                     term.Length, fieldRootPage, 
                                     out Span<byte> space);
                 term.CopyTo(space);
-                entryTerms.Add(new RecordedTerm
+
+                var recordedTerm = new RecordedTerm
                 (
                     // why: entryTerms.Count << 8 
                     // we put entries count here because we are sorting the entries afterward
                     // this ensure that stored values are then read using the same order we have for writing them
                     // which is important for storing arrays
-                    termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    termContainerId: entryTerms.Item1.Count << 8 | (int)type | 0b110, // marker for stored field
                     @long: termId
-                ));
+                );
+
+                if (entryTerms.Item1.TryPush(recordedTerm) == false)
+                {
+                    entryTerms.Item1.Grow(_parent._entriesAllocator, 1, ref entryTerms.Item2);
+                    entryTerms.Item1.PushUnsafe(recordedTerm);
+                }
             }
 
             public void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type)
@@ -733,15 +761,21 @@ namespace Corax
                 _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, _fieldsTree);
 
-                entryTerms.Add(new RecordedTerm
+                var recordedTerm = new RecordedTerm
                 (
                     // why: entryTerms.Count << 8 
                     // we put entries count here because we are sorting the entries afterward
                     // this ensure that stored values are then read using the same order we have for writing them
                     // which is important for storing arrays
-                    termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                    termContainerId: entryTerms.Item1.Count << 8 | (int)type | 0b110, // marker for stored field
                     @long: fieldRootPage
-                ));
+                );
+
+                if (entryTerms.Item1.TryPush(recordedTerm) == false)
+                {
+                    entryTerms.Item1.Grow(_parent._entriesAllocator, 1, ref entryTerms.Item2);
+                    entryTerms.Item1.PushUnsafe(recordedTerm);
+                }
             }
 
             public void IncrementList()
@@ -937,7 +971,7 @@ namespace Corax
         private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
         private FastPForEncoder _pForEncoder;
-        private readonly Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
+        private readonly Dictionary<long, (NativeList<RecordedTerm>, ByteStringContext<ByteStringMemoryCache>.InternalScope)> _termsPerEntryId = new();
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
         private CompactTree _primaryKeyTree;
@@ -1473,9 +1507,9 @@ namespace Corax
         private void WriteIndexEntries()
         {
             using var writer = new EntryTermsWriter(_entriesAllocator);
-            foreach (var (entry, terms) in _termsPerEntryId)
+            foreach (var (entry, termsRef) in _termsPerEntryId)
             {
-                int size = writer.Encode(terms);
+                int size = writer.Encode(termsRef.Item1);
                 long entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
                 _entryIdToLocation.Add(entry, entryTermsId);
@@ -1500,12 +1534,18 @@ namespace Corax
                 foreach (var item in CollectionsMarshal.AsSpan(list))
                 {
                     var (lat,lng) = item;
-                    entryTerms.Add(new RecordedTerm
+                    var recordedTerm = new RecordedTerm
                     (
                         termContainerId: termContainerId,
                         lat: lat,
                         lng: lng
-                    ));
+                    );
+
+                    if (entryTerms.Item1.TryPush(recordedTerm) == false)
+                    {
+                        entryTerms.Item1.Grow(_entriesAllocator, 1, ref entryTerms.Item2);
+                        entryTerms.Item1.PushUnsafe(recordedTerm);
+                    }
                 }
 
                 {
@@ -1522,6 +1562,7 @@ namespace Corax
         private void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
+            
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.Name); 
@@ -1547,7 +1588,10 @@ namespace Corax
             long totalLengthOfTerm = 0;
 
             using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
-            var entriesForTerm = new NativeList<TermInEntryModification>(_entriesAllocator);
+
+            var entriesForTerm = new NativeList<TermInEntryModification>();
+            var entriesForTermScope = entriesForTerm.Initialize(_entriesAllocator);
+
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
@@ -1555,14 +1599,13 @@ namespace Corax
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
                 entries.Prepare();
                 
-                UpdateEntriesForTerm(ref entriesForTerm, entries);
+                UpdateEntriesForTerm(ref entriesForTerm, ref entriesForTermScope, entries);
 
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
                     SetRange(_additionsForTerm, entries.Additions);
                     SetRange(_removalsForTerm, entries.Removals);
                 }
-
 
                 compactKeyCacheScope.Key.Set(term.AsSpan());
                 bool found = fieldTree.TryGetNextValue(compactKeyCacheScope.Key, out var termContainerId, out var existingIdInTree, out var keyLookup);
@@ -1628,8 +1671,9 @@ namespace Corax
                     InsertEntriesForTerm(entriesToTerms, termContainerId);
                 }
             }
-            entriesForTerm.Dispose();
-            
+
+            entriesForTermScope.Dispose();
+
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
         }
 
@@ -1642,7 +1686,13 @@ namespace Corax
             {
                 var entry = rawItems[i];
 
-                ref var recordedTerm = ref GetEntryTerms(entry.EntryId).AddByRef();
+                ref var recordedTermListRef = ref GetEntryTerms(entry.EntryId);
+                
+                ref var recordedTermList = ref recordedTermListRef.Item1;
+                if ( recordedTermList.HasCapacityFor(1) == false)
+                    recordedTermList.Grow(_entriesAllocator, 1, ref recordedTermListRef.Item2);
+
+                ref var recordedTerm = ref recordedTermList.AddByRefUnsafe();
 
                 Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
 
@@ -1671,34 +1721,38 @@ namespace Corax
             }
         }
 
-        private static void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
+        private void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, ref ByteStringContext<ByteStringMemoryCache>.InternalScope entriesForTermScope, in EntriesModifications entries)
         {
-            entriesForTerm.ResetAndEnsureCapacity(entries.Additions.Count + entries.Updates.Count);
-            var additions = entries.Additions.RawItems;
+            entriesForTerm.ResetAndEnsureCapacity(_entriesAllocator, entries.Additions.Count + entries.Updates.Count, ref entriesForTermScope);
+
             int i = 0;
+            var additions = entries.Additions.RawItems;
             for (; i < entries.Additions.Count; i++)
             {
-                entriesForTerm.AddKnownCapacity(additions[i]);
+                entriesForTerm.PushUnsafe(additions[i]);
             }
+
             var updates = entries.Updates.RawItems;
             for (; i < entries.Updates.Count; i++)
             {
-                entriesForTerm.AddKnownCapacity(updates[i]);
+                entriesForTerm.PushUnsafe(updates[i]);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref NativeList<RecordedTerm> GetEntryTerms(long entry)
+        private ref (NativeList<RecordedTerm>, ByteStringContext<ByteStringMemoryCache>.InternalScope) GetEntryTerms(long entry)
         {
             ref var entryTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_termsPerEntryId, entry, out var exists);
             if (exists == false)
             {
-                entryTerms = new NativeList<RecordedTerm>(_entriesAllocator);
+                NativeList<RecordedTerm> entryTermsList = new NativeList<RecordedTerm>();
+                ByteStringContext<ByteStringMemoryCache>.InternalScope scope = entryTermsList.Initialize(_entriesAllocator);
+                entryTerms = (entryTermsList, scope);
             }
             return ref entryTerms;
         }
 
-        private unsafe void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
+        private void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
         {
             list.Clear();
             for (int i = 0; i < span.Count; i++)
