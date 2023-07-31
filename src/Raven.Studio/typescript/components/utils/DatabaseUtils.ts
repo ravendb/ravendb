@@ -122,6 +122,10 @@ export default class DatabaseUtils {
             color: durationInSeconds > dayAsSeconds ? "warning" : "success",
         };
     }
+
+    static formatUptime(uptime: string): "Offline" | (string & NonNullable<unknown>) {
+        return uptime ?? "Offline";
+    }
 }
 
 const dayAsSeconds = 60 * 60 * 24;

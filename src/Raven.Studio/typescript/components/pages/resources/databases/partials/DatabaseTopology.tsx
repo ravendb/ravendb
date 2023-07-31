@@ -1,16 +1,18 @@
-﻿import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+﻿import { DatabaseLocalInfo, DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
-import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
 import React from "react";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import DatabaseTopologyNodeSetItem from "./DatabaseTopologyNodeSetItem";
+import { locationAwareLoadableData } from "components/models/common";
 
 interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
+    dbState: locationAwareLoadableData<DatabaseLocalInfo>[];
     togglePanelCollapsed: () => void;
 }
 
 export function DatabaseTopology(props: DatabaseTopologyProps) {
-    const { db, togglePanelCollapsed } = props;
+    const { db, dbState, togglePanelCollapsed } = props;
 
     if (db.sharded) {
         const shardedDb = db as ShardedDatabaseSharedInfo;
@@ -26,11 +28,12 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseNodeSetItem key={node.tag} node={node} />
+                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} dbState={dbState} />
                     ))}
                 </NodeSet>
 
                 {shardedDb.shards.map((shard) => {
+                    const shardNumber = DatabaseUtils.shardNumber(shard.name);
                     return (
                         <React.Fragment key={shard.name}>
                             <NodeSet
@@ -40,10 +43,15 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                 title="Expand distribution details"
                             >
                                 <NodeSetLabel color="shard" icon="shard">
-                                    #{DatabaseUtils.shardNumber(shard.name)}
+                                    #{shardNumber}
                                 </NodeSetLabel>
-                                {shard.nodes.map((node) => (
-                                    <DatabaseNodeSetItem key={node.tag} node={node} />
+                                {db.nodes.map((node) => (
+                                    <DatabaseTopologyNodeSetItem
+                                        key={node.tag}
+                                        node={node}
+                                        dbState={dbState}
+                                        shardNumber={shardNumber}
+                                    />
                                 ))}
                                 {shard.deletionInProgress.map((node) => {
                                     return (
@@ -73,9 +81,9 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                     title="Expand distribution details"
                 >
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
-                    {db.nodes.map((node) => {
-                        return <DatabaseNodeSetItem key={node.tag} node={node} />;
-                    })}
+                    {db.nodes.map((node) => (
+                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} dbState={dbState} />
+                    ))}
                     {db.deletionInProgress.map((node) => {
                         return (
                             <NodeSetItem

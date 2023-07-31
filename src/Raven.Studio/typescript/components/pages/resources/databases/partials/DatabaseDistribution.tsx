@@ -9,13 +9,10 @@ import { DatabaseLoadError } from "components/pages/resources/databases/partials
 import { Icon } from "components/common/Icon";
 import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
-}
-
-function formatUptime(uptime: string) {
-    return uptime ?? "Offline";
 }
 
 export function DatabaseDistribution(props: DatabaseDistributionProps) {
@@ -76,7 +73,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
 
                 const node = nodesToUse.find((x) => x.tag === localState.location.nodeTag);
 
-                const uptime = localState.data ? formatUptime(localState.data.upTime) : "";
+                const uptime = localState.data ? DatabaseUtils.formatUptime(localState.data.upTime) : "";
 
                 return (
                     <DistributionItem
@@ -91,7 +88,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     >
                         {sharded && shard}
                         <div className={classNames("node", { top: !sharded })}>
-                            <DatabaseNodeSetItem node={node} />
+                            <DatabaseNodeSetItem node={node} isOffline={uptime === "Offline"} />
                         </div>
                         <div className="entries">
                             {localState.data?.loadError ? (
