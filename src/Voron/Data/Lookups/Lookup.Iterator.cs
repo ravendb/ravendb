@@ -6,6 +6,8 @@ namespace Voron.Data.Lookups
 {
     public interface ILookupIterator
     {
+        bool IsForward { get; }
+        
         void Init<T>(T parent);
         void Reset();
         int Fill(Span<long> results);
@@ -28,7 +30,9 @@ namespace Voron.Data.Lookups
                 _tree = null;
                 _cursor = new IteratorCursorState { _pos = -1 };
             }
-            
+
+            public bool IsForward => true;
+
             public void Init<T>(T tree)
             {
                 if (typeof(T) != typeof(Lookup<TLookupKey>))
@@ -206,6 +210,8 @@ namespace Voron.Data.Lookups
             private Lookup<TLookupKey> _tree;
             private IteratorCursorState _cursor;
 
+            public bool IsForward => false;
+
             public void Init<T>(T tree)
             {
                 if (typeof(T) != typeof(Lookup<TLookupKey>))
@@ -228,7 +234,7 @@ namespace Voron.Data.Lookups
 
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
+                    state.LastSearchPosition = Math.Min(~state.LastSearchPosition, state.Header->NumberOfEntries - 1);
             }
             
             
