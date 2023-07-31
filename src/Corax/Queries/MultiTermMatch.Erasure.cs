@@ -159,7 +159,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(default, context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(null, default, context, new EmptyTermProvider(), streamingEnabled: false), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
         }
     }
 }

@@ -429,8 +429,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return HasMultipleTermsInField(slice);
     }
 
+    public bool HasMultipleTermsInField(in FieldMetadata fieldMetadata)
+    {
+        return HasMultipleTermsInField(fieldMetadata.FieldName);
+    }
+    
     private bool HasMultipleTermsInField(Slice fieldName)
     {
+        if (_metadataTree is null)
+            return false;
+        
         using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
         return it.Seek(fieldName) && SliceComparer.Equals(it.CurrentKey, fieldName);
     }
