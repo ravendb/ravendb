@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 _writer.WriteArrayEnd();
             }
-            else if (value is RegExpInstance)
+            else if (value is JsRegExp)
             {
                 _writer.WriteValueNull();
             }

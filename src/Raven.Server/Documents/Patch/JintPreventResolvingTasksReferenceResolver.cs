@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (value is ObjectWrapper objectWrapper &&
                 objectWrapper.Target is Task task &&
-                reference.GetReferencedName() == nameof(Task<int>.Result) &&
+                reference.ReferencedName == nameof(Task<int>.Result) &&
                 task.IsCompleted == false)
             {
                 var descriptor = GetRunningTaskResult(task);
