@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -17,6 +18,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
 
@@ -242,8 +244,45 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing = null)
             {
-                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, item.Document.Id);
+                var shardNumber = GetShardNumberAndHandleLegacyRevisionsIfNeeded(item.Document);
                 await _actions[shardNumber].WriteDocumentAsync(item, progress, beforeFlushing);
+            }
+
+            private int GetShardNumberAndHandleLegacyRevisionsIfNeeded(Document document)
+            {
+                if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision) == false &&
+                    document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions) == false) ||
+                    document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                    return DatabaseContext.GetShardNumberFor(_allocator, document.Id);
+
+
+                JsonOperationContext context = GetContextForNewDocument();
+                string id;
+                if (document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision))
+                {
+                    var endIndex = document.Id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                    id = document.Id.Substring(0, endIndex);
+
+                    metadata.Modifications = new DynamicJsonValue
+                    {
+                        ["Raven-Document-Parent-Revision"] = document.Id,
+                        ["Raven-Document-Revision-Status"] = "Historical"
+                    };
+                }
+                else
+                {
+                    id = document.Id;
+
+                    metadata.Modifications = new DynamicJsonValue
+                    {
+                        ["Raven-Document-Revision"] = document.Id,
+                        ["Raven-Document-Revision-Status"] = "Current"
+                    };
+                }
+
+                document.Data = context.ReadObject(document.Data, document.Id);
+
+                return DatabaseContext.GetShardNumberFor(_allocator, id);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)

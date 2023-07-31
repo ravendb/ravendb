@@ -163,7 +163,7 @@ namespace SlowTests.Smuggler
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
+                
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(5, stats.CountOfRevisionDocuments);
@@ -203,21 +203,22 @@ namespace SlowTests.Smuggler
                         Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
 
                         var revisionChangeVector = metadata.GetString(Constants.Documents.Metadata.ChangeVector);
-                        Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", revisionChangeVector);
 
                         if (i == 0)
                             Assert.Equal(changeVector, revisionChangeVector);
+                        else
+                            Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", revisionChangeVector);
                     }
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Smuggler)]
-        [InlineData("SlowTests.Smuggler.Data.DocumentWithRevisions.ravendbdump")]
-        public async Task CanImportRevisions2(string file)
+        [RavenData("SlowTests.Smuggler.Data.DocumentWithRevisions.ravendbdump", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanImportRevisions2(Options options, string file)
         {
-            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
-            using (var store = GetDocumentStore())
+            await using (var stream = GetType().Assembly.GetManifestResourceStream(file))
+            using (var store = GetDocumentStore(options))
             {
                 Assert.NotNull(stream);
 
@@ -226,7 +227,8 @@ namespace SlowTests.Smuggler
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "test");
+                var stats = await store.Maintenance.ForDatabase(database.Name).SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(6, stats.CountOfRevisionDocuments);
                 Assert.Equal(11, stats.LastDocEtag);

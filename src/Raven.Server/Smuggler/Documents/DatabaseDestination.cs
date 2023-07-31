@@ -706,6 +706,7 @@ namespace Raven.Server.Smuggler.Documents
                             // in v3.x: rev1, rev2, document, rev3
                             parentDocument = _database.DocumentsStorage.Get(context, newId);
                             _missingDocumentsForRevisions.TryRemove(newId, out _);
+                            documentChangeVector = documentChangeVector.MergeWith(parentDocument.ChangeVector, context);
                         }
 
                         document.Flags |= DocumentFlags.HasRevisions;
@@ -721,7 +722,7 @@ namespace Raven.Server.Smuggler.Documents
                                 parentDocument.Data = parentDocument.Data.Clone(context);
 
                             _database.DocumentsStorage.Put(context, parentDocument.Id, null,
-                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, null,
+                                parentDocument.Data, parentDocument.LastModified.Ticks, documentChangeVector, null,
                                 parentDocument.Flags, parentDocument.NonPersistentFlags);
                         }
 
