@@ -774,7 +774,7 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocumentDeletion(store2, "users/1"));
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker1$users/1");
 
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
@@ -794,7 +794,7 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Fitzchak 2"));
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker2$users/1");
 
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
@@ -813,7 +813,7 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Fitzchak 3"));
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker3$users/1");
 
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
@@ -832,7 +832,7 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Fitzchak 4"));
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker4$users/1");
 
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
@@ -851,7 +851,7 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Fitzchak 5"));
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker5$users/1");
 
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
