@@ -639,11 +639,13 @@ namespace Raven.Client.Util
                             }
                         }
                     case "OrderBy":
+                    case "ThenBy":
                         {
                             OrderByToSort(context, methodCallExpression);
                             return;
                         }
                     case "OrderByDescending":
+                    case "ThenByDescending":
                         {
                             OrderByToSort(context, methodCallExpression, true);
                             return;
