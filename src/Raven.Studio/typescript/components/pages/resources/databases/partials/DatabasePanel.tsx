@@ -472,7 +472,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             <DatabaseDistribution db={db} />
                         </Collapse>
                         <Collapse isOpen={panelCollapsed}>
-                            <DatabaseTopology db={db} togglePanelCollapsed={togglePanelCollapsed} />
+                            <DatabaseTopology db={db} dbState={dbState} togglePanelCollapsed={togglePanelCollapsed} />
                         </Collapse>
                     </div>
                 </div>
