@@ -10,13 +10,11 @@ namespace Raven.Server.Documents
     public class ClusterTransactionWaiter
     {
         internal readonly DocumentDatabase Database;
-        internal readonly ServerStore ServerStore;
         private readonly ConcurrentDictionary<string, TaskCompletionSource> _results = new ConcurrentDictionary<string, TaskCompletionSource>();
 
-        public ClusterTransactionWaiter(DocumentDatabase database, ServerStore serverStore)
+        public ClusterTransactionWaiter(DocumentDatabase database)
         {
             Database = database;
-            ServerStore = serverStore;
         }
 
         public RemoveTask CreateTask(string id, long index)

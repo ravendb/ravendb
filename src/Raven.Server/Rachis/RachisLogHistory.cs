@@ -490,18 +490,5 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe long? GetIndexByRaftId(ClusterOperationContext context, string guid)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
-            {
-                if (table.ReadByKey(guidSlice, out var reader) == false)
-                    return null;
-
-                var index = Bits.SwapBytes(*(long*)reader.Read((int)LogHistoryColumn.Index, out _));
-                return index;
-            }
-
-        }
     }
 }
