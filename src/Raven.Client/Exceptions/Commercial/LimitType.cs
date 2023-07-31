@@ -94,7 +94,7 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("TCP Data Compression")]
         TcpDataCompression,
         
-        [Description("Kafka Queue Sink")]
+        [Description("Queue Sink")]
         QueueSink,
     }
 }

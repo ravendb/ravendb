@@ -70,8 +70,6 @@ using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Documents.ETL.Providers.OLAP.Test;
-using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.QueueSink.Test;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
