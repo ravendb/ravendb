@@ -241,19 +241,24 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string CombinePathAndKey(string path)
         {
+            return CombinePathAndKey(path, _settings.FolderName, _settings.FileName);
+        }
+
+        public static string CombinePathAndKey(string path, string folderName, string fileName)
+        {
             if (path?.EndsWith('/') == true)
                 path = path[..^1];
 
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
 
-            return $"{prefix}{_settings.FolderName}/{_settings.FileName}";
+            return $"{prefix}{folderName}/{fileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
             where S : BackupSettings
             where T : CloudUploadStatus
         {
-            if (Client.Documents.Operations.Backups.BackupConfiguration.CanBackupUsing(settings) == false)
+            if (BackupConfiguration.CanBackupUsing(settings) == false)
                 return;
 
             Debug.Assert(uploadStatus != null);
@@ -380,8 +385,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (backupType.HasValue)
             {
-                var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
-                description = _isFullBackup ? fullBackupText : "Incremental backup";
+                description = GetBackupDescription(backupType.Value, _isFullBackup);
             }
             else
             {
@@ -389,6 +393,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return $"{description} for db {_settings.DatabaseName} at {SystemTime.UtcNow}";
+        }
+
+        public static string GetBackupDescription(BackupType backupType, bool isFullBackup)
+        {
+            var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
+            return isFullBackup ? fullBackupText : "Incremental backup";
         }
 
         private static string MsToHumanReadableString(long milliseconds)

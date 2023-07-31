@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Xunit;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
@@ -79,7 +80,9 @@ namespace FastTests.Voron.Backups
 
                 var voronTempFileName = new VoronPathSetting(tempFileName);
 
-                database.FullBackupTo(voronTempFileName.Combine("backup-test.backup").FullPath);
+                using (var fileStream = SafeFileStream.Create(voronTempFileName.Combine("backup-test.backup").FullPath, FileMode.Create))
+                    database.FullBackupTo(fileStream);
+
                 BackupMethods.Full.Restore(voronTempFileName.Combine("backup-test.backup"), voronTempFileName.Combine("backup-test.data"));
             }
             using (CreatePersistentDocumentDatabase(Path.Combine(tempFileName, "backup-test.data"), out var database))

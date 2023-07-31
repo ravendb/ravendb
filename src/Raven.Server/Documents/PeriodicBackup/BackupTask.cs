@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using Google.Api.Gax.ResourceNames;
+using Org.BouncyCastle.Utilities.Zlib;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -13,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Json;
@@ -26,10 +29,11 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Utils;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Logger = Sparrow.Logging.Logger;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -158,7 +162,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
                 var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, nowAsString, _configuration.BackupType, out string backupFilePath);
-                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startEtag, startRaftIndex);
+                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, folderName, fileName, startEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
@@ -551,7 +555,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             public long LastRaftIndex { get; set; }
         }
 
-        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, long? startEtag, long? startRaftIndex)
+        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, string folderName, string fileName, long? startEtag, long? startRaftIndex)
         {
             var internalBackupResult = new InternalBackupResult();
 
@@ -578,7 +582,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         options.OperateOnTypes |= DatabaseItemType.Tombstones;
                         options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
 
-                        var currentBackupResult = CreateBackup(options, tempBackupFilePath, startEtag, startRaftIndex);
+                        var currentBackupResult = CreateBackup(options, tempBackupFilePath, folderName, fileName, startEtag, startRaftIndex);
 
                         if (_isFullBackup)
                         {
@@ -613,21 +617,28 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var sw = Stopwatch.StartNew();
                         var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? CompressionLevel.Optimal;
                         var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
-                        var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionLevel, excludeIndexes,
-                            info =>
-                            {
-                                AddInfo(info.Message);
 
-                                _backupResult.SnapshotBackup.ReadCount += info.FilesCount;
-                                if (sw.ElapsedMilliseconds > 0 && info.FilesCount > 0)
+                        using (var stream = GetStreamForBackupDestination(tempBackupFilePath, folderName, fileName))
+                        {
+                            var smugglerResult = _database.FullBackupTo(stream, compressionLevel, excludeIndexes,
+                                info =>
                                 {
-                                    AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} " +
-                                            $"file{(_backupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
-                                    sw.Restart();
-                                }
-                            }, TaskCancelToken.Token);
+                                    AddInfo(info.Message);
 
-                        EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
+                                    _backupResult.SnapshotBackup.ReadCount += info.FilesCount;
+                                    if (sw.ElapsedMilliseconds > 0 && info.FilesCount > 0)
+                                    {
+                                        AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} " +
+                                                $"file{(_backupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
+                                        sw.Restart();
+                                    }
+                                }, TaskCancelToken.Token);
+
+                            FlushToDiskIfNeeded(stream);
+
+                            EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
+                        }
+                        
 
                         AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} files, " +
                                 $"took: {totalSw.ElapsedMilliseconds:#,#;;0}ms");
@@ -659,6 +670,53 @@ namespace Raven.Server.Documents.PeriodicBackup
             return internalBackupResult;
         }
 
+        private Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
+        {
+            if (_backupToLocalFolder)
+            {
+                // we'll do the local backup and then upload it
+                return GetForLocalBackup();
+            }
+
+            var hasAws = BackupConfiguration.CanBackupUsing(_configuration.S3Settings);
+            var hasGlacier = BackupConfiguration.CanBackupUsing(_configuration.GlacierSettings);
+            var hasAzure = BackupConfiguration.CanBackupUsing(_configuration.GlacierSettings);
+            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(_configuration.GoogleCloudSettings);
+            var hasFtp = BackupConfiguration.CanBackupUsing(_configuration.GoogleCloudSettings);
+
+            var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
+            if (destinations.Count(x => x) != 1)
+            {
+                // direct upload is supported only for 1 destination
+                return GetForLocalBackup();
+            }
+
+            if (hasAws)
+            {
+                var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                    settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
+
+                return new AwsS3DirectUploadStream(new AwsS3DirectUploadStream.Parameters
+                {
+                    Settings = s3Settings,
+                    Configuration = _database.Configuration.Backup,
+                    BackupType = _configuration.BackupType,
+                    IsFullBackup = _isFullBackup,
+                    FolderName = folderName,
+                    FileName = fileName,
+                    OnProgress = AddInfo
+                });
+            }
+
+            // all other destinations are currently not supported
+            return GetForLocalBackup();
+
+            FileStream GetForLocalBackup()
+            {
+                return SafeFileStream.Create(filePath, FileMode.Create);
+            }
+        }
+
         public static string GetBackupDescription(BackupType backupType, bool isFull)
         {
             var isFullText = isFull ? "a full" : "an incremental";
@@ -684,7 +742,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
-                if(mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
+                if (mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
                    _configuration.SnapshotSettings is { ExcludeIndexes: true })
                     continue;
 
@@ -746,16 +804,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             _onProgress.Invoke(_backupResult.Progress);
         }
 
-        private InternalBackupResult CreateBackup(
-            DatabaseSmugglerOptionsServerSide options, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
+        private InternalBackupResult CreateBackup(DatabaseSmugglerOptionsServerSide options, string backupFilePath, string folderName, string fileName, long? startDocumentEtag, long? startRaftIndex)
         {
             // the last etag is already included in the last backup
             var currentBackupResults = new InternalBackupResult();
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
             startRaftIndex = startRaftIndex == null ? 0 : ++startRaftIndex;
 
-            using (Stream fileStream = File.Open(backupFilePath, FileMode.CreateNew))
-            using (var outputStream = GetOutputStream(fileStream))
+            using (var stream = GetStreamForBackupDestination(backupFilePath, folderName, fileName))
+            using (var outputStream = GetOutputStream(stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
@@ -771,25 +828,33 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 smuggler.ExecuteAsync().Wait();
 
-                switch (outputStream)
-                {
-                    case EncryptingXChaCha20Poly1305Stream encryptedStream:
-                        encryptedStream.Flush(flushToDisk: true);
-                        break;
-
-                    case FileStream file:
-                        file.Flush(flushToDisk: true);
-                        break;
-
-                    default:
-                        throw new InvalidOperationException($" {outputStream.GetType()} not supported");
-                }
+                FlushToDiskIfNeeded(outputStream);
 
                 currentBackupResults.LastEtag = smugglerSource.LastEtag;
                 currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
                 currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
 
                 return currentBackupResults;
+            }
+        }
+
+        private static void FlushToDiskIfNeeded(Stream outputStream)
+        {
+            switch (outputStream)
+            {
+                case EncryptingXChaCha20Poly1305Stream encryptedStream:
+                    encryptedStream.Flush(flushToDisk: true);
+                    break;
+
+                case FileStream file:
+                    file.Flush(flushToDisk: true);
+                    break;
+
+                case DirectUploadStream:
+                    break;
+
+                default:
+                    throw new InvalidOperationException($" {outputStream.GetType()} not supported");
             }
         }
 

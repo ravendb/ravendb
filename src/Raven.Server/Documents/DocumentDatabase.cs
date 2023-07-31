@@ -1189,7 +1189,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal,
+        public SmugglerResult FullBackupTo(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal,
             bool excludeIndexes = false, Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
@@ -1202,8 +1202,7 @@ namespace Raven.Server.Documents
             }
 
             using (TombstoneCleaner.PreventTombstoneCleaningUpToEtag(lastTombstoneEtag))
-            using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
-            using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+            using (var package = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
@@ -1288,8 +1287,6 @@ namespace Raven.Server.Documents
 
                 BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, compressionLevel,
                     infoNotify: infoNotify, cancellationToken: cancellationToken);
-
-                file.Flush(true); // make sure that we fully flushed to disk
             }
 
             return smugglerResult;
