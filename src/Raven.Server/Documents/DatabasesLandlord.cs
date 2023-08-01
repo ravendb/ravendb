@@ -90,6 +90,7 @@ namespace Raven.Server.Documents
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
             internal bool ShouldFetchIdleStateImmediately = false;
+            internal bool PreventNodePromotion = false;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)

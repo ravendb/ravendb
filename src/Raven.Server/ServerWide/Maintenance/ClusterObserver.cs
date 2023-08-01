@@ -1299,6 +1299,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private (bool Promote, string UpdateTopologyReason) TryPromote(DatabaseObservationState state, string mentorNode, string promotable)
         {
+            if (_server.DatabasesLandlord.ForTestingPurposes?.PreventNodePromotion == true)
+                return (false, "Preventing node promotion for testing purposes.");
+
             var dbName = state.Name;
             var topology = state.DatabaseTopology;
             var current = state.Current;
