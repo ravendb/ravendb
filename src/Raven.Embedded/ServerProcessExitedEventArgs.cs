@@ -2,7 +2,7 @@
 
 namespace Raven.Embedded
 {
-    public class ServerProcessExitedEventArgs : EventArgs
+    public sealed class ServerProcessExitedEventArgs : EventArgs
     {
     }
 }
