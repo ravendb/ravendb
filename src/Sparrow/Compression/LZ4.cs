@@ -67,7 +67,7 @@ namespace Sparrow.Compression
         private struct Partial : IEarlyEndDirective { };
 
         [StructLayout(LayoutKind.Sequential)]
-        protected struct LZ4_stream_t_internal
+        private struct LZ4_stream_t_internal
         {
             public fixed int hashTable[HASH_SIZE_U32];
             public uint dictSize;

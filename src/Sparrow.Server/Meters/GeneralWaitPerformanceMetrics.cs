@@ -54,7 +54,7 @@ namespace Sparrow.Server.Meters
             return stats.ToJson();
         }
 
-        protected IEnumerable<MeterItem> GetCurrentItems()
+        private IEnumerable<MeterItem> GetCurrentItems()
         {
             for (int pos = 0; pos < Buffer.Length; pos++)
             {
@@ -65,7 +65,7 @@ namespace Sparrow.Server.Meters
             }
         }
 
-        protected List<MeterItem> GetRecentMetrics()
+        private List<MeterItem> GetRecentMetrics()
         {
             var list = new List<MeterItem>();
             list.AddRange(GetCurrentItems());

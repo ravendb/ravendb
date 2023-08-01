@@ -29,7 +29,7 @@ namespace Voron.Data.BTrees
         }
 
         // The bulk of the clean-up code is implemented in Dispose(bool)
-        protected void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (disposing)
             {

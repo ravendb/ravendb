@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class PutServerWideExternalReplicationCommand : UpdateValueCommand<ServerWideExternalReplication>
     {
-        protected PutServerWideExternalReplicationCommand()
+        public PutServerWideExternalReplicationCommand()
         {
             // for deserialization
         }
