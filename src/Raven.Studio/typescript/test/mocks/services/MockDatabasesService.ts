@@ -6,12 +6,20 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 
+interface WithGetDatabasesStateOptions {
+    loadError?: string[];
+    offlineNodes?: string[];
+}
+
 export default class MockDatabasesService extends AutoMockService<DatabasesService> {
     constructor() {
         super(new DatabasesService());
     }
 
-    withGetDatabasesState(databaseListProvider: (nodeTag: string) => string[], options: { loadError?: string[] } = {}) {
+    withGetDatabasesState(
+        databaseListProvider: (nodeTag: string) => string[],
+        options: WithGetDatabasesStateOptions = {}
+    ) {
         this.mocks.getDatabasesState.mockImplementation(async (tag) => {
             const dbs = databaseListProvider(tag);
 
@@ -23,6 +31,10 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
                         Name: db,
                         LoadError: "This is some load error!",
                     } as StudioDatabaseState;
+                }
+
+                if ((options.offlineNodes || []).includes(tag)) {
+                    state.UpTime = null;
                 }
 
                 return state;

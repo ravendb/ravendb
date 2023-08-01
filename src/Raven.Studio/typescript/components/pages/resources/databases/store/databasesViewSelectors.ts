@@ -5,6 +5,7 @@ import {
     DatabaseFilterCriteria,
     DatabaseLocalInfo,
     DatabaseSharedInfo,
+    MergedDatabaseState,
     OrchestratorLocalInfo,
     TopLevelDatabaseInfo,
 } from "components/models/databases";
@@ -23,6 +24,8 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
         nonSharded = 0,
         local = 0,
         remote = 0;
+
+    const localNodeTag = clusterSelectors.localNodeTag(store);
 
     databaseSelectors.allDatabases(store).forEach((db) => {
         const perNodeState = selectDatabaseState(db.name)(store);
@@ -57,14 +60,14 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
             nonSharded++;
         }
 
-        if (db.currentNode.relevant) {
+        if (perNodeState.some((x) => x.location.nodeTag === localNodeTag)) {
             local++;
-        } else {
+        }
+
+        if (perNodeState.some((x) => x.location.nodeTag !== localNodeTag)) {
             remote++;
         }
     });
-
-    const localNodeTag = clusterSelectors.localNodeTag(store);
 
     return [
         { value: "Online", label: "Online", count: online },
@@ -83,28 +86,32 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
     ];
 };
 
+function isMatchingStatus(
+    filterStates: DatabaseFilterByStateOption[],
+    state: MergedDatabaseState,
+    locationNodeStatesCount: number
+): boolean {
+    if (locationNodeStatesCount === 0) {
+        return false;
+    }
+
+    const preMatchesStatus =
+        state === "Partially Online"
+            ? filterStates.some((x) => x === "Online" || x === "Offline")
+            : filterStates.includes(state);
+
+    return (
+        !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
+        preMatchesStatus ||
+        state === "Loading"
+    );
+}
+
 const isDatabaseInFilterState = (
     store: RootState,
     db: DatabaseSharedInfo,
     filterStates: DatabaseFilterByStateOption[]
 ): boolean => {
-    const perNodeState = selectDatabaseState(db.name)(store);
-    const databaseState = DatabaseUtils.getDatabaseState(db, perNodeState);
-
-    const preMatchesStatus =
-        databaseState === "Partially Online"
-            ? filterStates.some((x) => x === "Online" || x === "Offline")
-            : filterStates.includes(databaseState);
-
-    const matchesStatus =
-        !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
-        preMatchesStatus ||
-        databaseState === "Loading";
-
-    if (!matchesStatus) {
-        return false;
-    }
-
     const matchesSharding =
         !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
         (filterStates.includes("Sharded") && db.sharded) ||
@@ -114,11 +121,40 @@ const isDatabaseInFilterState = (
         return false;
     }
 
-    return (
-        !filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
-        (filterStates.includes("Local") && db.currentNode.relevant) ||
-        (filterStates.includes("Remote") && !db.currentNode.relevant)
-    );
+    const perNodeStates = selectDatabaseState(db.name)(store);
+    const databaseState = DatabaseUtils.getDatabaseState(db, perNodeStates);
+
+    const isMatchingStatusWhenLocationUnselected =
+        !filterStates.some((x) => ["Local", "Remote"].includes(x)) &&
+        isMatchingStatus(filterStates, databaseState, perNodeStates.length);
+
+    if (isMatchingStatusWhenLocationUnselected) {
+        return true;
+    }
+
+    const localNodeTag = clusterSelectors.localNodeTag(store);
+
+    const localNodeStates = perNodeStates.filter((x) => x.location.nodeTag === localNodeTag);
+    const localDatabaseState = DatabaseUtils.getDatabaseState(db, localNodeStates);
+
+    const isMatchingStatusWhenLocalSelected =
+        filterStates.includes("Local") && isMatchingStatus(filterStates, localDatabaseState, localNodeStates.length);
+
+    if (isMatchingStatusWhenLocalSelected) {
+        return true;
+    }
+
+    const remoteNodeStates = perNodeStates.filter((x) => x.location.nodeTag !== localNodeTag);
+    const remoteDatabaseState = DatabaseUtils.getDatabaseState(db, remoteNodeStates);
+
+    const isMatchingStatusWhenRemoteSelected =
+        filterStates.includes("Remote") && isMatchingStatus(filterStates, remoteDatabaseState, remoteNodeStates.length);
+
+    if (isMatchingStatusWhenRemoteSelected) {
+        return true;
+    }
+
+    return false;
 };
 
 const selectFilteredDatabaseNames =
