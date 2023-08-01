@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// The query generator
         /// </summary>
-        protected readonly IDocumentQueryGenerator QueryGenerator;
+        private readonly IDocumentQueryGenerator QueryGenerator;
 
         internal const string WholeDocumentComparisonExceptionMessage =
             "You cannot compare the whole document in Where closure. Please write a conditional statement using fields from the document. A query such as session.Query<User>().Where(u => u == null) is not meaningful, you are asserting that the document itself is not null, which it can never be. Did you intend to assert that a property isn't set to null?";
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// The index name
         /// </summary>
-        protected readonly string IndexName;
+        private readonly string IndexName;
 
         private readonly string _collectionName;
 
@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Linq
         /// Visits the expression and generate the lucene query
         /// </summary>
         /// <param name="expression">The expression.</param>
-        protected void VisitExpression(Expression expression)
+        private void VisitExpression(Expression expression)
         {
             if (expression is BinaryExpression)
             {
@@ -679,7 +679,7 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        protected ExpressionInfo GetMember(Expression expression)
+        private ExpressionInfo GetMember(Expression expression)
         {
             var parameterExpression = GetParameterExpressionIncludingConversions(expression);
             if (parameterExpression != null)
@@ -4091,7 +4091,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <summary>
         /// Different query types 
         /// </summary>
-        protected enum SpecialQueryType
+        private enum SpecialQueryType
         {
             /// <summary>
             /// 
@@ -4141,7 +4141,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public string Name { get; internal set; }
         public string Alias { get; internal set; }
 
-        protected bool Equals(FieldToFetch other)
+        private bool Equals(FieldToFetch other)
         {
             return string.Equals(Name, other.Name) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
         }

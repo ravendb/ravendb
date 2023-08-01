@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public string Database;
             public string Index;
 
-            protected bool Equals(QueryCacheKey other)
+            private bool Equals(QueryCacheKey other)
             {
                 return Query == other.Query && Owner == other.Owner;
             }
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         }
 
 
-        protected bool Equals(CachingQuery other)
+        private bool Equals(CachingQuery other)
         {
             return base.Equals(other) && Equals(_inner, other._inner);
         }

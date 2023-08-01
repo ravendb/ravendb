@@ -1253,7 +1253,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            protected void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
+            private void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
                 char[] password, bool wrongPkcs12Zero)
             {
                 if (password != null)
@@ -1265,7 +1265,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            protected void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
+            private void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
             {
                 AsymmetricKeyParameter privKey = PrivateKeyFactory.CreateKey(privKeyInfo);
 

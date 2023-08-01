@@ -231,7 +231,7 @@ namespace Raven.Server.Https
                 Errors = errors;
             }
 
-            protected bool Equals(Key other)
+            private bool Equals(Key other)
             {
                 return Host == other.Host && Cert == other.Cert && Errors == other.Errors;
             }

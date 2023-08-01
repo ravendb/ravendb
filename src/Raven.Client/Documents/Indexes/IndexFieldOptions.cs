@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Indexes
 
         public bool? Suggestions { get; set; }
 
-        protected bool Equals(IndexFieldOptions other)
+        private bool Equals(IndexFieldOptions other)
         {
             return Storage == other.Storage
                    && Indexing == other.Indexing

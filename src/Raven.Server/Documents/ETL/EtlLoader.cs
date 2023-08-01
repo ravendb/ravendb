@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL
         private bool _isSubscribedToCounterChanges;
         private bool _isSubscribedToTimeSeriesChanges;
 
-        protected Logger Logger;
+        private Logger Logger;
 
         public event Action<(string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics)> BatchCompleted;
 

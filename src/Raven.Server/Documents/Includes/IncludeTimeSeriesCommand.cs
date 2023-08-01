@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Includes
 
         public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
 
-        protected IncludeTimeSeriesCommand()
+        private IncludeTimeSeriesCommand()
         {
             Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
         }

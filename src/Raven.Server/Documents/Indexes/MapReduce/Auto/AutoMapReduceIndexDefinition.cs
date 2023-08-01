@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return indexDefinition;
         }
 
-        protected void PersistGroupByFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
+        private void PersistGroupByFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName((nameof(GroupByFields)));
             writer.WriteStartArray();

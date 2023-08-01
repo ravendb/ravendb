@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return $"BatchSize: {BatchSize}, Started: {Started}, Duration: {Duration}";
         }
 
-        protected bool Equals(SqlEtlPerformanceStats other)
+        private bool Equals(SqlEtlPerformanceStats other)
         {
             return BatchSize == other.BatchSize && Duration.Equals(other.Duration) && Started.Equals(other.Started);
         }

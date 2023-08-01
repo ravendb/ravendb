@@ -114,7 +114,7 @@ namespace Raven.Server.Documents
             return $"Collection: '{Name}'";
         }
 
-        protected bool Equals(CollectionName other)
+        private bool Equals(CollectionName other)
         {
             return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
         }

@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class DeleteServerWideTaskCommand : UpdateValueCommand<DeleteServerWideTaskCommand.DeleteConfiguration>
     {
-        protected DeleteServerWideTaskCommand()
+        public DeleteServerWideTaskCommand()
         {
             // for deserialization
         }

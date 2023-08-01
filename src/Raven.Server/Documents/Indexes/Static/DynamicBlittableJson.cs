@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return Equals((DynamicBlittableJson)obj);
         }
 
-        protected bool Equals(DynamicBlittableJson other)
+        private bool Equals(DynamicBlittableJson other)
         {
             return Equals(BlittableJson, other.BlittableJson);
         }

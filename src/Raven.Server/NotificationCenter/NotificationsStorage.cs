@@ -21,7 +21,7 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly string _tableName;
 
-        protected readonly Logger Logger;
+        private readonly Logger Logger;
 
         private StorageEnvironment _environment;
 

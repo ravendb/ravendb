@@ -193,7 +193,7 @@ namespace Raven.Client.Http
             }
         }
 
-        protected static void ThrowEmptyTopology()
+        private static void ThrowEmptyTopology()
         {
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
         }

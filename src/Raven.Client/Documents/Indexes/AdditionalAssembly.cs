@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Indexes
         {
         }
 
-        protected bool Equals(AdditionalAssembly other)
+        private bool Equals(AdditionalAssembly other)
         {
             return string.Equals(AssemblyName, other.AssemblyName, StringComparison.OrdinalIgnoreCase)
                    && string.Equals(AssemblyPath, other.AssemblyPath, StringComparison.OrdinalIgnoreCase)

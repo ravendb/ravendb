@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
             MethodArguments = new List<string>(options.MethodArguments);
         }
 
-        protected bool Equals(AutoSpatialOptions other)
+        private bool Equals(AutoSpatialOptions other)
         {
             return base.Equals(other) && MethodType == other.MethodType && MethodArguments.SequenceEqual(other.MethodArguments);
         }

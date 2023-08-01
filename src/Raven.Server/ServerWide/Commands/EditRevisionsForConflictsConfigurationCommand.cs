@@ -7,7 +7,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditRevisionsForConflictsConfigurationCommand : UpdateDatabaseCommand
     {
-        public RevisionsCollectionConfiguration Configuration { get; protected set; }
+        public RevisionsCollectionConfiguration Configuration { get; private set; }
 
         public EditRevisionsForConflictsConfigurationCommand()
         {

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
         internal IndexReader _lastReader;
         private readonly LuceneDocumentConverterBase _converter;
-        protected IndexTransactionCache _streamsCache = new IndexTransactionCache();
+        private IndexTransactionCache _streamsCache = new IndexTransactionCache();
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;

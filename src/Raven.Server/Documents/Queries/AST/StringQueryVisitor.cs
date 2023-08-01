@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public sealed class StringQueryVisitor : QueryVisitor
     {
-        protected readonly StringBuilder _sb;
+        private readonly StringBuilder _sb;
 
         public StringQueryVisitor(StringBuilder sb)
         {

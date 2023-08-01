@@ -26,7 +26,7 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
 
     protected override bool SupportsCurrentNode => true;
 
-    protected PeriodicBackupConnectionType GetPeriodicBackupConnectionType()
+    private PeriodicBackupConnectionType GetPeriodicBackupConnectionType()
     {
         PeriodicBackupConnectionType connectionType;
 
@@ -44,7 +44,7 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
         return connectionType;
     }
 
-    protected ValueTask<BlittableJsonReaderObject> GetSettingsAsync(JsonOperationContext context) => context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "restore-info");
+    private ValueTask<BlittableJsonReaderObject> GetSettingsAsync(JsonOperationContext context) => context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "restore-info");
 
     protected override async ValueTask<RavenCommand<RestorePoints>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context)
     {

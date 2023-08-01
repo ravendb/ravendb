@@ -149,7 +149,7 @@ namespace Raven.Server.ServerWide
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
 
-        public ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
+        internal ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {

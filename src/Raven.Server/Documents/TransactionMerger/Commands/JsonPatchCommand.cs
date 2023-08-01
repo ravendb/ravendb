@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
         private readonly string _id;
         private readonly List<Command> _commands;
         public JsonPatchResult _patchResult;
-        protected readonly bool _returnDocument;
+        private readonly bool _returnDocument;
         private readonly JsonOperationContext _externalContext;
 
         public JsonPatchCommand(string id, List<Command> commands, bool returnDocument, JsonOperationContext externalContext)

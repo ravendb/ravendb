@@ -14,6 +14,6 @@ namespace Raven.Server.Documents.Queries.Facets
             Includes = new List<Document>();
         }
 
-        public bool NotModified { get; protected set; }
+        public bool NotModified { get; private set; }
     }
 }

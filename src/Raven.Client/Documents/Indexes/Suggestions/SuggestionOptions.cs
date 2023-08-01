@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Indexes.Suggestions
         /// </summary>
         public double Accuracy { get; set; }
 
-        protected bool Equals(SuggestionOptions other)
+        private bool Equals(SuggestionOptions other)
         {
             return Distance == other.Distance && Accuracy.Equals(other.Accuracy);
         }

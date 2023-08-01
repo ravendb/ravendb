@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 {
     internal sealed class StreamingHandlerProcessorForGetStreamQuery : AbstractStreamingHandlerProcessorForGetStreamQuery<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        protected QueryOperationContext _queryContext;
+        private QueryOperationContext _queryContext;
 
         public StreamingHandlerProcessorForGetStreamQuery([NotNull] DatabaseRequestHandler requestHandler, HttpMethod method) : base(requestHandler, method)
         {

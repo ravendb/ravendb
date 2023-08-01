@@ -1423,7 +1423,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        protected void NotifyLeaderAboutError(long index, Leader leader, Exception e)
+        private void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
             _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
             {
@@ -1443,7 +1443,7 @@ namespace Raven.Server.ServerWide
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
-        protected void NotifyLeaderAboutFatalError(long index, Leader leader, Exception e)
+        private void NotifyLeaderAboutFatalError(long index, Leader leader, Exception e)
         {
             _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
             {

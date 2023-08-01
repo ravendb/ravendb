@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             return Equals((ExpirationConfiguration)obj);
         }
 
-        protected bool Equals(ExpirationConfiguration other)
+        private bool Equals(ExpirationConfiguration other)
         {
             return Disabled == other.Disabled && DeleteFrequencyInSec == other.DeleteFrequencyInSec;
         }

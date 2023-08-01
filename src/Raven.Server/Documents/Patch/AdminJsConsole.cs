@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Patch
 }};");
         }
 
-        protected bool Equals(AdminJsScriptKey other)
+        private bool Equals(AdminJsScriptKey other)
         {
             return string.Equals(_script, other._script);
         }

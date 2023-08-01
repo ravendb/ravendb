@@ -41,15 +41,15 @@ namespace Raven.Server.Rachis
 
     public sealed class RachisTopologyChangeException : RachisException
     {
-        protected RachisTopologyChangeException()
+        public RachisTopologyChangeException()
         {
         }
 
-        protected RachisTopologyChangeException(string message) : base(message)
+        public RachisTopologyChangeException(string message) : base(message)
         {
         }
 
-        protected RachisTopologyChangeException(string message, Exception innerException) : base(message, innerException)
+        public RachisTopologyChangeException(string message, Exception innerException) : base(message, innerException)
         {
         }
 

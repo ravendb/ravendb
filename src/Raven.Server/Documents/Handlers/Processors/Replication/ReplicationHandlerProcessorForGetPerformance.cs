@@ -17,12 +17,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected IEnumerable<IAbstractIncomingReplicationHandler> GetIncomingHandlers(DocumentsOperationContext context)
+        private IEnumerable<IAbstractIncomingReplicationHandler> GetIncomingHandlers(DocumentsOperationContext context)
         {
             return RequestHandler.Database.ReplicationLoader.IncomingHandlers;
         }
 
-        protected IEnumerable<IReportOutgoingReplicationPerformance> GetOutgoingReplicationReportsPerformance(DocumentsOperationContext context)
+        private IEnumerable<IReportOutgoingReplicationPerformance> GetOutgoingReplicationReportsPerformance(DocumentsOperationContext context)
         {
             var reporters = RequestHandler.Database.ReplicationLoader.OutgoingHandlers.Concat<IReportOutgoingReplicationPerformance>(RequestHandler.Database.ReplicationLoader
                 .OutgoingConnectionsLastFailureToConnect.Values);

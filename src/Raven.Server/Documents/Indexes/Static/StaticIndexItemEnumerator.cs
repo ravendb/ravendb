@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
             Current?.Dispose();
         }
 
-        protected class DynamicIteratorOfCurrentItemWrapper<TDynamicIteratorOfCurrentItemWrapperType> : IEnumerable<TDynamicIteratorOfCurrentItemWrapperType> where TDynamicIteratorOfCurrentItemWrapperType : AbstractDynamicObject, new()
+        private sealed class DynamicIteratorOfCurrentItemWrapper<TDynamicIteratorOfCurrentItemWrapperType> : IEnumerable<TDynamicIteratorOfCurrentItemWrapperType> where TDynamicIteratorOfCurrentItemWrapperType : AbstractDynamicObject, new()
         {
             private readonly StaticIndexItemEnumerator<TDynamicIteratorOfCurrentItemWrapperType> _indexingEnumerator;
             private Enumerator<TDynamicIteratorOfCurrentItemWrapperType> _enumerator;

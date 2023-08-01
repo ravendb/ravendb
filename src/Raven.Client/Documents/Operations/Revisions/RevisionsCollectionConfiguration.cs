@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public long? MaximumRevisionsToDeleteUponDocumentUpdate { get; set; }
 
-        protected bool Equals(RevisionsCollectionConfiguration other)
+        private bool Equals(RevisionsCollectionConfiguration other)
         {
             return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep &&
                    MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep &&

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
             public const string CompareExchangeReferenceCollectionPrefix = "@";
         }
 
-        protected readonly Logger _logger;
+        private readonly Logger _logger;
 
         private readonly Index _index;
 

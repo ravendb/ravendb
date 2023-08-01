@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Patch
             Type = type;
         }
 
-        protected bool Equals(PatchRequest other)
+        private bool Equals(PatchRequest other)
         {
             if ((string.Equals(Script, other.Script) && Type == other.Type) == false)
                 return false;
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Patch
             runner.AddScript(GenerateRootScript());
         }
 
-        protected string GenerateRootScript()
+        private string GenerateRootScript()
         {
             switch (Type)
             {

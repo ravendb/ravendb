@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsQuoted;
 
-        protected bool Equals(QueryFieldName other)
+        private bool Equals(QueryFieldName other)
         {
             return string.Equals(Value, other.Value) && IsQuoted == other.IsQuoted;
         }

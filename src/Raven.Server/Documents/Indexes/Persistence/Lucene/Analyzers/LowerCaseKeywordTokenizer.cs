@@ -44,11 +44,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             : base(input)
         { }
 
-        protected LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
+        public LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
             : base(source, input)
         { }
 
-        protected LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
+        public LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
             : base(factory, input)
         { }
     }

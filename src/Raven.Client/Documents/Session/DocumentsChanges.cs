@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
             ArrayValueRemoved
         }
 
-        protected bool Equals(DocumentsChanges other)
+        private bool Equals(DocumentsChanges other)
         {
             return Equals(FieldOldValue, other.FieldOldValue)
                    && Equals(FieldNewValue, other.FieldNewValue)

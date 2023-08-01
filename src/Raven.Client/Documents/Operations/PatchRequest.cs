@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations
             Values = new Dictionary<string, object>();
         }
 
-        protected bool Equals(PatchRequest other)
+        private bool Equals(PatchRequest other)
         {
             if (other == null)
                 return false;

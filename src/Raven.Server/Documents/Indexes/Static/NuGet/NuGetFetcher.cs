@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
 
             public HashSet<NuGetPackage> Dependencies { get; set; } = new HashSet<NuGetPackage>();
 
-            protected bool Equals(NuGetPackage other)
+            private bool Equals(NuGetPackage other)
             {
                 return string.Equals(Path, other.Path, StringComparison.OrdinalIgnoreCase)
                        && string.Equals(NativePath, other.NativePath, StringComparison.OrdinalIgnoreCase)

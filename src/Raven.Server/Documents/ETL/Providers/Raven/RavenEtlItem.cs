@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         }
 
-        public LazyStringValue AttachmentTombstoneId { get; protected set; }
+        public LazyStringValue AttachmentTombstoneId { get; }
 
         public bool IsAttachmentTombstone => AttachmentTombstoneId != null;
     }

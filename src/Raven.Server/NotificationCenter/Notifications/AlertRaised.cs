@@ -15,7 +15,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public override string Id => GetKey(AlertType, Key);
         
-        public INotificationDetails Details { get; protected set; }
+        public INotificationDetails Details { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {

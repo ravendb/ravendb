@@ -6,7 +6,7 @@
 
         public string DisplayName { get; set; }
 
-        protected bool Equals(FacetAggregationField other)
+        private bool Equals(FacetAggregationField other)
         {
             return Name == other.Name && DisplayName == other.DisplayName;
         }

@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly AbstractStaticIndexBase _compiled;
+        internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleTimeSeriesReferences _handleReferences;
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
-        protected MapTimeSeriesIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
+        private MapTimeSeriesIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
