@@ -3,16 +3,19 @@ import React from "react";
 import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./DatabasesPage.stories";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError, WithDifferentAccessLevel } =
+const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError, WithDifferentAccessLevel, WithOfflineNodes } =
     composeStories(stories);
 
 const selectors = {
+    clusterDatabaseName: DatabasesStubs.nonShardedClusterDatabase().name,
     disableButton: "Disable",
     enableButton: "Enable",
     pauseIndexing: "Pause indexing until restart",
     disableIndexing: "Disable indexing",
     compactDatabase: "Compact database",
+    showFilteringOptions: "Show Filtering Options",
 };
 
 describe("DatabasesPage", function () {
@@ -79,5 +82,76 @@ describe("DatabasesPage", function () {
 
         // db admin can pause indexing
         expect(screen.queryByText(selectors.pauseIndexing)).toBeInTheDocument();
+    });
+
+    describe("filter by state", () => {
+        const localNodeTag = "A";
+        const remoteNodeTags = ["B", "C"];
+
+        it("can filter local + offline", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={[localNodeTag]} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Local/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Offline/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).toBeInTheDocument();
+        });
+
+        it("can filter local + online", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={[localNodeTag]} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Local/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Online/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).not.toBeInTheDocument();
+        });
+
+        it("can filter remote + offline when all offline", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={remoteNodeTags} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Remote/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Offline/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).toBeInTheDocument();
+        });
+
+        it("can filter remote + online when all offline", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={remoteNodeTags} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Remote/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Online/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).not.toBeInTheDocument();
+        });
+
+        it("can filter remote + offline when some offline", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={[remoteNodeTags[0]]} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Remote/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Offline/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).toBeInTheDocument();
+        });
+
+        it("can filter remote + online when some offline", async () => {
+            const { screen, fireClick } = rtlRender(<WithOfflineNodes offlineNodes={[remoteNodeTags[0]]} />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.showFilteringOptions }));
+
+            await fireClick(screen.getByRole("checkbox", { name: /Remote/ }));
+            await fireClick(screen.getByRole("checkbox", { name: /Online/ }));
+
+            expect(screen.queryByRole("heading", { name: selectors.clusterDatabaseName })).toBeInTheDocument();
+        });
     });
 });

@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { ComponentMeta, ComponentStory, StoryObj } from "@storybook/react";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
@@ -157,4 +157,21 @@ export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
     mockServices.databasesService.withGetDatabasesState(() => [clusterDb.name, ...shardedDb.shards.map((x) => x.name)]);
 
     return <DatabasesPage />;
+};
+
+export const WithOfflineNodes: StoryObj = {
+    render: ({ offlineNodes }: { offlineNodes: string[] }) => {
+        commonInit();
+
+        const value = mockStore.databases.with_Cluster();
+
+        mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+            offlineNodes: offlineNodes,
+        });
+
+        return <DatabasesPage />;
+    },
+    args: {
+        offlineNodes: ["A"],
+    },
 };
