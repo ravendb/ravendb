@@ -11,7 +11,6 @@ using System.Text;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
-using Newtonsoft.Json.Linq;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
@@ -89,14 +88,69 @@ namespace Corax
                 return Frequency.CompareTo(other.Frequency);
             }
         }
-        
+
+        [StructLayout(LayoutKind.Sequential)]
         internal struct EntriesModifications : IDisposable
         {
-            private readonly ByteStringContext _context;
+            private const int HasLong = 0b01;
+            private const int HasDouble = 0b10;
+            private const int HasNumericMask = 0b11;
+            private const int HasNumericBits = 2;
 
-            public long? Long;
-            public double? Double;
-            public readonly int TermSize;
+            private int _termSize;
+            private long _longValue;
+            private double _doubleValue;
+
+            public int TermSize
+            {
+                get => _termSize >> HasNumericBits;
+                set => _termSize = _termSize & HasNumericMask | value << HasNumericBits;
+            }
+
+            public long? Long
+            {
+                get
+                {
+                    if ((_termSize & HasLong) != HasLong)
+                        return null;
+                    return _longValue;
+                }
+                set
+                {
+                    if (value.HasValue == false)
+                    {
+                        _termSize &= ~HasLong;
+                    }
+                    else
+                    {
+                        _termSize |= HasLong;
+                        _longValue = value.Value;
+                    }
+                }
+            }
+
+            public double? Double
+            {
+                get
+                {
+                    if ((_termSize & HasDouble) != HasDouble)
+                        return null;
+                    return _doubleValue;
+                }
+                set
+                {
+                    if (value.HasValue == false)
+                    {
+                        _termSize &= ~HasDouble;
+                    }
+                    else
+                    {
+                        _termSize |= HasDouble;
+                        _doubleValue = value.Value;
+                    }
+                }
+            }
+
 
             public NativeList<TermInEntryModification> Additions;
             public NativeList<TermInEntryModification> Removals;
@@ -113,19 +167,17 @@ namespace Corax
             private bool _preparationFinished = false;
 #endif
 
-            public void Prepare()
+            public void Prepare([NotNull] ByteStringContext context)
             {
                 AssertHasChangesIsCalledOnlyOnce();
 
-                DeleteAllDuplicates();
+                DeleteAllDuplicates(context);
             }
 
             public bool HasChanges => Additions.Count + Removals.Count > 0;
 
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
-                _context = context;
-
                 TermSize = size;
                 _needToSortToDeleteDuplicates = true;
                 Additions = new();
@@ -136,18 +188,18 @@ namespace Corax
                 UpdatesScope = Updates.Initialize(context);
             }
 
-            public void Addition(long entryId, short freq = 1)
+            public void Addition([NotNull] ByteStringContext context, long entryId, short freq = 1)
             {
                 if (Additions.HasCapacityFor(1) == false)
-                    Additions.Grow(_context, 1, ref AdditionsScope);
+                    Additions.Grow(context, 1, ref AdditionsScope);
 
                 AddToList(ref Additions, entryId, freq);
             }
             
-            public void Removal(long entryId, short freq = 1)
+            public void Removal([NotNull] ByteStringContext context, long entryId, short freq = 1)
             {
                 if (Removals.HasCapacityFor(1) == false)
-                    Removals.Grow(_context, 1, ref RemovalsScope);
+                    Removals.Grow(context, 1, ref RemovalsScope);
 
                 AddToList(ref Removals, entryId, freq);
             }
@@ -179,7 +231,7 @@ namespace Corax
                 list.PushUnsafe(term);
             }
 
-            private void DeleteAllDuplicates()
+            private void DeleteAllDuplicates([NotNull] ByteStringContext context)
             {
                 if (_needToSortToDeleteDuplicates == false)
                     return;
@@ -204,7 +256,7 @@ namespace Corax
                     {
                         if (Updates.TryPush(currentAdd) == false)
                         {
-                            Updates.Grow(_context, 1, ref UpdatesScope);
+                            Updates.Grow(context, 1, ref UpdatesScope);
                             Updates.PushUnsafe(currentAdd);
                         }
                         rem++;
@@ -244,15 +296,15 @@ namespace Corax
             // There is an case we found in RavenDB-19688
             // Sometimes term can be added and removed for the same in the same batch and there can be multiple other docs between this two operations.
             // This requires us to ensure we don't have duplicates here.
-            public void GetEncodedAdditionsAndRemovals(out Span<long> additions, out Span<long> removals)
+            public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out Span<long> additions, out Span<long> removals)
             {
-                GetEncodedAdditionsAndRemovals(out long* addPtr, out long* removePtr);
+                GetEncodedAdditionsAndRemovals(context, out long* addPtr, out long* removePtr);
                 additions = new Span<long>(addPtr, Additions.Count);
                 removals = new Span<long>(removePtr, Removals.Count);
             }
 
-            public void GetEncodedAdditions(out long* additions) => GetEncodedAdditionsAndRemovals(out additions, out _);
-            public void GetEncodedAdditionsAndRemovals(out long* additions, out long* removals)
+            public void GetEncodedAdditions([NotNull] ByteStringContext context, out long* additions) => GetEncodedAdditionsAndRemovals(context, out additions, out _);
+            public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out long* additions, out long* removals)
             {
 #if DEBUG
                 if (_preparationFinished)
@@ -261,18 +313,18 @@ namespace Corax
                         Environment.StackTrace);
                 _preparationFinished = true;
 #endif
-                DeleteAllDuplicates();
+                DeleteAllDuplicates(context);
 
                 // repurposing the memory
                 Debug.Assert(sizeof(TermInEntryModification) >= sizeof(long));
                 additions = (long*)Additions.RawItems;
-                removals = (long*)Removals.RawItems;
-
                 for (int i = 0; i < Additions.Count; i++)
                 {
                     ref var cur = ref Additions.RawItems[i];
                     additions[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
                 }
+
+                removals = (long*)Removals.RawItems;
                 for (int i = 0; i < Removals.Count; i++)
                 {
                     ref var cur = ref Removals.RawItems[i];
@@ -592,7 +644,7 @@ namespace Corax
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Addition(_entryId);
+                term.Addition(_parent._entriesAllocator, _entryId);
 
                 if (field.HasSuggestions)
                     _parent.AddSuggestions(field, slice);
@@ -621,10 +673,10 @@ namespace Corax
                 }
 
                 ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
-                doublesTerm.Addition(_entryId);
+                doublesTerm.Addition(_parent._entriesAllocator, _entryId);
 
                 ref var longsTerm = ref field.Storage.GetAsRef(longsTermsLocation);
-                longsTerm.Addition(_entryId);
+                longsTerm.Addition(_parent._entriesAllocator, _entryId);
             }
 
             private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -1171,7 +1223,7 @@ namespace Corax
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(entryToDelete, reader.Frequency);
+                term.Removal(_entriesAllocator, entryToDelete, reader.Frequency);
                 scope.Dispose();
                 
                 if(reader.HasNumeric == false)
@@ -1185,7 +1237,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(entryToDelete);
+                term.Removal(_entriesAllocator, entryToDelete);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -1195,7 +1247,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(entryToDelete);
+                term.Removal(_entriesAllocator, entryToDelete);
             }
         }
 
@@ -1622,7 +1674,7 @@ namespace Corax
                 Debug.Assert(Unsafe.IsNullRef(ref entriesLocation) == false);
                 
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
-                entries.Prepare();
+                entries.Prepare(_entriesAllocator);
                 
                 UpdateEntriesForTerm(ref entriesForTerm, ref entriesForTermScope, entries);
 
@@ -1845,11 +1897,11 @@ namespace Corax
                         if (buffer[i] > entryId)
                             throw new InvalidDataException("Attempt to remove value " + entryId + ", but got " + buffer[i] );
                     } 
-                    entries.Addition(buffer[i]);
+                    entries.Addition(_entriesAllocator, buffer[i]);
                 }
             }
 
-            entries.GetEncodedAdditions(out var additions);
+            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
 
             if (entries.Additions.Count == 0)
             {
@@ -1955,7 +2007,7 @@ namespace Corax
                 }
 
                 if (isIncluded == false)
-                    entries.Addition(existingEntryId, existingFrequency);
+                    entries.Addition(_entriesAllocator, existingEntryId, existingFrequency);
             }
             
             
@@ -1970,7 +2022,7 @@ namespace Corax
             var setSpace = Container.GetMutable(llt, containerId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
-            entries.GetEncodedAdditionsAndRemovals(out Span<long> additions, out Span<long> removals);
+            entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out Span<long> additions, out Span<long> removals);
             var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, removals);
 
             termId = -1;
@@ -2009,7 +2061,7 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-                localEntry.Prepare();
+                localEntry.Prepare(_entriesAllocator);
                 if (localEntry.HasChanges == false)
                     continue;
                   
@@ -2078,7 +2130,7 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-                localEntry.Prepare();
+                localEntry.Prepare(_entriesAllocator);
                 
                 if (localEntry.HasChanges == false)
                     continue;
@@ -2144,7 +2196,7 @@ namespace Corax
                 return;
             }
 
-            entries.GetEncodedAdditions(out var additions);
+            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
             if (TryEncodingToBuffer(additions, entries.Additions.Count, tmpBuf, out var encoded) == false)
             {
                 // too big, convert to a set
