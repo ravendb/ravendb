@@ -669,7 +669,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var key = _documentIdReader.GetTermFor(ids[i]);
                         float? documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : null;
                         CoraxSpatialResult? documentDistance = hasOrderByDistance ? sortingData.DistancesBuffer[i] : null;
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, entryTermsReader, key, _index.IndexFieldsPersistence, documentScore, documentDistance);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, entryTermsReader, key, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
