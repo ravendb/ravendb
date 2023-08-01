@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ToggleDatabasesStateCommand : UpdateValueCommand<ToggleDatabasesStateCommand.Parameters>
+    public sealed class ToggleDatabasesStateCommand : UpdateValueCommand<ToggleDatabasesStateCommand.Parameters>
     {
         protected ToggleDatabasesStateCommand()
         {
@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        public class Parameters : IDynamicJson
+        public sealed class Parameters : IDynamicJson
         {
             public ToggleType Type { get; set; }
 

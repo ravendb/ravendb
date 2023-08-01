@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Tombstones;
 
-internal class AdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminTombstoneHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetPulsesLive : AbstractReplicationHandlerProcessorForGetPulsesLive<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetPulsesLive : AbstractReplicationHandlerProcessorForGetPulsesLive<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetPulsesLive([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

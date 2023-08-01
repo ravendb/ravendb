@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
 {
-    internal class GetSuggestConflictResolutionOperation : IMaintenanceOperation<ConflictResolverAdvisor.MergeResult>
+    internal sealed class GetSuggestConflictResolutionOperation : IMaintenanceOperation<ConflictResolverAdvisor.MergeResult>
     {
         private readonly string _documentId;
 
@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Operations
             return new GetSuggestConflictResolutionCommand(_documentId);
         }
 
-        public class GetSuggestConflictResolutionCommand : RavenCommand<ConflictResolverAdvisor.MergeResult>
+        public sealed class GetSuggestConflictResolutionCommand : RavenCommand<ConflictResolverAdvisor.MergeResult>
         {
             private readonly string _id;
             public override bool IsReadRequest => true;

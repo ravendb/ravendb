@@ -4,7 +4,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    internal class DatabaseUpTime : DatabaseScalarObjectBase<TimeTicks>
+    internal sealed class DatabaseUpTime : DatabaseScalarObjectBase<TimeTicks>
     {
         public DatabaseUpTime(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.UpTime, index)

@@ -2,7 +2,7 @@ using Lextm.SharpSnmpLib;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerVersion : ScalarObjectBase<OctetString>
+    public sealed class ServerVersion : ScalarObjectBase<OctetString>
     {
         private readonly OctetString _productVersion;
 

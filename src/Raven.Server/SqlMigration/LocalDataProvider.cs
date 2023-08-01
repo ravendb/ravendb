@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration
 {
-    public class LocalDataProvider<T> : IDataProvider<T>
+    public sealed class LocalDataProvider<T> : IDataProvider<T>
     {
         private readonly Func<DynamicJsonValue, T> _provider;
         

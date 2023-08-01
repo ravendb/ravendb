@@ -3,7 +3,7 @@ using Lucene.Net.Analysis;
 
 namespace Raven.Server.Documents.Indexes.Analysis
 {
-    public class FaultyAnalyzerFactory : AnalyzerFactory
+    public sealed class FaultyAnalyzerFactory : AnalyzerFactory
     {
         private readonly string _name;
         private readonly Exception _e;

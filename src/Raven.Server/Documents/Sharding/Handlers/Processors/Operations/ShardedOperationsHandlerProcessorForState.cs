@@ -5,7 +5,7 @@ using Raven.Server.Web.Operations.Processors;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Operations;
 
-internal class ShardedOperationsHandlerProcessorForState : AbstractOperationsHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedOperationsHandlerProcessorForState : AbstractOperationsHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedOperationsHandlerProcessorForState([NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(requestHandler)

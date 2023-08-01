@@ -49,7 +49,7 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseManager : IDisposable
+    public sealed class LicenseManager : IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private static readonly RSAParameters _rsaParameters;

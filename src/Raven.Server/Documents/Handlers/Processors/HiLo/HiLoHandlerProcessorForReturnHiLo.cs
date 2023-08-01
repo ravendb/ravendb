@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorForReturnHiLo<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorForReturnHiLo<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public HiLoHandlerProcessorForReturnHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
@@ -31,7 +31,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
         await RequestHandler.Database.TxMerger.Enqueue(cmd);
     }
 
-    internal class MergedHiLoReturnCommand : DocumentMergedTransactionCommand
+    internal sealed class MergedHiLoReturnCommand : DocumentMergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -75,7 +75,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
         }
     }
 
-    internal class MergedHiLoReturnCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedHiLoReturnCommand>
+    internal sealed class MergedHiLoReturnCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedHiLoReturnCommand>
     {
         public string Key;
         public long End;

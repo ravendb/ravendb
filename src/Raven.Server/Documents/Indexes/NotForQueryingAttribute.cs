@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class NotForQueryingAttribute : Attribute
+    public sealed class NotForQueryingAttribute : Attribute
     {
     }
 }

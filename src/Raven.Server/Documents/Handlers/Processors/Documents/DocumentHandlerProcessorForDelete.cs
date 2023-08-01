@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForDelete([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

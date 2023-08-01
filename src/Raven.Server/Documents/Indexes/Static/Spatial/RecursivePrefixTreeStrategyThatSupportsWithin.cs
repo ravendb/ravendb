@@ -5,7 +5,7 @@ using Lucene.Net.Spatial.Queries;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
-    internal class RecursivePrefixTreeStrategyThatSupportsWithin : PrefixTreeStrategy
+    internal sealed class RecursivePrefixTreeStrategyThatSupportsWithin : PrefixTreeStrategy
     {
         private int _prefixGridScanLevel;
 

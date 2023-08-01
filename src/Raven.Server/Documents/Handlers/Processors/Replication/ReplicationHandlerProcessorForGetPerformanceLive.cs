@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetPerformanceLive : AbstractReplicationHandlerProcessorForGetPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetPerformanceLive : AbstractReplicationHandlerProcessorForGetPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetPerformanceLive([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

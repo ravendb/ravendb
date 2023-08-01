@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class ConcurrentLruRegexCache
+    public sealed class ConcurrentLruRegexCache
     {
         public const int DefaultCapacity = 1024;
         
@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    internal class ConcurrentLruRegexCacheNode
+    internal sealed class ConcurrentLruRegexCacheNode
     {
         public long Timestamp;
         public Lazy<Regex> RegexLazy { get; }

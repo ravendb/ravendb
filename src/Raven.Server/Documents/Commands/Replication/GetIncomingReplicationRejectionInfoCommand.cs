@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetIncomingReplicationRejectionInfoCommand : RavenCommand<ReplicationIncomingRejectionInfoPreview>
+    internal sealed class GetIncomingReplicationRejectionInfoCommand : RavenCommand<ReplicationIncomingRejectionInfoPreview>
     {
         public GetIncomingReplicationRejectionInfoCommand()
         {

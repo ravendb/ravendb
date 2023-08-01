@@ -37,7 +37,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Dashboard
 {
-    public class DatabasesInfoRetriever : MetricCacher
+    public sealed class DatabasesInfoRetriever : MetricCacher
     {
         private readonly ServerStore _serverStore;
         private readonly CanAccessDatabase _canAccessDatabase;
@@ -584,7 +584,7 @@ namespace Raven.Server.Dashboard
         }
     }
     
-    public class ExtendedDatabaseInfo : DatabaseInfo
+    public sealed class ExtendedDatabaseInfo : DatabaseInfo
     {
         public List<Client.ServerWide.Operations.MountPointUsage> MountPointsUsage { get; set; }
     }

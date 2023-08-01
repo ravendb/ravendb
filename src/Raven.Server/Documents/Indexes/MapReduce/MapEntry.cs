@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public class MapEntry
+    public sealed class MapEntry
     {
         public ulong ReduceKeyHash;
         public long Id;

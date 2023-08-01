@@ -5,7 +5,7 @@ using Sparrow.Binary;
 
 namespace Raven.Server.Rachis.Remote
 {
-    public class RemoteToStreamSnapshotReader : RemoteSnapshotReader
+    public sealed class RemoteToStreamSnapshotReader : RemoteSnapshotReader
     {
         private readonly Stream _stream;
 
@@ -22,7 +22,7 @@ namespace Raven.Server.Rachis.Remote
         }
     }
         
-    public class StreamSnapshotReader : SnapshotReader
+    public sealed class StreamSnapshotReader : SnapshotReader
     {
         private readonly Stream _stream;
 

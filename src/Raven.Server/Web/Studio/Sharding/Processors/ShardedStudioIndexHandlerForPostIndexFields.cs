@@ -6,7 +6,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal class ShardedStudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStudioIndexHandlerForPostIndexFields([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

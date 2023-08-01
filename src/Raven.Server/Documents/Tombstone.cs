@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
-    public class Tombstone : IDisposable
+    public sealed class Tombstone : IDisposable
     {
         public long StorageId;
 

@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Comparers;
 
-public class ConstantComparer : IComparer<BlittableJsonReaderObject>
+public sealed class ConstantComparer : IComparer<BlittableJsonReaderObject>
 {
     public static readonly ConstantComparer Instance = new();
 

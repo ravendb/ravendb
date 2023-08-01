@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
-internal class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext> 
+internal sealed class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext> 
     where TOperationContext : JsonOperationContext
 {
     public CompareExchangeHandlerProcessorForDeleteCompareExchangeValue([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)

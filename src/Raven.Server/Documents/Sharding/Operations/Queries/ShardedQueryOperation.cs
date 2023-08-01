@@ -20,7 +20,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations.Queries;
 
-public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
+public sealed class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _query;
     private readonly bool _isDistinctQuery;

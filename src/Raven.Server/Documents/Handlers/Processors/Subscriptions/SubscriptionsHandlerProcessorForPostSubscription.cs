@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<SubscriptionsHandler, DocumentsOperationContext, SubscriptionConnectionsState>
+    internal sealed class SubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<SubscriptionsHandler, DocumentsOperationContext, SubscriptionConnectionsState>
     {
         public SubscriptionsHandlerProcessorForPostSubscription([NotNull] SubscriptionsHandler requestHandler)
             : base(requestHandler, requestHandler.Database.SubscriptionStorage)

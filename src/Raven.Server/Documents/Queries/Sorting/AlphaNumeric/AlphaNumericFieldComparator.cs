@@ -13,7 +13,7 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
-    public class AlphaNumericFieldComparator : FieldComparator
+    public sealed class AlphaNumericFieldComparator : FieldComparator
     {
         private readonly UnmanagedStringArray.UnmanagedString[] _values;
         private readonly string _field;

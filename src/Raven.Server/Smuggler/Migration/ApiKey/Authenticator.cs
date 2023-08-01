@@ -11,7 +11,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Smuggler.Migration.ApiKey
 {
-    public class Authenticator
+    public sealed class Authenticator
     {
         public static async Task<string> GetOAuthToken(
             string baseUrl,

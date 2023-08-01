@@ -5,7 +5,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Utils
 {
-    public class TransactionHolder
+    public sealed class TransactionHolder
     {
         private readonly Transaction _tx;
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);

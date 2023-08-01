@@ -31,7 +31,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    internal class ClusterObserver : IDisposable
+    internal sealed class ClusterObserver : IDisposable
     {
         private readonly PoolOfThreads.LongRunningWork _observe;
         private readonly DatabaseTopologyUpdater _databaseTopologyUpdater;
@@ -810,7 +810,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        internal class MergedDatabaseObservationState
+        internal sealed class MergedDatabaseObservationState
         {
             public static MergedDatabaseObservationState Empty = new MergedDatabaseObservationState();
             private readonly bool _isShardedState;
@@ -860,7 +860,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        internal class DatabaseObservationState
+        internal sealed class DatabaseObservationState
         {
             public readonly string Name;
             public readonly DatabaseTopology DatabaseTopology;

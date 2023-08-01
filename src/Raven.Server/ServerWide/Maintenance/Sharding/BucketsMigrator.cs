@@ -184,14 +184,14 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         }
     }
 
-    public class ShardReport
+    public sealed class ShardReport
     {
         public ShardNumber Shard;
         public Dictionary<int, BucketReport> ReportPerBucket;
         public long TotalSize => ReportPerBucket.Sum(r => r.Value.Size);
     }
 
-    public class BucketReport : IDynamicJson
+    public sealed class BucketReport : IDynamicJson
     {
         public long Size;
         public long NumberOfDocuments;
@@ -210,7 +210,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         }
     }
 
-    public class MigrationPolicy
+    public sealed class MigrationPolicy
     {
         public static MigrationPolicy Default = new MigrationPolicy();
         public static MigrationPolicy Min = new MigrationPolicy

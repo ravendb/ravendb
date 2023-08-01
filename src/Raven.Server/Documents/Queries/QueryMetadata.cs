@@ -41,7 +41,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class QueryMetadata
+    public sealed class QueryMetadata
     {
         internal static string SelectOutput = "__selectOutput";
 

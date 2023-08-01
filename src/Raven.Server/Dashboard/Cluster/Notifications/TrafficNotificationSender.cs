@@ -10,7 +10,7 @@ using Raven.Server.NotificationCenter;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class TrafficNotificationSender : AbstractClusterDashboardNotificationSender
+    public sealed class TrafficNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly ClusterDashboardPayloadType _payloadType;
         private readonly DatabasesInfoRetriever _databasesInfoRetriever;

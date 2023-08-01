@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public class GetTombstonesPreviewResult
+    public sealed class GetTombstonesPreviewResult
     {
         public List<Tombstone> Tombstones { get; set; }
         public string ContinuationToken { get; set; }

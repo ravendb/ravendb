@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 
-public class ShardedBatchCommandData : IDisposable, IBatchCommandData
+public sealed class ShardedBatchCommandData : IDisposable, IBatchCommandData
 {
     private readonly JsonOperationContext _ctx;
 

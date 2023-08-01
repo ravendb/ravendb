@@ -9,7 +9,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
 
-internal class ShardedSubscriptionsHandlerProcessorForPerformanceLive : AbstractSubscriptionsHandlerProcessorForPerformanceLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedSubscriptionsHandlerProcessorForPerformanceLive : AbstractSubscriptionsHandlerProcessorForPerformanceLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedSubscriptionsHandlerProcessorForPerformanceLive([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

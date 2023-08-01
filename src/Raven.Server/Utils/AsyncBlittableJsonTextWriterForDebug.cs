@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
-    public class AsyncBlittableJsonTextWriterForDebug : AsyncBlittableJsonTextWriter
+    public sealed class AsyncBlittableJsonTextWriterForDebug : AsyncBlittableJsonTextWriter
     {
         private readonly ServerStore _serverStore;
         private bool _isFirst = true;

@@ -5,7 +5,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class RecursiveFunction
+    public sealed class RecursiveFunction
     {
         private static readonly DynamicArray Empty = new DynamicArray(Enumerable.Empty<object>());
 

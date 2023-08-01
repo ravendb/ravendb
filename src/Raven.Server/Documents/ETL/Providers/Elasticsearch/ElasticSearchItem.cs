@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticSearchItem : ExtractedItem
+    public sealed class ElasticSearchItem : ExtractedItem
     {
         public ElasticSearchItem(ElasticSearchItem item)
         {

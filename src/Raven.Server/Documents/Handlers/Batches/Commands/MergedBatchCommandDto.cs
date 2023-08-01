@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchCommand>
+public sealed class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchCommand>
 {
     public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
     public List<MergedBatchCommand.AttachmentStream> AttachmentStreams;

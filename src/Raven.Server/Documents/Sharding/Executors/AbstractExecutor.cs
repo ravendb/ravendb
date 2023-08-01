@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Executors
 {
-    public class ShardExecutionResult<T>
+    public sealed class ShardExecutionResult<T>
     {
         public int ShardNumber;
         public RavenCommand<T> Command;

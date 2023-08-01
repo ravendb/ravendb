@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
-internal class BackupDatabaseHandlerProcessorForGetPeriodicBackup : AbstractHandlerProcessor<RequestHandler>
+internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackup : AbstractHandlerProcessor<RequestHandler>
 {
     public BackupDatabaseHandlerProcessorForGetPeriodicBackup([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {

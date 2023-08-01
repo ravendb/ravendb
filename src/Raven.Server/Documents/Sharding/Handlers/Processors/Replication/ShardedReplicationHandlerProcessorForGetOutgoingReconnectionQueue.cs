@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetOutgoingReconnectionQueue : AbstractReplicationHandlerProcessorForGetOutgoingReconnectionQueue<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetOutgoingReconnectionQueue : AbstractReplicationHandlerProcessorForGetOutgoingReconnectionQueue<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetOutgoingReconnectionQueue([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

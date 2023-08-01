@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
-    public class CSharpSyntaxRewriterBase : CSharpSyntaxRewriter
+    public sealed class CSharpSyntaxRewriterBase : CSharpSyntaxRewriter
     {
         protected CSharpSyntaxRewriter[] Rewriters;
 

@@ -6,7 +6,7 @@ using Raven.Server.Web.Studio.Sharding.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding;
 
-public class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/admin/studio-tasks/folder-path-options", "POST")]
     public async Task GetFolderPathOptionsForDatabaseAdmin()

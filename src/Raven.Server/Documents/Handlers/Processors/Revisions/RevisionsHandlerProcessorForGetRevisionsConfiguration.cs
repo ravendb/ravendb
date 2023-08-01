@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal class RevisionsHandlerProcessorForGetRevisionsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<DatabaseRequestHandler>
+    internal sealed class RevisionsHandlerProcessorForGetRevisionsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<DatabaseRequestHandler>
     {
         public RevisionsHandlerProcessorForGetRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler) 
             : base(requestHandler)

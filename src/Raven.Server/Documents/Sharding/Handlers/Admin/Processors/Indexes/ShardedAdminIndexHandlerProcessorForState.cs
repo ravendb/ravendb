@@ -11,7 +11,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAdminIndexHandlerProcessorForState(IndexState state, [NotNull] ShardedDatabaseRequestHandler requestHandler) : base(state, requestHandler)
     {

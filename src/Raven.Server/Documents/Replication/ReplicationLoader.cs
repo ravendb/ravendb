@@ -583,7 +583,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public class PullReplicationParams
+        public sealed class PullReplicationParams
         {
             public string Name;
             public string[] AllowedPaths;
@@ -1796,7 +1796,7 @@ namespace Raven.Server.Documents.Replication
             return dict;
         }
 
-        public class IncomingConnectionRejectionInfo
+        public sealed class IncomingConnectionRejectionInfo
         {
             public string Reason { get; set; }
             public DateTime When { get; } = DateTime.UtcNow;
@@ -1901,7 +1901,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    public class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance
+    public sealed class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance
     {
         private ReplicationNode _node;
         private OutgoingReplicationStatsAggregator _stats;
@@ -1920,7 +1920,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    public class IncomingReplicationFailureToConnectReporter : IReportIncomingReplicationPerformance
+    public sealed class IncomingReplicationFailureToConnectReporter : IReportIncomingReplicationPerformance
     {
         private ReplicationNode _node;
         private IncomingReplicationStatsAggregator _stats;

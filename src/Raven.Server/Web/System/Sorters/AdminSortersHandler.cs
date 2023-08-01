@@ -12,7 +12,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Sorters
 {
-    public class AdminSortersHandler : ServerRequestHandler
+    public sealed class AdminSortersHandler : ServerRequestHandler
     {
         [RavenAction("/admin/sorters", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()

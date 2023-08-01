@@ -3,7 +3,7 @@ using Lextm.SharpSnmpLib;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerPid : ScalarObjectBase<Integer32>
+    public sealed class ServerPid : ScalarObjectBase<Integer32>
     {
         private readonly Integer32 _pid;
 

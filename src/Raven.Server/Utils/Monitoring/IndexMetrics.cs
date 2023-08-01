@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Monitoring
 {
-    public class IndexMetrics
+    public sealed class IndexMetrics
     {
         public string IndexName { get; set; }
         public IndexPriority Priority { get; set; }
@@ -47,7 +47,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
     
-    public class IndexesMetrics
+    public sealed class IndexesMetrics
     {
         public List<PerDatabaseIndexMetrics> Results { get; set; } = new List<PerDatabaseIndexMetrics>();
         
@@ -66,7 +66,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
 
-    public class PerDatabaseIndexMetrics
+    public sealed class PerDatabaseIndexMetrics
     {
         public string DatabaseName { get; set; }
         public List<IndexMetrics> Indexes { get; set; } = new List<IndexMetrics>();

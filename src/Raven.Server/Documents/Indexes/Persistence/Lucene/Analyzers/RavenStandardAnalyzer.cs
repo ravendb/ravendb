@@ -7,7 +7,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
-    public class RavenStandardAnalyzer : StandardAnalyzer
+    public sealed class RavenStandardAnalyzer : StandardAnalyzer
     {
         public RavenStandardAnalyzer(Version matchVersion) : base(matchVersion)
         {

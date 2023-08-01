@@ -12,7 +12,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromS3 : IRestoreSource
+    public sealed class RestoreFromS3 : IRestoreSource
     {
         private readonly ServerStore _serverStore;
         private readonly RavenAwsS3Client _client;

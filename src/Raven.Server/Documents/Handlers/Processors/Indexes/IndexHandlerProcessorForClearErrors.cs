@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcessorForClearErrors<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcessorForClearErrors<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForClearErrors([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

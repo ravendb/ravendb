@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 {
-    internal class SmugglerHandlerProcessorForImport : AbstractSmugglerHandlerProcessorForImport<SmugglerHandler, DocumentsOperationContext>
+    internal sealed class SmugglerHandlerProcessorForImport : AbstractSmugglerHandlerProcessorForImport<SmugglerHandler, DocumentsOperationContext>
     {
         public SmugglerHandlerProcessorForImport([NotNull] SmugglerHandler requestHandler) : base(requestHandler)
         {

@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
 

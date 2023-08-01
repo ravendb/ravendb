@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Smuggler;
 
-public class ShardedDatabaseDestination : DatabaseDestination
+public sealed class ShardedDatabaseDestination : DatabaseDestination
 {
     public ShardedDatabaseDestination(ShardedDocumentDatabase database, CancellationToken token = default) 
         : base(database, token)

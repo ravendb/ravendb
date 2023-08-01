@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal class AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts : AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts : AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

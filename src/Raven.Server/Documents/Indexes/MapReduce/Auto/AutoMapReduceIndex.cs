@@ -18,7 +18,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    internal class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition, AutoIndexField>
+    internal sealed class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition, AutoIndexField>
     {
         private ReduceKeyProcessor _reduceKeyProcessor;
         private BlittableJsonTraverser _blittableJsonTraverser;

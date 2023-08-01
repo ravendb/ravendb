@@ -16,7 +16,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class CollectionQueryEnumerable : IEnumerable<Document>
+    public sealed class CollectionQueryEnumerable : IEnumerable<Document>
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Queries
             return GetEnumerator();
         }
 
-        public class FilterKey : ScriptRunnerCache.Key
+        public sealed class FilterKey : ScriptRunnerCache.Key
         {
             private readonly QueryMetadata _queryMetadata;
 

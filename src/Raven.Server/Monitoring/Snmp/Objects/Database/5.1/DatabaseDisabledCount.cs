@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseDisabledCount : DatabaseBase<Integer32>
+    public sealed class DatabaseDisabledCount : DatabaseBase<Integer32>
     {
         public DatabaseDisabledCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.DisabledCount)

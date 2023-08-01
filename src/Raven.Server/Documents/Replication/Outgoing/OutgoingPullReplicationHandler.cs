@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
     }
 
-    public class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
+    public sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
     {
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition.
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public override string FromToString => $"{base.FromToString} (pull definition: {PullReplicationDefinitionName})";
     }
 
-    public class OutgoingPullReplicationHandlerAsSink : OutgoingPullReplicationHandler
+    public sealed class OutgoingPullReplicationHandlerAsSink : OutgoingPullReplicationHandler
     {
         private readonly PullReplicationAsSink _node;
 

@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 {
-    internal class ShardedCollectionsHandlerProcessorForGetLastChangeVector : AbstractCollectionsHandlerProcessorForGetLastChangeVector<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedCollectionsHandlerProcessorForGetLastChangeVector : AbstractCollectionsHandlerProcessorForGetLastChangeVector<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedCollectionsHandlerProcessorForGetLastChangeVector([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

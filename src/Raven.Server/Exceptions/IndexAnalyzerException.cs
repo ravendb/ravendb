@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Exceptions
 {
-    public class IndexAnalyzerException : Exception
+    public sealed class IndexAnalyzerException : Exception
     {
         public IndexAnalyzerException()
         {

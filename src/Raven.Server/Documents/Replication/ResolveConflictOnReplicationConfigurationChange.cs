@@ -20,7 +20,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ResolveConflictOnReplicationConfigurationChange
+    public sealed class ResolveConflictOnReplicationConfigurationChange
     {
         private readonly DocumentDatabase _database;
         private readonly Logger _log;
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal class PutResolvedConflictsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class PutResolvedConflictsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly ConflictsStorage _conflictsStorage;
             private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool resovedToLatest)> _resolvedConflicts;
@@ -535,7 +535,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    internal class PutResolvedConflictsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
+    internal sealed class PutResolvedConflictsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
     {
         public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatests)> ResolvedConflicts;
 

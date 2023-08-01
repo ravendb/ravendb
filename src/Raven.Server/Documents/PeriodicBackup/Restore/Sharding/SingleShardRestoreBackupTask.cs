@@ -17,7 +17,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
-    internal class SingleShardRestoreBackupTask : RestoreBackupTask
+    internal sealed class SingleShardRestoreBackupTask : RestoreBackupTask
     {
         private readonly int _shardNumber;
 

@@ -4,7 +4,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
-    public class DatabaseMetricCacher : MetricCacher
+    public sealed class DatabaseMetricCacher : MetricCacher
     {
         private readonly DocumentDatabase _database;
 

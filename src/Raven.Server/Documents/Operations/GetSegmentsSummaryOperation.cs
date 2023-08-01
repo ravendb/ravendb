@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Operations
 {
-    internal class GetSegmentsSummaryOperation : IOperation<SegmentsSummary>
+    internal sealed class GetSegmentsSummaryOperation : IOperation<SegmentsSummary>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Operations
             return new GetSegmentsSummaryCommand(_documentId, _name, _from, _to);
         }
 
-        internal class GetSegmentsSummaryCommand : RavenCommand<SegmentsSummary>, IRaftCommand
+        internal sealed class GetSegmentsSummaryCommand : RavenCommand<SegmentsSummary>, IRaftCommand
         {
             private readonly string _documentId;
             private readonly string _name;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Operations
         }
     }
 
-    public class SegmentsSummary
+    public sealed class SegmentsSummary
     {
         public List<TimeSeriesStorage.SegmentSummary> Results { get; set; }
     }

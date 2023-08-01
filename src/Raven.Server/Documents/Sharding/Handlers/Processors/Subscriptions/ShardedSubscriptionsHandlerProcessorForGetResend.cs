@@ -8,7 +8,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
         public ShardedSubscriptionsHandlerProcessorForGetResend([NotNull] ShardedDatabaseRequestHandler requestHandler) 
             : base(requestHandler, requestHandler.DatabaseContext.SubscriptionsStorage)

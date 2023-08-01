@@ -8,7 +8,7 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class OutputReferencesPattern
+    public sealed class OutputReferencesPattern
     {
         public string ReferencesCollectionName { get; }
         public string Pattern => _builder?.Pattern;
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             return _builder;
         }
 
-        public class DocumentIdBuilder : IDisposable
+        public sealed class DocumentIdBuilder : IDisposable
         {
             private readonly DocumentDatabase _database;
             private readonly string _pattern;

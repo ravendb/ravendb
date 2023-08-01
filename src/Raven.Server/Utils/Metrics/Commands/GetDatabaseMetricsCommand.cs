@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Utils.Metrics.Commands
 {
-    internal class GetDatabaseMetricsCommand : RavenCommand
+    internal sealed class GetDatabaseMetricsCommand : RavenCommand
     {
         private readonly bool _putsOnly;
         private readonly bool _bytesOnly;

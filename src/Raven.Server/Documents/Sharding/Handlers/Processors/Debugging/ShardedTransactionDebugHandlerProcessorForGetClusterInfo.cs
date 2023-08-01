@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Debugging
 {
-    internal class ShardedTransactionDebugHandlerProcessorForGetClusterInfo : AbstractTransactionDebugHandlerProcessorForGetClusterInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedTransactionDebugHandlerProcessorForGetClusterInfo : AbstractTransactionDebugHandlerProcessorForGetClusterInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedTransactionDebugHandlerProcessorForGetClusterInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

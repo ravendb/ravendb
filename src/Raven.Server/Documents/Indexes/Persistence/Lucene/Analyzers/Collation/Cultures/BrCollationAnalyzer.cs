@@ -7,7 +7,7 @@
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation.Cultures
 {
     
-    public class BrCollationAnalyzer : AbstractCultureCollationAnalyzer
+    public sealed class BrCollationAnalyzer : AbstractCultureCollationAnalyzer
     {
     }
 }

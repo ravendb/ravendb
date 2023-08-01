@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Indexes;
 
-internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]>
+internal sealed class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]>
 {
     private readonly string[] _indexNames;
 
@@ -52,7 +52,7 @@ internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountComm
         Result = indexErrors;
     }
 
-    public class IndexErrorsCount
+    public sealed class IndexErrorsCount
     {
         public IndexErrorsCount()
         {
@@ -64,7 +64,7 @@ internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountComm
         public IndexingErrorCount[] Errors { get; set; }
     }
 
-    public class IndexingErrorCount
+    public sealed class IndexingErrorCount
     {
         public string Action { get; set; }
 

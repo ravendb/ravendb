@@ -16,7 +16,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    internal class SingleShardDatabaseSmuggler : DatabaseSmuggler
+    internal sealed class SingleShardDatabaseSmuggler : DatabaseSmuggler
     {
         private readonly int _index;
         private bool _processCompareExchange;

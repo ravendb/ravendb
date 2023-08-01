@@ -4,7 +4,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerGcGeneration : ServerGcBase<Integer32>
+    public sealed class ServerGcGeneration : ServerGcBase<Integer32>
     {
         public ServerGcGeneration(MetricCacher metricCacher, GCKind gcKind)
             : base(metricCacher, gcKind, SnmpOids.Server.GcGeneration)

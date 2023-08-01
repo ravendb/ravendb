@@ -6,7 +6,7 @@ using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Utils.Cli
 {
-    internal class JavaScriptCli
+    internal sealed class JavaScriptCli
     {
         private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
         private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";

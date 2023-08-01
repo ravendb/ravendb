@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseSupportInfo
+    public sealed class LicenseSupportInfo
     {
         public Status Status { get; set; }
 

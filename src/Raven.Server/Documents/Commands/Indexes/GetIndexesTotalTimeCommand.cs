@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Indexes;
 
-internal class GetIndexesTotalTimeCommand : RavenCommand<GetIndexesTotalTimeCommand.IndexTotalTime[]>
+internal sealed class GetIndexesTotalTimeCommand : RavenCommand<GetIndexesTotalTimeCommand.IndexTotalTime[]>
 {
     private readonly string[] _indexNames;
 
@@ -48,12 +48,12 @@ internal class GetIndexesTotalTimeCommand : RavenCommand<GetIndexesTotalTimeComm
         Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexesTotalTime>(response).Results;
     }
 
-    internal class IndexesTotalTime
+    internal sealed class IndexesTotalTime
     {
         public IndexTotalTime[] Results { get; set; }
     }
 
-    internal class IndexTotalTime
+    internal sealed class IndexTotalTime
     {
         public string Name { get; set; }
 

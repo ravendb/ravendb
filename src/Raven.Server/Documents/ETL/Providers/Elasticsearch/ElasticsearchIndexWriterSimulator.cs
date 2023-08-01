@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticSearchIndexWriterSimulator
+    public sealed class ElasticSearchIndexWriterSimulator
     {
         public IEnumerable<string> SimulateExecuteCommandText(ElasticSearchIndexWithRecords records, DocumentsOperationContext context)
         {

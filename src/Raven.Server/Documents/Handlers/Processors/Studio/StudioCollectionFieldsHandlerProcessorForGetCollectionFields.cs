@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
-    internal class StudioCollectionFieldsHandlerProcessorForGetCollectionFields : AbstractStudioCollectionFieldsHandlerProcessorForGetCollectionFields<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StudioCollectionFieldsHandlerProcessorForGetCollectionFields : AbstractStudioCollectionFieldsHandlerProcessorForGetCollectionFields<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StudioCollectionFieldsHandlerProcessorForGetCollectionFields([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

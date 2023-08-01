@@ -28,7 +28,7 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ServerWideDebugInfoPackageHandler : ServerRequestHandler
+    public sealed class ServerWideDebugInfoPackageHandler : ServerRequestHandler
     {
         internal const string _serverWidePrefix = "server-wide";
 
@@ -509,7 +509,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return context.ReadObject(djv, "DatabaseRecord");
         }
 
-        internal class NodeDebugInfoRequestHeader
+        internal sealed class NodeDebugInfoRequestHeader
         {
             public string FromUrl { get; set; }
 

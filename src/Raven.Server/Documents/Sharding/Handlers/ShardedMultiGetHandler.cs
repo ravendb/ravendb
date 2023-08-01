@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedMultiGetHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedMultiGetHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/multi_get", "POST")]
     public async Task Post()

@@ -4,7 +4,7 @@ using Raven.Server.Config.Attributes;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Patching)]
-    public class PatchingConfiguration : ConfigurationCategory
+    public sealed class PatchingConfiguration : ConfigurationCategory
     {
         /// <summary>
         /// The maximum number of steps iterations to give a script before timing out.

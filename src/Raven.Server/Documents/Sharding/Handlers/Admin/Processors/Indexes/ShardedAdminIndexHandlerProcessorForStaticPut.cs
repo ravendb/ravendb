@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAdminIndexHandlerProcessorForStaticPut([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

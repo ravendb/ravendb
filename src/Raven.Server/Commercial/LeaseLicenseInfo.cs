@@ -3,7 +3,7 @@ using Raven.Client.ServerWide.Operations;
 
 namespace Raven.Server.Commercial
 {
-    public class LeaseLicenseInfo
+    public sealed class LeaseLicenseInfo
     {
         public License License { get; set; }
 

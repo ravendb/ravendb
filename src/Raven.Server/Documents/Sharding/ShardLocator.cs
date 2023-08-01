@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Sharding
             return result;
         }
 
-        public class IdsByShard<T>
+        public sealed class IdsByShard<T>
         {
             public List<T> Ids;
             public List<int> Positions; // positions in the final result

@@ -20,7 +20,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class CorsPreflightHandler : ServerRequestHandler
+    public sealed class CorsPreflightHandler : ServerRequestHandler
     {
         public Task HandlePreflightRequest()
         {

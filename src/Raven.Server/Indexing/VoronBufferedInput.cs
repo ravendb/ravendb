@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Indexing;
 
-public class VoronBufferedInput : BufferedIndexInput
+public sealed class VoronBufferedInput : BufferedIndexInput
 {
     private readonly CancellationTokenSource _cts = new CancellationTokenSource();
     private const int DefaultBufferSize = 4096;

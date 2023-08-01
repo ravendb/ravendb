@@ -30,7 +30,7 @@ using Voron.Util.Settings;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioTasksHandler : ServerRequestHandler
+    public sealed class StudioTasksHandler : ServerRequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
         [RavenAction("/admin/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]
@@ -131,7 +131,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        public class OfflineMigrationValidation
+        public sealed class OfflineMigrationValidation
         {
             public bool IsValid { get; set; }
             public string ErrorMessage { get; set; }
@@ -278,7 +278,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        public class NextCronExpressionOccurrence
+        public sealed class NextCronExpressionOccurrence
         {
             public bool IsValid { get; set; }
 

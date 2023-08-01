@@ -13,7 +13,7 @@ using CommandType = Raven.Client.Documents.Commands.Batches.CommandType;
 
 namespace Raven.Server.SqlMigration
 {
-    internal class SqlMigrationWriter : IDisposable
+    internal sealed class SqlMigrationWriter : IDisposable
     {
         private readonly DocumentsOperationContext _context;
         private MergedBatchCommand _command;

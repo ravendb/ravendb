@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
-public class CompareExchangeHandlerProcessorForPutCompareExchangeValue : IDisposable
+public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue : IDisposable
 {
     private readonly RequestHandler _requestHandler;
     private readonly string _databaseName;

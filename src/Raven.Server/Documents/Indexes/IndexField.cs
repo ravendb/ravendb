@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class IndexField : IndexFieldBase
+    public sealed class IndexField : IndexFieldBase
     {
         internal string OriginalName { get; set; }
 
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class AutoIndexField : IndexFieldBase
+    public sealed class AutoIndexField : IndexFieldBase
     {
         public AggregationOperation Aggregation { get; set; }
 

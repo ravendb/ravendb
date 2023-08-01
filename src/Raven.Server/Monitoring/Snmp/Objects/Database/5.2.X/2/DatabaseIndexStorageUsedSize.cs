@@ -4,7 +4,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseIndexStorageUsedSize : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseIndexStorageUsedSize : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseIndexStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.IndexStorageUsedSize, index)

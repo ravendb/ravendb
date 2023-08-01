@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
-internal class DatabaseNotificationCenterHandlerProcessorForPostpone : AbstractDatabaseNotificationCenterHandlerProcessorForPostpone<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class DatabaseNotificationCenterHandlerProcessorForPostpone : AbstractDatabaseNotificationCenterHandlerProcessorForPostpone<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public DatabaseNotificationCenterHandlerProcessorForPostpone([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

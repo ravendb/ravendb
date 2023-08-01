@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Documents
 {
-    public class StreamsTempFile : IDisposable
+    public sealed class StreamsTempFile : IDisposable
     {
         private readonly string _tempFile;
         private readonly bool _encrypted;
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal class InnerStream : Stream
+        internal sealed class InnerStream : Stream
         {
             private readonly Stream _stream;
             private readonly StreamsTempFile _parent;

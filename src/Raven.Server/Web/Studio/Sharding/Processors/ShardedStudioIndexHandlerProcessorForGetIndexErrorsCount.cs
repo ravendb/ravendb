@@ -10,7 +10,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal class ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

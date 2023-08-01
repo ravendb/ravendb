@@ -16,7 +16,7 @@ public partial class ShardedDatabaseContext
 {
     public ShardedOngoingTasks OngoingTasks;
 
-    public class ShardedOngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsStateOrchestrator>
+    public sealed class ShardedOngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsStateOrchestrator>
     {
         private readonly ShardedDatabaseContext _context;
 

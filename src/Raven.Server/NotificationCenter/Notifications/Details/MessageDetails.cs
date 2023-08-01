@@ -2,7 +2,7 @@
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class MessageDetails : INotificationDetails
+    public sealed class MessageDetails : INotificationDetails
     {
         public string Message { get; set; }
 

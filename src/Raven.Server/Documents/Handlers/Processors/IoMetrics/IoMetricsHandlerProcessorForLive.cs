@@ -10,7 +10,7 @@ using Raven.Server.Utils.IoMetrics;
 
 namespace Raven.Server.Documents.Handlers.Processors.IoMetrics;
 
-internal class IoMetricsHandlerProcessorForLive : AbstractIoMetricsHandlerProcessorForLive<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IoMetricsHandlerProcessorForLive : AbstractIoMetricsHandlerProcessorForLive<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IoMetricsHandlerProcessorForLive([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

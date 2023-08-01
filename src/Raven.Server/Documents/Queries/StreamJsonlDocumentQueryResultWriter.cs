@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamJsonlDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
+    public sealed class StreamJsonlDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
     {
         private readonly AsyncBlittableJsonTextWriter _writer;
         private readonly JsonOperationContext _context;

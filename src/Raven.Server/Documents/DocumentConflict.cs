@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentConflict : IDisposable
+    public sealed class DocumentConflict : IDisposable
     {
         private bool _disposed;
 

@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class QueryResultsIterationState : PulsedEnumerationState<LuceneIndexReadOperation.QueryResult>
+    public sealed class QueryResultsIterationState : PulsedEnumerationState<LuceneIndexReadOperation.QueryResult>
     {
         public QueryResultsIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {

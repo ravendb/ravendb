@@ -7,7 +7,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerAvailableMemoryForProcessing : ScalarObjectBase<Gauge32>
+    public sealed class ServerAvailableMemoryForProcessing : ScalarObjectBase<Gauge32>
     {
         private readonly MetricCacher _metricCacher;
 

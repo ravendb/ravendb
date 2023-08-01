@@ -11,7 +11,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
-    public class PowerBIAllCollectionsQuery : PowerBIRqlQuery
+    public sealed class PowerBIAllCollectionsQuery : PowerBIRqlQuery
     {
         private static readonly string TableQuery = "select TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\nfrom INFORMATION_SCHEMA.tables\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')\norder by TABLE_SCHEMA, TABLE_NAME".NormalizeLineEndings();
 

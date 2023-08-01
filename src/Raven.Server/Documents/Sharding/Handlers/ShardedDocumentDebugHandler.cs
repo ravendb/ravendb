@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedDocumentDebugHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedDocumentDebugHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/documents/huge", "GET")]
         public async Task HugeDocuments()

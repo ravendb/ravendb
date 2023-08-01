@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamJsonDocumentQueryResultWriter : AbstractDocumentStreamQueryResultWriter<Document>
+    public sealed class StreamJsonDocumentQueryResultWriter : AbstractDocumentStreamQueryResultWriter<Document>
     {
         public StreamJsonDocumentQueryResultWriter(Stream stream, JsonOperationContext context) : base(stream, context)
         {

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Raven.Server
 {
-    public class RedirectServerStartup
+    public sealed class RedirectServerStartup
     {
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {

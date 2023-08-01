@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Queries
 {
-    public class GroupByField
+    public sealed class GroupByField
     {
         public readonly QueryFieldName Name;
 

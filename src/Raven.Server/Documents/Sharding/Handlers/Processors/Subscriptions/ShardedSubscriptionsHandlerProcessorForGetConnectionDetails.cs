@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForGetConnectionDetails : AbstractSubscriptionsHandlerProcessorForGetConnectionDetails<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForGetConnectionDetails : AbstractSubscriptionsHandlerProcessorForGetConnectionDetails<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedSubscriptionsHandlerProcessorForGetConnectionDetails([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

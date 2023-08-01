@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class UpdateDnsRecordParameters
+public sealed class UpdateDnsRecordParameters
 {
     public Action<IOperationProgress> OnProgress;
     public SetupProgressAndResult Progress;

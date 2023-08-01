@@ -9,7 +9,7 @@ using Voron;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class DocumentItem
+    public sealed class DocumentItem
     {
         public static class ExportDocumentType
         {
@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents
         }
     }
 
-    public class CounterItem
+    public sealed class CounterItem
     {
         public string DocId;
         public string ChangeVector;
@@ -64,7 +64,7 @@ namespace Raven.Server.Smuggler.Documents
     }
 
 
-    public class TimeSeriesItem : IDisposable
+    public sealed class TimeSeriesItem : IDisposable
     {
         public LazyStringValue DocId;
 

@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal class PostgreSqlIntegrationHandlerProcessorForDeleteUser : AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUser<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class PostgreSqlIntegrationHandlerProcessorForDeleteUser : AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUser<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public PostgreSqlIntegrationHandlerProcessorForDeleteUser([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

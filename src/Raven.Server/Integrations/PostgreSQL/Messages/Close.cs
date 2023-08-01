@@ -5,7 +5,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class Close : ExtendedProtocolMessage
+    public sealed class Close : ExtendedProtocolMessage
     {
         public PgObjectType PgObjectType;
         public string ObjectName;

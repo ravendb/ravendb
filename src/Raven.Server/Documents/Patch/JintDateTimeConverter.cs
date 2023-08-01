@@ -6,7 +6,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintDateTimeConverter : IObjectConverter
+    public sealed class JintDateTimeConverter : IObjectConverter
     {
         public bool TryConvert(Engine engine, object value, out JsValue result)
         {

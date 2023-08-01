@@ -170,7 +170,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseIndexActions(_database.IndexStore.Create, _database.Time);
         }
 
-        public class DuplicateDocsHandler : IDisposable
+        public sealed class DuplicateDocsHandler : IDisposable
         {
             private readonly DocumentDatabase _database;
             private DocumentsOperationContext _context;
@@ -207,7 +207,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class DatabaseDocumentActions : IDocumentActions
+        public sealed class DatabaseDocumentActions : IDocumentActions
         {
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
@@ -531,7 +531,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class MergedBatchPutCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+        public sealed class MergedBatchPutCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             public bool IsRevision;
             public Action<DocumentItem> DocumentCollectionMismatchHandler;
@@ -914,7 +914,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class MergedBatchPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchPutCommand>
+        public sealed class MergedBatchPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchPutCommand>
         {
             public BuildVersionType BuildType;
             public List<DocumentItem> Documents;
@@ -936,7 +936,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        internal class MergedBatchFixDocumentMetadataCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+        internal sealed class MergedBatchFixDocumentMetadataCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly Logger _log;
             public HashSet<string> Ids = new HashSet<string>();
@@ -1068,7 +1068,7 @@ namespace Raven.Server.Smuggler.Documents
                 };
             }
 
-            internal class MergedBatchFixDocumentMetadataCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchFixDocumentMetadataCommand>
+            internal sealed class MergedBatchFixDocumentMetadataCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchFixDocumentMetadataCommand>
             {
                 public HashSet<string> Ids = new HashSet<string>();
 
@@ -1087,7 +1087,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        internal class MergedBatchDeleteRevisionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+        internal sealed class MergedBatchDeleteRevisionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly Logger _log;
             public readonly List<KeyValuePair<string, CollectionName>> Ids = new List<KeyValuePair<string, CollectionName>>();
@@ -1151,7 +1151,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        internal class MergedBatchDeleteRevisionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchDeleteRevisionCommand>
+        internal sealed class MergedBatchDeleteRevisionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchDeleteRevisionCommand>
         {
             public List<KeyValuePair<string, CollectionName>> Ids = new List<KeyValuePair<string, CollectionName>>();
 

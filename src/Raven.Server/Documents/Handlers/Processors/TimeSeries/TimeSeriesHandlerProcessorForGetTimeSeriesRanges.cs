@@ -15,7 +15,7 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal class TimeSeriesHandlerProcessorForGetTimeSeriesRanges : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class TimeSeriesHandlerProcessorForGetTimeSeriesRanges : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public TimeSeriesHandlerProcessorForGetTimeSeriesRanges([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

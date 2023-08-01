@@ -10,7 +10,7 @@ using Raven.Server.Web.Studio;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
-    internal class StudioCollectionHandlerProcessorForDeleteCollection : AbstractStudioCollectionHandlerProcessorForDeleteCollection<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StudioCollectionHandlerProcessorForDeleteCollection : AbstractStudioCollectionHandlerProcessorForDeleteCollection<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StudioCollectionHandlerProcessorForDeleteCollection([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

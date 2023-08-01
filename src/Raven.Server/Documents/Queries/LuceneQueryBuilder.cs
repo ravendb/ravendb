@@ -35,7 +35,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class LuceneQueryBuilder
+    public sealed class LuceneQueryBuilder
     {
         private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
 

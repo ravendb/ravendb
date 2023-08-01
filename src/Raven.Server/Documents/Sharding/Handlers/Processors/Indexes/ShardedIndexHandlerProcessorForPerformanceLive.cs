@@ -9,7 +9,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForPerformanceLive : AbstractIndexHandlerProcessorForPerformanceLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForPerformanceLive : AbstractIndexHandlerProcessorForPerformanceLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForPerformanceLive([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

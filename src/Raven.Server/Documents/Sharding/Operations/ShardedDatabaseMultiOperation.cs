@@ -9,7 +9,7 @@ using Raven.Client.Http;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-public class ShardedDatabaseMultiOperation : AbstractShardedMultiOperation
+public sealed class ShardedDatabaseMultiOperation : AbstractShardedMultiOperation
 {
     public ShardedDatabaseMultiOperation(long id, ShardedDatabaseContext context, Action<IOperationProgress> onProgress) : base(id, context, onProgress)
     {

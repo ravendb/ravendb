@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration;
 
-internal class ConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class ConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
 
     public ConfigurationHandlerProcessorForGetStudioConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)

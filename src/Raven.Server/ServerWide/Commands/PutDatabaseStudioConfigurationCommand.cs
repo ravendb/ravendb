@@ -13,7 +13,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutDatabaseStudioConfigurationCommand : UpdateDatabaseCommand
+    public sealed class PutDatabaseStudioConfigurationCommand : UpdateDatabaseCommand
     {
         public StudioConfiguration Configuration;
 

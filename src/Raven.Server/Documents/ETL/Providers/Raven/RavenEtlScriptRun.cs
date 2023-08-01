@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtlScriptRun
+    public sealed class RavenEtlScriptRun
     {
         private readonly EtlStatsScope _stats;
         private readonly Transformation _transformation;

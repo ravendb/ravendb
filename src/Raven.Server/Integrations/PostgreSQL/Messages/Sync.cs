@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class Sync : ExtendedProtocolMessage
+    public sealed class Sync : ExtendedProtocolMessage
     {
         protected override Task<int> InitMessage(MessageReader messageReader, PipeReader reader, int msgLen, CancellationToken token)
         {

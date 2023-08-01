@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 
-public class ShardedAggregatedAnonymousObjects : AggregatedAnonymousObjects
+public sealed class ShardedAggregatedAnonymousObjects : AggregatedAnonymousObjects
 {
     private static readonly DynamicJsonValue DummyDynamicJsonValue = new();
     

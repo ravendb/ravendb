@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedRefreshHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedRefreshHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/refresh/config", "GET")]
     public async Task GetRefreshConfiguration()

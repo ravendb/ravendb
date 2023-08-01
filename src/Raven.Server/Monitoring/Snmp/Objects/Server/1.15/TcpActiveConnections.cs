@@ -3,7 +3,7 @@ using Sparrow.Server.Extensions;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class TcpActiveConnections : ScalarObjectBase<Gauge32>
+    public sealed class TcpActiveConnections : ScalarObjectBase<Gauge32>
     {
         public TcpActiveConnections()
             : base(SnmpOids.Server.TcpActiveConnections)

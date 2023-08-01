@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-public class ShardedOperation : AbstractOperation
+public sealed class ShardedOperation : AbstractOperation
 {
     [JsonDeserializationIgnore]
     public ShardedDatabaseMultiOperation Operation;

@@ -1,5 +1,5 @@
 ﻿namespace Raven.Server.Documents.Operations;
 
-public class Operation : AbstractOperation
+public sealed class Operation : AbstractOperation
 {
 }

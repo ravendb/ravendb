@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.BulkInsert
 {
-    public class BulkInsertHandler : DatabaseRequestHandler
+    public sealed class BulkInsertHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/bulk_insert", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkInsert()

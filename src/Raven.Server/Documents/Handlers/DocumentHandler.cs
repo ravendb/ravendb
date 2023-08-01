@@ -40,7 +40,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentHandler : DatabaseRequestHandler
+    public sealed class DocumentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    public sealed class MergedPutCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
         private string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        public class MergedPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedPutCommand>
+        public sealed class MergedPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedPutCommand>
         {
             public string Id { get; set; }
             public LazyStringValue ExpectedChangeVector { get; set; }

@@ -3,7 +3,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlTableWithRecords : SqlEtlTable
+    public sealed class SqlTableWithRecords : SqlEtlTable
     {
         public SqlTableWithRecords(SqlEtlTable table)
         {

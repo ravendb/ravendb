@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
-    public class TimeSeriesStream
+    public sealed class TimeSeriesStream
     {
         public IEnumerable<DynamicJsonValue> TimeSeries;
         public string Key;

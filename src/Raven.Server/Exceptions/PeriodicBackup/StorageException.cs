@@ -7,7 +7,7 @@ using Raven.Client.Http;
 
 namespace Raven.Server.Exceptions.PeriodicBackup
 {
-    public class StorageException : Exception
+    public sealed class StorageException : Exception
     {
         public HttpResponseMessage Response { get; }
 

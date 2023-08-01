@@ -179,7 +179,7 @@ namespace Raven.Server.ServerWide.Commands
             return JsonDeserializationCluster.CompareExchangeResult(((BlittableJsonReaderObject)remoteResult).Clone(ContextToWriteResult));
         }
 
-        public class CompareExchangeResult : IDynamicJsonValueConvertible
+        public sealed class CompareExchangeResult : IDynamicJsonValueConvertible
         {
             public long Index;
             public object Value;
@@ -236,7 +236,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-    public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
+    public sealed class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
         public RemoveCompareExchangeCommand() { }
 
@@ -319,7 +319,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-    public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
+    public sealed class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
     {
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 

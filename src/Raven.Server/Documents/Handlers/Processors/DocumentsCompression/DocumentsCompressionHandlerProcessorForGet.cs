@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.DocumentsCompression
 {
-    internal class DocumentsCompressionHandlerProcessorForGet : AbstractDocumentsCompressionHandlerProcessorForGet<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class DocumentsCompressionHandlerProcessorForGet : AbstractDocumentsCompressionHandlerProcessorForGet<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public DocumentsCompressionHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

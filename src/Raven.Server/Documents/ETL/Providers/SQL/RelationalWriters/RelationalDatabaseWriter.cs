@@ -22,7 +22,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
-    public class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
+    public sealed class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
     {
         private readonly Logger _logger;
 

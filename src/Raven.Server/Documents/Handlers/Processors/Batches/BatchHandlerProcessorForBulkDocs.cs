@@ -22,7 +22,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
-internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<MergedBatchCommand, DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<MergedBatchCommand, DatabaseRequestHandler, DocumentsOperationContext>
 {
     public BatchHandlerProcessorForBulkDocs([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

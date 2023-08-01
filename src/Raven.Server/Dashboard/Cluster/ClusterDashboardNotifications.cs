@@ -7,7 +7,7 @@ using Raven.Server.NotificationCenter;
 
 namespace Raven.Server.Dashboard.Cluster
 {
-    public class ClusterDashboardNotifications : NotificationsBase
+    public sealed class ClusterDashboardNotifications : NotificationsBase
     {
         private readonly RavenServer _server;
         private readonly CancellationToken _shutdown;

@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ThreadsInfoHandler : ServerNotificationCenterHandler
+    public sealed class ThreadsInfoHandler : ServerNotificationHandlerBase
     {
         [RavenAction("/threads-info/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task GetThreadsInfo()

@@ -5,7 +5,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    public class ObserverLogger
+    public sealed class ObserverLogger
     {
         private readonly Logger _logger;
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog;

@@ -3,7 +3,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerTotalRequests : ScalarObjectBase<Integer32>
+    public sealed class ServerTotalRequests : ScalarObjectBase<Integer32>
     {
         private readonly MetricCounters _metrics;
 

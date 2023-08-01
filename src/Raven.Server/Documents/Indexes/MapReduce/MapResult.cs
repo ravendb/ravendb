@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public class MapResult
+    public sealed class MapResult
     {
         public BlittableJsonReaderObject Data;
 

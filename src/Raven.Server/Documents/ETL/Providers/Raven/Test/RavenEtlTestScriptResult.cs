@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Test
 {
-    public class RavenEtlTestScriptResult : TestEtlScriptResult
+    public sealed class RavenEtlTestScriptResult : TestEtlScriptResult
     {
         public List<ICommandData> Commands { get; set; }
 

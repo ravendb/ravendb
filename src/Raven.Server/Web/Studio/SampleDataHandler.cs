@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
 {
-    public class SampleDataHandler : DatabaseRequestHandler
+    public sealed class SampleDataHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/studio/sample-data", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task PostCreateSampleData()

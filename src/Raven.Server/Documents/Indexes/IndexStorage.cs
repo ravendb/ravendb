@@ -23,9 +23,9 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexStorage
+    public sealed class IndexStorage
     {
-        public class Constants
+        public sealed class Constants
         {
             private Constants()
             {
@@ -463,7 +463,7 @@ namespace Raven.Server.Documents.Indexes
             return 0;
         }
 
-        public class DocumentReferences : ReferencesBase
+        public sealed class DocumentReferences : ReferencesBase
         {
             public DocumentReferences()
                 : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix, ReferencesType.Documents)
@@ -471,7 +471,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public class CompareExchangeReferences : ReferencesBase
+        public sealed class CompareExchangeReferences : ReferencesBase
         {
             public static CollectionName CompareExchange = new CollectionName(nameof(CompareExchange));
 
@@ -815,7 +815,7 @@ namespace Raven.Server.Documents.Indexes
             throw new IndexWriteException(inner);
         }
 
-        public class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException
+        public sealed class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException
         {
             public SimulatedVoronUnrecoverableErrorException(string message) : base(message)
             {
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal class IndexSchema
+        internal sealed class IndexSchema
         {
             public const string ConfigurationTree = "Configuration";
 

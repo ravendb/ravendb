@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Http.Behaviors;
 
-internal class ProxyCommandResponseBehavior : AbstractCommandResponseBehavior
+internal sealed class ProxyCommandResponseBehavior : AbstractCommandResponseBehavior
 {
     private readonly HttpResponse _response;
 

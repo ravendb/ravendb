@@ -11,7 +11,7 @@ using Raven.Server.NotificationCenter;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class StorageUsageNotificationSender : AbstractClusterDashboardNotificationSender
+    public sealed class StorageUsageNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly ClusterDashboardPayloadType _payloadType;
         private readonly DatabasesInfoRetriever _databasesInfoRetriever;

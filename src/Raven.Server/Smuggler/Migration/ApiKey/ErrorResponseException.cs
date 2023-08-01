@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Raven.Server.Smuggler.Migration.ApiKey
 {
     [Serializable]
-    public class ErrorResponseException : Exception
+    public sealed class ErrorResponseException : Exception
     {
         private readonly HttpResponseMessage response;
 

@@ -5,7 +5,7 @@ using static Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Propert
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class DictionaryAccessor : IPropertyAccessor
+    public sealed class DictionaryAccessor : IPropertyAccessor
     {
         private readonly Dictionary<string, DictionaryValueAccessor> _properties = new();
 
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException($"The {name} property was not found");
         }
 
-        internal class DictionaryValueAccessor : PropertyAccessor.Accessor
+        internal sealed class DictionaryValueAccessor : PropertyAccessor.Accessor
         {
             private readonly string _propertyName;
 

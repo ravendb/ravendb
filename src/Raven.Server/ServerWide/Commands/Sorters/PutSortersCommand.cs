@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    public class PutSortersCommand : UpdateDatabaseCommand
+    public sealed class PutSortersCommand : UpdateDatabaseCommand
     {
         public List<SorterDefinition> Sorters = new List<SorterDefinition>();
 

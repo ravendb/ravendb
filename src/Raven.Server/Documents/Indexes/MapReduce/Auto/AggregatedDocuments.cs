@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AggregatedDocuments : AggregationResult
+    public sealed class AggregatedDocuments : AggregationResult
     {
         private readonly List<Document> _outputs;
 

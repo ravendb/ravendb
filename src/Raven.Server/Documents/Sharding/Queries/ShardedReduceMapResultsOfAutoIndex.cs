@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
-public class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : AutoMapReduceIndexResultsAggregator
+public sealed class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : AutoMapReduceIndexResultsAggregator
 {
     private string _reduceKeyHash;
 

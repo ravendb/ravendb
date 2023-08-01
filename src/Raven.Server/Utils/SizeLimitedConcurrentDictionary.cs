@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Utils
 {
-    public class SizeLimitedConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    public sealed class SizeLimitedConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
         where TValue : new()
     {
         private readonly ConcurrentDictionary<TKey, TValue> _dic;

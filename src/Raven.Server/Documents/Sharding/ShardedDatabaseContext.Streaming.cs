@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding
     {
         public ShardedStreaming Streaming;
 
-        public class ShardedStreaming
+        public sealed class ShardedStreaming
         {
             public async ValueTask<Memory<ShardStreamItem<long>>> ReadCombinedLongAsync(
                 CombinedReadContinuationState combinedState,
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
-            public class DocumentIdComparer : Comparer<ShardStreamItem<Document>>
+            public sealed class DocumentIdComparer : Comparer<ShardStreamItem<Document>>
             {
                 public override int Compare(ShardStreamItem<Document> x, ShardStreamItem<Document> y)
                 {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Sharding
                 public static DocumentIdComparer Instance = new();
             }
 
-            public class BlittableIdComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            public sealed class BlittableIdComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Sharding
                 public static BlittableIdComparer Instance = new();
             }
 
-            public class DocumentLastModifiedComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            public sealed class DocumentLastModifiedComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {

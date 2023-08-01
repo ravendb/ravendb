@@ -11,7 +11,7 @@ using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
-    public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
+    public sealed class SpatialDistanceFieldComparatorSource : FieldComparatorSource
     {
         private readonly IPoint _center;
         private readonly IndexQueryServerSide _query;
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return comp;
         }
 
-        public class SpatialDistanceFieldComparator : FieldComparator
+        public sealed class SpatialDistanceFieldComparator : FieldComparator
         {
             private readonly SpatialField _spatialField;
             private readonly DistanceValue[] _values;

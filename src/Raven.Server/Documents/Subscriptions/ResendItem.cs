@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public class ResendItem : IDynamicJson
+public sealed class ResendItem : IDynamicJson
 {
     public string Id;
     public long Batch;

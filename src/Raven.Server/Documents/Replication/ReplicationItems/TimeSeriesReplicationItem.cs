@@ -15,7 +15,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class TimeSeriesDeletedRangeItem : ReplicationBatchItem
+    public sealed class TimeSeriesDeletedRangeItem : ReplicationBatchItem
     {
         public Slice Key;
         public LazyStringValue Collection;
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
     }
 
-    public class TimeSeriesReplicationItem : ReplicationBatchItem
+    public sealed class TimeSeriesReplicationItem : ReplicationBatchItem
     {
         public Slice Key; // docId|lower-name|baseline
         public LazyStringValue Name; // original casing

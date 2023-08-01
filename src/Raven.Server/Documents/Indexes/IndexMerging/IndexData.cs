@@ -7,7 +7,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
 {
-    internal class IndexData
+    internal sealed class IndexData
     {
         private readonly IndexDefinition _index;
         public Dictionary<string, ExpressionSyntax> SelectExpressions = new Dictionary<string, ExpressionSyntax>();

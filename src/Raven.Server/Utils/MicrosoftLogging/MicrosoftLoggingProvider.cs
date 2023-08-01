@@ -10,7 +10,7 @@ using Sparrow.Threading;
 namespace Raven.Server.Utils.MicrosoftLogging;
 
 [ProviderAlias("Sparrow")]
-public class MicrosoftLoggingProvider : ILoggerProvider
+public sealed class MicrosoftLoggingProvider : ILoggerProvider
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingProvider));
 

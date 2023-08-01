@@ -17,7 +17,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
+    public sealed class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
     {
         public string ChangeVector;
 

@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminStudioServerWideHandler : ServerRequestHandler
+    public sealed class AdminStudioServerWideHandler : ServerRequestHandler
     {
         [RavenAction("/admin/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
         public async Task GetServerWideTasksForStudio()
@@ -90,7 +90,7 @@ namespace Raven.Server.Web.System
             await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName: null, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
 
-        public class ServerWideTasksResult : IDynamicJson
+        public sealed class ServerWideTasksResult : IDynamicJson
         {
             public List<ServerWideTask> Tasks;
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            public class ServerWideBackupTask : ServerWideTask
+            public sealed class ServerWideBackupTask : ServerWideTask
             {
                 public ServerWideBackupTask()
                 {
@@ -145,7 +145,7 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            public class ServerWideExternalReplicationTask : ServerWideTask
+            public sealed class ServerWideExternalReplicationTask : ServerWideTask
             {
                 public ServerWideExternalReplicationTask()
                 {

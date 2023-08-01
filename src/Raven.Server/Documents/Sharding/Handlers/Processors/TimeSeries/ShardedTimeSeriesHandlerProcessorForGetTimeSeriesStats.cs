@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
-    internal class ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

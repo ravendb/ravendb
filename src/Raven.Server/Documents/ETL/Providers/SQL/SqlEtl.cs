@@ -18,7 +18,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlEtlConfiguration, SqlConnectionString, EtlStatsScope, EtlPerformanceOperation>
+    public sealed class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlEtlConfiguration, SqlConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         public const string SqlEtlTag = "SQL ETL";
 

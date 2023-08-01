@@ -3,7 +3,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseDocPutsPerSecond : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseDocPutsPerSecond : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseDocPutsPerSecond(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.DocPutsPerSecond, index)

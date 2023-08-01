@@ -12,7 +12,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide
 {
-    public class CompareExchangeExpirationStorage
+    public sealed class CompareExchangeExpirationStorage
     {
         public static readonly Slice CompareExchangeByExpiration;
 

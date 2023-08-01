@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class TombstoneNotifications
+    public sealed class TombstoneNotifications
     {
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
@@ -53,7 +53,7 @@ namespace Raven.Server.NotificationCenter
             return list;
         }
 
-        internal class BlockingTombstonesDetails : INotificationDetails
+        internal sealed class BlockingTombstonesDetails : INotificationDetails
         {
             internal List<BlockingTombstoneDetails> BlockingTombstones { get; set; }
 
@@ -86,7 +86,7 @@ namespace Raven.Server.NotificationCenter
         }
     }
 
-        public class BlockingTombstoneDetails
+        public sealed class BlockingTombstoneDetails
         {
             public string Source { get; set; }
         public ITombstoneAware.TombstoneDeletionBlockerType BlockerType { get; set; }
@@ -97,7 +97,7 @@ namespace Raven.Server.NotificationCenter
         public string SizeOfTombstonesHumane => new Size(SizeOfTombstonesInBytes, SizeUnit.Bytes).ToString();
         }
 
-    public class TombstoneDeletionBlockageSource : IEquatable<TombstoneDeletionBlockageSource>
+    public sealed class TombstoneDeletionBlockageSource : IEquatable<TombstoneDeletionBlockageSource>
     {
         public long TaskId { get; }
         public ITombstoneAware.TombstoneDeletionBlockerType Type { get; }

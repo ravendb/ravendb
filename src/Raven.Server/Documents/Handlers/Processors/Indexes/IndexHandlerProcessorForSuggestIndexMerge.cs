@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForSuggestIndexMerge : AbstractIndexHandlerProcessorForSuggestIndexMerge<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForSuggestIndexMerge : AbstractIndexHandlerProcessorForSuggestIndexMerge<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForSuggestIndexMerge([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

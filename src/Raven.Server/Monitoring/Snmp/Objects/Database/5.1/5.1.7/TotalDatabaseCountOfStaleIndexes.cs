@@ -6,7 +6,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalDatabaseCountOfStaleIndexes : DatabaseBase<Gauge32>
+    public sealed class TotalDatabaseCountOfStaleIndexes : DatabaseBase<Gauge32>
     {
         public TotalDatabaseCountOfStaleIndexes(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.TotalNumberOfStaleIndexes)

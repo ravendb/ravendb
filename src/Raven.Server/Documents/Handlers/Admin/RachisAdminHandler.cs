@@ -33,7 +33,7 @@ using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class RachisAdminHandler : ServerRequestHandler
+    public sealed class RachisAdminHandler : ServerRequestHandler
     {
         [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.Operator)]
         public async Task ApplyCommand()

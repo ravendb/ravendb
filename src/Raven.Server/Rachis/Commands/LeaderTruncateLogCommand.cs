@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Rachis.Commands;
 
-public class LeaderTruncateLogCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class LeaderTruncateLogCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
     private readonly long _lowestIndexInEntireCluster;

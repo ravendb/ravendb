@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
 {
-    public class DeleteAnalyzerCommand : UpdateDatabaseCommand
+    public sealed class DeleteAnalyzerCommand : UpdateDatabaseCommand
     {
         public string AnalyzerName;
 

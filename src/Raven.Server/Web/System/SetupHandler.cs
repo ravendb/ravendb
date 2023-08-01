@@ -41,7 +41,7 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 
 namespace Raven.Server.Web.System
 {
-    public class SetupHandler : ServerRequestHandler
+    public sealed class SetupHandler : ServerRequestHandler
     {
         [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients, CorsMode = CorsMode.Public)]
         public Task ServerAlive()
@@ -830,12 +830,12 @@ namespace Raven.Server.Web.System
         private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later.";
     }
 
-    public class LicenseInfo
+    public sealed class LicenseInfo
     {
         public License License { get; set; }
     }
 
-    public class ConfigurationNodeInfo
+    public sealed class ConfigurationNodeInfo
     {
         public string Tag { get; set; }
         public string ServerUrl { get; set; }

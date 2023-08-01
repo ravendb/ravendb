@@ -8,7 +8,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide
 {
-    public class ServerMetricCacher : MetricCacher
+    public sealed class ServerMetricCacher : MetricCacher
     {
         private readonly SmapsReader _smapsReader;
         private readonly RavenServer _server;

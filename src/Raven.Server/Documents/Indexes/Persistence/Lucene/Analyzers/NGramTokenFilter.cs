@@ -3,7 +3,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
-    public class NGramTokenFilter : TokenFilter
+    public sealed class NGramTokenFilter : TokenFilter
     {
         public static int DEFAULT_MIN_NGRAM_SIZE = 1;
         public static int DEFAULT_MAX_NGRAM_SIZE = 2;

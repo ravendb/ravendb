@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutClientConfigurationCommand : PutValueCommand<ClientConfiguration>
+    public sealed class PutClientConfigurationCommand : PutValueCommand<ClientConfiguration>
     {
         public PutClientConfigurationCommand()
         {

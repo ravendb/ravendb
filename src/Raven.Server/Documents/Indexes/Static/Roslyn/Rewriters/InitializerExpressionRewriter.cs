@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class InitializerExpressionRewriter : CSharpSyntaxRewriter
+    public sealed class InitializerExpressionRewriter : CSharpSyntaxRewriter
     {
         public static readonly InitializerExpressionRewriter Instance = new InitializerExpressionRewriter();
 

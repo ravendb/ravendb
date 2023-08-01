@@ -14,7 +14,7 @@ public partial class ShardedDatabaseContext
 {
     public ShardedSubscriptionsStorage SubscriptionsStorage;
 
-    public class ShardedSubscriptionsStorage : AbstractSubscriptionStorage<SubscriptionConnectionsStateOrchestrator>
+    public sealed class ShardedSubscriptionsStorage : AbstractSubscriptionStorage<SubscriptionConnectionsStateOrchestrator>
     {
         private readonly ShardedDatabaseContext _context;
 

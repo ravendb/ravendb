@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionsHandlerProcessorForGetSubscription : AbstractSubscriptionsHandlerProcessorForGetSubscription<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class SubscriptionsHandlerProcessorForGetSubscription : AbstractSubscriptionsHandlerProcessorForGetSubscription<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public SubscriptionsHandlerProcessorForGetSubscription([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

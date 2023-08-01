@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 namespace Raven.Server.Rachis.Commands;
 
-public class FollowerApplyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class FollowerApplyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
     private readonly long _term;

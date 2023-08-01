@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class SlowSqlDetails : INotificationDetails
+    public sealed class SlowSqlDetails : INotificationDetails
     {
         public const int MaxNumberOfStatements = 500;
 

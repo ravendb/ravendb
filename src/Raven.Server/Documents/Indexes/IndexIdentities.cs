@@ -2,7 +2,7 @@ using System.Threading;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexIdentities
+    public sealed class IndexIdentities
     {
         private int _indexingStatsId;
 

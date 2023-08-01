@@ -6,7 +6,7 @@
 
 namespace Raven.Server.Dashboard.Cluster
 {
-    public class WidgetRequest
+    public sealed class WidgetRequest
     {
         public string Command { get; set; }
         public int Id { get; set; }

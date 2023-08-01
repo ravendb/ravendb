@@ -7,7 +7,7 @@ using Raven.Server.Documents.Studio;
 
 namespace Raven.Server.Commercial
 {
-    public class FeedbackSender
+    public sealed class FeedbackSender
     {
         public async Task SendFeedback(FeedbackForm feedback)
         {

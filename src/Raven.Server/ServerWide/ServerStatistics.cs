@@ -13,7 +13,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide
 {
-    public class ServerStatistics
+    public sealed class ServerStatistics
     {
         private static readonly TimeSpan PersistFrequency = TimeSpan.FromMinutes(15);
 

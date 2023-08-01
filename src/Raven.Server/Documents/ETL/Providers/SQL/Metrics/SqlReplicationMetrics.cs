@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
 {
-    public class SqlEtlTableMetrics
+    public sealed class SqlEtlTableMetrics
     {
         public readonly string TableName;
         public readonly MeterMetric DeleteActionsMeter;

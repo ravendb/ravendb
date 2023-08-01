@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminIoMetricsHandler : ServerRequestHandler
+    public sealed class AdminIoMetricsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/io-metrics", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task IoMetrics()

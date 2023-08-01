@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetIncomingRejectionInfo : AbstractReplicationHandlerProcessorForGetIncomingRejectionInfo<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetIncomingRejectionInfo : AbstractReplicationHandlerProcessorForGetIncomingRejectionInfo<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetIncomingRejectionInfo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

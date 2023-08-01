@@ -13,7 +13,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedIndexCreateController : AbstractIndexCreateController
+public sealed class ShardedIndexCreateController : AbstractIndexCreateController
 {
     private readonly ShardedDatabaseContext _context;
 

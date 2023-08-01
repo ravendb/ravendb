@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding
 {
-    public class ShardedIndexStore : IndexStore
+    public sealed class ShardedIndexStore : IndexStore
     {
         public ShardedIndexStore(ShardedDocumentDatabase database, ServerStore serverStore)
             : base(database, serverStore,

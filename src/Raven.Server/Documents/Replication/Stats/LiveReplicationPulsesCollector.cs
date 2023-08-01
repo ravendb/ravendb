@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Replication.Stats
         
     }
 
-    public class LiveReplicationPulsesCollector : IDisposable
+    public sealed class LiveReplicationPulsesCollector : IDisposable
     {
         private readonly DocumentDatabase _database;
 

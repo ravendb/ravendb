@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors
 {
-    internal class QueueEtlHandlerProcessorForPostScriptTest : AbstractDatabaseEtlHandlerProcessorForTest<TestQueueEtlScript, QueueEtlConfiguration, QueueConnectionString>
+    internal sealed class QueueEtlHandlerProcessorForPostScriptTest : AbstractDatabaseEtlHandlerProcessorForTest<TestQueueEtlScript, QueueEtlConfiguration, QueueConnectionString>
     {
         public QueueEtlHandlerProcessorForPostScriptTest([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

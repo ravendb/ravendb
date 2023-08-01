@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateTopologyCommand : UpdateDatabaseCommand
+    public sealed class UpdateTopologyCommand : UpdateDatabaseCommand
     {
         public DatabaseTopology Topology;
         public DateTime At;

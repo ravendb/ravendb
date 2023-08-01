@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace Raven.Server.Utils.Imports.Memory;
 
-public class MemoryCacheOptions : IOptions<MemoryCacheOptions>
+public sealed class MemoryCacheOptions : IOptions<MemoryCacheOptions>
 {
     private long? _sizeLimit;
     private double _compactionPercentage = 0.05;

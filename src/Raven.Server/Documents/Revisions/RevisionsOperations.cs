@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Revisions
 {
-    public class RevisionsOperations
+    public sealed class RevisionsOperations
     {
         private readonly DocumentDatabase _database;
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Revisions
             _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).GetAwaiter().GetResult();
         }
 
-        internal class DeleteRevisionsBeforeCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class DeleteRevisionsBeforeCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly string _collection;
             private readonly DateTime _time;
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Revisions
         }
     }
 
-    internal class DeleteRevisionsBeforeCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevisionsOperations.DeleteRevisionsBeforeCommand>
+    internal sealed class DeleteRevisionsBeforeCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevisionsOperations.DeleteRevisionsBeforeCommand>
     {
         public string Collection;
         public DateTime Time;

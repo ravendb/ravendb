@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
-internal class StatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class StatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public StatsHandlerProcessorForEssentialStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

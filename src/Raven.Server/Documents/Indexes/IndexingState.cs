@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Indexes
 {
-    public class IndexingState
+    public sealed class IndexingState
     {
         public IndexingState(bool isStale, long lastProcessedEtag, long? lastProcessedCompareExchangeReferenceEtag, long? lastProcessedCompareExchangeReferenceTombstoneEtag)
         {

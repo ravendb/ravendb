@@ -12,7 +12,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
-    internal class ShardedAdminRevisionsHandlerProcessorForDeleteRevisions :  AbstractAdminRevisionsHandlerProcessorForDeleteRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAdminRevisionsHandlerProcessorForDeleteRevisions :  AbstractAdminRevisionsHandlerProcessorForDeleteRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAdminRevisionsHandlerProcessorForDeleteRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

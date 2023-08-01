@@ -5,7 +5,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class Describe : ExtendedProtocolMessage
+    public sealed class Describe : ExtendedProtocolMessage
     {
         /// <summary>
         /// Type of Postgres object to describe (Portal/Statement)

@@ -21,7 +21,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Web.Studio
 {
-    public class DataDirectoryInfo
+    public sealed class DataDirectoryInfo
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DataDirectoryInfo>("DataDirectoryInfo");
 
@@ -214,7 +214,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        internal class GetDataDirectoryInfoCommand : RavenCommand<SingleNodeDataDirectoryResult>
+        internal sealed class GetDataDirectoryInfoCommand : RavenCommand<SingleNodeDataDirectoryResult>
         {
             private readonly string _path;
             private readonly string _name;
@@ -251,7 +251,7 @@ namespace Raven.Server.Web.Studio
         }
     }
 
-    public class SingleNodeDataDirectoryResult : IDynamicJson
+    public sealed class SingleNodeDataDirectoryResult : IDynamicJson
     {
         public string NodeTag { get; set; }
 
@@ -282,7 +282,7 @@ namespace Raven.Server.Web.Studio
         }
     }
 
-    public class DataDirectoryResult : IDynamicJson
+    public sealed class DataDirectoryResult : IDynamicJson
     {
         public DataDirectoryResult()
         {

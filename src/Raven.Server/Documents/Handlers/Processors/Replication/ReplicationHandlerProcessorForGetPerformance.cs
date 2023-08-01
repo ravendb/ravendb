@@ -11,7 +11,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetPerformance : AbstractReplicationHandlerProcessorForGetPerformance<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetPerformance : AbstractReplicationHandlerProcessorForGetPerformance<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetPerformance([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

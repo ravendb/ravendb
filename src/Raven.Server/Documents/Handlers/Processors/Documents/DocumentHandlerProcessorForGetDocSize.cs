@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForGetDocSize([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

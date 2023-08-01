@@ -19,7 +19,7 @@ using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
-internal class StorageHandlerProcessorForGetEnvironmentPages : AbstractStorageHandlerProcessorForGetEnvironmentReport<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractStorageHandlerProcessorForGetEnvironmentReport<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public StorageHandlerProcessorForGetEnvironmentPages([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding;
 
-public class PutShardedSubscriptionCommand : PutSubscriptionCommand
+public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
 {
     public Dictionary<string, string> InitialChangeVectorPerShard;
 

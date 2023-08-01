@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcessorForHead<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcessorForHead<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForHead([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Exceptions.ETL.ElasticSearch
 {
-    public class ElasticSearchLoadException : Exception
+    public sealed class ElasticSearchLoadException : Exception
     {
         public ElasticSearchLoadException()
         {

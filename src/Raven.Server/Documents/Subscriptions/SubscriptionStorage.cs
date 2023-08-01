@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
-        public class SubscriptionGeneralDataAndStats : SubscriptionState
+        public sealed class SubscriptionGeneralDataAndStats : SubscriptionState
         {
             public SubscriptionConnection Connection => Connections?.FirstOrDefault();
             public List<SubscriptionConnection> Connections;

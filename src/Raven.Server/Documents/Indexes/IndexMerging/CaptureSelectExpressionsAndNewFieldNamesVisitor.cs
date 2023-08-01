@@ -5,7 +5,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
 {
-    internal class CaptureSelectExpressionsAndNewFieldNamesVisitor : CaptureSelectNewFieldNamesVisitor
+    internal sealed class CaptureSelectExpressionsAndNewFieldNamesVisitor : CaptureSelectNewFieldNamesVisitor
     {
         private readonly bool _outerMostRequired;
         private readonly HashSet<string> _fieldNames;

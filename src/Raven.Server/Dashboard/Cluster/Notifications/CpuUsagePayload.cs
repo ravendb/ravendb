@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class CpuUsagePayload : AbstractClusterDashboardNotification
+    public sealed class CpuUsagePayload : AbstractClusterDashboardNotification
     {
         public int MachineCpuUsage { get; set; }
         public int ProcessCpuUsage { get; set; }

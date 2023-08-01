@@ -5,7 +5,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 
 namespace Raven.Server.Json.Converters
 {
-    internal class CounterOperationConverter : RavenTypeJsonConverter<CounterOperation>
+    internal sealed class CounterOperationConverter : RavenTypeJsonConverter<CounterOperation>
     {
         public static CounterOperationConverter Instance = new CounterOperationConverter();
 

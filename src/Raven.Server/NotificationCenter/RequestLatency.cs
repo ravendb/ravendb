@@ -9,7 +9,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class RequestLatency : IDisposable
+    public sealed class RequestLatency : IDisposable
     {
         private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
         private readonly object _locker = new();

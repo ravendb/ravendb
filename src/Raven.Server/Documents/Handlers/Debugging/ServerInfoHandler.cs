@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ServerInfoHandler : ServerRequestHandler
+    public sealed class ServerInfoHandler : ServerRequestHandler
     {
         [RavenAction("/debug/server-id", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task ServerId()

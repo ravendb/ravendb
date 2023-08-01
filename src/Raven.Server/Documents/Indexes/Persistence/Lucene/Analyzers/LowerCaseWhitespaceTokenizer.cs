@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         }
     }
 
-    public class LowerCaseWhitespaceTokenizer : LowerCaseTokenizerBase<LowerCaseWhitespaceTokenizerHelper>
+    public sealed class LowerCaseWhitespaceTokenizer : LowerCaseTokenizerBase<LowerCaseWhitespaceTokenizerHelper>
     {
         public LowerCaseWhitespaceTokenizer(TextReader input) : base(input)
         {

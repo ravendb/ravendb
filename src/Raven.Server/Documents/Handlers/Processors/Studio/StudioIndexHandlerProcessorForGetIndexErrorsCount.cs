@@ -14,7 +14,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio;
 
-internal class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public StudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

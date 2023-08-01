@@ -13,7 +13,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcessorForPerformance<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcessorForPerformance<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForPerformance([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

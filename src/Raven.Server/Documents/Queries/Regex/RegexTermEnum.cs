@@ -28,7 +28,7 @@ namespace Lucene.Net.Search
     /// the enumeration is greater than all that precede it.</para>
     /// </summary>
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexTermEnum.java.htm</remarks>
-    public class RegexTermEnum : FilteredTermEnum
+    public sealed class RegexTermEnum : FilteredTermEnum
     {
         private readonly string _sField;
         private bool _bEndEnum;

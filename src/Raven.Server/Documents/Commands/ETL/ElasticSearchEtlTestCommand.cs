@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
-internal class ElasticSearchEtlTestCommand : RavenCommand
+internal sealed class ElasticSearchEtlTestCommand : RavenCommand
 {
     private readonly DocumentConventions _conventions;
     private readonly BlittableJsonReaderObject _testScript;

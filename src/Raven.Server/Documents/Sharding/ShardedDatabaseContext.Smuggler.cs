@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Sharding
     {
         public readonly ShardedSmugglerContext Smuggler;
 
-        public class ShardedSmugglerContext
+        public sealed class ShardedSmugglerContext
         {
             private readonly ShardedDatabaseContext _context;
 

@@ -4,7 +4,7 @@ using Voron;
 
 namespace Raven.Server.Storage.Schema
 {
-    public class SchemaUpgradeExtensions
+    public sealed class SchemaUpgradeExtensions
     {
         public const string DbKey = "db/";
 

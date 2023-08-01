@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetOutgoingReconnectionQueue : AbstractReplicationHandlerProcessorForGetOutgoingReconnectionQueue<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetOutgoingReconnectionQueue : AbstractReplicationHandlerProcessorForGetOutgoingReconnectionQueue<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetOutgoingReconnectionQueue([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

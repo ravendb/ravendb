@@ -12,7 +12,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class GoogleCloudRestorePoints : RestorePointsBase
+    public sealed class GoogleCloudRestorePoints : RestorePointsBase
     {
         private readonly RavenConfiguration _configuration;
         private readonly RavenGoogleCloudClient _client;

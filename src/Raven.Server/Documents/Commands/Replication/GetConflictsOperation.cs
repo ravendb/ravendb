@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetConflictsOperation : IMaintenanceOperation<GetConflictsPreviewResult>
+    internal sealed class GetConflictsOperation : IMaintenanceOperation<GetConflictsPreviewResult>
     {
         private readonly long _start;
         private readonly int? _pageSize;
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Commands.Replication
             return new GetConflictsCommand(_start);
         }
 
-        internal class GetConflictsCommand : RavenCommand<GetConflictsPreviewResult>
+        internal sealed class GetConflictsCommand : RavenCommand<GetConflictsPreviewResult>
         {
             private readonly long _start;
             private readonly int? _pageSize;

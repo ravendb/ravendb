@@ -5,7 +5,7 @@ using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {
-    public class Circle : SpatialShapeBase
+    public sealed class Circle : SpatialShapeBase
     {
         public readonly Coordinates Center;
         public readonly double Radius;

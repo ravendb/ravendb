@@ -5,7 +5,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseLoaded : DatabaseScalarObjectBase<OctetString>
+    public sealed class DatabaseLoaded : DatabaseScalarObjectBase<OctetString>
     {
         private readonly string _databaseName;
 

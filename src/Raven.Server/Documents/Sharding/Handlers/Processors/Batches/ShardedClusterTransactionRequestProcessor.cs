@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
-public class ShardedClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<ShardedDatabaseRequestHandler, ShardedBatchCommand>
+public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<ShardedDatabaseRequestHandler, ShardedBatchCommand>
 {
     public ShardedClusterTransactionRequestProcessor(ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)

@@ -8,7 +8,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class DocumentInfoHelper : IDisposable
+    public sealed class DocumentInfoHelper : IDisposable
     {
         public DocumentInfoHelper(JsonOperationContext context = null)
         {

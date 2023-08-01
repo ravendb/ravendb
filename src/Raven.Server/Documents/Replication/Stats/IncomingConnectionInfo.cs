@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
-    public class IncomingConnectionInfo : IEquatable<IncomingConnectionInfo>
+    public sealed class IncomingConnectionInfo : IEquatable<IncomingConnectionInfo>
     {
         public string SourceDatabaseId { get; set; }
 
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Replication.Stats
             return !Equals(left, right);
         }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {

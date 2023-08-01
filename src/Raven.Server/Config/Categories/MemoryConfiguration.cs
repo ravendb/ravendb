@@ -8,7 +8,7 @@ using Sparrow.Platform;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Memory)]
-    public class MemoryConfiguration : ConfigurationCategory
+    public sealed class MemoryConfiguration : ConfigurationCategory
     {
         public MemoryConfiguration()
         {

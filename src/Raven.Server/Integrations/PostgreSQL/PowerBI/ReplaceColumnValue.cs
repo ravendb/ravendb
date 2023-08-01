@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
-    public class ReplaceColumnValue
+    public sealed class ReplaceColumnValue
     {
         public string DstColumnName { get; set; }
 

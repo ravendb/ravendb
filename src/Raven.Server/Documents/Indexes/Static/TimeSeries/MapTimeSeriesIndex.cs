@@ -23,7 +23,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class MapTimeSeriesIndex : MapIndexBase<MapIndexDefinition, IndexField>
+    public sealed class MapTimeSeriesIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

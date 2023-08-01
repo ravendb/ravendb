@@ -11,7 +11,7 @@ using Raven.Server.NotificationCenter;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class IoStatsNotificationSender : AbstractClusterDashboardNotificationSender
+    public sealed class IoStatsNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly DatabasesInfoRetriever _databasesInfoRetriever;
 

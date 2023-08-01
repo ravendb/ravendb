@@ -243,7 +243,7 @@ public abstract class AbstractIndexCreateController
                creationOptions == IndexCreationOptions.Update;
     }
 
-    public class IndexBatchScope
+    public sealed class IndexBatchScope
     {
         private readonly AbstractIndexCreateController _controller;
         private readonly ServerStore _serverStore;

@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class FieldExpression : QueryExpression
+    public sealed class FieldExpression : QueryExpression
     {
         public List<StringSegment> Compound;
 

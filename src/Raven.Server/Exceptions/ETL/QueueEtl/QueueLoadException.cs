@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Exceptions.ETL.QueueEtl
 {
-    public class QueueLoadException : Exception
+    public sealed class QueueLoadException : Exception
     {
         public QueueLoadException()
         {

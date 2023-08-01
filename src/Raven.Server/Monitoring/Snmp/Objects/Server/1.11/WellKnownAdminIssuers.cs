@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class WellKnownAdminIssuers : ScalarObjectBase<OctetString>
+    public sealed class WellKnownAdminIssuers : ScalarObjectBase<OctetString>
     {
         private readonly OctetString _wellKnownAdminCertificates;
 

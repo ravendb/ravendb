@@ -16,7 +16,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
-    public class PgSession
+    public sealed class PgSession
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
         internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }

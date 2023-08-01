@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.PeriodicBackup;
 
-internal class PeriodicBackupInfo
+internal sealed class PeriodicBackupInfo
 {
     public string Database { get; set; }
 

@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
-    public class LiveReplicationPerformanceCollector : DatabaseAwareLivePerformanceCollector<LiveReplicationPerformanceCollector.IReplicationPerformanceStats>
+    public sealed class LiveReplicationPerformanceCollector : DatabaseAwareLivePerformanceCollector<LiveReplicationPerformanceCollector.IReplicationPerformanceStats>
     {
         private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming =
             new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Replication.Stats
             }
         }
 
-        public class OutgoingPerformanceStats : ReplicationPerformanceStatsBase<OutgoingReplicationPerformanceStats>
+        public sealed class OutgoingPerformanceStats : ReplicationPerformanceStatsBase<OutgoingReplicationPerformanceStats>
         {
             private OutgoingPerformanceStats(string id, string description, ReplicationPerformanceType type, OutgoingReplicationPerformanceStats[] performance)
                 : base(id, description, type, performance)
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Replication.Stats
             }
         }
 
-        public class IncomingPerformanceStats : ReplicationPerformanceStatsBase<IncomingReplicationPerformanceStats>
+        public sealed class IncomingPerformanceStats : ReplicationPerformanceStatsBase<IncomingReplicationPerformanceStats>
         {
             private IncomingPerformanceStats(string id, string description, ReplicationPerformanceType type, IncomingReplicationPerformanceStats[] performance)
                 : base(id, description, type, performance)

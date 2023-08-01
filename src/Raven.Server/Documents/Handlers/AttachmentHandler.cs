@@ -20,7 +20,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class AttachmentHandler : DatabaseRequestHandler
+    public sealed class AttachmentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/attachments", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class MergedPutAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public sealed class MergedPutAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedPutAttachmentCommand>
+    public sealed class MergedPutAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedPutAttachmentCommand>
     {
         public string DocumentId;
         public string Name;
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
+    internal sealed class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
     {
         public string DocumentId;
         public string Name;

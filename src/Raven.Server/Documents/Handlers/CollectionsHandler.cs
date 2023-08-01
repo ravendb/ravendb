@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class CollectionsHandler : DatabaseRequestHandler
+    public sealed class CollectionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/collections/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionStats()

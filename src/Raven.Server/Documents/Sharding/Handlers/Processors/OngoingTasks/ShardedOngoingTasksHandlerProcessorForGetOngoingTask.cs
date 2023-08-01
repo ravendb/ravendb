@@ -9,7 +9,7 @@ using Raven.Server.Web.System.Processors.OngoingTasks;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTask : AbstractOngoingTasksHandlerProcessorForGetOngoingTask<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
+    internal sealed class ShardedOngoingTasksHandlerProcessorForGetOngoingTask : AbstractOngoingTasksHandlerProcessorForGetOngoingTask<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
         public ShardedOngoingTasksHandlerProcessorForGetOngoingTask([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.OngoingTasks)
         {

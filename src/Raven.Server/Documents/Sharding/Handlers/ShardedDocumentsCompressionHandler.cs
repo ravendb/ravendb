@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedDocumentsCompressionHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedDocumentsCompressionHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/documents-compression/config", "GET")]
         public async Task GetDocumentsCompressionConfig()

@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForHasChanged : AbstractIndexHandlerProcessorForHasChanged<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForHasChanged : AbstractIndexHandlerProcessorForHasChanged<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForHasChanged([NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(requestHandler)

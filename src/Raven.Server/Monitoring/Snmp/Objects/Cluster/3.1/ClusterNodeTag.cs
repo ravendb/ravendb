@@ -3,7 +3,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
 {
-    public class ClusterNodeTag : ScalarObjectBase<OctetString>
+    public sealed class ClusterNodeTag : ScalarObjectBase<OctetString>
     {
         private readonly ServerStore _store;
 

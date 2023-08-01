@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.TimeSeries
 {
-    internal class AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

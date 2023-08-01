@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    internal class PutServerWideSorterCommand : PutValueCommand<SorterDefinition>
+    internal sealed class PutServerWideSorterCommand : PutValueCommand<SorterDefinition>
     {
         public const string Prefix = "sorter/";
 

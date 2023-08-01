@@ -18,7 +18,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class CoraxIndexPersistence : IndexPersistenceBase
+public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;

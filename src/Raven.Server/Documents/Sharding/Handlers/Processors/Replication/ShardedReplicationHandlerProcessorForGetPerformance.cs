@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetPerformance : AbstractReplicationHandlerProcessorForGetPerformance<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetPerformance : AbstractReplicationHandlerProcessorForGetPerformance<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetPerformance([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

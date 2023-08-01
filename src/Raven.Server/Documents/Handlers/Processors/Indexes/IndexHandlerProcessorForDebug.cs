@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForDebug : AbstractIndexHandlerProcessorForDebug<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForDebug : AbstractIndexHandlerProcessorForDebug<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForDebug([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -502,7 +502,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return _referencedCollections.Overlaps(collections);
         }
 
-        public class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
+        public sealed class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;

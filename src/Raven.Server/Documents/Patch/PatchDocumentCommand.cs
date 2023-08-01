@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Patch
         public abstract string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections);
     }
 
-    public class BatchPatchDocumentCommand : PatchDocumentCommandBase
+    public sealed class BatchPatchDocumentCommand : PatchDocumentCommandBase
     {
         private readonly BlittableJsonReaderArray _ids;
 
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class PatchDocumentCommand : PatchDocumentCommandBase
+    public sealed class PatchDocumentCommand : PatchDocumentCommandBase
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class BatchPatchDocumentCommandDto : PatchDocumentCommandDtoBase<BatchPatchDocumentCommand>
+    public sealed class BatchPatchDocumentCommandDto : PatchDocumentCommandDtoBase<BatchPatchDocumentCommand>
     {
         public BlittableJsonReaderArray Ids;
 
@@ -510,7 +510,7 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class PatchDocumentCommandDto : PatchDocumentCommandDtoBase<PatchDocumentCommand>
+    public sealed class PatchDocumentCommandDto : PatchDocumentCommandDtoBase<PatchDocumentCommand>
     {
         public string Id;
         public LazyStringValue ExpectedChangeVector;

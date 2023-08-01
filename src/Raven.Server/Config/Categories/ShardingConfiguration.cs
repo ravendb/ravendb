@@ -7,7 +7,7 @@ using Raven.Server.Config.Settings;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Sharding)]
-    public class ShardingConfiguration : ConfigurationCategory
+    public sealed class ShardingConfiguration : ConfigurationCategory
     {
         public ShardingConfiguration()
         {

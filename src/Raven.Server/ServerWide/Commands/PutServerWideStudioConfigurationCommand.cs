@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutServerWideStudioConfigurationCommand : PutValueCommand<ServerWideStudioConfiguration>
+    public sealed class PutServerWideStudioConfigurationCommand : PutValueCommand<ServerWideStudioConfiguration>
     {
         public PutServerWideStudioConfigurationCommand()
         {

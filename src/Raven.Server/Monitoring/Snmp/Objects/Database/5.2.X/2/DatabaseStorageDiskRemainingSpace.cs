@@ -6,7 +6,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index)

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public class CollectionNameComparer : IEqualityComparer<CollectionName>
+    public sealed class CollectionNameComparer : IEqualityComparer<CollectionName>
     {
         public static readonly CollectionNameComparer Instance = new CollectionNameComparer();
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public class CollectionName
+    public sealed class CollectionName
     {
         public const string HiLoCollection = "@hilo";
 

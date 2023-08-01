@@ -9,7 +9,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalDatabaseNumberOfErrorIndexes : DatabaseBase<Integer32>
+    public sealed class TotalDatabaseNumberOfErrorIndexes : DatabaseBase<Integer32>
     {
         public TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes)

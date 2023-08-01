@@ -44,7 +44,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
         }
     }
 
-    internal class FacetValues
+    internal sealed class FacetValues
     {
         internal static readonly FacetAggregationField Default = new FacetAggregationField();
 

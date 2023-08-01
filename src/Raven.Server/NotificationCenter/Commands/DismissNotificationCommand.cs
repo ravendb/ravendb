@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Commands;
 
-internal class DismissNotificationCommand : RavenCommand
+internal sealed class DismissNotificationCommand : RavenCommand
 {
     private readonly string _id;
     private readonly bool _forever;

@@ -7,7 +7,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
-public class CoraxOrQueries : CoraxBooleanQueryBase
+public sealed class CoraxOrQueries : CoraxBooleanQueryBase
 {
     private List<CoraxBooleanItem> _unaryMatchesList;
     private Dictionary<FieldMetadata, List<string>> _termMatchesList; 

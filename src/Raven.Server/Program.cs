@@ -31,7 +31,7 @@ using Voron.Impl;
 
 namespace Raven.Server
 {
-    public class Program
+    public sealed class Program
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
         

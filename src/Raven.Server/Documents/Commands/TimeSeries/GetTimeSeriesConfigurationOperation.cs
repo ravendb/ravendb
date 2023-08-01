@@ -8,14 +8,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.TimeSeries
 {
-    internal class GetTimeSeriesConfigurationOperation : IMaintenanceOperation<TimeSeriesConfiguration>
+    internal sealed class GetTimeSeriesConfigurationOperation : IMaintenanceOperation<TimeSeriesConfiguration>
     {
         public RavenCommand<TimeSeriesConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
            return new GetTimeSeriesConfigurationCommand();
         }
 
-        internal class GetTimeSeriesConfigurationCommand : RavenCommand<TimeSeriesConfiguration>
+        internal sealed class GetTimeSeriesConfigurationCommand : RavenCommand<TimeSeriesConfiguration>
         {
             public override bool IsReadRequest => true;
 

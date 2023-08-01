@@ -10,7 +10,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
-    public class QueryParser
+    public sealed class QueryParser
     {
         private static readonly string[] OperatorStartMatches = { ">=", "<=", "<>", "<", ">", "==", "=", "!=", "BETWEEN", "IN", "ALL IN", "(" };
         private static readonly string[] BinaryOperators = { "OR", "AND" };
@@ -1551,7 +1551,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             BinaryOp
         }
 
-        public class ParseException : Exception
+        public sealed class ParseException : Exception
         {
             public ParseException(string msg) : base(msg)
             {

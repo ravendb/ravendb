@@ -4,7 +4,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 
 namespace Raven.Server.Documents.Indexes.Test;
 
-public class TestIndexConfiguration : SingleIndexConfiguration
+public sealed class TestIndexConfiguration : SingleIndexConfiguration
 {
     public TestIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration) : base(clientConfiguration, databaseConfiguration)
     {

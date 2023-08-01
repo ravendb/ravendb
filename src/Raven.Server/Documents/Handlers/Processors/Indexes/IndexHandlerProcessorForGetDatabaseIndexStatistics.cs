@@ -17,7 +17,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
-    internal class IndexHandlerProcessorForGetDatabaseIndexStatistics : AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<DatabaseRequestHandler,
+    internal sealed class IndexHandlerProcessorForGetDatabaseIndexStatistics : AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<DatabaseRequestHandler,
          DocumentsOperationContext>
     {
         public IndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)

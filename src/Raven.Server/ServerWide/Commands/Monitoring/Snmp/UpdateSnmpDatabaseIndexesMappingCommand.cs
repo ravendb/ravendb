@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
 {
-    public class UpdateSnmpDatabaseIndexesMappingCommand : UpdateValueForDatabaseCommand
+    public sealed class UpdateSnmpDatabaseIndexesMappingCommand : UpdateValueForDatabaseCommand
     {
         public static string GetStorageKey(string databaseName)
         {

@@ -14,7 +14,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.NotificationCenter.BackgroundWork;
 
-public class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
+public sealed class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
 {
     private readonly ShardedDatabaseContext _context;
 

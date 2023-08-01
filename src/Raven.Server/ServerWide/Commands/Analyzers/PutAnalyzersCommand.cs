@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
 {
-    public class PutAnalyzersCommand : UpdateDatabaseCommand
+    public sealed class PutAnalyzersCommand : UpdateDatabaseCommand
     {
         public List<AnalyzerDefinition> Analyzers = new List<AnalyzerDefinition>();
 

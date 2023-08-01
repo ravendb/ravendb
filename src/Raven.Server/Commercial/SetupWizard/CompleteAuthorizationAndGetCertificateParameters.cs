@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
-public class CompleteAuthorizationAndGetCertificateParameters
+public sealed class CompleteAuthorizationAndGetCertificateParameters
 {
     public Action OnValidationSuccessful;
     public SetupInfo SetupInfo;

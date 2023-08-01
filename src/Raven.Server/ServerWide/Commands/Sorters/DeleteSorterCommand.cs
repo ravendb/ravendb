@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    public class DeleteSorterCommand : UpdateDatabaseCommand
+    public sealed class DeleteSorterCommand : UpdateDatabaseCommand
     {
         public string SorterName;
 

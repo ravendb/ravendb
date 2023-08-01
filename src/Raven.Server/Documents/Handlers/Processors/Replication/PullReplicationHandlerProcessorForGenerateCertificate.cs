@@ -3,7 +3,7 @@ using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class PullReplicationHandlerProcessorForGenerateCertificate : AbstractPullReplicationHandlerProcessorForGenerateCertificate<DatabaseRequestHandler>
+    internal sealed class PullReplicationHandlerProcessorForGenerateCertificate : AbstractPullReplicationHandlerProcessorForGenerateCertificate<DatabaseRequestHandler>
     {
         public PullReplicationHandlerProcessorForGenerateCertificate([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler)

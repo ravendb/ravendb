@@ -3,7 +3,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseCountOfIndexes : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseCountOfIndexes : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfIndexes(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfIndexes, index)

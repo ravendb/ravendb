@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Commands;
 
-public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObject>
+public sealed class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObject>
 {
     private readonly DocumentConventions _conventions;
     public readonly int ShardNumber;

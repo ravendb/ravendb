@@ -4,7 +4,7 @@ using Raven.Server.Web.System.Processors.Studio;
 
 namespace Raven.Server.Web.System;
 
-public class StudioDatabasesHandler : ServerRequestHandler
+public sealed class StudioDatabasesHandler : ServerRequestHandler
 {
     [RavenAction("/studio-tasks/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task Databases()

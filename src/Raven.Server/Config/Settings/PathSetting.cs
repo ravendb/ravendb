@@ -5,7 +5,7 @@ using Voron.Util.Settings;
 
 namespace Raven.Server.Config.Settings
 {
-    public class PathSetting : PathSettingBase<PathSetting>
+    public sealed class PathSetting : PathSettingBase<PathSetting>
     {
         public PathSetting(string path, string baseDataDir = null)
             : base(path, baseDataDir != null ? new PathSetting(baseDataDir) : null)
@@ -45,7 +45,7 @@ namespace Raven.Server.Config.Settings
     }
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class ReadOnlyPathAttribute : Attribute
+    public sealed class ReadOnlyPathAttribute : Attribute
     {
     }
 }

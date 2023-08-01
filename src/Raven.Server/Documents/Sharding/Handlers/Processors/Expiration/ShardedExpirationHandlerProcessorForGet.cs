@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Expiration
 {
-    internal class ShardedExpirationHandlerProcessorForGet : AbstractExpirationHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedExpirationHandlerProcessorForGet : AbstractExpirationHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedExpirationHandlerProcessorForGet([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class PullReplicationHandler : DatabaseRequestHandler
+    public sealed class PullReplicationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task DefineHub()
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        public class PullReplicationCertificate
+        public sealed class PullReplicationCertificate
         {
             public string PublicKey { get; set; }
             public string Certificate { get; set; }

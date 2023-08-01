@@ -14,7 +14,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
 {
-    public class CandidateAmbassador : IDisposable
+    public sealed class CandidateAmbassador : IDisposable
     {
         private readonly RachisConsensus _engine;
         private readonly Candidate _candidate;

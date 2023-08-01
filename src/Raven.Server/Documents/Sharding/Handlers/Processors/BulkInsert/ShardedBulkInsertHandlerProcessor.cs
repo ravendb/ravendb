@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.BulkInsert;
 
-internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProcessor<ShardedBatchCommandData, ShardedBulkInsertHandler, TransactionOperationContext>, IAsyncDisposable
+internal sealed class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProcessor<ShardedBatchCommandData, ShardedBulkInsertHandler, TransactionOperationContext>, IAsyncDisposable
 {
     private readonly ShardedDatabaseContext _databaseContext;
     private const string SampleChangeVector = "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q";

@@ -5,7 +5,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Sharding;
 
-public class ShardedDocumentPutAction : DocumentPutAction
+public sealed class ShardedDocumentPutAction : DocumentPutAction
 {
     private readonly ShardedDocumentDatabase _documentDatabase;
 

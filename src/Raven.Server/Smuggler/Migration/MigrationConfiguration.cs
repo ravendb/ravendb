@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class MigrationConfiguration
+    public sealed class MigrationConfiguration
     {
         public string DatabaseTypeName { get; set; }
 
@@ -15,12 +15,12 @@ namespace Raven.Server.Smuggler.Migration
         public string TransformScript { get; set; }
     }
 
-    public class SingleDatabaseMigrationConfiguration : MigrationConfigurationBase
+    public sealed class SingleDatabaseMigrationConfiguration : MigrationConfigurationBase
     {
         public DatabaseMigrationSettings MigrationSettings { get; set; }
     }
 
-    public class DatabasesMigrationConfiguration : MigrationConfigurationBase
+    public sealed class DatabasesMigrationConfiguration : MigrationConfigurationBase
     {
         public DatabasesMigrationConfiguration()
         {
@@ -30,7 +30,7 @@ namespace Raven.Server.Smuggler.Migration
         public List<DatabaseMigrationSettings> Databases { get; set; }
     }
 
-    public class DatabaseMigrationSettings
+    public sealed class DatabaseMigrationSettings
     {
         public string DatabaseName { get; set; }
 

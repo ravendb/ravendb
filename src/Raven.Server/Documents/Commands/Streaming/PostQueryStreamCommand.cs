@@ -12,7 +12,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Commands.Streaming
 {
-    public class PostQueryStreamCommand : RavenCommand<StreamResult>
+    public sealed class PostQueryStreamCommand : RavenCommand<StreamResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly BlittableJsonReaderObject _query;

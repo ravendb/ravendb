@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DeleteServerWideBackupConfigurationCommand : UpdateValueCommand<string>
+    public sealed class DeleteServerWideBackupConfigurationCommand : UpdateValueCommand<string>
     {
         protected DeleteServerWideBackupConfigurationCommand()
         {

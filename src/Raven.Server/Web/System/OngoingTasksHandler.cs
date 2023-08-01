@@ -16,7 +16,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class OngoingTasksHandler : DatabaseRequestHandler
+    public sealed class OngoingTasksHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetOngoingTasks()
@@ -185,7 +185,7 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public class OngoingTasksResult : IDynamicJson
+    public sealed class OngoingTasksResult : IDynamicJson
     {
         public List<OngoingTask> OngoingTasks { get; set; }
         public int SubscriptionsCount { get; set; }

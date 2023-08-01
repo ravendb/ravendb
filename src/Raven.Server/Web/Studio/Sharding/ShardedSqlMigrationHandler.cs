@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studio.Sharding
 {
-    public class ShardedSqlMigrationHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedSqlMigrationHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/smuggler/import/csv", "POST")]
         public async Task ImportFromCsv()

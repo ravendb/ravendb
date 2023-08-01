@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class GetTcpInfoForReplicationCommand : GetTcpInfoCommand
+    public sealed class GetTcpInfoForReplicationCommand : GetTcpInfoCommand
     {
         private readonly string _localNodeTag;
 

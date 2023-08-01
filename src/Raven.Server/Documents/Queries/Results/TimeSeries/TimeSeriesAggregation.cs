@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         }
     }
 
-    public class TimeSeriesAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
+    public sealed class TimeSeriesAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
     {
         public TimeSeriesAggregation(AggregationType type, string name = null) : base(type, name)
         {

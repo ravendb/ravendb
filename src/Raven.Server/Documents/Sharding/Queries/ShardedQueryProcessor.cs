@@ -25,7 +25,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
-public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResult>
+public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResult>
 {
     public ShardedQueryProcessor(
         TransactionOperationContext context,

@@ -3,7 +3,7 @@ using Raven.Server.Documents.Queries.AST;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
-public class ShardedQueryResultDocument : Document
+public sealed class ShardedQueryResultDocument : Document
 {
     public List<OrderByField> OrderByFields = new();
 

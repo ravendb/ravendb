@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class NewVersionAvailableDetails : INotificationDetails
+    public sealed class NewVersionAvailableDetails : INotificationDetails
     {
         public NewVersionAvailableDetails(LatestVersionCheck.VersionInfo versionInfo)
         {

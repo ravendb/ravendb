@@ -25,7 +25,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    internal class RestoreSnapshotTask : AbstractRestoreBackupTask
+    internal sealed class RestoreSnapshotTask : AbstractRestoreBackupTask
     {
         private Stopwatch _sw;
         private readonly string _firstFile, _extension;

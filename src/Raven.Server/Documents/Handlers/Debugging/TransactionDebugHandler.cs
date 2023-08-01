@@ -15,9 +15,9 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class TransactionDebugHandler : DatabaseRequestHandler
+    public sealed class TransactionDebugHandler : DatabaseRequestHandler
     {
-        public class TransactionInfo
+        public sealed class TransactionInfo
         {
             public string Path;
             public List<LowLevelTransaction> Information;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
     }
 
-    internal class TxInfoResult
+    internal sealed class TxInfoResult
     {
         public int TransactionId;
         public int ThreadId;

@@ -8,7 +8,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Test;
 
-public class TestIndexWriteOperation : IndexWriteOperationBase
+public sealed class TestIndexWriteOperation : IndexWriteOperationBase
 {
     private readonly IndexWriteOperationBase _inner;
     private readonly TestIndexRun _testIndexRun;

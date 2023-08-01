@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetIncomingActivityTimes : AbstractReplicationHandlerProcessorForGetIncomingActivityTimes<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetIncomingActivityTimes : AbstractReplicationHandlerProcessorForGetIncomingActivityTimes<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetIncomingActivityTimes([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

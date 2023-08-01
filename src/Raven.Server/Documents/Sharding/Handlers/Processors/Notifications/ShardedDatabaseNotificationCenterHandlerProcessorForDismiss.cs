@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Notifications;
 
-internal class ShardedDatabaseNotificationCenterHandlerProcessorForDismiss : AbstractDatabaseNotificationCenterHandlerProcessorForDismiss<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedDatabaseNotificationCenterHandlerProcessorForDismiss : AbstractDatabaseNotificationCenterHandlerProcessorForDismiss<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedDatabaseNotificationCenterHandlerProcessorForDismiss([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

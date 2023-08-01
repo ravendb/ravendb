@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ShardedExternalReplicationState : IDatabaseTaskStatus
+    public sealed class ShardedExternalReplicationState : IDatabaseTaskStatus
     {
         public string NodeTag { get; set; }
 
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    public class ShardedExternalReplicationStateForSingleSource
+    public sealed class ShardedExternalReplicationStateForSingleSource
     {
         public long LastSourceEtag { get; set; }
 

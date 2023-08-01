@@ -4,7 +4,7 @@ using Raven.Server.Documents.Sharding;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedDatabaseIndexStateController : DatabaseIndexStateController
+public sealed class ShardedDatabaseIndexStateController : DatabaseIndexStateController
 {
     private readonly ShardedDocumentDatabase _database;
 

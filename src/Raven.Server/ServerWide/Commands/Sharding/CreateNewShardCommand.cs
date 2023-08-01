@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
 {
-    public class CreateNewShardCommand : UpdateDatabaseCommand
+    public sealed class CreateNewShardCommand : UpdateDatabaseCommand
     {
         public DatabaseTopology Topology;
         public DateTime At;

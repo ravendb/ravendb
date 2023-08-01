@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class StorageUsagePayload : AbstractClusterDashboardNotification
+    public sealed class StorageUsagePayload : AbstractClusterDashboardNotification
     {
         public List<MountPointUsage> Items { get; set; }
 

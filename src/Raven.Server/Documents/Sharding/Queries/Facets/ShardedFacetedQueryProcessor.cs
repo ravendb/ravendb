@@ -20,7 +20,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Queries.Facets;
 
-public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, FacetedQueryResult>
+public sealed class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, FacetedQueryResult>
 {
     private Dictionary<string, FacetOptions> _optionsByFacet;
 

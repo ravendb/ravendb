@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class CounterReplicationItem : ReplicationBatchItem
+    public sealed class CounterReplicationItem : ReplicationBatchItem
     {
         public LazyStringValue Collection;
         public LazyStringValue Id;

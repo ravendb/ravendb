@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.TimeSeries
 {
-    public class TimeseriesIncludesHelper
+    public sealed class TimeseriesIncludesHelper
     {
         public static (TimeSeriesRangeType Type, TimeValue Time) ParseTime(MethodExpression expression, string queryText, BlittableJsonReaderObject parameters = null)
         {

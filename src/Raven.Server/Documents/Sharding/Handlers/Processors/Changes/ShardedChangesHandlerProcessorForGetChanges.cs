@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Changes;
 
-internal class ShardedChangesHandlerProcessorForGetChanges : AbstractChangesHandlerProcessorForGetChanges<ShardedDatabaseRequestHandler, TransactionOperationContext, ShardedChangesClientConnection>
+internal sealed class ShardedChangesHandlerProcessorForGetChanges : AbstractChangesHandlerProcessorForGetChanges<ShardedDatabaseRequestHandler, TransactionOperationContext, ShardedChangesClientConnection>
 {
     public ShardedChangesHandlerProcessorForGetChanges([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

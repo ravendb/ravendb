@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class SortersHandler : DatabaseRequestHandler
+    public sealed class SortersHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/sorters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()

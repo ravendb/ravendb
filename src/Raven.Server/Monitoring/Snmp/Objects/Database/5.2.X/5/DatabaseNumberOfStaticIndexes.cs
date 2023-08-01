@@ -11,7 +11,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseNumberOfStaticIndexes : DatabaseScalarObjectBase<Integer32>
+    public sealed class DatabaseNumberOfStaticIndexes : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseNumberOfStaticIndexes(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.NumberOfStaticIndexes, index)

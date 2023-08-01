@@ -14,7 +14,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForTotalTime : AbstractIndexHandlerProcessorForTotalTime<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForTotalTime : AbstractIndexHandlerProcessorForTotalTime<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForTotalTime([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

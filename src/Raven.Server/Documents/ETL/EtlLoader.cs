@@ -30,7 +30,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlLoader : IDisposable, ITombstoneAware
+    public sealed class EtlLoader : IDisposable, ITombstoneAware
     {
         private const string AlertTitle = "ETL loader";
 
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             _database.Changes.OnDocumentChange -= OnDocumentChange;
             _database.Changes.OnCounterChange -= OnCounterChange;

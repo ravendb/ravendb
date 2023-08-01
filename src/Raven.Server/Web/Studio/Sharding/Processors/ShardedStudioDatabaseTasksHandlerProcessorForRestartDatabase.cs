@@ -8,7 +8,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal class ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase : AbstractStudioDatabaseTasksHandlerProcessorForRestartDatabase<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase : AbstractStudioDatabaseTasksHandlerProcessorForRestartDatabase<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)

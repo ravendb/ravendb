@@ -6,7 +6,7 @@ using Raven.Server.Documents.Sharding;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedDatabaseIndexCreateController : DatabaseIndexCreateController
+public sealed class ShardedDatabaseIndexCreateController : DatabaseIndexCreateController
 {
     private readonly ShardedDocumentDatabase _database;
 

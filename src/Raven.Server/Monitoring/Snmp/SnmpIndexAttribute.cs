@@ -4,7 +4,7 @@ namespace Raven.Server.Monitoring.Snmp
 {
 
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class SnmpIndexAttribute : Attribute
+    public sealed class SnmpIndexAttribute : Attribute
     {
         public int Index { get; }
 

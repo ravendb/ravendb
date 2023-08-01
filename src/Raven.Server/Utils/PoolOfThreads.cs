@@ -23,7 +23,7 @@ namespace Raven.Server.Utils
     ///
     /// This is intended for _BIG_ tasks and it is not a replacement for the thread pool.
     /// </summary>
-    public class PoolOfThreads : IDisposable, ILowMemoryHandler
+    public sealed class PoolOfThreads : IDisposable, ILowMemoryHandler
     {
         private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
         {
@@ -55,7 +55,7 @@ namespace Raven.Server.Utils
             Clear();
         }
 
-        public class LongRunningWork
+        public sealed class LongRunningWork
         {
             [ThreadStatic] public static LongRunningWork Current;
             [ThreadStatic] internal static PooledThread CurrentPooledThread;
@@ -129,7 +129,7 @@ namespace Raven.Server.Utils
                 pooled.SetWorkForThread(null, null, null, null);
         }
 
-        internal class PooledThread
+        internal sealed class PooledThread
         {
             private static readonly FieldInfo ThreadFieldName;
 

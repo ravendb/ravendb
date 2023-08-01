@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetIncomingRejectionInfo : AbstractReplicationHandlerProcessorForGetIncomingRejectionInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetIncomingRejectionInfo : AbstractReplicationHandlerProcessorForGetIncomingRejectionInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetIncomingRejectionInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

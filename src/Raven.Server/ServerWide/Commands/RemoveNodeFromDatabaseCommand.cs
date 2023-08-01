@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class RemoveNodeFromDatabaseCommand : UpdateDatabaseCommand
+    public sealed class RemoveNodeFromDatabaseCommand : UpdateDatabaseCommand
     {
         public string NodeTag;
         public string DatabaseId;

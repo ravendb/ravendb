@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 {
-    internal class ShardedStreamingHandlerProcessorForGetDocs : AbstractStreamingHandlerProcessorForGetDocs<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStreamingHandlerProcessorForGetDocs : AbstractStreamingHandlerProcessorForGetDocs<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStreamingHandlerProcessorForGetDocs([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

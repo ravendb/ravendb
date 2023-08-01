@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Server.ServerWide.Maintenance.Sharding
 {
-    public class MergedDatabaseStatusReport
+    public sealed class MergedDatabaseStatusReport
     {
         public Dictionary<ShardNumber, DatabaseStatusReport> MergedReport = new Dictionary<ShardNumber, DatabaseStatusReport>();
 

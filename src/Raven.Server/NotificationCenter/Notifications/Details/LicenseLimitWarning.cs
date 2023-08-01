@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    internal class LicenseLimitWarning : INotificationDetails
+    internal sealed class LicenseLimitWarning : INotificationDetails
     {
         private LicenseLimitWarning()
         {

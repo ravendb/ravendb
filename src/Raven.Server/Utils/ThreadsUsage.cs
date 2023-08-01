@@ -13,7 +13,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public class ThreadsUsage
+    public sealed class ThreadsUsage
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineCpu>("ThreadsUsage");
         private (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;

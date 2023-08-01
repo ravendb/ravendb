@@ -11,7 +11,7 @@ using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Web
 {
-    public class HtmlUtil
+    public sealed class HtmlUtil
     {
         public static string RenderPlaceholders(string html, IDictionary<string, string> substitutions)
         {

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
 {
-    internal class StreamingHandlerProcessorForGetTimeSeries : AbstractStreamingHandlerProcessorForGetTimeSeries<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StreamingHandlerProcessorForGetTimeSeries : AbstractStreamingHandlerProcessorForGetTimeSeries<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StreamingHandlerProcessorForGetTimeSeries([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

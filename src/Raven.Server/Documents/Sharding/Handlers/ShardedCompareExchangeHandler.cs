@@ -8,7 +8,7 @@ using Raven.Server.Web.System.Processors.CompareExchange;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedCompareExchangeHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedCompareExchangeHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/cmpxchg", "GET")]
     public async Task GetCompareExchangeValues()

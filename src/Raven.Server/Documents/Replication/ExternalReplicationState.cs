@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ExternalReplicationState : IDatabaseTaskStatus
+    public sealed class ExternalReplicationState : IDatabaseTaskStatus
     {
         public long TaskId { get; set; }
 

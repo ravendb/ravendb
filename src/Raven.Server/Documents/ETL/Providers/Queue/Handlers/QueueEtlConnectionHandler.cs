@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 {
-    public class QueueEtlConnectionHandler : DatabaseRequestHandler
+    public sealed class QueueEtlConnectionHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/etl/queue/kafka/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetTestKafkaConnectionResult()

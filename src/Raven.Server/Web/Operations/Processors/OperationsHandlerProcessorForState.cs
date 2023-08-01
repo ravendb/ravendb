@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Operations.Processors;
 
-internal class OperationsHandlerProcessorForState : AbstractOperationsHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class OperationsHandlerProcessorForState : AbstractOperationsHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public OperationsHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -6,7 +6,7 @@ using Raven.Server.Web.System.Processors.Tcp;
 
 namespace Raven.Server.Web.System
 {
-    public class DatabaseTcpConnectionInfoHandler : DatabaseRequestHandler
+    public sealed class DatabaseTcpConnectionInfoHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Get()

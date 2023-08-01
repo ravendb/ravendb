@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    internal sealed class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private static readonly JsValue DefaultVarCharSize = 50;
         
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return item;
         }
 
-        public class VarcharFunctionCall
+        public sealed class VarcharFunctionCall
         {
             public static JsValue AnsiStringType = DbType.AnsiString.ToString();
             public static JsValue StringType = DbType.String.ToString();

@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class MethodExpression : QueryExpression
+    public sealed class MethodExpression : QueryExpression
     {
         private string _text;
         private string _textWithAlias;

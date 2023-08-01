@@ -11,7 +11,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class MessageReader : IDisposable
+    public sealed class MessageReader : IDisposable
     {
         private readonly List<byte[]> _rentedBuffers = new List<byte[]>();
         public async Task<IInitialMessage> ReadInitialMessage(PipeReader reader, CancellationToken token)

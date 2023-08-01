@@ -7,7 +7,7 @@ using Raven.Server.Documents.Sharding.Executors;
 
 namespace Raven.Server.Documents.Sharding.Streaming;
 
-public class CombinedStreamResult
+public sealed class CombinedStreamResult
 {
     public Dictionary<int, ShardExecutionResult<StreamResult>> Results;
 

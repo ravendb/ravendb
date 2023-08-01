@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedSqlEtlHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedSqlEtlHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/etl/sql/test-connection", "POST")]
         public async Task TestConnection()

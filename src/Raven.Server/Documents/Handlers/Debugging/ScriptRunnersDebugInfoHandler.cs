@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ScriptRunnersDebugInfoHandler : DatabaseRequestHandler
+    public sealed class ScriptRunnersDebugInfoHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/script-runners", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetJSDebugInfo()

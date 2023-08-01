@@ -7,7 +7,7 @@ using Raven.Server.NotificationCenter.BackgroundWork;
 
 namespace Raven.Server.NotificationCenter;
 
-public class DatabaseNotificationCenter : AbstractDatabaseNotificationCenter
+public sealed class DatabaseNotificationCenter : AbstractDatabaseNotificationCenter
 {
     [NotNull]
     private readonly DocumentDatabase _database;

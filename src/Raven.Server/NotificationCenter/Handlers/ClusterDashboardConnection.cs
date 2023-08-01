@@ -13,7 +13,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ClusterDashboardConnection<TOperationContext> : NotificationCenterWebSocketWriter<TOperationContext>
+    public sealed class ClusterDashboardConnection<TOperationContext> : NotificationCenterWebSocketWriter<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
         private const int WelcomeMessageId = -1;

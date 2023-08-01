@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
         
-        public class CoraxParsedRange : ParsedRange
+        public sealed class CoraxParsedRange : ParsedRange
         {
             private Operation _leftSide; 
             private Operation _rightSide; 
@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
 
-        public class FacetResult
+        public sealed class FacetResult
         {
             public FacetResult()
             {
@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
             public FacetOptions Options;
 
-            public class Aggregation
+            public sealed class Aggregation
             {
                 public bool Sum;
 

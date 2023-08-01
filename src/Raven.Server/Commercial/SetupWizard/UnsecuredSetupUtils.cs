@@ -7,7 +7,7 @@ using Raven.Server.Commercial.LetsEncrypt;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
-public class UnsecuredSetupUtils
+public sealed class UnsecuredSetupUtils
 {
     public static async Task<byte[]> Setup(UnsecuredSetupInfo unsecuredSetupInfo, SetupProgressAndResult progress, CancellationToken token)
     {

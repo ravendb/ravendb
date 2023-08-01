@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminConfigurationHandler : DatabaseRequestHandler
+    public sealed class AdminConfigurationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetSettings()

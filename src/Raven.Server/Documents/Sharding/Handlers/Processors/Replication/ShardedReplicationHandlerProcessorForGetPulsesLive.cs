@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetPulsesLive : AbstractReplicationHandlerProcessorForGetPulsesLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetPulsesLive : AbstractReplicationHandlerProcessorForGetPulsesLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetPulsesLive([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerGcHeapSize : ServerGcBase<Gauge32>
+    public sealed class ServerGcHeapSize : ServerGcBase<Gauge32>
     {
         public ServerGcHeapSize(MetricCacher metricCacher, GCKind gcKind)
             : base(metricCacher, gcKind, SnmpOids.Server.GcHeapSize)

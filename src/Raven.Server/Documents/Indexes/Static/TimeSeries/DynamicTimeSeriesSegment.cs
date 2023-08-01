@@ -8,7 +8,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class DynamicTimeSeriesSegment : AbstractDynamicObject
+    public sealed class DynamicTimeSeriesSegment : AbstractDynamicObject
     {
         internal TimeSeriesSegmentEntry _segmentEntry;
         private DynamicArray _entries;
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
         }
 
-        public class DynamicTimeSeriesEntry : AbstractDynamicObject
+        public sealed class DynamicTimeSeriesEntry : AbstractDynamicObject
         {
             internal SingleResult _entry;
             private DynamicArray _values;

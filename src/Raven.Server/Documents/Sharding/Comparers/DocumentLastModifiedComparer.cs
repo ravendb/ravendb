@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Comparers;
 
-public class DocumentLastModifiedComparer : IComparer<BlittableJsonReaderObject>
+public sealed class DocumentLastModifiedComparer : IComparer<BlittableJsonReaderObject>
 {
     public static readonly DocumentLastModifiedComparer Throwing = new(throwIfCannotExtract: true);
 

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Queries
 {
-    public class TermsQueryResultServerSide : TermsQueryResult
+    public sealed class TermsQueryResultServerSide : TermsQueryResult
     {
         public static readonly TermsQueryResultServerSide NotModifiedResult = new TermsQueryResultServerSide { NotModified = true };
 

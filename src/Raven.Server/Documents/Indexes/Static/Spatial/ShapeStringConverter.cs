@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     /// <summary>
     /// Converts spatial strings to WKT, if they aren't already
     /// </summary>
-    public class ShapeStringConverter
+    public sealed class ShapeStringConverter
     {
         private readonly SpatialOptions _options;
 

@@ -53,7 +53,7 @@ public static class SubscriptionBinder
     }
 }
 
-public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscriptionBinder
+public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscriptionBinder
     where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludeCommand>
     where TConnection : SubscriptionConnectionBase<TIncludeCommand>
     where TIncludeCommand : AbstractIncludesCommand

@@ -7,7 +7,7 @@ using Raven.Server.Config;
 
 namespace Raven.Server.Utils.Cli
 {
-    internal class CommandLineSwitches
+    internal sealed class CommandLineSwitches
     {
         public static bool PrintServerId => ParseSwitchOption(_printIdOption);
 

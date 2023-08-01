@@ -21,11 +21,11 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class LetsEncryptSimulationHelper
+public sealed class LetsEncryptSimulationHelper
 {
     internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
 
-    internal class UniqueResponseResponder : IStartup
+    internal sealed class UniqueResponseResponder : IStartup
     {
         private readonly string _response;
 

@@ -18,7 +18,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
-    public class RachisLogHistory
+    public sealed class RachisLogHistory
     {
         internal static readonly Slice LogHistorySlice;
         private static readonly Slice LogHistoryIndexSlice;

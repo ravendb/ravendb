@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class IncomingExternalReplicationHandlerForShard : IncomingReplicationHandler
+    public sealed class IncomingExternalReplicationHandlerForShard : IncomingReplicationHandler
     {
         private readonly ShardedDocumentDatabase _shardedDatabase;
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return new MergedDocumentReplicationForShardCommand(_shardedDatabase, data, lastDocumentEtag);
         }
 
-        internal class MergedDocumentReplicationForShardCommand : MergedDocumentReplicationCommand
+        internal sealed class MergedDocumentReplicationForShardCommand : MergedDocumentReplicationCommand
         {
             private readonly ShardedDocumentDatabase _database;
 

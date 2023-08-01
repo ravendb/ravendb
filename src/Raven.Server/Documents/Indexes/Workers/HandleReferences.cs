@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public class Reference : IDisposable
+        public sealed class Reference : IDisposable
         {
             public LazyStringValue Key;
 
@@ -472,7 +472,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Tombstone
         }
 
-        public class InMemoryReferencesInfo
+        public sealed class InMemoryReferencesInfo
         {
             public static InMemoryReferencesInfo Default = new InMemoryReferencesInfo();
 

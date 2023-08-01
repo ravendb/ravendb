@@ -22,7 +22,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Studio;
 
-internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>
+internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
@@ -242,14 +242,14 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         }
     }
 
-    internal class StudioDatabasesState
+    internal sealed class StudioDatabasesState
     {
         public List<StudioOrchestratorState> Orchestrators { get; set; }
 
         public List<StudioDatabaseState> Databases { get; set; }
     }
 
-    internal class StudioOrchestratorState : IDynamicJson
+    internal sealed class StudioOrchestratorState : IDynamicJson
     {
         public string Name { get; set; }
         public long Alerts { get; set; }

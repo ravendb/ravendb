@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         }
     }
 
-    public class MethodsInGroupByValidatorMethodSyntax : MethodsInGroupByValidator
+    public sealed class MethodsInGroupByValidatorMethodSyntax : MethodsInGroupByValidator
     {
         private ParameterSyntax _root;
 
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         }
     }
 
-    public class MethodsInGroupByValidatorQuerySyntax : MethodsInGroupByValidator
+    public sealed class MethodsInGroupByValidatorQuerySyntax : MethodsInGroupByValidator
     {
         private SyntaxToken _root;
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public static GroupByFieldsRetriever MethodSyntax => new MethodSyntaxRetriever();
 
-        public class QuerySyntaxRetriever : GroupByFieldsRetriever
+        public sealed class QuerySyntaxRetriever : GroupByFieldsRetriever
         {
             public override SyntaxNode VisitGroupClause(GroupClauseSyntax node)
             {

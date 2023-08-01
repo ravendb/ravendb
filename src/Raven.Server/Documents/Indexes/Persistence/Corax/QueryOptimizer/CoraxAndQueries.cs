@@ -10,7 +10,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
-public class CoraxAndQueries : CoraxBooleanQueryBase
+public sealed class CoraxAndQueries : CoraxBooleanQueryBase
 {
     private readonly List<CoraxBooleanItem> _queryStack;
 

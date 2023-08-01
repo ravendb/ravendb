@@ -7,7 +7,7 @@
         Lost
     }
 
-    public class RequestVote
+    public sealed class RequestVote
     {
         public int SendingThread { get; set; }
         public long Term { get; set; }
@@ -19,7 +19,7 @@
         public ElectionResult ElectionResult { get; set; }
     }
 
-    public class RequestVoteResponse
+    public sealed class RequestVoteResponse
     {
         public long Term { get; set; }
         public bool VoteGranted { get; set; }

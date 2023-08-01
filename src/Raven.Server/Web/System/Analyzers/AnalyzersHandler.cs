@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Analyzers
 {
-    public class AnalyzersHandler : ServerRequestHandler
+    public sealed class AnalyzersHandler : ServerRequestHandler
     {
         [RavenAction("/analyzers", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()

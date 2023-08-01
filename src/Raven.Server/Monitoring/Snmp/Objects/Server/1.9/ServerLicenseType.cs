@@ -3,7 +3,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerLicenseType : ScalarObjectBase<OctetString>
+    public sealed class ServerLicenseType : ScalarObjectBase<OctetString>
     {
         private readonly ServerStore _store;
 

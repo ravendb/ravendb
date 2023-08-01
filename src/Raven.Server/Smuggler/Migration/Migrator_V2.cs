@@ -15,7 +15,7 @@ using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class Migrator_V2 : AbstractLegacyMigrator
+    public sealed class Migrator_V2 : AbstractLegacyMigrator
     {
         private const int AttachmentsPageSize = 32;
 

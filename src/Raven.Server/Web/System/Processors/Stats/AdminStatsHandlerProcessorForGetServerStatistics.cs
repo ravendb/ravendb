@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.Stats;
 
-internal class AdminStatsHandlerProcessorForGetServerStatistics : AbstractServerHandlerProxyReadProcessor<ServerStatistics>
+internal sealed class AdminStatsHandlerProcessorForGetServerStatistics : AbstractServerHandlerProxyReadProcessor<ServerStatistics>
 {
     public AdminStatsHandlerProcessorForGetServerStatistics([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {

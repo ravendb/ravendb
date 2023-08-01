@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateUnusedDatabaseIdsCommand : UpdateDatabaseCommand
+    public sealed class UpdateUnusedDatabaseIdsCommand : UpdateDatabaseCommand
     {
         public HashSet<string> UnusedDatabaseIds;
 

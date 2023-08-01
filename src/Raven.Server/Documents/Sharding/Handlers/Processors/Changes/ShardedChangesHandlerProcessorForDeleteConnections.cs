@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Changes;
 
-internal class ShardedChangesHandlerProcessorForDeleteConnections : AbstractChangesHandlerProcessorForDeleteConnections<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedChangesHandlerProcessorForDeleteConnections : AbstractChangesHandlerProcessorForDeleteConnections<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedChangesHandlerProcessorForDeleteConnections([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

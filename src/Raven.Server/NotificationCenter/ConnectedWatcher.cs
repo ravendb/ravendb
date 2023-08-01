@@ -4,7 +4,7 @@ using Sparrow.Server.Collections;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class ConnectedWatcher
+    public sealed class ConnectedWatcher
     {
         public AsyncQueue<DynamicJsonValue> NotificationsQueue;
 

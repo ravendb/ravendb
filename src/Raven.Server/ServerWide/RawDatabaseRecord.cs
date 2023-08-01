@@ -43,7 +43,7 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class RawDatabaseRecord : IDisposable
+    public sealed class RawDatabaseRecord : IDisposable
     {
         private BlittableJsonReaderObject _record;
         private readonly JsonOperationContext _context;

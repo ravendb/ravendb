@@ -5,9 +5,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Tombstones;
 
-public class CleanupTombstonesCommand : RavenCommand<CleanupTombstonesCommand.Response>
+public sealed class CleanupTombstonesCommand : RavenCommand<CleanupTombstonesCommand.Response>
 {
-    public class Response
+    public sealed class Response
     {
         public int Value { get; set; }
     }

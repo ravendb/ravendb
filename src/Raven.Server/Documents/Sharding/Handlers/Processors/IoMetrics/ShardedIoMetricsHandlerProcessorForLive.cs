@@ -9,7 +9,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.IoMetrics;
 
-internal class ShardedIoMetricsHandlerProcessorForLive : AbstractIoMetricsHandlerProcessorForLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIoMetricsHandlerProcessorForLive : AbstractIoMetricsHandlerProcessorForLive<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIoMetricsHandlerProcessorForLive([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

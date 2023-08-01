@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
-    internal class CountersHandlerProcessorForPostCounters : AbstractCountersHandlerProcessorForPostCounters<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class CountersHandlerProcessorForPostCounters : AbstractCountersHandlerProcessorForPostCounters<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public CountersHandlerProcessorForPostCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

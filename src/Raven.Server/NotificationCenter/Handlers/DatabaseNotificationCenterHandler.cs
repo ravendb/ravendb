@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
+    public sealed class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Watch()

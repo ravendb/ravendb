@@ -8,7 +8,7 @@ using Raven.Client.Documents.Indexes.Suggestions;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
-    internal class LegacyIndexDefinition
+    internal sealed class LegacyIndexDefinition
     {
         public int IndexId { get; set; }
 

@@ -17,7 +17,7 @@ using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
-    public class CachingQuery : Query
+    public sealed class CachingQuery : Query
     {
         private static ConditionalWeakTable<IndexReader, IndexReaderCachedQueries> CacheByReader = new();
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
 
-        public class QueryCacheKey
+        public sealed class QueryCacheKey
         {
             public string Query;
             public string Owner;
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
         
-        public class IndexReaderCachedQueries
+        public sealed class IndexReaderCachedQueries
         {
             public SizeLimitedConcurrentDictionary<QueryCacheKey, DateTime> PreviousClauses;
             public ConcurrentSet<string> CachedQueries = new();

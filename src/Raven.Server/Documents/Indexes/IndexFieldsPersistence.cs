@@ -7,7 +7,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexFieldsPersistence
+    public sealed class IndexFieldsPersistence
     {
         private bool _initialized;
 

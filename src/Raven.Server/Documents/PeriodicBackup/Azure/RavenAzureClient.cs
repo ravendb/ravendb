@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Size MaxSingleBlockSize { get; set; }
     }
 
-    public class RavenAzureClient : IProgress<long>, IRavenAzureClient
+    public sealed class RavenAzureClient : IProgress<long>, IRavenAzureClient
     {
         private readonly Progress _progress;
 

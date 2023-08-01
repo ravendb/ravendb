@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
-internal class ShardedAttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAttachmentHandlerProcessorForHeadAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

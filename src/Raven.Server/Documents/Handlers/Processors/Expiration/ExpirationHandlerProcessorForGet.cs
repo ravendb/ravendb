@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Expiration
 {
-    internal class ExpirationHandlerProcessorForGet : AbstractExpirationHandlerProcessorForGet<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ExpirationHandlerProcessorForGet : AbstractExpirationHandlerProcessorForGet<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ExpirationHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

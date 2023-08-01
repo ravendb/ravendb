@@ -8,7 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromLocal : IRestoreSource
+    public sealed class RestoreFromLocal : IRestoreSource
     {
         private readonly string _backupLocation;
 

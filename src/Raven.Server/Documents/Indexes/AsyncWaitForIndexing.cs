@@ -5,7 +5,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class AsyncWaitForIndexing
+    public sealed class AsyncWaitForIndexing
     {
         private readonly Stopwatch _queryDuration;
         private readonly TimeSpan _waitTimeout;

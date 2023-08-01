@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal class BucketsHandlerProcessorForGetBuckets : AbstractBucketsHandlerProcessorForGetBuckets<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class BucketsHandlerProcessorForGetBuckets : AbstractBucketsHandlerProcessorForGetBuckets<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public BucketsHandlerProcessorForGetBuckets([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
@@ -69,7 +69,7 @@ namespace Raven.Server.Web.Studio.Processors
         }
     }
 
-    public class BucketRange : IDynamicJson
+    public sealed class BucketRange : IDynamicJson
     {
         public long FromBucket;
         public long ToBucket;
@@ -99,7 +99,7 @@ namespace Raven.Server.Web.Studio.Processors
         }
     }
 
-    public class BucketsResults
+    public sealed class BucketsResults
     {
         public long TotalSize;
         public string TotalSizeHumane => Size.Humane(TotalSize);

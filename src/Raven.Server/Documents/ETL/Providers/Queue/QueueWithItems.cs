@@ -3,7 +3,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class QueueWithItems<T> : EtlQueue where T: QueueItem
+public sealed class QueueWithItems<T> : EtlQueue where T: QueueItem
 {
     public readonly List<T> Items = new();
 

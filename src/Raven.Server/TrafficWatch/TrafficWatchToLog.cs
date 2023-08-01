@@ -12,7 +12,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.TrafficWatch;
 
-internal class TrafficWatchToLog : IDynamicJson
+internal sealed class TrafficWatchToLog : IDynamicJson
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("TrafficWatchManager");
 

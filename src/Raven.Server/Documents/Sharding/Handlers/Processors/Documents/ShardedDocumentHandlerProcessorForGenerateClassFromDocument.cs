@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForGenerateClassFromDocument : AbstractDocumentHandlerProcessorForGenerateClassFromDocument<ShardedDocumentHandler, TransactionOperationContext>
+internal sealed class ShardedDocumentHandlerProcessorForGenerateClassFromDocument : AbstractDocumentHandlerProcessorForGenerateClassFromDocument<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForGenerateClassFromDocument([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {

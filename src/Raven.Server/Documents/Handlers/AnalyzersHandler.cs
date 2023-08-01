@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class AnalyzersHandler : DatabaseRequestHandler
+    public sealed class AnalyzersHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/analyzers", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()

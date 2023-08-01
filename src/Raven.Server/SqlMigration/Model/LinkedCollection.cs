@@ -2,7 +2,7 @@
 
 namespace Raven.Server.SqlMigration.Model
 {
-    public class LinkedCollection : AbstractCollection, ICollectionReference
+    public sealed class LinkedCollection : AbstractCollection, ICollectionReference
     {
         public List<string> JoinColumns { get; set; }
         public RelationType Type { get; set; }

@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<ShardedDocumentHandler, TransactionOperationContext>
+internal sealed class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForGetDocSize([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {

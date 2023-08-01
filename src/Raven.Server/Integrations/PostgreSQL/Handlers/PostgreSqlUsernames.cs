@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
-    public class PostgreSqlUsernames
+    public sealed class PostgreSqlUsernames
     {
         public List<PostgreSqlUsername> Users { get; set; }
 
@@ -12,7 +12,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         }
     }
 
-    public class PostgreSqlUsername
+    public sealed class PostgreSqlUsername
     {
         public string Username { get; set; }
     }

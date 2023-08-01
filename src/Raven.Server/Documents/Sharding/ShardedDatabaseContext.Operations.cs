@@ -19,7 +19,7 @@ public partial class ShardedDatabaseContext
 {
     public ShardedOperations Operations;
 
-    public class ShardedOperations : AbstractOperations<ShardedOperation>
+    public sealed class ShardedOperations : AbstractOperations<ShardedOperation>
     {
         private readonly ShardedDatabaseContext _context;
 

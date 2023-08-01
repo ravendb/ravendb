@@ -4,7 +4,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
 
-public class SparrowLoggerWrapper : ILogger<RavenServer>
+public sealed class SparrowLoggerWrapper : ILogger<RavenServer>
 {
     private readonly Logger _sparrowLogger;
 

@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForSuggestIndexMerge : AbstractIndexHandlerProcessorForSuggestIndexMerge<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForSuggestIndexMerge : AbstractIndexHandlerProcessorForSuggestIndexMerge<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForSuggestIndexMerge([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)

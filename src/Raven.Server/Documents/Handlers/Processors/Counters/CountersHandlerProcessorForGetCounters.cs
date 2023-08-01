@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
-    internal class CountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class CountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public CountersHandlerProcessorForGetCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

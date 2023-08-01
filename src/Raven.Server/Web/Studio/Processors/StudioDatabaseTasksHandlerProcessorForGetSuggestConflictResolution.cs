@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal class StudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution : AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution : AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

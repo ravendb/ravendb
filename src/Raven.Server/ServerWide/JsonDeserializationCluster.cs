@@ -37,7 +37,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
 {
-    public class JsonDeserializationCluster : JsonDeserializationBase
+    internal sealed class JsonDeserializationCluster : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, DetailedReplicationHubAccess> DetailedReplicationHubAccess = GenerateJsonDeserializationRoutine<DetailedReplicationHubAccess>();
 

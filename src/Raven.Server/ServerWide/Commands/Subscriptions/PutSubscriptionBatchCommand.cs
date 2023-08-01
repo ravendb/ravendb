@@ -2,7 +2,7 @@
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class PutSubscriptionBatchCommand : PutSubscriptionBatchCommandBase<PutSubscriptionCommand>
+    public sealed class PutSubscriptionBatchCommand : PutSubscriptionBatchCommandBase<PutSubscriptionCommand>
     {
 
         public PutSubscriptionBatchCommand()

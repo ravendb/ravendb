@@ -10,7 +10,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
-    public class Elector : IDisposable
+    public sealed class Elector : IDisposable
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
@@ -303,7 +303,7 @@ namespace Raven.Server.Rachis
             return e is OperationCanceledException || e is ObjectDisposedException;
         }
 
-        internal class HandleVoteResult
+        internal sealed class HandleVoteResult
         {
             public string DeclineReason;
             public bool DeclineVote;

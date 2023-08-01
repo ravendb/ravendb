@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class RequestLatencyDetail : INotificationDetails
+    public sealed class RequestLatencyDetail : INotificationDetails
     {
         private const int RequestLatencyDetailLimit = 50;
 

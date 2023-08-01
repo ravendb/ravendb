@@ -12,7 +12,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class ToggleSubscriptionStateCommand : UpdateValueForDatabaseCommand
+    public sealed class ToggleSubscriptionStateCommand : UpdateValueForDatabaseCommand
     {
         public string SubscriptionName;
         public bool Disable;

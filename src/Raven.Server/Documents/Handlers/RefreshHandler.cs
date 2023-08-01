@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class RefreshHandler : DatabaseRequestHandler
+    public sealed class RefreshHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/refresh/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRefreshConfiguration()

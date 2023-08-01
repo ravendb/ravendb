@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
     }
 
-    public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IEnumerable<KeyValuePair<object, object>>, IBlittableJsonContainer
+    public sealed class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IEnumerable<KeyValuePair<object, object>>, IBlittableJsonContainer
     {
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;

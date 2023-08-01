@@ -3,7 +3,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseIndexPriority : DatabaseIndexScalarObjectBase<OctetString>
+    public sealed class DatabaseIndexPriority : DatabaseIndexScalarObjectBase<OctetString>
     {
         public DatabaseIndexPriority(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
             : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Priority)

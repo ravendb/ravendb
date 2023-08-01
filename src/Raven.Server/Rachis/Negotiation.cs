@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Rachis
 {
-    public class LogLengthNegotiation
+    public sealed class LogLengthNegotiation
     {
         public long PrevLogIndex { get; set; }
         public long PrevLogTerm { get; set; }
@@ -9,7 +9,7 @@
         public int SendingThread { get; set; }
     }
 
-    public class LogLengthNegotiationResponse
+    public sealed class LogLengthNegotiationResponse
     {
         public enum ResponseStatus
         {

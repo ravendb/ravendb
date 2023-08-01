@@ -3,7 +3,7 @@ using Raven.Server.Documents.ETL.Test;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.Test
 {
-    public class TestQueueEtlScript : TestEtlScript<QueueEtlConfiguration, QueueConnectionString>
+    public sealed class TestQueueEtlScript : TestEtlScript<QueueEtlConfiguration, QueueConnectionString>
     {
         
     }

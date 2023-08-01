@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerProcessorForHead<ShardedDocumentHandler, TransactionOperationContext>
+internal sealed class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerProcessorForHead<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForHead([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {

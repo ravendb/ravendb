@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetReplicationOutgoingReconnectionQueueCommand : RavenCommand<ReplicationOutgoingReconnectionQueuePreview>
+    internal sealed class GetReplicationOutgoingReconnectionQueueCommand : RavenCommand<ReplicationOutgoingReconnectionQueuePreview>
     {
         public GetReplicationOutgoingReconnectionQueueCommand()
         {

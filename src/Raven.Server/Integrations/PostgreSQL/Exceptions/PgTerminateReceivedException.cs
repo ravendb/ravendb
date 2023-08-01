@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Integrations.PostgreSQL.Exceptions
 {
-    public class PgTerminateReceivedException : Exception
+    public sealed class PgTerminateReceivedException : Exception
     {
     }
 }

@@ -6,7 +6,7 @@ public partial class ShardedDatabaseContext
 {
     public ShardedCompareExchangeStorage CompareExchangeStorage;
 
-    public class ShardedCompareExchangeStorage : AbstractCompareExchangeStorage
+    public sealed class ShardedCompareExchangeStorage : AbstractCompareExchangeStorage
     {
         public ShardedCompareExchangeStorage([NotNull] ShardedDatabaseContext context) 
             : base(context.ServerStore)

@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCompareExchangeValuesCommand : ICompareExchangeValueIncludes, IDisposable
+    public sealed class IncludeCompareExchangeValuesCommand : ICompareExchangeValueIncludes, IDisposable
     {
         private readonly ServerStore _serverStore;
         private readonly AbstractCompareExchangeStorage _compareExchangeStorage;

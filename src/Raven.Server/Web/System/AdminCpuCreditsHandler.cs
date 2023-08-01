@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminCpuCreditsHandler : ServerRequestHandler
+    public sealed class AdminCpuCreditsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/cpu-credits", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task UpdateCpuCredits()
@@ -45,7 +45,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public class CpuCredits
+        public sealed class CpuCredits
         {
             public double RemainingCredits;
 

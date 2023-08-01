@@ -11,7 +11,7 @@ using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging
 {
-    internal class StorageHandlerProcessorForGetReport : AbstractStorageHandlerProcessorForGetReport<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StorageHandlerProcessorForGetReport : AbstractStorageHandlerProcessorForGetReport<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StorageHandlerProcessorForGetReport([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler)

@@ -4,7 +4,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public class DatabaseStorageDiskIosReadOperations : DatabaseScalarObjectBase<Gauge32>
+public sealed class DatabaseStorageDiskIosReadOperations : DatabaseScalarObjectBase<Gauge32>
 {
     public DatabaseStorageDiskIosReadOperations(string databaseName, DatabasesLandlord landlord, int index)
         : base(databaseName, landlord, SnmpOids.Databases.StorageDiskIoReadOperations, index)

@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 {
-    internal class ShardedCollectionsHandlerProcessorForGetCollectionStats : AbstractCollectionsHandlerProcessorForGetCollectionStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedCollectionsHandlerProcessorForGetCollectionStats : AbstractCollectionsHandlerProcessorForGetCollectionStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedCollectionsHandlerProcessorForGetCollectionStats([NotNull] ShardedDatabaseRequestHandler requestHandler, bool detailed) : base(requestHandler, detailed)
         {

@@ -11,7 +11,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class AzureRestorePoints : RestorePointsBase
+    public sealed class AzureRestorePoints : RestorePointsBase
     {
         private readonly RavenConfiguration _configuration;
         private readonly IRavenAzureClient _client;

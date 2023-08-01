@@ -17,7 +17,7 @@ namespace Raven.Server.Routing
     /// Scans all the classes in this assembly for potential routes
     /// and register them
     /// </summary>
-    public class RouteScanner
+    public sealed class RouteScanner
     {
         public static readonly List<RouteInformation> DebugRoutes = Scan(attr =>
             {

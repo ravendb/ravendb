@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal class RevisionsHandlerProcessorForGetResolvedRevisions : AbstractRevisionsHandlerProcessorForGetResolvedRevisions<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class RevisionsHandlerProcessorForGetResolvedRevisions : AbstractRevisionsHandlerProcessorForGetResolvedRevisions<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public RevisionsHandlerProcessorForGetResolvedRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

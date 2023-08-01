@@ -556,7 +556,7 @@ namespace Raven.Server.Documents
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
         }
 
-        public class RecreateCounters : IRecreationType
+        public sealed class RecreateCounters : IRecreationType
         {
             private readonly DocumentsStorage _storage;
 

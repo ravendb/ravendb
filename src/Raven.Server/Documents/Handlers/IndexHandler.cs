@@ -23,7 +23,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class IndexHandler : DatabaseRequestHandler
+    public sealed class IndexHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Replace()
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        public class IndexHistoryResult
+        public sealed class IndexHistoryResult
         {
             public string Index { get; set; }
             public IndexHistoryEntry[] History { get; set; }

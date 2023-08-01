@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Configuration;
 
-internal class ShardedConfigurationHandlerProcessorForGetClientConfiguration : AbstractConfigurationHandlerProcessorForGetClientConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedConfigurationHandlerProcessorForGetClientConfiguration : AbstractConfigurationHandlerProcessorForGetClientConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedConfigurationHandlerProcessorForGetClientConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

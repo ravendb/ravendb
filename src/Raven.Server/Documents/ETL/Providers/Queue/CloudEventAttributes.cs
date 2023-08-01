@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class CloudEventAttributes
+public sealed class CloudEventAttributes
 {
     public static HashSet<string> ValidAttributeNames = new()
     {

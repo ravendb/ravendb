@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    internal class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
+    internal sealed class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
         public static readonly AutoMapReduceIndexResultsAggregator Aggregator = new();
 

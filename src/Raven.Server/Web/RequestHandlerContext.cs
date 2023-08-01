@@ -6,7 +6,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Web
 {
-    public class RequestHandlerContext
+    public sealed class RequestHandlerContext
     {
         public HttpContext HttpContext;
         public RavenServer RavenServer;

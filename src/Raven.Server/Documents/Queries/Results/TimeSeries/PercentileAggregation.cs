@@ -6,7 +6,7 @@ using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
-    public class PercentileAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
+    public sealed class PercentileAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
     {
         private readonly double _percentileFactor;
         private readonly List<SortedDictionary<double, int>> _rankedValues;

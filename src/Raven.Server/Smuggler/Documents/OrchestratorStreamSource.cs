@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Smuggler.Documents;
 
-public class OrchestratorStreamSource : StreamSource
+public sealed class OrchestratorStreamSource : StreamSource
 {
     private readonly int _numberOfShards;
 

@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ModifyConflictSolverCommand : UpdateDatabaseCommand
+    public sealed class ModifyConflictSolverCommand : UpdateDatabaseCommand
     {
         public ConflictSolver Solver;
 

@@ -7,7 +7,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 
-public class QueryFilter : AbstractQueryFilter
+public sealed class QueryFilter : AbstractQueryFilter
 {
     private readonly Reference<long> _skippedResults;
     private readonly Reference<long> _scannedDocuments;

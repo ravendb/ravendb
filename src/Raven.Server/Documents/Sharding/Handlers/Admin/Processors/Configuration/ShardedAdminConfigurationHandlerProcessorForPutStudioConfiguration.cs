@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuration
 {
-    internal class ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration : AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration : AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration(ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutServerWideExternalReplicationCommand : UpdateValueCommand<ServerWideExternalReplication>
+    public sealed class PutServerWideExternalReplicationCommand : UpdateValueCommand<ServerWideExternalReplication>
     {
         protected PutServerWideExternalReplicationCommand()
         {

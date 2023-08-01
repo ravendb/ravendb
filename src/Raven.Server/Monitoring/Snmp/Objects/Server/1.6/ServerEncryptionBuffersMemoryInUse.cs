@@ -5,7 +5,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerEncryptionBuffersMemoryInUse : ScalarObjectBase<Gauge32>
+    public sealed class ServerEncryptionBuffersMemoryInUse : ScalarObjectBase<Gauge32>
     {
         public ServerEncryptionBuffersMemoryInUse() : base(SnmpOids.Server.EncryptionBuffersMemoryInUse)
         {

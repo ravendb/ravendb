@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
             }
         }
 
-        internal class GetIndexTermsCommand : RavenCommand<TermsQueryResultServerSide>
+        internal sealed class GetIndexTermsCommand : RavenCommand<TermsQueryResultServerSide>
         {
             private GetTermsOperation.GetTermsCommand _cmd;
 

@@ -25,7 +25,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Databases;
 
-internal class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcessorForAllowedDatabases<DatabasesInfo>
+internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcessorForAllowedDatabases<DatabasesInfo>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 

@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    internal class ServerLastRequestTime : ScalarObjectBase<TimeTicks>
+    internal sealed class ServerLastRequestTime : ScalarObjectBase<TimeTicks>
     {
         private readonly ServerStatistics _statistics;
 

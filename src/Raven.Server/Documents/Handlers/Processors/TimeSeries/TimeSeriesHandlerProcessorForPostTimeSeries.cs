@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal class TimeSeriesHandlerProcessorForPostTimeSeries : AbstractTimeSeriesHandlerProcessorForPostTimeSeries<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class TimeSeriesHandlerProcessorForPostTimeSeries : AbstractTimeSeriesHandlerProcessorForPostTimeSeries<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public TimeSeriesHandlerProcessorForPostTimeSeries([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

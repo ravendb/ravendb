@@ -22,7 +22,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    public class ClusterMaintenanceSupervisor : IDisposable
+    public sealed class ClusterMaintenanceSupervisor : IDisposable
     {
         private readonly string _leaderClusterTag;
 
@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action<ClusterNode> NoChangeFoundAction;
             internal Action<ClusterNode> BeforeReportBuildAction;
@@ -164,7 +164,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        public class ClusterNode : IDisposable
+        public sealed class ClusterNode : IDisposable
         {
             private readonly JsonContextPool _contextPool;
             private readonly ClusterMaintenanceSupervisor _parent;
@@ -653,7 +653,7 @@ namespace Raven.Server.ServerWide.Maintenance
             Ok = 4
         }
 
-        public class ClusterMaintenanceConnectionHeader
+        public sealed class ClusterMaintenanceConnectionHeader
         {
             public string LeaderClusterTag { get; set; }
 

@@ -8,7 +8,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class RequestTimeTracker : IDisposable
+    public sealed class RequestTimeTracker : IDisposable
     {
         private readonly HttpContext _context;
         private readonly Logger _logger;

@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedIdentityDebugHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedIdentityDebugHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/identities", "GET")]
         public async Task GetIdentities()

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.TimeSeries
         RolledUp
     }
 
-    public class SingleResult
+    public sealed class SingleResult
     {
         public DateTime Timestamp;
         public Memory<double> Values;
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
     }
 
-    public class SegmentResult
+    public sealed class SegmentResult
     {
         public DateTime Start, End;
         public TimeSeriesValuesSegment Summary;
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
     }
 
-    internal class SeriesSummary
+    internal sealed class SeriesSummary
     {
         public SeriesSummary(int numberOfValues)
         {
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public class DetailedSingleResult
+        public sealed class DetailedSingleResult
         {
             private readonly string _databaseChangeVector;
             public Dictionary<string, double[]> Details = new Dictionary<string, double[]>();
@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
     }
 
-    public class TimeSeriesMultiReader : ITimeSeriesReader, IEnumerator<TimeSeriesReader>
+    public sealed class TimeSeriesMultiReader : ITimeSeriesReader, IEnumerator<TimeSeriesReader>
     {
         private readonly DocumentsOperationContext _context;
         private TimeSeriesReader _reader;

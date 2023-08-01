@@ -3,7 +3,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerRequestsPerSecond : ScalarObjectBase<Gauge32>
+    public sealed class ServerRequestsPerSecond : ScalarObjectBase<Gauge32>
     {
         private readonly MetricCounters _metrics;
 

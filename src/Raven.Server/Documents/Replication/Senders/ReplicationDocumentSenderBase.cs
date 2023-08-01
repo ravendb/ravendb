@@ -661,7 +661,7 @@ namespace Raven.Server.Documents.Replication.Senders
             _stats.TimeSeriesRead = _stats.Storage.For(ReplicationOperation.Outgoing.TimeSeriesRead, start: false);
         }
 
-        public class ReplicationStats
+        public sealed class ReplicationStats
         {
             public OutgoingReplicationStatsScope Network;
             public OutgoingReplicationStatsScope Storage;
@@ -789,7 +789,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        protected internal class ReplicationSupportedFeatures
+        protected internal sealed class ReplicationSupportedFeatures
         {
             public bool CaseInsensitiveCounters;
             public bool RevisionTombstonesWithId;

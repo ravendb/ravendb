@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Commands;
 
-internal class PostponeNotificationCommand : RavenCommand
+internal sealed class PostponeNotificationCommand : RavenCommand
 {
     private readonly string _id;
     private readonly long _timeInSec;

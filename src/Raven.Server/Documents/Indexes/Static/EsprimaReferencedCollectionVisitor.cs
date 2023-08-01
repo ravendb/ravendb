@@ -4,7 +4,7 @@ using Esprima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class EsprimaReferencedCollectionVisitor : EsprimaVisitor
+    public sealed class EsprimaReferencedCollectionVisitor : EsprimaVisitor
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
 

@@ -4,7 +4,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
 {
-    public class From40011 : ISchemaUpdate
+    public sealed class From40011 : ISchemaUpdate
     {
         public int From => 40_011;
         public int To => 40_012;

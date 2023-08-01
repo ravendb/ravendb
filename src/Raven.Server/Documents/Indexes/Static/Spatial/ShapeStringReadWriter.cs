@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     /// <summary>
     /// Reads and writes shape strings
     /// </summary>
-    public class ShapeStringReadWriter
+    public sealed class ShapeStringReadWriter
     {
         private static readonly WktSanitizer WktSanitizer = new WktSanitizer();
 

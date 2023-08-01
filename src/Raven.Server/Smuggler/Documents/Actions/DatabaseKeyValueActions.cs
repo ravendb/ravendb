@@ -8,7 +8,7 @@ using Raven.Server.Smuggler.Documents.Data;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
-public class DatabaseKeyValueActions : IKeyValueActions<long>
+public sealed class DatabaseKeyValueActions : IKeyValueActions<long>
 {
     private readonly ServerStore _serverStore;
     private readonly string _name;

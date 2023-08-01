@@ -43,7 +43,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class StreamDestination : ISmugglerDestination
+    public sealed class StreamDestination : ISmugglerDestination
     {
         private readonly Stream _stream;
         private GZipStream _gzipStream;
@@ -62,7 +62,7 @@ namespace Raven.Server.Smuggler.Documents
             _compressionLevel = compressionLevel;
         }
 
-        public virtual ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _gzipStream = new GZipStream(_stream, _compressionLevel, leaveOpen: true);
             _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents
             return ValueTask.FromResult(InitializeAsyncDispose());
         }
 
-        protected virtual IAsyncDisposable InitializeAsyncDispose()
+        protected IAsyncDisposable InitializeAsyncDispose()
         {
             return new AsyncDisposableAction(async () =>
             {

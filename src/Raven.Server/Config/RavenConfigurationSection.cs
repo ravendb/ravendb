@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Raven.Server.Config
 {
-    public class RavenConfigurationSection : IConfigurationSection
+    public sealed class RavenConfigurationSection : IConfigurationSection
     {
         public RavenConfigurationSection(string key, string path, string value)
         {

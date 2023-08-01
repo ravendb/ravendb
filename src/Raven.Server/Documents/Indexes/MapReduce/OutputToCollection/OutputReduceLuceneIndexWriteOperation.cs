@@ -15,7 +15,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class OutputReduceLuceneIndexWriteOperation : LuceneIndexWriteOperation
+    public sealed class OutputReduceLuceneIndexWriteOperation : LuceneIndexWriteOperation
     {
         private readonly OutputReduceIndexWriteOperationScope<OutputReduceLuceneIndexWriteOperation> _outputScope;
 

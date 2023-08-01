@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class InterruptibleRead<TContextPool, TOperationContext> : IDisposable
+    public sealed class InterruptibleRead<TContextPool, TOperationContext> : IDisposable
     where TContextPool : JsonContextPoolBase<TOperationContext>
     where TOperationContext : JsonOperationContext
     {

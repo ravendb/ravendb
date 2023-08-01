@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationTableValue
+    public sealed class NotificationTableValue
     {
         public BlittableJsonReaderObject Json;
 

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class AddOrUpdateCompareExchangeBatchCommand : CommandBase
+    public sealed class AddOrUpdateCompareExchangeBatchCommand : CommandBase
     {
         public List<AddOrUpdateCompareExchangeCommand> Commands;
         public List<RemoveCompareExchangeCommand> RemoveCommands;

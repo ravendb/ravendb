@@ -4,7 +4,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Documents.Indexes.Configuration
 {
-    public class FaultyInMemoryIndexConfiguration : IndexingConfiguration
+    public sealed class FaultyInMemoryIndexConfiguration : IndexingConfiguration
     {
         private readonly PathSetting _storagePath;
 

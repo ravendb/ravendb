@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Queries.Explanation
 {
-    public class ExplanationResult
+    public sealed class ExplanationResult
     {
         public string Key;
 

@@ -5,7 +5,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL.Types
 {
-    public class PgTimestamp : PgType
+    public sealed class PgTimestamp : PgType
     {
         public static readonly PgTimestamp Default = new();
         

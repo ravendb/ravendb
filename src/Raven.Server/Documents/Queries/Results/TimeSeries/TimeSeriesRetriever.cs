@@ -23,7 +23,7 @@ using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWri
 
 namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
-    public class TimeSeriesRetriever
+    public sealed class TimeSeriesRetriever
     {
         private readonly Dictionary<ValueExpression, object> _valuesDictionary;
 
@@ -917,7 +917,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        public class TimeSeriesStreamingRetrieverResult
+        public sealed class TimeSeriesStreamingRetrieverResult
         {
             public IEnumerable<DynamicJsonValue> Stream;
             public DynamicJsonValue Metadata;

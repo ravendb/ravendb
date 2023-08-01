@@ -6,7 +6,7 @@ using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.MultiGet;
 
-internal class ShardedMultiGetHandlerProcessorForPost : AbstractMultiGetHandlerProcessorForPost<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedMultiGetHandlerProcessorForPost : AbstractMultiGetHandlerProcessorForPost<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedMultiGetHandlerProcessorForPost([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

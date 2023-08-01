@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminTimeSeriesHandler : DatabaseRequestHandler
+    public sealed class AdminTimeSeriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddTimeSeriesPolicy()

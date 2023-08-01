@@ -8,7 +8,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    internal class From53000 : ISchemaUpdate
+    internal sealed class From53000 : ISchemaUpdate
     {
         public int From => 53_000;
         public int To => 53_001;

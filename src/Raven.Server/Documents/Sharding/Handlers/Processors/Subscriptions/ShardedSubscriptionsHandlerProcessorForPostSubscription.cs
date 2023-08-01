@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<ShardedSubscriptionsHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<ShardedSubscriptionsHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
         public ShardedSubscriptionsHandlerProcessorForPostSubscription([NotNull] ShardedSubscriptionsHandler requestHandler)
             : base(requestHandler, requestHandler.DatabaseContext.SubscriptionsStorage)

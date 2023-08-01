@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentsTransaction : RavenTransaction
+    public sealed class DocumentsTransaction : RavenTransaction
     {
         private readonly DocumentsOperationContext _context;
 

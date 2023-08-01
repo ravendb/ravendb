@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetReplicationOutgoingsFailureInfoCommand : RavenCommand<ReplicationOutgoingsFailurePreview>
+    internal sealed class GetReplicationOutgoingsFailureInfoCommand : RavenCommand<ReplicationOutgoingsFailurePreview>
     {
         public GetReplicationOutgoingsFailureInfoCommand()
         {

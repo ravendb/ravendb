@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class IdentityHandler : DatabaseRequestHandler
+    public sealed class IdentityHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task NextIdentityFor()

@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal class ShardedQueriesDebugHandlerProcessorForQueriesCacheList : AbstractQueriesDebugHandlerProcessorForQueriesCacheList<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedQueriesDebugHandlerProcessorForQueriesCacheList : AbstractQueriesDebugHandlerProcessorForQueriesCacheList<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedQueriesDebugHandlerProcessorForQueriesCacheList([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

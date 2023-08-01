@@ -18,7 +18,7 @@ using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
-    public class SpatialField
+    public sealed class SpatialField
     {
         private static readonly NtsSpatialContext GeoContext;
 

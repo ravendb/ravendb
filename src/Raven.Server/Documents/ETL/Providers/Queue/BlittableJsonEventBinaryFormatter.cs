@@ -10,7 +10,7 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue
 {
-    public class BlittableJsonEventBinaryFormatter : CloudEventFormatter, IDisposable
+    public sealed class BlittableJsonEventBinaryFormatter : CloudEventFormatter, IDisposable
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<MemoryStream> _streams = new();

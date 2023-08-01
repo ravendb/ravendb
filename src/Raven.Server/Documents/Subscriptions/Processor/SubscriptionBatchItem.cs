@@ -3,7 +3,7 @@ using static Raven.Server.Documents.Subscriptions.SubscriptionFetcher;
 
 namespace Raven.Server.Documents.Subscriptions.Processor;
 
-public class SubscriptionBatchItem
+public sealed class SubscriptionBatchItem
 {
     public Document Document;
     public Exception Exception;

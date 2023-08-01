@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.TimeSeries
 {
-    internal class ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

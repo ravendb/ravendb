@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
     }
 
-    public class Reader
+    public sealed class Reader
     {
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly Stream _stream;

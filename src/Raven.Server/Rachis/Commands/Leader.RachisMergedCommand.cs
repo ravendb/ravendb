@@ -14,7 +14,7 @@ namespace Raven.Server.Rachis
 {
     public partial class Leader
     {
-        internal class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+        internal sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
         {
             public CommandBase Command;
             public Task<(long, object)> TaskResult { get; private set; }

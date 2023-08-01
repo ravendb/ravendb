@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class RemoveNodeFromClusterCommand : CommandBase
+    public sealed class RemoveNodeFromClusterCommand : CommandBase
     {
         public string RemovedNode;
 

@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public class TimeSeriesSegmentEntry : IDisposable
+    public sealed class TimeSeriesSegmentEntry : IDisposable
     {
         public LazyStringValue Key;
 

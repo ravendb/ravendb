@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance.Sharding
 {
-    internal class OrchestratorTopologyUpdater : DatabaseTopologyUpdater
+    internal sealed class OrchestratorTopologyUpdater : DatabaseTopologyUpdater
     {
         public OrchestratorTopologyUpdater(ServerStore server,
             RachisConsensus<ClusterStateMachine> engine,

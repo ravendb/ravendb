@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseEncryptedCount : DatabaseBase<Integer32>
+    public sealed class DatabaseEncryptedCount : DatabaseBase<Integer32>
     {
         public DatabaseEncryptedCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.EncryptedCount)

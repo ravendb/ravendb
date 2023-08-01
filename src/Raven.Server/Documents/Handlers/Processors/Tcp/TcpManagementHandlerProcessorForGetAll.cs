@@ -5,7 +5,7 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Handlers.Processors.Tcp;
 
-internal class TcpManagementHandlerProcessorForGetAll : AbstractTcpManagementHandlerProcessorForGetAll<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class TcpManagementHandlerProcessorForGetAll : AbstractTcpManagementHandlerProcessorForGetAll<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public TcpManagementHandlerProcessorForGetAll([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public class MetricCounters 
+    public sealed class MetricCounters 
     {
         public readonly RequestCounters Requests = new RequestCounters();
 
@@ -55,7 +55,7 @@ namespace Raven.Server.Utils
             TimeSeries.Initialize();
         }
 
-        public class RequestCounters
+        public sealed class RequestCounters
         {
             public MeterMetric RequestsPerSec { get; internal set; }
             
@@ -92,34 +92,34 @@ namespace Raven.Server.Utils
             }
         }
 
-        public class DocCounters : MetricsWritesBase
+        public sealed class DocCounters : MetricsWritesBase
         {
         }
 
-        public class AttachmentCounters : MetricsWritesBase
+        public sealed class AttachmentCounters : MetricsWritesBase
         {
         }
 
-        public class CounterCounters : MetricsWritesBase
+        public sealed class CounterCounters : MetricsWritesBase
         {
         }
 
-        public class TimeSeriesCounters : MetricsWritesBase
+        public sealed class TimeSeriesCounters : MetricsWritesBase
         {
         }
 
-        public class MapIndexCounters
+        public sealed class MapIndexCounters
         {
             public MeterMetric IndexedPerSec { get; internal set; }
         }
 
-        public class MapReduceIndexCounters
+        public sealed class MapReduceIndexCounters
         {
             public MeterMetric MappedPerSec { get; internal set; }
             public MeterMetric ReducedPerSec { get; internal set; }
         }
 
-        public class SqlReplicationCounters
+        public sealed class SqlReplicationCounters
         {
             public MeterMetric BatchSize { get; internal set; }
         }

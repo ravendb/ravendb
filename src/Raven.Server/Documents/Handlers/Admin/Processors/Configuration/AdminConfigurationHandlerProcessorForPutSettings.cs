@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal class AdminConfigurationHandlerProcessorForPutSettings : AbstractAdminConfigurationHandlerProcessorForPutSettings<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AdminConfigurationHandlerProcessorForPutSettings : AbstractAdminConfigurationHandlerProcessorForPutSettings<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminConfigurationHandlerProcessorForPutSettings(DatabaseRequestHandler requestHandler)
         : base(requestHandler)

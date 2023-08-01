@@ -3344,7 +3344,7 @@ namespace Raven.Server.ServerWide
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class PutRaftCommandResult
+        public sealed class PutRaftCommandResult
         {
             public long RaftCommandIndex { get; set; }
 
@@ -3774,7 +3774,7 @@ namespace Raven.Server.ServerWide
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;

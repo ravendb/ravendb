@@ -6,7 +6,7 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Tcp;
 
-internal class ShardedTcpManagementHandlerProcessorForDelete : AbstractTcpManagementHandlerProcessorForDelete<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedTcpManagementHandlerProcessorForDelete : AbstractTcpManagementHandlerProcessorForDelete<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedTcpManagementHandlerProcessorForDelete([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

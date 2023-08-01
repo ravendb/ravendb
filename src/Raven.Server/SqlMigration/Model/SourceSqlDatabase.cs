@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.SqlMigration.Model
 {
-    public class SourceSqlDatabase
+    public sealed class SourceSqlDatabase
     {
         public MigrationProvider Provider { get; set; }
 

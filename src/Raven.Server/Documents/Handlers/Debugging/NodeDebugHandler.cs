@@ -24,7 +24,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class NodeDebugHandler : ServerRequestHandler
+    public sealed class NodeDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/node/clear-http-clients-pool", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task ClearHttpClientsPool()
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal class PingResult : IDynamicJsonValueConvertible
+        internal sealed class PingResult : IDynamicJsonValueConvertible
         {
             public string Url;
             public SetupAliveInfo SetupAlive;
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal class SetupAliveInfo : IDynamicJson
+        internal sealed class SetupAliveInfo : IDynamicJson
         {
             public long Time;
             public string Error;
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal class TcpInfo : IDynamicJson
+        internal sealed class TcpInfo : IDynamicJson
         {
             public long TcpInfoTime;
             public long SendTime;

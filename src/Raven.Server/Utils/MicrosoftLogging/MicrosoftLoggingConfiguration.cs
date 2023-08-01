@@ -15,7 +15,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
 
-public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLevel LogLevel)>
+public sealed class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLevel LogLevel)>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingConfiguration));
     private const string NotificationKey = "microsoft-configuration-logs-error";

@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class QueryOperationContext : IDisposable
+    public sealed class QueryOperationContext : IDisposable
     {
         private readonly DocumentDatabase _database;
         public readonly DocumentsOperationContext Documents;

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Exceptions
 {
-    public class IndexWriterCreationException : CriticalIndexingException
+    public sealed class IndexWriterCreationException : CriticalIndexingException
     {
         public string Field { get; }
 

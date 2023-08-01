@@ -4,7 +4,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Utils
 {
-    public class UnhandledExceptions
+    public sealed class UnhandledExceptions
     {
         internal static readonly TimeSpan TimeToWaitForLog = TimeSpan.FromSeconds(15);
 

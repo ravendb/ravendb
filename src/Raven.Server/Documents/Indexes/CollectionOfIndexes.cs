@@ -8,7 +8,7 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class CollectionOfIndexes : IEnumerable<Index>
+    public sealed class CollectionOfIndexes : IEnumerable<Index>
     {
         private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(IndexNameComparer.Instance);
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = 

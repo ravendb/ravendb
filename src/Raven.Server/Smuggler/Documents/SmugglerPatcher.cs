@@ -9,14 +9,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class ServerSmugglerPatcher : SmugglerPatcher
+    public sealed class ServerSmugglerPatcher : SmugglerPatcher
     {
         public ServerSmugglerPatcher(DatabaseSmugglerOptions options, ServerStore server) : base(options, server.Server.AdminScripts)
         {
         }
     }
 
-    public class DatabaseSmugglerPatcher : SmugglerPatcher
+    public sealed class DatabaseSmugglerPatcher : SmugglerPatcher
     {
         public DatabaseSmugglerPatcher(DatabaseSmugglerOptions options, DocumentDatabase database) : base(options, database.Scripts)
         {

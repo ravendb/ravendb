@@ -13,7 +13,7 @@ using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-public class ShardedServerMultiOperation : AbstractShardedMultiOperation
+public sealed class ShardedServerMultiOperation : AbstractShardedMultiOperation
 {
     public ShardedServerMultiOperation(long id, ShardedDatabaseContext context, Action<IOperationProgress> onProgress) : base(id, context, onProgress)
     {

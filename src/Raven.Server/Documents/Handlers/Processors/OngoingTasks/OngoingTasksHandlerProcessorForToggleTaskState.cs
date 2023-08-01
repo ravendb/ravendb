@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForToggleTaskState : AbstractOngoingTasksHandlerProcessorForToggleTaskState<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForToggleTaskState : AbstractOngoingTasksHandlerProcessorForToggleTaskState<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForToggleTaskState([NotNull] DatabaseRequestHandler requestHandler, bool requireAdmin) : base(requestHandler)
         {

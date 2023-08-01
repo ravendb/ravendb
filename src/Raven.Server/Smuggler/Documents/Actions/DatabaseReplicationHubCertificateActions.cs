@@ -11,7 +11,7 @@ using Raven.Server.Smuggler.Documents.Data;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
-public class DatabaseReplicationHubCertificateActions : IReplicationHubCertificateActions
+public sealed class DatabaseReplicationHubCertificateActions : IReplicationHubCertificateActions
 {
     private readonly ServerStore _server;
     private readonly string _name;

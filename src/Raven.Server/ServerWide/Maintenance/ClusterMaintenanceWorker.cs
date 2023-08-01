@@ -23,7 +23,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    public class ClusterMaintenanceWorker : IDisposable
+    public sealed class ClusterMaintenanceWorker : IDisposable
     {
         private readonly TcpConnectionOptions _tcp;
         private readonly ServerStore _server;

@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Operations.Processors;
 
-internal class OperationsHandlerProcessorForKill : AbstractOperationsHandlerProcessorForKill<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class OperationsHandlerProcessorForKill : AbstractOperationsHandlerProcessorForKill<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public OperationsHandlerProcessorForKill([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

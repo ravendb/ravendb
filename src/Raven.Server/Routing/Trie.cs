@@ -33,7 +33,7 @@ namespace Raven.Server.Routing
     /// match anything until the next /.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Trie<T>
+    public sealed class Trie<T>
     {
         public string DebugKey;
         public string Key;

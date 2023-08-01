@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class ValueExpression : QueryExpression
+    public sealed class ValueExpression : QueryExpression
     {
         public StringSegment Token;
         public ValueTokenType Value;

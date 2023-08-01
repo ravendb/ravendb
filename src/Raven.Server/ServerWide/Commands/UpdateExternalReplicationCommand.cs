@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateExternalReplicationCommand : UpdateDatabaseCommand
+    public sealed class UpdateExternalReplicationCommand : UpdateDatabaseCommand
     {
         public ExternalReplication Watcher;
 

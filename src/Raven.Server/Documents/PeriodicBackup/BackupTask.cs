@@ -32,7 +32,7 @@ using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironme
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class BackupTask
+    public sealed class BackupTask
     {
         public static string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
         private const string LegacyDateTimeFormat = "yyyy-MM-dd-HH-mm";

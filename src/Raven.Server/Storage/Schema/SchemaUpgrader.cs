@@ -11,7 +11,7 @@ namespace Raven.Server.Storage.Schema
 {
     public static class SchemaUpgrader
     {
-        internal class CurrentVersion
+        internal sealed class CurrentVersion
         {
             public const int ServerVersion = 53_001;
 

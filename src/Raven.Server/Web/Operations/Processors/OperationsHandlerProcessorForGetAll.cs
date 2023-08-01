@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Operations.Processors;
 
-internal class OperationsHandlerProcessorForGetAll : AbstractOperationsHandlerProcessorForGetAll<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class OperationsHandlerProcessorForGetAll : AbstractOperationsHandlerProcessorForGetAll<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public OperationsHandlerProcessorForGetAll([NotNull] DatabaseRequestHandler requestHandler) 
         : base(requestHandler)

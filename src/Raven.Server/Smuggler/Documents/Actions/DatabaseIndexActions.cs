@@ -9,7 +9,7 @@ using Raven.Server.Smuggler.Documents.Data;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
-public class DatabaseIndexActions : IIndexActions
+public sealed class DatabaseIndexActions : IIndexActions
 {
     private readonly AbstractIndexCreateController _controller;
     private readonly SystemTime _time;

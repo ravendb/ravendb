@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Revisions
 {
-    public class GetRevisionsDebugCommand : RavenCommand<BlittableJsonReaderObject>
+    public sealed class GetRevisionsDebugCommand : RavenCommand<BlittableJsonReaderObject>
     {
         private readonly long? _start;
         private readonly int? _pageSize;

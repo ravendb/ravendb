@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcessorForClearErrors<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcessorForClearErrors<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForClearErrors([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

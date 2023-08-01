@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class BackupDelayException : Exception
+    public sealed class BackupDelayException : Exception
     {
         public TimeSpan DelayPeriod { get; set; } = TimeSpan.FromMinutes(1);
 

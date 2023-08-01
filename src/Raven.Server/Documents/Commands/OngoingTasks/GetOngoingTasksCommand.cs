@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.OngoingTasks;
 
-internal class GetOngoingTasksCommand : RavenCommand<OngoingTasksResult>
+internal sealed class GetOngoingTasksCommand : RavenCommand<OngoingTasksResult>
 {
     public GetOngoingTasksCommand(string nodeTag)
     {

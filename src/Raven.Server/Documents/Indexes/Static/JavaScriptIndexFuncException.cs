@@ -5,7 +5,7 @@ using Jint.Runtime;
 namespace Raven.Server.Documents.Indexes.Static
 {
     [Serializable]
-    internal class JavaScriptIndexFuncException : Exception
+    internal sealed class JavaScriptIndexFuncException : Exception
     {
         public JavaScriptIndexFuncException()
         {

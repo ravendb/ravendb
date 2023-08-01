@@ -75,7 +75,7 @@ using DateTime = System.DateTime;
 
 namespace Raven.Server
 {
-    public class RavenServer : IDisposable
+    public sealed class RavenServer : IDisposable
     {
         static RavenServer()
         {
@@ -478,7 +478,7 @@ namespace Raven.Server
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
 
-        public class CpuCreditsState : IDynamicJson
+        public sealed class CpuCreditsState : IDynamicJson
         {
             public bool Used;
             public double BaseCredits;
@@ -716,7 +716,7 @@ namespace Raven.Server
             return response.Remaining;
         }
 
-        public class CpuCreditsResponse
+        public sealed class CpuCreditsResponse
         {
             public double Remaining { get; set; }
             public DateTime Timestamp { get; set; }
@@ -1476,7 +1476,7 @@ namespace Raven.Server
                 Pipes.ListenToAdminConsolePipe(this, AdminConsolePipe));
         }
 
-        public class AuthenticateConnection : IHttpAuthenticationFeature
+        public sealed class AuthenticateConnection : IHttpAuthenticationFeature
         {
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
@@ -1769,7 +1769,7 @@ namespace Raven.Server
         internal X509Certificate2[] WellKnownIssuers;
         internal string[] WellKnownIssuersThumbprints = Array.Empty<string>();
 
-        public class TcpListenerStatus
+        public sealed class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
             public int Port;
@@ -2850,14 +2850,14 @@ namespace Raven.Server
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
             internal bool ThrowExceptionInTrafficWatchTcp = false;
             internal bool GatherVerboseDatabaseDisposeInformation = false;
 
             internal DebugPackageTestingStuff DebugPackage = new DebugPackageTestingStuff();
-            internal class DebugPackageTestingStuff
+            internal sealed class DebugPackageTestingStuff
             {
                 internal string[] RoutesToSkip = new string[] { };
             }

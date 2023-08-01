@@ -9,7 +9,7 @@ using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
-    public class SubscriptionConnectionRunStats
+    public sealed class SubscriptionConnectionRunStats
     {
         public string WorkerId { get; set; }
         

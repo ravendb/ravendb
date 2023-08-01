@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Identities
 {
-    internal class ShardedIdentityHandlerProcessorForPostIdentity : AbstractIdentityHandlerProcessorForPostIdentity<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedIdentityHandlerProcessorForPostIdentity : AbstractIdentityHandlerProcessorForPostIdentity<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedIdentityHandlerProcessorForPostIdentity([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

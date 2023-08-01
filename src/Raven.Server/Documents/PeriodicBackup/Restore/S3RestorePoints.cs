@@ -11,7 +11,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class S3RestorePoints : RestorePointsBase
+    public sealed class S3RestorePoints : RestorePointsBase
     {
         private readonly RavenConfiguration _configuration;
         private readonly RavenAwsS3Client _client;

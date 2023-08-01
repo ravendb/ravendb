@@ -24,7 +24,7 @@ namespace Raven.Server.Config.Categories
 
         public const string DefaultValueSetInConstructor = "default-value-set-in-constructor";
 
-        public class SettingValue
+        public sealed class SettingValue
         {
             public SettingValue(string current, bool keyExistsInDatabaseRecord, string server, bool keyExistsInServerSettings)
             {
@@ -474,7 +474,7 @@ namespace Raven.Server.Config.Categories
             return values;
         }
 
-        public class ConfigurationProperty
+        public sealed class ConfigurationProperty
         {
             public PropertyInfo Info;
 

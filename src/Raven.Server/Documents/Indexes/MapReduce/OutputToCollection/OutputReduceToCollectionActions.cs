@@ -18,7 +18,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class OutputReduceToCollectionActions
+    public sealed class OutputReduceToCollectionActions
     {
         private readonly MapReduceIndex _index;
         private const string PrefixesOfReduceOutputDocumentsToDeleteTree = "PrefixesOfReduceOutputDocumentsToDeleteTree";

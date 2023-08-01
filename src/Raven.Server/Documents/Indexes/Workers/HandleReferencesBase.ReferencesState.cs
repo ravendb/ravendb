@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     : _lastIdPerCollectionForTombstones;
             }
 
-            public class ReferenceState
+            public sealed class ReferenceState
             {
                 private readonly string _referencedItemId;
                 private readonly string _nextItemId;

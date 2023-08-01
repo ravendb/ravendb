@@ -25,7 +25,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class OlapEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString, OlapEtlStatsScope, OlapEtlPerformanceOperation>
+    public sealed class OlapEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString, OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
         public const string OlaptEtlTag = "OLAP ETL";
 

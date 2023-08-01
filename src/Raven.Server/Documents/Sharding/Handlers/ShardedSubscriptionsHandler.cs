@@ -18,7 +18,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedSubscriptionsHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedSubscriptionsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/subscriptions", "PUT")]
         public async Task Create()

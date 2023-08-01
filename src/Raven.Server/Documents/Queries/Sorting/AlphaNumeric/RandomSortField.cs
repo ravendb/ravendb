@@ -3,7 +3,7 @@ using Lucene.Net.Search;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
-    public class RandomSortField : SortField
+    public sealed class RandomSortField : SortField
     {
         public RandomSortField(string field) : base(field ?? "RandomValue-" + Guid.NewGuid(), INT)
         {

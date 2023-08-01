@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class MultiGetHandler : DatabaseRequestHandler
+    public sealed class MultiGetHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/multi_get", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Post()

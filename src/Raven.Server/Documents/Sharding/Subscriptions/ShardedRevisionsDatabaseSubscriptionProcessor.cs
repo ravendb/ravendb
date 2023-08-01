@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
-public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor
+public sealed class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor
 {
     private readonly ShardedDocumentDatabase _database;
     private ShardingConfiguration _sharding;

@@ -3,7 +3,7 @@ using System;
 namespace Raven.Server.Routing
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class RavenActionAttribute : Attribute
+    public sealed class RavenActionAttribute : Attribute
     {
         public bool IsDebugInformationEndpoint { get; set; }
 
@@ -79,7 +79,7 @@ namespace Raven.Server.Routing
         Write
     }
 
-    public class RavenShardedActionAttribute : Attribute
+    public sealed class RavenShardedActionAttribute : Attribute
     {
         public string Path { get; }
 

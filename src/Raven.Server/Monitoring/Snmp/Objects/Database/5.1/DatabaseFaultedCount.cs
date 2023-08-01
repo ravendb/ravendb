@@ -6,7 +6,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseFaultedCount : DatabaseBase<Integer32>
+    public sealed class DatabaseFaultedCount : DatabaseBase<Integer32>
     {
         public DatabaseFaultedCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.FaultedCount)

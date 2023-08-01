@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Sharding.Persistence;
 
-public class ShardedIndexReadOperationFactory : IIndexReadOperationFactory
+public sealed class ShardedIndexReadOperationFactory : IIndexReadOperationFactory
 {
     public LuceneIndexReadOperation CreateLuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
         QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)

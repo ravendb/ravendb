@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseCountOfRevisionDocuments : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseCountOfRevisionDocuments : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfRevisionDocuments(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfRevisionDocuments, index)

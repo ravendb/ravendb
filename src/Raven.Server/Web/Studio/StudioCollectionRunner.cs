@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
 {
-    internal class StudioCollectionRunner : CollectionRunner
+    internal sealed class StudioCollectionRunner : CollectionRunner
     {
         private readonly HashSet<string> _excludeIds;
 

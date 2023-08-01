@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedConfigurationHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedConfigurationHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/configuration/studio", "GET")]
         public async Task GetStudioConfiguration()

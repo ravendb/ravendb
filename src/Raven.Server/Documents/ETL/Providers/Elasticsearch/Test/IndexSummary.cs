@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Test
 {
-    public class IndexSummary
+    public sealed class IndexSummary
     {
         public string IndexName { get; set; }
 

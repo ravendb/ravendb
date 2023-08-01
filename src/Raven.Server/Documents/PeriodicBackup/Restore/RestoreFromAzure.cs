@@ -12,7 +12,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromAzure : IRestoreSource
+    public sealed class RestoreFromAzure : IRestoreSource
     {
         private readonly ServerStore _serverStore;
         private readonly IRavenAzureClient _client;

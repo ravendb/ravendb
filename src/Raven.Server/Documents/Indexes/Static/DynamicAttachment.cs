@@ -5,7 +5,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicAttachment : AbstractDynamicObject, IAttachmentObject
+    public sealed class DynamicAttachment : AbstractDynamicObject, IAttachmentObject
     {
         private readonly Attachment _attachment;
 

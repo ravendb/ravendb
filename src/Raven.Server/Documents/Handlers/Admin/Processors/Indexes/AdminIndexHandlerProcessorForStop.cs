@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal class AdminIndexHandlerProcessorForStop : AbstractAdminIndexHandlerProcessorForStop<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AdminIndexHandlerProcessorForStop : AbstractAdminIndexHandlerProcessorForStop<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminIndexHandlerProcessorForStop([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

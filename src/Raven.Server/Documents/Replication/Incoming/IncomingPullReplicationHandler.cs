@@ -17,7 +17,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
-    public class IncomingPullReplicationHandler : IncomingReplicationHandler
+    public sealed class IncomingPullReplicationHandler : IncomingReplicationHandler
     {
         public readonly ReplicationLoader.PullReplicationParams _incomingPullReplicationParams;
 
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo.SourceDatabaseId, trigger, _incomingPullReplicationParams);
         }
 
-        internal class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
+        internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
         {
             private readonly bool _isHub;
             private readonly bool _isSink;
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
+        internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
         {
             private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
 
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
+        internal sealed class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
             public ReplicationLoader.PullReplicationParams PullReplicationParams;

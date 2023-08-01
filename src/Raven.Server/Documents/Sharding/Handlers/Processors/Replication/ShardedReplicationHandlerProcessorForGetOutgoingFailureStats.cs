@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetOutgoingFailureStats : AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetOutgoingFailureStats : AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedReplicationHandlerProcessorForGetOutgoingFailureStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -53,7 +53,7 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server.Utils.Cli
 {
-    public class RavenCli
+    public sealed class RavenCli
     {
         public const string DelimiterKeyWord = "DELIMITER:";
 

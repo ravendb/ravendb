@@ -72,7 +72,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         Routine = (byte)'R'
     }
 
-    public class PgColumn
+    public sealed class PgColumn
     {
         public string Name;
         /// <summary>
@@ -96,7 +96,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         }
     }
 
-    public class PgTable
+    public sealed class PgTable
     {
         public List<PgColumn> Columns;
         public List<PgDataRow> Data;
@@ -108,7 +108,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         }
     }
 
-    public class PgDataRow
+    public sealed class PgDataRow
     {
         public Memory<ReadOnlyMemory<byte>?> ColumnData;
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         Binary = 1
     }
 
-    public class PgSeverity
+    public sealed class PgSeverity
     {
         // In ErrorResponse messages
         public const string Error = "ERROR";

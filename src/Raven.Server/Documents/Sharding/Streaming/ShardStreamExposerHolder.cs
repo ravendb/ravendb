@@ -5,7 +5,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Streaming;
 
-internal class ShardStreamExposerHolder<T> :  IAsyncDisposable where T : StreamExposerContent
+internal sealed class ShardStreamExposerHolder<T> :  IAsyncDisposable where T : StreamExposerContent
 {
     public T ContentExposer { get; set; }
 

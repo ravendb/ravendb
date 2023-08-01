@@ -6,7 +6,7 @@ using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class ConcurrentBackupsCounter
+    public sealed class ConcurrentBackupsCounter
     {
         private readonly object _locker = new object();
 

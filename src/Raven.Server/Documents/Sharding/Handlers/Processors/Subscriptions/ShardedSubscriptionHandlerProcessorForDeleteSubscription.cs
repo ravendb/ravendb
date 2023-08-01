@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionHandlerProcessorForDeleteSubscription : AbstractSubscriptionHandlerProcessorForDeleteSubscription<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedSubscriptionHandlerProcessorForDeleteSubscription : AbstractSubscriptionHandlerProcessorForDeleteSubscription<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedSubscriptionHandlerProcessorForDeleteSubscription([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL
 {
-    internal class ShardedSqlEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestSqlEtlScript, SqlEtlConfiguration, SqlConnectionString>
+    internal sealed class ShardedSqlEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestSqlEtlScript, SqlEtlConfiguration, SqlConnectionString>
     {
         public ShardedSqlEtlHandlerProcessorForTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

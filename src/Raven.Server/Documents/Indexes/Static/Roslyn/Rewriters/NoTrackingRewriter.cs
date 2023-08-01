@@ -6,7 +6,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class NoTrackingRewriter : CSharpSyntaxRewriter
+    public sealed class NoTrackingRewriter : CSharpSyntaxRewriter
     {
         public static readonly NoTrackingRewriter Instance = new NoTrackingRewriter();
 

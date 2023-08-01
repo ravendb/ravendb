@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
 
-public class BatchPatchSingleShardedCommand : SingleShardedCommand
+public sealed class BatchPatchSingleShardedCommand : SingleShardedCommand
 {
     public List<(string Id, string ChangeVector)> List;
 

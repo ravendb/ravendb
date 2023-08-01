@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ReplicationHandler : DatabaseRequestHandler
+    public sealed class ReplicationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/replication/tombstones", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAllTombstones()

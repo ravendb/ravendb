@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioCollectionFieldsHandler : DatabaseRequestHandler
+    public sealed class StudioCollectionFieldsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionFields()

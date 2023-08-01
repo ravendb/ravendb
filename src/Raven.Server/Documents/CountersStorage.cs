@@ -60,7 +60,7 @@ namespace Raven.Server.Documents
             public long Etag;
         }
 
-        internal class DbIdsHolder
+        internal sealed class DbIdsHolder
         {
             private readonly BlittableJsonReaderArray _dbIdsBlittableArray;
             public readonly List<LazyStringValue> dbIdsList;
@@ -785,7 +785,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal class PutCountersData
+        internal sealed class PutCountersData
         {
             public BlittableJsonReaderObject Data;
             public DbIdsHolder DbIdsHolder;
@@ -2414,7 +2414,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
         }
 
-        public class IndexingMethods
+        public sealed class IndexingMethods
         {
             private readonly CountersStorage _countersStorage;
 
@@ -2637,7 +2637,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public class CounterGroupItemMetadata : IDisposable
+    public sealed class CounterGroupItemMetadata : IDisposable
     {
         private bool _disposed;
         private IDisposable _keyScope;
@@ -2698,7 +2698,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public class CounterInfo
+    public sealed class CounterInfo
     {
         public long Value;
         public long Etag;
@@ -2706,7 +2706,7 @@ namespace Raven.Server.Documents
         public string Name;
     }
 
-    public class CounterTombstoneDetail : IDisposable
+    public sealed class CounterTombstoneDetail : IDisposable
     {
         public LazyStringValue DocumentId { get; set; }
         public LazyStringValue ChangeVector { get; set; }

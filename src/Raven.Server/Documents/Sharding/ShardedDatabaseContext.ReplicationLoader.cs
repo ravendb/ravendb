@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding
     {
         public readonly ShardedReplicationContext Replication;
 
-        public class ShardedReplicationContext : AbstractReplicationLoader<TransactionContextPool, TransactionOperationContext>
+        public sealed class ShardedReplicationContext : AbstractReplicationLoader<TransactionContextPool, TransactionOperationContext>
         {
             private readonly ShardedDatabaseContext _context;
             public ShardedDatabaseContext Context => _context;
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ReplicationBatch : IDisposable
+    public sealed class ReplicationBatch : IDisposable
     {
         public List<ReplicationBatchItem> Items = new();
         public Dictionary<Slice, AttachmentReplicationItem> AttachmentStreams;
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ShardReplicationNode : ExternalReplication
+    public sealed class ShardReplicationNode : ExternalReplication
     {
         public int ShardNumber;
 

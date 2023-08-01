@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal class ShardedQueriesHandlerProcessorForDelete : AbstractShardedOperationQueriesHandlerProcessor
+internal sealed class ShardedQueriesHandlerProcessorForDelete : AbstractShardedOperationQueriesHandlerProcessor
 {
     public ShardedQueriesHandlerProcessorForDelete([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {

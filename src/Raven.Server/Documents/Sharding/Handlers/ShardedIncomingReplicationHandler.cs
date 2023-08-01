@@ -24,7 +24,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedIncomingReplicationHandler : AbstractIncomingReplicationHandler<TransactionContextPool, TransactionOperationContext>
+    public sealed class ShardedIncomingReplicationHandler : AbstractIncomingReplicationHandler<TransactionContextPool, TransactionOperationContext>
     {
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly string _sourceShardedDatabaseId;
@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             base.DisposeInternal();
         }
 
-        public class ReplicationBatches : IDisposable
+        public sealed class ReplicationBatches : IDisposable
         {
             public Dictionary<int, ReplicationBatch> Batches;
 

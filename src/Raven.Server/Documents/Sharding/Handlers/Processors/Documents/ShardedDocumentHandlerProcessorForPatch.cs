@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForPatch : AbstractDocumentHandlerProcessorForPatch<ShardedDocumentHandler, TransactionOperationContext>
+internal sealed class ShardedDocumentHandlerProcessorForPatch : AbstractDocumentHandlerProcessorForPatch<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForPatch([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {

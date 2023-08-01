@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Operations;
 
-public class OperationDescription
+public sealed class OperationDescription
 {
     public string Description;
     public OperationType TaskType;

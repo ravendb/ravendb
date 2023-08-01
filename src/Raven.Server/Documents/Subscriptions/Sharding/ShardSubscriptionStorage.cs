@@ -10,7 +10,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Subscriptions.Sharding;
 
-public class ShardSubscriptionStorage : SubscriptionStorage
+public sealed class ShardSubscriptionStorage : SubscriptionStorage
 {
     private readonly string _shardName;
     private readonly int _shardNumber;

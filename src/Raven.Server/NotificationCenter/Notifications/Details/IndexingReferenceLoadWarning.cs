@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class IndexingReferenceLoadWarning : INotificationDetails
+    public sealed class IndexingReferenceLoadWarning : INotificationDetails
     {
         internal const int MaxNumberOfDetailsPerIndex = 10;
 
@@ -65,7 +65,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public class WarningDetails
+        public sealed class WarningDetails
         {
             private readonly SortedList<int, LoadedReference> _sortedTop10 = new(AllowDuplicatedNumberOfLoadsComparer.Instance);
 
@@ -152,7 +152,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             }
         }
 
-        public class LoadedReference
+        public sealed class LoadedReference
         {
             public string ReferenceId { get; set; }
 

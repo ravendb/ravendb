@@ -20,7 +20,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class ShardedDatabaseSmuggler : SmugglerBase
+    public sealed class ShardedDatabaseSmuggler : SmugglerBase
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly ServerStore _server;

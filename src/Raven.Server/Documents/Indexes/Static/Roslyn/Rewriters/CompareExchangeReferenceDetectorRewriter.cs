@@ -5,7 +5,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class CompareExchangeReferenceDetectorRewriter : CSharpSyntaxRewriter
+    public sealed class CompareExchangeReferenceDetectorRewriter : CSharpSyntaxRewriter
     {
         public bool HasLoadCompareExchangeValue { get; private set; }
 

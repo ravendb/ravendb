@@ -620,7 +620,7 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        internal class FieldType
+        internal sealed class FieldType
         {
             public bool IsArray;
             public bool IsJson;

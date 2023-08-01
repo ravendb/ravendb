@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
-    public class PutRollingIndexCommand : UpdateDatabaseCommand
+    public sealed class PutRollingIndexCommand : UpdateDatabaseCommand
     {
         public string IndexName { get; set; }
         public string FinishedNodeTag { get; set; }

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
 {
-    internal class EtlHandlerProcessorForTest : AbstractDatabaseEtlHandlerProcessorForTest<TestRavenEtlScript, RavenEtlConfiguration, RavenConnectionString>
+    internal sealed class EtlHandlerProcessorForTest : AbstractDatabaseEtlHandlerProcessorForTest<TestRavenEtlScript, RavenEtlConfiguration, RavenConnectionString>
     {
         public EtlHandlerProcessorForTest([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

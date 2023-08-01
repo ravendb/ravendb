@@ -8,7 +8,7 @@ using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    internal class RavenLinqOptimizer : CSharpSyntaxRewriter
+    internal sealed class RavenLinqOptimizer : CSharpSyntaxRewriter
     {
         private readonly FieldNamesValidator _validator;
 

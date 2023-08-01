@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
-    internal class StatsHandlerProcessorForGetMetrics : AbstractStatsHandlerProcessorForGetMetrics<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StatsHandlerProcessorForGetMetrics : AbstractStatsHandlerProcessorForGetMetrics<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StatsHandlerProcessorForGetMetrics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

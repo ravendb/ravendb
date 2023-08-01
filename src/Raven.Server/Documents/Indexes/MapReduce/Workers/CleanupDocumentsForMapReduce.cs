@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Workers
 {
-    public class CleanupDocumentsForMapReduce : CleanupDocuments
+    public sealed class CleanupDocumentsForMapReduce : CleanupDocuments
     {
         private readonly MapReduceIndex _mapReduceIndex;
 

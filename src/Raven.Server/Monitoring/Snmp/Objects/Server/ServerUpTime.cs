@@ -3,7 +3,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    internal class ServerUpTime : ScalarObjectBase<TimeTicks>
+    internal sealed class ServerUpTime : ScalarObjectBase<TimeTicks>
     {
         private readonly ServerStatistics _statistics;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         }
     }
 
-    internal class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>
+    internal sealed class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>
     {
         private readonly ServerStatistics _statistics;
 

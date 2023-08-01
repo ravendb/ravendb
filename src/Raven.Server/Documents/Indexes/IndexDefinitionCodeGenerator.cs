@@ -12,7 +12,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 namespace Raven.Server.Documents.Indexes
 {
 
-    public class IndexDefinitionCodeGenerator
+    public sealed class IndexDefinitionCodeGenerator
     {
         private readonly IndexDefinition _indexDefinition;
         private const string IndexName = "IndexName";

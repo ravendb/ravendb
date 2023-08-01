@@ -9,9 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Tombstones;
 
-internal class GetTombstonesStateCommand : RavenCommand<GetTombstonesStateCommand.Response>
+internal sealed class GetTombstonesStateCommand : RavenCommand<GetTombstonesStateCommand.Response>
 {
-    public class Response
+    public sealed class Response
     {
         public Response()
         {
@@ -46,7 +46,7 @@ internal class GetTombstonesStateCommand : RavenCommand<GetTombstonesStateComman
 
         public List<TombstoneCleaner.TombstonesState.SubscriptionInfo> PerSubscriptionInfo { get; set; }
 
-        public class TombstonesStateForCollection
+        public sealed class TombstonesStateForCollection
         {
             public TombstonesStateForCollection()
             {

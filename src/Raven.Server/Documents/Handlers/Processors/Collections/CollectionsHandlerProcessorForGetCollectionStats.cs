@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Collections
 {
-    internal class CollectionsHandlerProcessorForGetCollectionStats : AbstractCollectionsHandlerProcessorForGetCollectionStats<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class CollectionsHandlerProcessorForGetCollectionStats : AbstractCollectionsHandlerProcessorForGetCollectionStats<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public CollectionsHandlerProcessorForGetCollectionStats([NotNull] DatabaseRequestHandler requestHandler, bool detailed) : base(requestHandler, detailed)
         {

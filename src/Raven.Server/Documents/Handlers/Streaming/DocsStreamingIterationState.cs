@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {
-    public class DocsStreamingIterationState : PulsedEnumerationState<Document>
+    public sealed class DocsStreamingIterationState : PulsedEnumerationState<Document>
     {
         public DocsStreamingIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {

@@ -13,7 +13,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-internal class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<BatchRequestParser.CommandData, BulkInsertHandler, DocumentsOperationContext>
+internal sealed class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<BatchRequestParser.CommandData, BulkInsertHandler, DocumentsOperationContext>
 {
     private readonly DocumentDatabase _database;
     private readonly Logger _logger;

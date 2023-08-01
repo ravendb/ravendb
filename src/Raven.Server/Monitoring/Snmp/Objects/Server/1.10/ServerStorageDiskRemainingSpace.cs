@@ -6,7 +6,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerStorageDiskRemainingSpace : ScalarObjectBase<Gauge32>
+    public sealed class ServerStorageDiskRemainingSpace : ScalarObjectBase<Gauge32>
     {
         private readonly ServerStore _store;
 

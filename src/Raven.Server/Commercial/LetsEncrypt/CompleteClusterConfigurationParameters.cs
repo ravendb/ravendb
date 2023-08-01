@@ -9,7 +9,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class CompleteClusterConfigurationParameters
+public sealed class CompleteClusterConfigurationParameters
 {
     public SetupProgressAndResult Progress;
     public Action<IOperationProgress> OnProgress;

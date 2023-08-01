@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Raven.Server.Exceptions
 {
     [Serializable]
-    internal class MissingAttachmentException : Exception
+    internal sealed class MissingAttachmentException : Exception
     {
         public MissingAttachmentException()
         {

@@ -12,7 +12,7 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class LetsEncryptCertificateUtil
+public sealed class LetsEncryptCertificateUtil
 {
     internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition, X509Certificate2 SelfSignedCertificate) GenerateClientCertificateTask(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {

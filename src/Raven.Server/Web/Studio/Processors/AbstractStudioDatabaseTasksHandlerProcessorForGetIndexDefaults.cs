@@ -44,7 +44,7 @@ internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDe
     }
 }
 
-public class IndexDefaults
+public sealed class IndexDefaults
 {
     public IndexDeploymentMode AutoIndexDeploymentMode { get; set; }
     public IndexDeploymentMode StaticIndexDeploymentMode { get; set; }

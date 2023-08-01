@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
-    internal class StudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StudioStatsHandlerProcessorForGetFooterStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

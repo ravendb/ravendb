@@ -18,7 +18,7 @@ using static Raven.Server.Documents.Subscriptions.SubscriptionFetcher;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
-public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor
+public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor
 {
     private readonly ShardedDocumentDatabase _database;
     private ShardingConfiguration _sharding;

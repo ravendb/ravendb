@@ -4,7 +4,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Commercial;
 
-public class CompleteClusterConfigurationResult
+public sealed class CompleteClusterConfigurationResult
 {
     public string Domain;
     public byte[] CertBytes;

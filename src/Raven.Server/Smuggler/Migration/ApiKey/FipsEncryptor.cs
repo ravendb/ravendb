@@ -13,7 +13,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
 
         public override IHashEncryptor Hash { get; protected set; }
 
-        public class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
+        public sealed class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
         {
             public FipsHashEncryptor()
                 : this(true)
@@ -153,7 +153,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
             }
         }
 
-        public class FipsSymmetricalEncryptor : ISymmetricalEncryptor
+        public sealed class FipsSymmetricalEncryptor : ISymmetricalEncryptor
         {
             private readonly SymmetricAlgorithm algorithm;
 
@@ -233,7 +233,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
             }
         }
 
-        public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
+        public sealed class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
         {
             private readonly RSACryptoServiceProvider algorithm;
 

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Revisions
 {
-    public class DeleteRevisionsOperation : IMaintenanceOperation
+    public sealed class DeleteRevisionsOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Revisions
             return new DeleteRevisionsCommand(conventions, context, _parameters);
         }
 
-        internal class DeleteRevisionsCommand : RavenCommand
+        internal sealed class DeleteRevisionsCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string[] DocumentIds { get; set; }
         }

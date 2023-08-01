@@ -4,9 +4,9 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Indexing
 {
-    public class IndexTransactionCache
+    public sealed class IndexTransactionCache
     {
-        public class CollectionEtags
+        public sealed class CollectionEtags
         {
             public long LastIndexedEtag;
             public long LastProcessedTombstoneEtag;
@@ -14,13 +14,13 @@ namespace Raven.Server.Indexing
             public ReferenceCollectionEtags LastReferencedEtagsForCompareExchange;
         }
 
-        public class ReferenceCollectionEtags
+        public sealed class ReferenceCollectionEtags
         {
             public long LastEtag;
             public long LastProcessedTombstoneEtag;
         }
 
-        public class DirectoryFiles
+        public sealed class DirectoryFiles
         {
             public Dictionary<string, Tree.ChunkDetails[]> ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>(StringComparer.OrdinalIgnoreCase);
         }

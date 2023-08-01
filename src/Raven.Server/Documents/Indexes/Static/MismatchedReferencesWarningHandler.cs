@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static;
 
-public class MismatchedReferencesWarningHandler
+public sealed class MismatchedReferencesWarningHandler
 {
     private Dictionary<string, Dictionary<string, LoadFailure>> _mismatchedReferences;
 
@@ -14,7 +14,7 @@ public class MismatchedReferencesWarningHandler
     public bool IsEmpty => _mismatchedReferences.Count == 0;
     public bool IsFull => _mismatchedReferences.Count >= MaxMismatchedDocumentLoadsPerIndex;
 
-    public class LoadFailure
+    public sealed class LoadFailure
     {
         public string SourceId;
         public string ReferenceId;

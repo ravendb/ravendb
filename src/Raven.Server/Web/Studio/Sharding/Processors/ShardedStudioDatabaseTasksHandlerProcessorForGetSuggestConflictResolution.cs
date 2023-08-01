@@ -9,7 +9,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
 {
-    internal class ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution : AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution : AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution([NotNull] ShardedDatabaseRequestHandler requestHandler)
             : base(requestHandler)

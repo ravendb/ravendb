@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdatePullReplicationAsHubCommand : UpdateDatabaseCommand
+    public sealed class UpdatePullReplicationAsHubCommand : UpdateDatabaseCommand
     {
         public PullReplicationDefinition Definition;
 

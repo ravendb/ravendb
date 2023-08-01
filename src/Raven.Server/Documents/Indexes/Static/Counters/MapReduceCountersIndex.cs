@@ -15,7 +15,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class MapReduceCountersIndex : MapReduceIndex
+    public sealed class MapReduceCountersIndex : MapReduceIndex
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

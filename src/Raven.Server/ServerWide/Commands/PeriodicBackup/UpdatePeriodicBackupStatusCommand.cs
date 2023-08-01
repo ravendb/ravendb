@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
-    public class UpdatePeriodicBackupStatusCommand : UpdateValueForDatabaseCommand
+    public sealed class UpdatePeriodicBackupStatusCommand : UpdateValueForDatabaseCommand
     {
         public PeriodicBackupStatus PeriodicBackupStatus;
 

@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
-internal class DatabaseNotificationCenterHandlerProcessorForDismiss : AbstractDatabaseNotificationCenterHandlerProcessorForDismiss<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class DatabaseNotificationCenterHandlerProcessorForDismiss : AbstractDatabaseNotificationCenterHandlerProcessorForDismiss<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public DatabaseNotificationCenterHandlerProcessorForDismiss([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.Tcp;
 
-internal class DatabaseTcpConnectionInfoHandlerProcessorForGet<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+internal sealed class DatabaseTcpConnectionInfoHandlerProcessorForGet<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
     public DatabaseTcpConnectionInfoHandlerProcessorForGet([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)

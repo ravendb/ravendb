@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Facets
 {
-    public class FacetQuery
+    public sealed class FacetQuery
     {
         public readonly IndexQueryServerSide Query;
 

@@ -4,7 +4,7 @@ using Raven.Server.Web.Operations.Processors;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Operations;
 
-internal class ShardedOperationsHandlerProcessorForGetNextOperationId : AbstractOperationsHandlerProcessorForGetNextOperationId<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedOperationsHandlerProcessorForGetNextOperationId : AbstractOperationsHandlerProcessorForGetNextOperationId<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedOperationsHandlerProcessorForGetNextOperationId([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

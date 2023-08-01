@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class ExceptionDetails : INotificationDetails
+    public sealed class ExceptionDetails : INotificationDetails
     {
         public ExceptionDetails()
         {

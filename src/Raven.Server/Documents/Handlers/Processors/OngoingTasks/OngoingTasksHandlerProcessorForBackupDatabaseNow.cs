@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForBackupDatabaseNow : AbstractOngoingTasksHandlerProcessorForBackupDatabaseNow<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForBackupDatabaseNow : AbstractOngoingTasksHandlerProcessorForBackupDatabaseNow<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForBackupDatabaseNow([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

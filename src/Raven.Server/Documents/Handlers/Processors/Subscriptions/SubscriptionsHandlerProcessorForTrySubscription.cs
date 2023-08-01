@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionsHandlerProcessorForTrySubscription : AbstractSubscriptionsHandlerProcessorForTrySubscription<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class SubscriptionsHandlerProcessorForTrySubscription : AbstractSubscriptionsHandlerProcessorForTrySubscription<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public SubscriptionsHandlerProcessorForTrySubscription([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

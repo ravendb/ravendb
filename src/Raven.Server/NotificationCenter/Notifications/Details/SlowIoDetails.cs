@@ -7,7 +7,7 @@ using static Sparrow.Server.Meters.IoMetrics;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class SlowIoDetails : INotificationDetails
+    public sealed class SlowIoDetails : INotificationDetails
     {
         public const int MaxNumberOfWrites = 500;
 
@@ -27,7 +27,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             return djv;
         }
 
-        public class SlowWriteInfo : IDynamicJsonValueConvertible
+        public sealed class SlowWriteInfo : IDynamicJsonValueConvertible
         {
             public string Key => $"{Type}/{Path}";
 

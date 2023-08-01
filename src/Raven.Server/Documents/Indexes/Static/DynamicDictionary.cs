@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicDictionary : DynamicObject, IDictionary<object, object>, IEnumerable<object>
+    public sealed class DynamicDictionary : DynamicObject, IDictionary<object, object>, IEnumerable<object>
     {
         private readonly Dictionary<object, object> _dictionary;
 
