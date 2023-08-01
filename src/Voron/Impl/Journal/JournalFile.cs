@@ -19,7 +19,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalFile : IDisposable
+    public sealed unsafe class JournalFile : IDisposable
     {
         private readonly StorageEnvironment _env;
         private IJournalWriter _journalWriter;

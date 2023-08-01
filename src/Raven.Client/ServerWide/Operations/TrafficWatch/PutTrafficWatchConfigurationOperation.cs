@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
             return new SetTrafficWatchConfigurationCommand(conventions, _parameters);
         }
 
-        private class SetTrafficWatchConfigurationCommand : RavenCommand
+        private sealed class SetTrafficWatchConfigurationCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;

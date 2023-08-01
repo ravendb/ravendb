@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class ReplayTxs : IDisposable
+        private sealed class ReplayTxs : IDisposable
         {
             public DocumentsOperationContext TxCtx;
             public DocumentsTransaction PrevTx;

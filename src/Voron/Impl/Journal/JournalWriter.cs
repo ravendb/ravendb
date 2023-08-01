@@ -16,7 +16,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalWriter : IJournalWriter
+    public sealed unsafe class JournalWriter : IJournalWriter
     {
         private const int ERROR_WORKING_SET_QUOTA = 0x5AD;
 

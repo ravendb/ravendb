@@ -55,7 +55,7 @@ public sealed class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
 
         public RavenCommand<NotificationCenterDatabaseStats> CreateCommandForShard(int shardNumber) => new GetNotificationCenterDatabaseStatsCommand();
 
-        private class GetNotificationCenterDatabaseStatsCommand : RavenCommand<NotificationCenterDatabaseStats>
+        private sealed class GetNotificationCenterDatabaseStatsCommand : RavenCommand<NotificationCenterDatabaseStats>
         {
             public override bool IsReadRequest => true;
 

@@ -32,7 +32,7 @@ namespace Raven.Client.ServerWide.Operations
             return new PromoteDatabaseNodeCommand(_databaseName, _node);
         }
 
-        private class PromoteDatabaseNodeCommand : RavenCommand<DatabasePutResult>, IRaftCommand
+        private sealed class PromoteDatabaseNodeCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;

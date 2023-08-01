@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Sparrow
 {
-    public unsafe class UnmanagedMemory
+    public sealed unsafe class UnmanagedMemory
     {
         private Memory<byte>? _memory;
 

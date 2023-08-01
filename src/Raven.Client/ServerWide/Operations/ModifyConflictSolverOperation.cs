@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ModifyConflictSolverCommand(conventions, _database, this);
         }
 
-        private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>, IRaftCommand
+        private sealed class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>, IRaftCommand
         {
             private readonly ModifyConflictSolverOperation _solver;
             private readonly DocumentConventions _conventions;

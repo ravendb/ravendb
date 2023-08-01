@@ -10,7 +10,7 @@ namespace Corax.Utils;
 //This is implementation of BM25F from this white-paper:
 //https://www.researchgate.net/publication/45886647_Integrating_the_Probabilistic_Models_BM25BM25F_into_Lucene
 
-public unsafe class Bm25Relevance : IDisposable
+public sealed unsafe class Bm25Relevance : IDisposable
 {
     [ThreadStatic]
     internal static ArrayPool<Bm25Relevance> RelevancePool; 

@@ -15,7 +15,7 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly object _watchersLock = new object();
 
-        private class State
+        private sealed class State
         {
             public TaskCompletionSource<object> NewWebSocket = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             public TaskCompletionSource<object> AllWebSocketsRemoved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

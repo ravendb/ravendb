@@ -1073,7 +1073,7 @@ namespace Voron.Impl
             key = null;
         }
 
-        private class PagerStateCacheItem
+        private sealed class PagerStateCacheItem
         {
             public readonly int FileNumber;
             public readonly PagerState State;

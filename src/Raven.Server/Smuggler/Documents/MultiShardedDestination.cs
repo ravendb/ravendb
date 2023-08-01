@@ -191,7 +191,7 @@ namespace Raven.Server.Smuggler.Documents
             public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
         }
 
-        private class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions
+        private sealed class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions
         {
             private readonly ByteStringContext _allocator;
 
@@ -231,7 +231,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
 
-        private class ShardedDocumentActions : ShardedActions<IDocumentActions>, IDocumentActions
+        private sealed class ShardedDocumentActions : ShardedActions<IDocumentActions>, IDocumentActions
         {
             private readonly ByteStringContext _allocator;
 
@@ -266,7 +266,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class ShardedCounterActions : ShardedActions<ICounterActions>, ICounterActions
+        private sealed class ShardedCounterActions : ShardedActions<ICounterActions>, ICounterActions
         {
             private readonly ByteStringContext _allocator;
 
@@ -292,7 +292,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class ShardedTimeSeriesActions : ShardedActions<ITimeSeriesActions>, ITimeSeriesActions
+        private sealed class ShardedTimeSeriesActions : ShardedActions<ITimeSeriesActions>, ITimeSeriesActions
         {
             private readonly ByteStringContext _allocator;
 
@@ -318,7 +318,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions
+        private sealed class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions
         {
             private readonly ByteStringContext _allocator;
 

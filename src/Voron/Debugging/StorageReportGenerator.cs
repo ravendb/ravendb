@@ -74,7 +74,7 @@ namespace Voron.Debugging
         public InMemoryStorageState InMemoryStorageState { get; set; }
     }
 
-    public unsafe class StorageReportGenerator
+    public sealed unsafe class StorageReportGenerator
     {
         private readonly LowLevelTransaction _tx;
         private StreamDetails _skippedStreamsDetailsEntry;

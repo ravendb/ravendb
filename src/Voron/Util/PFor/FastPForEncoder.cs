@@ -9,7 +9,7 @@ using Sparrow.Server;
 
 namespace Voron.Util.PFor;
 
-public unsafe class FastPForEncoder  : IDisposable
+public sealed unsafe class FastPForEncoder  : IDisposable
 {
     public const byte VarIntBatchMarker = 255;
     public const byte BiggerThanMaxMarker = 254;

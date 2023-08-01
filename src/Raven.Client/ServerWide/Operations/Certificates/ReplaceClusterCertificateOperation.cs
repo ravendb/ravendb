@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new ReplaceClusterCertificateCommand(conventions, _certBytes, _replaceImmediately);
         }
 
-        private class ReplaceClusterCertificateCommand : RavenCommand, IRaftCommand
+        private sealed class ReplaceClusterCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly byte[] _certBytes;

@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
             return new GetShardedPeriodicBackupStatusCommand(_taskId);
         }
 
-        private class GetShardedPeriodicBackupStatusCommand : RavenCommand<GetShardedPeriodicBackupStatusOperationResult>
+        private sealed class GetShardedPeriodicBackupStatusCommand : RavenCommand<GetShardedPeriodicBackupStatusOperationResult>
         {
             public override bool IsReadRequest => true;
             private readonly long _taskId;

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Storage.Schema.Updates.Configuration
 {
-    public unsafe class From40011 : ISchemaUpdate
+    public sealed unsafe class From40011 : ISchemaUpdate
     {
         public int From => 40_011;
 

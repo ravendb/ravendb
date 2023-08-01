@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private class AggregationBatch : IDisposable
+        private sealed class AggregationBatch : IDisposable
         {
             public readonly List<BlittableJsonReaderObject> Items = new List<BlittableJsonReaderObject>();
 
@@ -854,14 +854,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private class TreeReductionStats
+        private sealed class TreeReductionStats
         {
             public IndexingStatsScope LeafAggregation;
             public IndexingStatsScope BranchAggregation;
             public IndexingStatsScope StoringReduceResult;
         }
 
-        private class NestedValuesReductionStats
+        private sealed class NestedValuesReductionStats
         {
             public IndexingStatsScope NestedValuesRead;
             public IndexingStatsScope NestedValuesAggregation;

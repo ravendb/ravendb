@@ -285,7 +285,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         writer.WriteEndObject();
     }
 
-    private class MultiGetHttpResponseFeature : IHttpResponseFeature
+    private sealed class MultiGetHttpResponseFeature : IHttpResponseFeature
     {
         public MultiGetHttpResponseFeature()
         {

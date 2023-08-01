@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Expiration
 {
-    public unsafe class ExpirationStorage
+    public sealed unsafe class ExpirationStorage
     {
         private const string DocumentsByExpiration = "DocumentsByExpiration";
         private const string DocumentsByRefresh = "DocumentsByRefresh";

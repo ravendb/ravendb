@@ -108,7 +108,7 @@ public static class MemoryUtils
         }
     }
 
-    private class InvertedComparer : IComparer<long>
+    private sealed class InvertedComparer : IComparer<long>
     {
         public int Compare(long x, long y)
         {

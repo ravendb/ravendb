@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
          RegexOptions.Compiled |
          RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        private class IncludePath
+        private sealed class IncludePath
         {
             public string Path;
             public string Addition;

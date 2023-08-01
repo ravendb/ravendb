@@ -119,7 +119,7 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
         }
     }
 
-    private class GetRestorePointsCommand : RavenCommand<RestorePoints>
+    private sealed class GetRestorePointsCommand : RavenCommand<RestorePoints>
     {
         private readonly PeriodicBackupConnectionType _type;
         private readonly BlittableJsonReaderObject _settings;

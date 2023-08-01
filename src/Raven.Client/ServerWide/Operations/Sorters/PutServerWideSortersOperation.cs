@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Sorters
             return new PutServerWideSortersCommand(conventions, context, _sortersToAdd);
         }
 
-        private class PutServerWideSortersCommand : RavenCommand, IRaftCommand
+        private sealed class PutServerWideSortersCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _sortersToAdd;

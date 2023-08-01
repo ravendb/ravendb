@@ -26,7 +26,7 @@ internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForRestartDat
 
     protected override RavenCommand<object> CreateCommandForNode(string nodeTag) => new RestartDatabaseCommand(nodeTag);
 
-    private class RestartDatabaseCommand : RavenCommand
+    private sealed class RestartDatabaseCommand : RavenCommand
     {
         public RestartDatabaseCommand(string nodeTag)
         {

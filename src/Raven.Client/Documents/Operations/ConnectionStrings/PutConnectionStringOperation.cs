@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new PutConnectionStringCommand(conventions, _connectionString);
         }
 
-        private class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>, IRaftCommand
+        private sealed class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly T _connectionString;

@@ -4,7 +4,7 @@ using Voron.Data.BTrees;
 
 namespace Voron.Data
 {
-    public unsafe class EmptyIterator : IIterator
+    public sealed unsafe class EmptyIterator : IIterator
     {
         public bool Seek(Slice key)
         {

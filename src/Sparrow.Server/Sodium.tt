@@ -61,7 +61,7 @@ namespace Sparrow
 
 		#region Posix
 
-		private class Posix
+		private sealed class Posix
 		{
 			private static readonly bool _is32bits;
 			private static readonly bool _isArm;
@@ -313,7 +313,7 @@ namespace Sparrow
 		#endregion
 		
 		#region Windows
-		private class Windows
+		private sealed class Windows
 		{
 			private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
 
@@ -407,7 +407,7 @@ namespace Sparrow
 
 			#region x64
 
-			private class X64
+			private sealed class X64
 			{
 				private const string LIB_SODIUM = "libsodium.x64.dll";
 

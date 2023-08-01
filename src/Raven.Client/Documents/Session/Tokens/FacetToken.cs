@@ -184,7 +184,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        private class FacetAggregationToken : QueryToken
+        private sealed class FacetAggregationToken : QueryToken
         {
             private readonly string _fieldName;
             private readonly string _fieldDisplayName;

@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new PutServerWideBackupConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutServerWideBackupConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
+        private sealed class PutServerWideBackupConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;

@@ -180,12 +180,12 @@ namespace Raven.Server.Utils
             }
         }
 
-        private class Conflicted
+        private sealed class Conflicted
         {
             public readonly HashSet<BlittableJsonReaderObject.PropertyDetails> Values = new HashSet<BlittableJsonReaderObject.PropertyDetails>();
         }
 
-        private class ArrayWithWarning
+        private sealed class ArrayWithWarning
         {
             public readonly BlittableJsonReaderArray MergedArray;
 

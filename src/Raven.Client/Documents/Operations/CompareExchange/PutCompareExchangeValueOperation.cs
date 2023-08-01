@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new PutCompareExchangeValueCommand(_key, _value, _index, _metadata, conventions);
         }
 
-        private class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
+        private sealed class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
         {
             private readonly string _key;
             private readonly T _value;

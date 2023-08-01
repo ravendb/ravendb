@@ -1342,7 +1342,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private class EnforceRevisionConfigurationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        private sealed class EnforceRevisionConfigurationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly RevisionsStorage _revisionsStorage;
             private readonly List<string> _ids;
@@ -1380,7 +1380,7 @@ namespace Raven.Server.Documents.Revisions
                 return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids);
             }
 
-            private class EnforceRevisionConfigurationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, EnforceRevisionConfigurationCommand>
+            private sealed class EnforceRevisionConfigurationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, EnforceRevisionConfigurationCommand>
             {
                 private readonly RevisionsStorage _revisionsStorage;
                 private readonly List<string> _ids;
@@ -1398,7 +1398,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private class Parameters
+        private sealed class Parameters
         {
             public DateTime Before;
             public DateTime MinimalDate;

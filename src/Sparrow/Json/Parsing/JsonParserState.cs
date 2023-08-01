@@ -4,7 +4,7 @@ using Sparrow.Collections;
 
 namespace Sparrow.Json.Parsing
 {
-    public unsafe class JsonParserState
+    public sealed unsafe class JsonParserState
     {
         public const int EscapePositionItemSize = 5;
         public const int ControlCharacterItemSize = 5;

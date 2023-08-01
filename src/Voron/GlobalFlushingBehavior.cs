@@ -28,7 +28,7 @@ namespace Voron
             return flusher;
         });
 
-        private class EnvSyncReq
+        private sealed class EnvSyncReq
         {
             public StorageEnvironment Env => Reference?.Owner;
             public int IsSyncRun;
@@ -48,7 +48,7 @@ namespace Voron
 
         private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
 
-        private class MountPointInfo
+        private sealed class MountPointInfo
         {
             public readonly ConcurrentQueue<EnvSyncReq> StorageEnvironments = new ConcurrentQueue<EnvSyncReq>();
         }

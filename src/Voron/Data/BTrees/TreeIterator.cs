@@ -9,7 +9,7 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreeIterator : IIterator
+    public sealed unsafe class TreeIterator : IIterator
     {
         private readonly Tree _tree;
         private readonly LowLevelTransaction _tx;

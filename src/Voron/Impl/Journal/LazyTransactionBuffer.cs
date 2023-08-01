@@ -8,7 +8,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class LazyTransactionBuffer : IDisposable
+    public sealed unsafe class LazyTransactionBuffer : IDisposable
     {
         public bool HasDataInBuffer() => _firstPositionInJournalFile != null;
 

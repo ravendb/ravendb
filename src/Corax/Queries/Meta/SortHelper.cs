@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Queries;
 
-internal unsafe class SortHelper
+internal sealed unsafe class SortHelper
 {
     public static int FindMatches(Span<long> dst, Span<long> left, Span<long> right)
     {

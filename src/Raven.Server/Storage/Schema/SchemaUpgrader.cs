@@ -41,7 +41,7 @@ namespace Raven.Server.Storage.Schema
             CoraxIndex
         }
 
-        private class InternalUpgrader
+        private sealed class InternalUpgrader
         {
             private readonly StorageType _storageType;
             private readonly ConfigurationStorage _configurationStorage;

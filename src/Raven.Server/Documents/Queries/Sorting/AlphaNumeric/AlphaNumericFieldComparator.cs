@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             }
 
-            private class AlphanumericStringComparisonState : AbstractAlphanumericComparisonState<string>
+            private sealed class AlphanumericStringComparisonState : AbstractAlphanumericComparisonState<string>
             {
                 public AlphanumericStringComparisonState(string originalString) : base(originalString, originalString.Length)
                 {
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             }
 
-            private class AlphanumericUnmanagedStringComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
+            private sealed class AlphanumericUnmanagedStringComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
             {
                 [ThreadStatic]
                 private static Decoder Decoder;

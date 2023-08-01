@@ -128,7 +128,7 @@ public sealed class ShardedSuggestionQueryOperation : AbstractShardedQueryOperat
         }
     }
 
-    private class CombinedSuggestions
+    private sealed class CombinedSuggestions
     {
         public HashSet<string> Suggestions { get; } = new();
 

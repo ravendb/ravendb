@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new ConfigureRevisionsCommand(conventions, _configuration);
         }
 
-        private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>, IRaftCommand
+        private sealed class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly RevisionsConfiguration _configuration;

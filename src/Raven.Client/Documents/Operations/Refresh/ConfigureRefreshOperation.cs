@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Refresh
             return new ConfigureRefreshCommand(conventions, _configuration);
         }
 
-        private class ConfigureRefreshCommand : RavenCommand<ConfigureRefreshOperationResult>, IRaftCommand
+        private sealed class ConfigureRefreshCommand : RavenCommand<ConfigureRefreshOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly RefreshConfiguration _configuration;

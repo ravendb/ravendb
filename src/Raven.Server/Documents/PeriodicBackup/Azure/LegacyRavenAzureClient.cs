@@ -886,7 +886,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 .Aggregate(stringToHash, (current, parameter) => current + $"{parameter.Key.ToLower()}:{parameter.Value}\n");
         }
 
-        private class EmptyContent : HttpContent
+        private sealed class EmptyContent : HttpContent
         {
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {

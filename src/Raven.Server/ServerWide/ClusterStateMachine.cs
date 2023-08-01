@@ -4816,7 +4816,7 @@ namespace Raven.Server.ServerWide
         public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
         internal Logger Log;
         private SingleUseFlag _isDisposed = new SingleUseFlag();
-        private class ErrorHolder
+        private sealed class ErrorHolder
         {
             public long Index;
             public ExceptionDispatchInfo Exception;

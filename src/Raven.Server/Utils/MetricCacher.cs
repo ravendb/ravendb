@@ -75,7 +75,7 @@ namespace Raven.Server.Utils
             return (T)result;
         }
 
-        private class MetricValue
+        private sealed class MetricValue
         {
             private readonly TimeSpan _refreshRate;
             private readonly Func<object> _factory;

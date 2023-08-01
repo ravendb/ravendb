@@ -317,7 +317,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
         return nodeId;
     }
 
-    private class GetDatabasesInfoCommand : RavenCommand<DatabasesInfo>
+    private sealed class GetDatabasesInfoCommand : RavenCommand<DatabasesInfo>
     {
         private readonly bool _namesOnly;
         private readonly int? _start;

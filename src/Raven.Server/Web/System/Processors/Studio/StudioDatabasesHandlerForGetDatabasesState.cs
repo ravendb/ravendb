@@ -193,7 +193,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
         context.Write(writer, doc);
     }
 
-    private class GetStudioDatabasesStateCommand : RavenCommand<StudioDatabasesState>
+    private sealed class GetStudioDatabasesStateCommand : RavenCommand<StudioDatabasesState>
     {
         private readonly int? _start;
         private readonly int? _pageSize;

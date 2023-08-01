@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
             return new ConfigurePostgreSqlCommand(conventions, _configuration);
         }
 
-        private class ConfigurePostgreSqlCommand : RavenCommand<ConfigurePostgreSqlOperationResult>, IRaftCommand
+        private sealed class ConfigurePostgreSqlCommand : RavenCommand<ConfigurePostgreSqlOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly PostgreSqlConfiguration _configuration;

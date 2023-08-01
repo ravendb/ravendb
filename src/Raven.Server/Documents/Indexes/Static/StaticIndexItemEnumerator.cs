@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return GetEnumerator();
             }
 
-            private class Enumerator<TEnumeratorType> : IEnumerator<TEnumeratorType> where TEnumeratorType : AbstractDynamicObject, new()
+            private sealed class Enumerator<TEnumeratorType> : IEnumerator<TEnumeratorType> where TEnumeratorType : AbstractDynamicObject, new()
             {
                 private TEnumeratorType _dynamicItem;
                 private readonly StaticIndexItemEnumerator<TEnumeratorType> _inner;
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private class MultipleIndexingFunctionsEnumerator<TMultipleIndexingFunctionsEnumeratorType> : IEnumerable where TMultipleIndexingFunctionsEnumeratorType : AbstractDynamicObject, new()
+        private sealed class MultipleIndexingFunctionsEnumerator<TMultipleIndexingFunctionsEnumeratorType> : IEnumerable where TMultipleIndexingFunctionsEnumeratorType : AbstractDynamicObject, new()
         {
             private readonly Enumerator<TMultipleIndexingFunctionsEnumeratorType> _enumerator;
 
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 _enumerator.Reset();
             }
 
-            private class Enumerator<TEnumeratorType> : IEnumerator where TEnumeratorType : AbstractDynamicObject
+            private sealed class Enumerator<TEnumeratorType> : IEnumerator where TEnumeratorType : AbstractDynamicObject
             {
                 private readonly List<IndexingFunc> _funcs;
                 private readonly IEnumerator<TEnumeratorType> _docEnumerator;

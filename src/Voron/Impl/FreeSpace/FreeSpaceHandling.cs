@@ -166,7 +166,7 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private class FoundSectionsInfo
+        private sealed class FoundSectionsInfo
         {
 
             public List<long> Sections = new List<long>();

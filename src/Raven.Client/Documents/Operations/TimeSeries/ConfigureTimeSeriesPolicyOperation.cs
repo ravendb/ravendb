@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new ConfigureTimeSeriesPolicyCommand(conventions, _collection, _config);
         }
 
-        private class ConfigureTimeSeriesPolicyCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
+        private sealed class ConfigureTimeSeriesPolicyCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly TimeSeriesPolicy _configuration;
@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new RemoveTimeSeriesPolicyCommand(_collection, _name);
         }
 
-        private class RemoveTimeSeriesPolicyCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
+        private sealed class RemoveTimeSeriesPolicyCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
             private readonly string _collection;
             private readonly string _name;

@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 yield return item;
         }
 
-        private class JsValueComparer : IEqualityComparer<JsValue>
+        private sealed class JsValueComparer : IEqualityComparer<JsValue>
         {
             public static readonly JsValueComparer Instance = new ();
 

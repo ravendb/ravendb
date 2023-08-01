@@ -13,7 +13,7 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class ParentPageAction
+    public sealed unsafe class ParentPageAction
     {
         private readonly TreePage _currentPage;
         private readonly TreePage _parentPage;

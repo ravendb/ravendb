@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Analyzers
             return new DeleteServerWideAnalyzerCommand(_analyzerName);
         }
 
-        private class DeleteServerWideAnalyzerCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteServerWideAnalyzerCommand : RavenCommand, IRaftCommand
         {
             private readonly string _analyzerName;
 

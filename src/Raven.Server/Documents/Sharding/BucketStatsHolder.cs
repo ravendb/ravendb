@@ -10,7 +10,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Sharding
 {
-    internal unsafe class BucketStatsHolder
+    internal sealed unsafe class BucketStatsHolder
     {
         private readonly Dictionary<int, Documents.BucketStats> _values;
         private readonly Dictionary<int, ChangeVector> _mergedChangeVectors;

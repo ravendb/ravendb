@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         [UsedImplicitly]
         private static CacheByReaderCleaner Cleaner = new();
 
-        private class CacheByReaderCleaner : ILowMemoryHandler
+        private sealed class CacheByReaderCleaner : ILowMemoryHandler
         {
             public CacheByReaderCleaner()
             {
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             return new CachingWeight(this, _inner.CreateWeight(searcher, state), searcher);
         }
 
-        private class CachingWeight : Weight
+        private sealed class CachingWeight : Weight
         {
             private readonly CachingQuery _parent;
             private readonly Weight _inner;
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 return new FastBitArrayScorer(results, similarity, disposeArray: false);
             }
 
-            private class ReturnBuffer
+            private sealed class ReturnBuffer
             {
                 public ulong[] Buffer;
 

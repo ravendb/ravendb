@@ -19,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations
             return new GetDatabaseRecordCommand(_database);
         }
 
-        private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecordWithEtag>
+        private sealed class GetDatabaseRecordCommand : RavenCommand<DatabaseRecordWithEtag>
         {
             private readonly string _database;
 

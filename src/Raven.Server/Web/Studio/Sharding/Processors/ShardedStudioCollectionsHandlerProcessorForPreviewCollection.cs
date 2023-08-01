@@ -73,7 +73,7 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
         writer.WriteContinuationToken(context, _continuationToken);
     }
 
-    private class ShardedPreviewState : PreviewState
+    private sealed class ShardedPreviewState : PreviewState
     {
         private const string ShardNumberKey = "@shard-number";
         public int ShardNumber;
@@ -166,7 +166,7 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
             return new ShardedCollectionPreviewCommand(_collection, _token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        private class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
+        private sealed class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
         {
             private readonly string _collection;
             private readonly int _start;

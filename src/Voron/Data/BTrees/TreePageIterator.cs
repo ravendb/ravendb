@@ -6,7 +6,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreePageIterator : IIterator
+    public sealed unsafe class TreePageIterator : IIterator
     {
         private readonly Slice _treeKey;
         private readonly Tree _parent;

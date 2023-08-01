@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.Identities
             return new GetIdentitiesCommand();
         }
 
-        private class GetIdentitiesCommand : RavenCommand<Dictionary<string, long>>
+        private sealed class GetIdentitiesCommand : RavenCommand<Dictionary<string, long>>
         {
             public override bool IsReadRequest => true;
 

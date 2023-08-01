@@ -228,7 +228,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class InnerPartStream : Stream
+        private sealed class InnerPartStream : Stream
         {
             private readonly Stream _file;
             private readonly long _startPosition;

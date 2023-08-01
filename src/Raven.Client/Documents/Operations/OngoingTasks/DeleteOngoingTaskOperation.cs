@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new DeleteOngoingTaskCommand(_taskId, _taskType);
         }
 
-        private class DeleteOngoingTaskCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private sealed class DeleteOngoingTaskCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly OngoingTaskType _taskType;

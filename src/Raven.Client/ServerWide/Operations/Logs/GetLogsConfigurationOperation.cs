@@ -16,7 +16,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             return new GetLogsConfigurationCommand();
         }
 
-        private class GetLogsConfigurationCommand : RavenCommand<GetLogsConfigurationResult>
+        private sealed class GetLogsConfigurationCommand : RavenCommand<GetLogsConfigurationResult>
         {
             public override bool IsReadRequest => true;
 

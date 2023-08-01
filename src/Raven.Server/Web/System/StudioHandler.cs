@@ -34,7 +34,7 @@ namespace Raven.Server.Web.System
         /// <summary>
         /// Control structure for a cached file
         /// </summary>
-        private class CachedStaticFile
+        private sealed class CachedStaticFile
         {
             public string ContentType;
             public string ETag;

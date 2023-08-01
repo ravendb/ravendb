@@ -443,7 +443,7 @@ namespace Raven.Client.Documents.Indexes
             return whereEntityIsVisitor.HasWhereEntityIs;
         }
 
-        private class WhereEntityIsVisitor : ExpressionVisitor
+        private sealed class WhereEntityIsVisitor : ExpressionVisitor
         {
             public bool HasWhereEntityIs { get; private set; }
 

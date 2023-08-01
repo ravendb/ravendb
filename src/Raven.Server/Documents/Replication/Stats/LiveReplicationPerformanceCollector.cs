@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Replication.Stats
                 stats.Performance.Add(latestStat);
         }
 
-        private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator> : HandlerAndPerformanceStatsList<THandler, TStatsAggregator>
+        private sealed class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator> : HandlerAndPerformanceStatsList<THandler, TStatsAggregator>
         {
             public ReplicationHandlerAndPerformanceStatsList(THandler handler) : base(handler)
             {

@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.TimeSeries
         public bool IsRaw { get; }
     }
 
-    public unsafe class TimeSeriesReader : ITimeSeriesReader
+    public sealed unsafe class TimeSeriesReader : ITimeSeriesReader
     {
         private readonly DocumentsOperationContext _context;
         private readonly string _documentId;

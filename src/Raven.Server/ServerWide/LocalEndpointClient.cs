@@ -96,7 +96,7 @@ namespace Raven.Server.ServerWide
             throw new HttpRequestException($"A call to endpoint <<{route.Method} {route.Path}>> has failed with status code {statusCode}");
         }
 
-        private class LocalInvocationCustomHttpContext : HttpContext, IDisposable
+        private sealed class LocalInvocationCustomHttpContext : HttpContext, IDisposable
         {
             public LocalInvocationCustomHttpContext(string method, string path)
             {
@@ -120,7 +120,7 @@ namespace Raven.Server.ServerWide
             public override string TraceIdentifier { get; set; }
             public override ISession Session { get; set; }
 
-            private class LocalHttpResponse : HttpResponse
+            private sealed class LocalHttpResponse : HttpResponse
             {
                 private Stream _body;
 
@@ -175,7 +175,7 @@ namespace Raven.Server.ServerWide
                 public override bool HasStarted { get; }
             }
 
-            private class LocalHttpRequest : HttpRequest
+            private sealed class LocalHttpRequest : HttpRequest
             {
                 public override Task<IFormCollection> ReadFormAsync(CancellationToken cancellationToken = new CancellationToken())
                 {

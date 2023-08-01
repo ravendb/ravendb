@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _stats.PutResult = stats.For(IndexingOperation.Reduce.PutMapResult, start: false);
         }
 
-        private class MapPhaseStats
+        private sealed class MapPhaseStats
         {
             public IndexingStatsScope RemoveResult;
             public IndexingStatsScope PutResult;

@@ -261,7 +261,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class HistoryLogEntry
+        private sealed class HistoryLogEntry
         {
             public string Guid;
             public long Index;

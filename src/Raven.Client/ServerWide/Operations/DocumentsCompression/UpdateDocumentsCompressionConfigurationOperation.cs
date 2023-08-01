@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.DocumentsCompression
             return new UpdateDocumentCompressionConfigurationCommand(conventions, _documentsCompressionConfiguration);
         }
 
-        private class UpdateDocumentCompressionConfigurationCommand : RavenCommand<DocumentCompressionConfigurationResult>, IRaftCommand
+        private sealed class UpdateDocumentCompressionConfigurationCommand : RavenCommand<DocumentCompressionConfigurationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly DocumentsCompressionConfiguration _documentsCompressionConfiguration;

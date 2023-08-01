@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             public BlittableJsonReaderObject Current => _enumerator.Current?.BlittableJson;
 
-            private class Enumerator : IEnumerator<DynamicBlittableJson>
+            private sealed class Enumerator : IEnumerator<DynamicBlittableJson>
             {
                 private IEnumerator<BlittableJsonReaderObject> _items;
 

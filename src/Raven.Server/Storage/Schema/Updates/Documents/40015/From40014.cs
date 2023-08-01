@@ -9,7 +9,7 @@ using static Raven.Server.Documents.Schemas.Revisions;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From40014 : ISchemaUpdate
+    public sealed unsafe class From40014 : ISchemaUpdate
     {
         public int From => 40_014;
         public int To => 40_015;

@@ -21,7 +21,7 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Platform.Win32
 {
-    public unsafe class WindowsMemoryMapPager : AbstractPager
+    public sealed unsafe class WindowsMemoryMapPager : AbstractPager
     {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         private long _totalAllocationSize;

@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new GetCompareExchangeValueCommand(_key, _materializeMetadata, conventions, _nodeTag);
         }
 
-        private class GetCompareExchangeValueCommand : RavenCommand<CompareExchangeValue<T>>
+        private sealed class GetCompareExchangeValueCommand : RavenCommand<CompareExchangeValue<T>>
         {
             private readonly string _key;
             private readonly bool _materializeMetadata;

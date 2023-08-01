@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public static SelectManyRewriter SelectMethodOnProperties = new SelectOnPropertiesRewriter();
 
-        private class SelectOnPropertiesRewriter : SelectManyRewriter
+        private sealed class SelectOnPropertiesRewriter : SelectManyRewriter
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
         }
 
-        private class MethodSyntaxRewriter : SelectManyRewriter
+        private sealed class MethodSyntaxRewriter : SelectManyRewriter
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
         }
 
-        private class QuerySyntaxRewriter : SelectManyRewriter
+        private sealed class QuerySyntaxRewriter : SelectManyRewriter
         {
             public override SyntaxNode VisitFromClause(FromClauseSyntax node)
             {

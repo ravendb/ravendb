@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new IndexHasChangedCommand(conventions, context, _definition);
         }
 
-        private class IndexHasChangedCommand : RavenCommand<bool>
+        private sealed class IndexHasChangedCommand : RavenCommand<bool>
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _definition;

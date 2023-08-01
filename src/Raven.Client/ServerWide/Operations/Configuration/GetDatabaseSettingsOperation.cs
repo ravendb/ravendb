@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new GetDatabaseSettingsCommand(_databaseName);
         }
 
-        private class GetDatabaseSettingsCommand : RavenCommand<DatabaseSettings>
+        private sealed class GetDatabaseSettingsCommand : RavenCommand<DatabaseSettings>
         {
             public override bool IsReadRequest => false;
             private readonly string _databaseName;

@@ -1020,7 +1020,7 @@ namespace Raven.Server.Documents.TimeSeries
             Sum
         }
 
-        private class InnerList : IReadOnlyList<double>
+        private sealed class InnerList : IReadOnlyList<double>
         {
             private readonly TimeSeriesValuesSegment _segment;
             private readonly SummaryType _type;

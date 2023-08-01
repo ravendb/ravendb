@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 throw new InvalidOperationException("Indexing empty time series segment. Should not happen.");
         }
 
-        private class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
+        private sealed class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
         {
             private readonly IEnumerable<SingleResult> _inner;
 
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return GetEnumerator();
             }
 
-            private class Enumerator : IEnumerator<DynamicTimeSeriesEntry>
+            private sealed class Enumerator : IEnumerator<DynamicTimeSeriesEntry>
             {
                 private readonly IEnumerator<SingleResult> _inner;
 

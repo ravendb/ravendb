@@ -995,7 +995,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return new FilterModeScope(FilterModeStack, @on);
         }
 
-        private class FilterModeScope : IDisposable
+        private sealed class FilterModeScope : IDisposable
         {
             private Stack<bool> _modeStack;
             public FilterModeScope(Stack<bool> modeStack, bool @on)

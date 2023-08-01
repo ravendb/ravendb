@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexCommand(_indexName);
         }
 
-        private class GetIndexCommand : RavenCommand<IndexDefinition>
+        private sealed class GetIndexCommand : RavenCommand<IndexDefinition>
         {
             private readonly string _indexName;
 

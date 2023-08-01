@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Indexes
             {
             }
 
-            private class Partition
+            private sealed class Partition
             {
                 public const int PartitionSize = 64 * 1024;
 

@@ -264,7 +264,7 @@ namespace Voron.Util
             return ReplaceParameters(expression.Body, p =>  arguments[lambdaParams.FindIndex( x => x.Name == p.Name)]);
         }
 
-        private class ReplaceParametersVisitor : ExpressionVisitor
+        private sealed class ReplaceParametersVisitor : ExpressionVisitor
         {
             private readonly Func<ParameterExpression, Expression> _replace;
 

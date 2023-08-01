@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new GetCertificateCommand(_thumbprint);
         }
 
-        private class GetCertificateCommand : RavenCommand<CertificateDefinition>
+        private sealed class GetCertificateCommand : RavenCommand<CertificateDefinition>
         {
             private readonly string _thumbprint;
 

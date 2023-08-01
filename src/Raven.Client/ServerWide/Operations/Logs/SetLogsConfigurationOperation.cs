@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             return new SetLogsConfigurationCommand(conventions, _parameters);
         }
 
-        private class SetLogsConfigurationCommand : RavenCommand
+        private sealed class SetLogsConfigurationCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;

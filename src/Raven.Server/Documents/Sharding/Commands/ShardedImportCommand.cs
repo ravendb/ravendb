@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_options, _holders[shardNumber].OutStream, _operationId);
 
-        private class ShardedImportCommand : RavenCommand<BlittableJsonReaderObject>
+        private sealed class ShardedImportCommand : RavenCommand<BlittableJsonReaderObject>
         {
             private readonly StreamExposerContent _stream;
             private readonly long _operationId;

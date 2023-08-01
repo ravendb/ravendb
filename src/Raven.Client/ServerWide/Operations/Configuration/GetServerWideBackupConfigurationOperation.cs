@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new GetServerWideBackupConfigurationCommand(_name);
         }
 
-        private class GetServerWideBackupConfigurationCommand : RavenCommand<ServerWideBackupConfiguration>
+        private sealed class GetServerWideBackupConfigurationCommand : RavenCommand<ServerWideBackupConfiguration>
         {
             private readonly string _name;
 

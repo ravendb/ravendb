@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseReadTransaction?.Dispose();
         }
 
-        private class IntersectDocs
+        private sealed class IntersectDocs
         {
             public static readonly IntersectDocs Empty = new();
 
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private class ReaderFacetInfo
+        private sealed class ReaderFacetInfo
         {
             public IndexReader Reader;
             public int DocBase;
@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private class GatherAllCollectorByReader : Collector
+        private sealed class GatherAllCollectorByReader : Collector
         {
             private ReaderFacetInfo _current;
             public readonly List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>();

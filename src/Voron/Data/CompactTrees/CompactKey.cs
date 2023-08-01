@@ -16,7 +16,7 @@ namespace Voron.Data.CompactTrees;
 // The idea behind the introduction of the CompactKey is to serve as an abstraction that allow to cache the
 // encoding of the same key under different dictionaries in order to save the cost of encoding/decoding 
 // when the same key is reused on multiple operations in the same transaction.
-public unsafe class CompactKey : IDisposable
+public sealed unsafe class CompactKey : IDisposable
 {
     private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
     private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;

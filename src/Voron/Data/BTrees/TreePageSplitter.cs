@@ -9,7 +9,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreePageSplitter
+    public sealed unsafe class TreePageSplitter
     {
         private const DecompressionUsage WriteDecompressionUsage = DecompressionUsage.Write;
         private readonly TreeCursor _cursor;

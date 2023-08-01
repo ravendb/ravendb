@@ -17,7 +17,7 @@ internal sealed class StudioDatabaseTasksHandlerProcessorForGetFolderPathOptions
         return new ValueTask<RavenCommand<FolderPathOptions>>(new GetFolderPathOptionsForOperatorCommand(GetPeriodicBackupConnectionType(), GetPath(), IsBackupFolder(), nodeTag));
     }
 
-    private class GetFolderPathOptionsForOperatorCommand : AbstractGetFolderPathOptionsCommand
+    private sealed class GetFolderPathOptionsForOperatorCommand : AbstractGetFolderPathOptionsCommand
     {
         public GetFolderPathOptionsForOperatorCommand(PeriodicBackupConnectionType connectionType, string path, bool isBackupFolder, string nodeTag)
             : base(connectionType, path, isBackupFolder, nodeTag)

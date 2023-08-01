@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new ToggleTaskStateCommand(_taskId, _taskName, _type, _disable);
         }
 
-        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private sealed class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly string _taskName;

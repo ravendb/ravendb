@@ -56,7 +56,7 @@ public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOper
         base.Dispose();
     }
 
-    private class ExecutableMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+    private sealed class ExecutableMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
     {
         private Func<ClusterOperationContext, long> _executeFunc;
 

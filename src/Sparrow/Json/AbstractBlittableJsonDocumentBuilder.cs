@@ -143,7 +143,7 @@ namespace Sparrow.Json
             }
         }
 
-        private class GlobalPoolItem
+        private sealed class GlobalPoolItem
         {
             public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
             public readonly ListCache<int> PositionsCache = new ListCache<int>();

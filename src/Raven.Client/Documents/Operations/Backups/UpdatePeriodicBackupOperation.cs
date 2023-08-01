@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new UpdatePeriodicBackupCommand(conventions, _configuration);
         }
 
-        private class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>, IRaftCommand
+        private sealed class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly PeriodicBackupConfiguration _configuration;

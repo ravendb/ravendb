@@ -11,7 +11,7 @@ using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public unsafe class MapReduceResultsStore : IDisposable
+    public sealed unsafe class MapReduceResultsStore : IDisposable
     {
         public const string ReduceTreePrefix = "__raven/map-reduce/#reduce-tree-";
         public const string NestedValuesPrefix = "__raven/map-reduce/#nested-section-";

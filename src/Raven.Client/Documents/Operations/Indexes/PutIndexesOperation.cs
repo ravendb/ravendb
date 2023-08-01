@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new PutIndexesCommand(conventions, context, _indexToAdd);
         }
 
-        private class PutIndexesCommand : RavenCommand<PutIndexResult[]>, IRaftCommand
+        private sealed class PutIndexesCommand : RavenCommand<PutIndexResult[]>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _indexToAdd;

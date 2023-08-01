@@ -405,7 +405,7 @@ namespace Voron.Platform.Posix
             }
         }
 
-        private class Posix32Bit4KbBatchWrites : I4KbBatchWrites
+        private sealed class Posix32Bit4KbBatchWrites : I4KbBatchWrites
         {
             private readonly Posix32BitsMemoryMapPager _parent;
             private readonly TransactionState _state = new TransactionState();

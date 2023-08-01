@@ -187,7 +187,7 @@ namespace Raven.Server.Web.System
             return list;
         }
 
-        private class PullNodeTask : IDatabaseTask
+        private sealed class PullNodeTask : IDatabaseTask
         {
             public string Mentor;
             public string DatabaseGroupId;

@@ -989,7 +989,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private class QueryKey : ScriptRunnerCache.Key
+        private sealed class QueryKey : ScriptRunnerCache.Key
         {
             private readonly Dictionary<string, DeclaredFunction> _functions;
 
@@ -1159,7 +1159,7 @@ namespace Raven.Server.Documents.Queries.Results
                 $"Attempted to read multiple values in field {fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value}, but it isn't an array and should have only a single value, did you forget '[]' ?");
         }
 
-        private class UniqueFieldNames : IEqualityComparer<IFieldable>
+        private sealed class UniqueFieldNames : IEqualityComparer<IFieldable>
         {
             public static readonly UniqueFieldNames Instance = new UniqueFieldNames();
 
@@ -1174,7 +1174,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private class QueryResultModifier : JsBlittableBridge.IResultModifier
+        private sealed class QueryResultModifier : JsBlittableBridge.IResultModifier
         {
             public static readonly QueryResultModifier Instance = new QueryResultModifier();
 

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             return new InQueryWeight(this, searcher);
         }
 
-        private class SharedArrayDisjunctionMaxScorer : DisjunctionMaxScorer
+        private sealed class SharedArrayDisjunctionMaxScorer : DisjunctionMaxScorer
         {
             private Scorer[] _subScorers;
 
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
         
-        private class InQueryWeight : Weight
+        private sealed class InQueryWeight : Weight
         {
             private readonly InQuery _parent;
             private readonly Searcher _searcher;
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public override float Value => _queryWeight;
         }
         
-        private class LazyInitInScorer : Scorer
+        private sealed class LazyInitInScorer : Scorer
         {
             private readonly InQuery _parent;
             private readonly IndexReader _reader;

@@ -672,7 +672,7 @@ namespace Raven.Server.Documents.Replication.Senders
             public OutgoingReplicationStatsScope TimeSeriesRead;
         }
 
-        private class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
+        private sealed class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
         {
             private readonly ReplicationDocumentSenderBase _parent;
             public bool WasInterrupted { get; private set; }

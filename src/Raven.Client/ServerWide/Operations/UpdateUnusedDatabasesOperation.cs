@@ -31,7 +31,7 @@ namespace Raven.Client.ServerWide.Operations
             return new UpdateUnusedDatabasesCommand(conventions, _database, _parameters);
         }
 
-        private class UpdateUnusedDatabasesCommand : RavenCommand, IRaftCommand
+        private sealed class UpdateUnusedDatabasesCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _database;

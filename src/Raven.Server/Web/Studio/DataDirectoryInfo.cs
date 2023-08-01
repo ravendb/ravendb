@@ -299,7 +299,7 @@ namespace Raven.Server.Web.Studio
             };
         }
 
-        private class DataDirectoryComparer : IComparer<SingleNodeDataDirectoryResult>
+        private sealed class DataDirectoryComparer : IComparer<SingleNodeDataDirectoryResult>
         {
             public int Compare(SingleNodeDataDirectoryResult x, SingleNodeDataDirectoryResult y)
             {

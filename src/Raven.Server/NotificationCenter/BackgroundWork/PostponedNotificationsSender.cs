@@ -106,7 +106,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             return next;
         }
 
-        private class PostponedNotification
+        private sealed class PostponedNotification
         {
             public DateTime PostponedUntil;
 

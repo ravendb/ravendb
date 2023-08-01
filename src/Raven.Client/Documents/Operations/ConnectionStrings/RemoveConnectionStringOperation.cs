@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new RemoveConnectionStringCommand(_connectionString);
         }
 
-        private class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>, IRaftCommand
+        private sealed class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>, IRaftCommand
         {
             private readonly T _connectionString;
 

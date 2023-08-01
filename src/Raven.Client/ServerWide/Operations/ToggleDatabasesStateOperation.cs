@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
         }
 
-        private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
+        private sealed class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly bool _disable;

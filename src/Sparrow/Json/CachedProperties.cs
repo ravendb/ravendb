@@ -133,7 +133,7 @@ namespace Sparrow.Json
             }
         }
 
-        private class PropertyPosition
+        private sealed class PropertyPosition
         {
             public PropertyName Property;
             public int SortedPosition;
@@ -146,7 +146,7 @@ namespace Sparrow.Json
             }
         }
 
-        private class CachedSort
+        private sealed class CachedSort
         {
             public readonly FastList<PropertyPosition> Sorting = new FastList<PropertyPosition>();
             public int FinalCount;

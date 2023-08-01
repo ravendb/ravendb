@@ -15,7 +15,7 @@ using Voron;
 
 namespace Raven.Server.Documents
 {
-    internal unsafe class DocumentIdWorker
+    internal sealed unsafe class DocumentIdWorker
     {
         [ThreadStatic]
         private static JsonParserState _jsonParserState;

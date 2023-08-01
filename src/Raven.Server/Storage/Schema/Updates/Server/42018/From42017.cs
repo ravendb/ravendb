@@ -7,7 +7,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From42017 : ISchemaUpdate
+    public sealed unsafe class From42017 : ISchemaUpdate
     {
         public int From => 42_017;
 

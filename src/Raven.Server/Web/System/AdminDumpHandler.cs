@@ -167,7 +167,7 @@ namespace Raven.Server.Web.System
             return (fileName, gzipFileName);
         }
 
-        private class DeleteFile : IDisposable
+        private sealed class DeleteFile : IDisposable
         {
             private readonly string _path;
 

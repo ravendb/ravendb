@@ -621,7 +621,7 @@ namespace Raven.Server.Monitoring.Snmp
             return result;
         }
 
-        private class SnmpLogger : ILogger
+        private sealed class SnmpLogger : ILogger
         {
             private readonly Logger _logger;
 

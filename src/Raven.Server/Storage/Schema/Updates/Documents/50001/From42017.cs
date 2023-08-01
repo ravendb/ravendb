@@ -39,7 +39,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private string _dbId;
 
-        private class CounterBatchUpdate
+        private sealed class CounterBatchUpdate
         {
             public readonly List<CounterReplicationItem> Counters = new List<CounterReplicationItem>();
 

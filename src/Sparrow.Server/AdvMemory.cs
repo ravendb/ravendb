@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace Sparrow.Server
 {
-    public unsafe class AdvMemory
+    public sealed unsafe class AdvMemory
     {
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static int Compare(byte* p1, byte* p2, int size)

@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             return new PutSortersCommand(conventions, context, _sortersToAdd);
         }
 
-        private class PutSortersCommand : RavenCommand, IRaftCommand
+        private sealed class PutSortersCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _sortersToAdd;

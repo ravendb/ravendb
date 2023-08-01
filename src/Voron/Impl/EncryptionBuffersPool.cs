@@ -18,7 +18,7 @@ using Voron.Global;
 
 namespace Voron.Impl
 {
-    public unsafe class EncryptionBuffersPool : ILowMemoryHandler
+    public sealed unsafe class EncryptionBuffersPool : ILowMemoryHandler
     {
         private readonly object _locker = new object();
 
@@ -384,7 +384,7 @@ namespace Voron.Impl
             }
         }
 
-        private class NativeAllocation : PooledItem
+        private sealed class NativeAllocation : PooledItem
         {
             public byte* Ptr;
             public long Size;

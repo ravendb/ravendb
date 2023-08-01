@@ -8,7 +8,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From42015 : ISchemaUpdate
+    public sealed unsafe class From42015 : ISchemaUpdate
     {
         public int From => 42_015;
 

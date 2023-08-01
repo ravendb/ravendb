@@ -17,7 +17,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public unsafe class ArenaMemoryAllocator : IDisposable
+    public sealed unsafe class ArenaMemoryAllocator : IDisposable
     {
         internal const int MaxArenaSize = 1024 * 1024 * 1024;
         private static readonly int? SingleAllocationSizeLimit = PlatformDetails.Is32Bits ? 8 * Constants.Size.Megabyte : (int?)null;
@@ -436,7 +436,7 @@ namespace Sparrow.Json
         }
     }
 
-    public unsafe class AllocatedMemoryData
+    public sealed unsafe class AllocatedMemoryData
     {
         public int SizeInBytes;
         public int ContextGeneration;
@@ -500,7 +500,7 @@ namespace Sparrow.Json
 #endif
     }
 
-    public unsafe class UnmanagedMemoryManager : MemoryManager<byte>
+    public sealed unsafe class UnmanagedMemoryManager : MemoryManager<byte>
     {
         private readonly byte* _address;
         private readonly int _length;

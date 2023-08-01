@@ -14,7 +14,7 @@ namespace Sparrow.Server.Collections.LockFree
     /// </summary>
     public sealed class Counter64 : CounterBase
     {
-        private class Cell
+        private sealed class Cell
         {
             [StructLayout(LayoutKind.Explicit, Size = CACHE_LINE * 2 - OBJ_HEADER_SIZE)]
             public struct SpacedCounter

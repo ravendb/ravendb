@@ -210,7 +210,7 @@ namespace Raven.Server.Https
             }
         }
 
-        private class CachedValue
+        private sealed class CachedValue
         {
             public DateTime Until;
             public bool Valid;
@@ -218,7 +218,7 @@ namespace Raven.Server.Https
             public Task<CachedValue> Next;
         }
 
-        private class Key
+        private sealed class Key
         {
             public readonly string Host;
             public readonly string Cert;

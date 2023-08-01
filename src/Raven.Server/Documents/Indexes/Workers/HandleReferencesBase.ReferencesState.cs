@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public abstract partial class HandleReferencesBase
     {
-        private class ReferencesState
+        private sealed class ReferencesState
         {
             private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForDocuments = new Dictionary<string, ReferenceState>();
 

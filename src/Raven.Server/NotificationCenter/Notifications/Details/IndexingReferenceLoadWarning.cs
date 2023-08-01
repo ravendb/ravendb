@@ -159,7 +159,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             public int NumberOfLoads { get; set; }
         }
 
-        private class AllowDuplicatedNumberOfLoadsComparer : IComparer<int>
+        private sealed class AllowDuplicatedNumberOfLoadsComparer : IComparer<int>
         {
             public static AllowDuplicatedNumberOfLoadsComparer Instance = new AllowDuplicatedNumberOfLoadsComparer();
 

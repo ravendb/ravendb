@@ -15,7 +15,7 @@ using Voron.Impl;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class TableValueCompressor
+    public sealed unsafe class TableValueCompressor
     {
         // we need at least 5 bytes to store the dictionary id (usually less)
         // we require a bit more because we want to ensure that we aren't wasting

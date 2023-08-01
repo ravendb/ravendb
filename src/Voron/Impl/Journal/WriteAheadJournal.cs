@@ -37,7 +37,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class WriteAheadJournal : IJournalCompressionBufferCryptoHandler, IDisposable
+    public sealed unsafe class WriteAheadJournal : IJournalCompressionBufferCryptoHandler, IDisposable
     {
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
@@ -1353,7 +1353,7 @@ namespace Voron.Impl.Journal
                 private AssignedTask _active;
                 private readonly ManualResetEventSlim _waitForTaskToBeDone = new ManualResetEventSlim();
 
-                private class AssignedTask
+                private sealed class AssignedTask
                 {
                     public readonly Func<bool> Task;
                     public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
@@ -2072,7 +2072,7 @@ namespace Voron.Impl.Journal
                 throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_encrypt, rc = " + rc);
         }
 
-        private class CompressionAccelerationStats
+        private sealed class CompressionAccelerationStats
         {
             private readonly StorageEnvironmentOptions _options;
             public TimeSpan CompressionDuration;

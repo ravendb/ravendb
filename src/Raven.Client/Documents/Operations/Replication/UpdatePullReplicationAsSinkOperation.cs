@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UpdatePullEdgeReplication(conventions, _pullReplication);
         }
 
-        private class UpdatePullEdgeReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private sealed class UpdatePullEdgeReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly PullReplicationAsSink _pullReplication;

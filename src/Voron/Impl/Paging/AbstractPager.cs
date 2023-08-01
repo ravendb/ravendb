@@ -789,7 +789,7 @@ namespace Voron.Impl.Paging
         unsafe void Write(long posBy4Kbs, int numberOf4Kbs, byte* source);
     }
 
-    public unsafe class Simple4KbBatchWrites : I4KbBatchWrites
+    public sealed unsafe class Simple4KbBatchWrites : I4KbBatchWrites
     {
         private readonly AbstractPager _abstractPager;
         private PagerState _pagerState;

@@ -12,7 +12,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
 
-        private class CurrentItem
+        private sealed class CurrentItem
         {
             public BlittableJsonReaderObject.InsertionOrderProperties? Buffers;
             public BlittableJsonReaderObject Object;

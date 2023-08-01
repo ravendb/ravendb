@@ -11,7 +11,7 @@ using Sparrow.Server;
 using Voron;
 using static Raven.Server.Documents.Indexes.MapReduce.ReduceKeyProcessor;
 
-internal unsafe class AnalyzersScope : IDisposable
+internal sealed unsafe class AnalyzersScope : IDisposable
 {
     private readonly IndexFieldsMapping _knownFields;
     private readonly bool _hasDynamics;

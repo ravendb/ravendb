@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new PutClientCertificateCommand(conventions, _name, _certificate, _permissions, _clearance);
         }
 
-        private class PutClientCertificateCommand : RavenCommand, IRaftCommand
+        private sealed class PutClientCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly X509Certificate2 _certificate;

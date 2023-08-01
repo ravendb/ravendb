@@ -717,7 +717,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        private class RemoveEntryFromRaftLogCommand : RavenCommand<List<string>>
+        private sealed class RemoveEntryFromRaftLogCommand : RavenCommand<List<string>>
         {
             private readonly long _index;
 

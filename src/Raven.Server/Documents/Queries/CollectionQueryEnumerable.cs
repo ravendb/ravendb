@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private class Enumerator : IEnumerator<Document>
+        private sealed class Enumerator : IEnumerator<Document>
         {
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;

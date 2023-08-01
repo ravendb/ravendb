@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public static ResultsVariableNameRewriter QuerySyntax => new QuerySyntaxRewriter();
 
-        private class MethodSyntaxRewriter : ResultsVariableNameRewriter
+        private sealed class MethodSyntaxRewriter : ResultsVariableNameRewriter
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             }
         }
 
-        private class QuerySyntaxRewriter : ResultsVariableNameRewriter
+        private sealed class QuerySyntaxRewriter : ResultsVariableNameRewriter
         {
             public override SyntaxNode VisitFromClause(FromClauseSyntax node)
             {

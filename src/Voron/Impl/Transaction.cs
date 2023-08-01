@@ -21,7 +21,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl
 {
-    public unsafe class Transaction : IDisposable
+    public sealed unsafe class Transaction : IDisposable
     {
         public LowLevelTransaction LowLevelTransaction
         {

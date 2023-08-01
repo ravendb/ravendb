@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
             return new CollationKeyFilter(result, _cultureInfo);
         }
 
-        private class SavedStreams
+        private sealed class SavedStreams
         {
             public Tokenizer Source;
             public TokenStream Result;

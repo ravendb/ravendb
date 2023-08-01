@@ -490,7 +490,7 @@ namespace Sparrow.Logging
         }
 
         private static readonly IComparer<string> Comparer = new LogComparer();
-        private class LogComparer : IComparer<string>
+        private sealed class LogComparer : IComparer<string>
         {
             public int Compare(string x, string y)
             {
@@ -992,7 +992,7 @@ namespace Sparrow.Logging
             }
         }
 
-        private class LocalThreadWriterState
+        private sealed class LocalThreadWriterState
         {
             public int Generation;
 
@@ -1013,7 +1013,7 @@ namespace Sparrow.Logging
         }
 
 
-        private class ForwardingStream : Stream
+        private sealed class ForwardingStream : Stream
         {
             public MemoryStream Destination;
             public override bool CanRead { get; } = false;

@@ -14,7 +14,7 @@ using Voron.Impl;
 
 namespace Voron.Data.CompactTrees
 {
-    public unsafe class PersistentDictionaryLocator
+    public sealed unsafe class PersistentDictionaryLocator
     {
         private readonly object[] _cache;
         private readonly int _andMask;

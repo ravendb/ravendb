@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Storage.Schema.Updates.CoraxIndex;
 
-public unsafe class From54000 : ISchemaUpdate
+public sealed unsafe class From54000 : ISchemaUpdate
 {
     public int From => 54_000;
 

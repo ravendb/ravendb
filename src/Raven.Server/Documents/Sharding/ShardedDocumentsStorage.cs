@@ -22,7 +22,7 @@ using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Documents.Sharding;
 
-public unsafe class ShardedDocumentsStorage : DocumentsStorage
+public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 {
     public static readonly Slice BucketStatsSlice;
 

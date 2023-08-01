@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Sharding
             return new RemoveNodeFromOrchestratorTopologyCommand(_databaseName, _node);
         }
 
-        private class RemoveNodeFromOrchestratorTopologyCommand : RavenCommand<ModifyOrchestratorTopologyResult>, IRaftCommand
+        private sealed class RemoveNodeFromOrchestratorTopologyCommand : RavenCommand<ModifyOrchestratorTopologyResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;

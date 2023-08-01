@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.ETL
             LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
         }
 
-        private class EnsureAlerts : IDisposable
+        private sealed class EnsureAlerts : IDisposable
         {
             private readonly EtlProcessStatistics _parent;
 

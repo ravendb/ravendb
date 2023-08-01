@@ -224,7 +224,7 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamLegacyActions(_writer, "AttachmentsDeletions");
         }
 
-        private class DatabaseRecordActions : IDatabaseRecordActions
+        private sealed class DatabaseRecordActions : IDatabaseRecordActions
         {
             private readonly AsyncBlittableJsonTextWriter _writer;
             private readonly JsonOperationContext _context;
@@ -1001,7 +1001,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamIndexActions : StreamActionsBase, IIndexActions
+        private sealed class StreamIndexActions : StreamActionsBase, IIndexActions
         {
             private readonly JsonOperationContext _context;
 
@@ -1052,7 +1052,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamCounterActions : StreamActionsBase, ICounterActions
+        private sealed class StreamCounterActions : StreamActionsBase, ICounterActions
         {
             private readonly JsonOperationContext _context;
             private readonly StreamDestination _destination;
@@ -1135,7 +1135,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
+        private sealed class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
         {
             private readonly JsonOperationContext _context;
 
@@ -1211,7 +1211,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamSubscriptionActions : StreamActionsBase, ISubscriptionActions
+        private sealed class StreamSubscriptionActions : StreamActionsBase, ISubscriptionActions
         {
             private readonly JsonOperationContext _context;
             private readonly AbstractBlittableJsonTextWriter _writer;
@@ -1234,7 +1234,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamReplicationHubCertificateActions : StreamActionsBase, IReplicationHubCertificateActions
+        private sealed class StreamReplicationHubCertificateActions : StreamActionsBase, IReplicationHubCertificateActions
         {
             private readonly JsonOperationContext _context;
             private readonly AsyncBlittableJsonTextWriter _writer;
@@ -1259,7 +1259,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamDocumentActions : StreamActionsBase, IDocumentActions
+        private sealed class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {
             private readonly JsonOperationContext _context;
             private readonly ISmugglerSource _source;
@@ -1467,7 +1467,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamKeyValueActions<T> : StreamActionsBase, IKeyValueActions<T>
+        private sealed class StreamKeyValueActions<T> : StreamActionsBase, IKeyValueActions<T>
         {
             public StreamKeyValueActions(AsyncBlittableJsonTextWriter writer, string name)
                 : base(writer, name)
@@ -1492,7 +1492,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamCompareExchangeActions : StreamActionsBase, ICompareExchangeActions
+        private sealed class StreamCompareExchangeActions : StreamActionsBase, ICompareExchangeActions
         {
             private readonly JsonOperationContext _context;
             public StreamCompareExchangeActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, string name)
@@ -1570,7 +1570,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamLegacyActions : StreamActionsBase, ILegacyActions
+        private sealed class StreamLegacyActions : StreamActionsBase, ILegacyActions
         {
 
             public StreamLegacyActions(AsyncBlittableJsonTextWriter writer, string propertyName)

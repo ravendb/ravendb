@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return converted.Object;
         }
 
-        private class ResultHolder
+        private sealed class ResultHolder
         {
 #pragma warning disable 649
             public T Object;

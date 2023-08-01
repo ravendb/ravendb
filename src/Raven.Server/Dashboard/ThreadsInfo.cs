@@ -29,7 +29,7 @@ namespace Raven.Server.Dashboard
             List = new SortedSet<ThreadInfo>(new ThreadsInfoComparer());
         }
 
-        private class ThreadsInfoComparer : IComparer<ThreadInfo>
+        private sealed class ThreadsInfoComparer : IComparer<ThreadInfo>
         {
             public int Compare(ThreadInfo x, ThreadInfo y)
             {

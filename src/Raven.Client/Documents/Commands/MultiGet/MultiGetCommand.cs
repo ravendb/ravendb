@@ -363,7 +363,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        private class Cached : IDisposable
+        private sealed class Cached : IDisposable
         {
             private readonly int _size;
             public (HttpCache.ReleaseCacheItem Release, BlittableJsonReaderObject Cached)[] Values;

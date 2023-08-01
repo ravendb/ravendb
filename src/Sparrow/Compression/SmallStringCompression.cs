@@ -14,7 +14,7 @@ namespace Sparrow.Compression
     /// Full explanation is here:
     /// https://ayende.com/blog/172865/reverse-engineering-the-smaz-compression-library?key=cd1aaeff5ab64f1ebcf6e5556f9a7803
     /// </summary>
-    public unsafe class SmallStringCompression
+    public sealed unsafe class SmallStringCompression
     {
 
         private static readonly string[] DefaultTermsTable = {

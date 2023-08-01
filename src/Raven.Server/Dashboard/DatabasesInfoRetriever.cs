@@ -90,7 +90,7 @@ namespace Raven.Server.Dashboard
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DrivesUsage>().First();
         }
 
-        private class AggregatedWatchInfo
+        private sealed class AggregatedWatchInfo
         {
             public readonly DatabasesInfo DatabasesInfo = new DatabasesInfo();
             public readonly DatabasesOngoingTasksInfo DatabasesOngoingTasksInfo = new DatabasesOngoingTasksInfo();
@@ -419,7 +419,7 @@ namespace Raven.Server.Dashboard
         private static readonly ConcurrentDictionary<string, DatabaseInfoCache> CachedDatabaseInfo =
             new ConcurrentDictionary<string, DatabaseInfoCache>(StringComparer.OrdinalIgnoreCase);
 
-        private class DatabaseInfoCache
+        private sealed class DatabaseInfoCache
         {
             public long Hash;
             public DatabaseInfoItem Item;
@@ -429,7 +429,7 @@ namespace Raven.Server.Dashboard
 
         private static SystemInfoCache CachedSystemInfo = new SystemInfoCache();
 
-        private class SystemInfoCache
+        private sealed class SystemInfoCache
         {
             public long Hash;
             public List<Client.ServerWide.Operations.MountPointUsage> MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();

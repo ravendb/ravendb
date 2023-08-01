@@ -135,7 +135,7 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        private class Keys
+        private sealed class Keys
         {
             public byte[] Attributes { get; set; }
 

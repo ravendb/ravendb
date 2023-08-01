@@ -27,7 +27,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ConfigureRevisionsForConflictsCommand(conventions, _database, _configuration);
         }
 
-        private class ConfigureRevisionsForConflictsCommand : RavenCommand<ConfigureRevisionsForConflictsResult>, IRaftCommand
+        private sealed class ConfigureRevisionsForConflictsCommand : RavenCommand<ConfigureRevisionsForConflictsResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;

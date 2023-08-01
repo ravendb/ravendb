@@ -101,7 +101,7 @@ public sealed class AllOrchestratorNodesExecutor : AbstractExecutor
         UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
     }
 
-    private class AllNodesExecutorState
+    private sealed class AllNodesExecutorState
     {
         public int[] FullRange;
         public RequestExecutor[] Executors;

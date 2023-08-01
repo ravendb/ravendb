@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new PutDatabaseConfigurationSettingsCommand(conventions, context, _configurationSettings, _databaseName);
         }
 
-        private class PutDatabaseConfigurationSettingsCommand : RavenCommand, IRaftCommand
+        private sealed class PutDatabaseConfigurationSettingsCommand : RavenCommand, IRaftCommand
         {
             public override bool IsReadRequest => false;
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();

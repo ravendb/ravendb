@@ -8,7 +8,7 @@ using Voron.Impl;
 namespace Voron
 {
 
-    public unsafe class PageLocator
+    public sealed unsafe class PageLocator
     {
         [StructLayout(LayoutKind.Explicit, Size = 20)]
         private struct PageData

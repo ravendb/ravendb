@@ -746,7 +746,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private unsafe class UnmanagedMemoryToStream
+        private sealed unsafe class UnmanagedMemoryToStream
         {
             private readonly byte[] _buffer = new byte[1024];
 

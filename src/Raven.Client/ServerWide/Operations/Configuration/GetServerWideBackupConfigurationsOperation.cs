@@ -14,7 +14,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new GetServerWideBackupConfigurationsCommand();
         }
 
-        private class GetServerWideBackupConfigurationsCommand : RavenCommand<ServerWideBackupConfiguration[]>
+        private sealed class GetServerWideBackupConfigurationsCommand : RavenCommand<ServerWideBackupConfiguration[]>
         {
             public override bool IsReadRequest => true;
 

@@ -292,7 +292,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class ShardedDatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeActions
+        private sealed class ShardedDatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeActions
         {
             public ShardedDatabaseCompareExchangeActions(ServerStore serverStore, DatabaseRecord databaseRecord, JsonOperationContext context, BackupKind? backupKind, CancellationToken token) 
                 : base(serverStore, databaseRecord.DatabaseName, databaseRecord.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator, context, backupKind, token)

@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
             return new DeleteServerWideTaskCommand(_name, _type);
         }
 
-        private class DeleteServerWideTaskCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteServerWideTaskCommand : RavenCommand, IRaftCommand
         {
             private readonly string _name;
             private readonly OngoingTaskType _type;

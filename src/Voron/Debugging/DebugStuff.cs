@@ -555,7 +555,7 @@ namespace Voron.Debugging
             await sw.WriteLineAsync("</ul></li></ul>");
         }
 
-        private unsafe class TreePageSafe
+        private sealed unsafe class TreePageSafe
         {
             private readonly Tree _tree;
             private readonly TreePage _page;
@@ -653,13 +653,13 @@ namespace Voron.Debugging
             }
         }
 
-        private class FixedSizeTreeSafe
+        private sealed class FixedSizeTreeSafe
         {
             private FixedSizeTreeSafe()
             {
             }
 
-            public unsafe class EmbeddedFixedSizeTreeSafe
+            public sealed unsafe class EmbeddedFixedSizeTreeSafe
             {
                 private readonly byte* _ptr;
 
@@ -690,7 +690,7 @@ namespace Voron.Debugging
                 }
             }
 
-            public unsafe class LargeFixedSizeTreeSafe
+            public sealed unsafe class LargeFixedSizeTreeSafe
             {
                 private readonly FixedSizeTreeHeader.Large* _header;
 

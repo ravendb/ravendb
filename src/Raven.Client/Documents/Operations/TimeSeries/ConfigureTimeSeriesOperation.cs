@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new ConfigureTimeSeriesCommand(conventions, _configuration);
         }
 
-        private class ConfigureTimeSeriesCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
+        private sealed class ConfigureTimeSeriesCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly TimeSeriesConfiguration _configuration;
