@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private readonly StorageClient _client;
         private readonly string _projectId;
-        protected readonly CancellationToken CancellationToken;
+        private readonly CancellationToken CancellationToken;
         private readonly string _bucketName;
         private readonly Progress _progress;
 

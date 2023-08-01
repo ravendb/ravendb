@@ -599,7 +599,7 @@ namespace Raven.Client.ServerWide
             CompressRevisions = compressRevisions;
         }
 
-        protected bool Equals(DocumentsCompressionConfiguration other)
+        private bool Equals(DocumentsCompressionConfiguration other)
         {
             var mine = new HashSet<string>(Collections, StringComparer.OrdinalIgnoreCase);
             var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);

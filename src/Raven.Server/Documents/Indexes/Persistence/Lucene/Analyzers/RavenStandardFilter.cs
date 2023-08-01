@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             return true;
         }
 
-        protected char ToLower(char c)
+        private char ToLower(char c)
         {
             int cInt = c;
 

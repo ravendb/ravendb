@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class ToggleServerWideTaskStateCommand : UpdateValueCommand<ToggleServerWideTaskStateCommand.Parameters>
     {
-        protected ToggleServerWideTaskStateCommand()
+        public ToggleServerWideTaskStateCommand()
         {
             // for deserialization
         }

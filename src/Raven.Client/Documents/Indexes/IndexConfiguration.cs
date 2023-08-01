@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Indexes
             return value;
         }
 
-        protected bool Equals(IndexConfiguration other)
+        private bool Equals(IndexConfiguration other)
         {
             return DictionaryExtensions.ContentEquals(this, other);
         }

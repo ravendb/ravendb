@@ -303,7 +303,7 @@ namespace Raven.Client.Documents.Linq
             return query.CountLazilyAsync(token);
         }
 
-        protected RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
+        private RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
         {
             return new RavenQueryProviderProcessor<TS>(
                 _queryGenerator,

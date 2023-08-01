@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             }
         }
 
-        protected async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
+        private async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
             Action<IOperationProgress> onProgress,
             JsonOperationContext jsonOperationContext,

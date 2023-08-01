@@ -601,7 +601,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            protected bool Equals(ClusterNode other)
+            private bool Equals(ClusterNode other)
             {
                 return string.Equals(ClusterTag, other.ClusterTag);
             }

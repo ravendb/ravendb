@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public string DocumentIdColumn { get; set; }
 
-        protected bool Equals(OlapEtlTable other)
+        private bool Equals(OlapEtlTable other)
         {
             return string.Equals(TableName, other.TableName) && 
                    string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);

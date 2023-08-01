@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Replication.Stats
             _incomingErrors.AddOrUpdate(node, incomingFailureReporter, (_, __) => incomingFailureReporter);
         }
 
-        protected IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
+        private IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
         {
             foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
             {

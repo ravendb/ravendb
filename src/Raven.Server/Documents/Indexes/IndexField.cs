@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes
             return field;
         }
 
-        protected bool Equals(IndexField other)
+        private bool Equals(IndexField other)
         {
             return Id == other.Id
                 && string.Equals(Name, other.Name, StringComparison.Ordinal)
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Indexes
             return fields;
         }
 
-        protected bool Equals(AutoIndexField other)
+        private bool Equals(AutoIndexField other)
         {
             return string.Equals(Name, other.Name, StringComparison.Ordinal)
                    && Id == other.Id

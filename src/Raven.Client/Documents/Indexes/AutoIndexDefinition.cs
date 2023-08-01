@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Indexes
 
             public bool IsNameQuoted { get; set; }
 
-            protected bool Equals(AutoIndexFieldOptions other)
+            private bool Equals(AutoIndexFieldOptions other)
             {
                 return Storage == other.Storage
                        && Indexing == other.Indexing

@@ -18,17 +18,17 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.ExtractAndTransformTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting ExtractAndTransformTimeout { get; protected set; }
+        public TimeSetting ExtractAndTransformTimeout { get; set; }
 
         [Description("Max number of extracted documents in ETL batch")]
         [DefaultValue(8192)]
         [ConfigurationEntry("ETL.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int? MaxNumberOfExtractedDocuments { get; protected set; }
+        public int? MaxNumberOfExtractedDocuments { get; set; }
 
         [Description("Max number of extracted items in ETL batch")]
         [DefaultValue(8192)]
         [ConfigurationEntry("ETL.MaxNumberOfExtractedItems", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int? MaxNumberOfExtractedItems { get; protected set; }
+        public int? MaxNumberOfExtractedItems { get; set; }
 
         [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
         [DefaultValue(60 * 15)]
@@ -40,11 +40,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(64)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("ETL.MaxBatchSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size? MaxBatchSize { get; protected set; }
+        public Size? MaxBatchSize { get; set; }
 
         [Description("Max number of extracted documents in OLAP ETL batch")]
         [DefaultValue(64 * 1024)]
         [ConfigurationEntry("ETL.OLAP.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int? OlapMaxNumberOfExtractedDocuments { get; protected set; }
+        public int? OlapMaxNumberOfExtractedDocuments { get; set; }
     }
 }

@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Changes
 
         public string NodeTag { get; set; }
 
-        protected bool Equals(DatabaseChangesOptions other)
+        private bool Equals(DatabaseChangesOptions other)
         {
             return string.Equals(DatabaseName, other.DatabaseName, StringComparison.OrdinalIgnoreCase) && string.Equals(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase);
         }

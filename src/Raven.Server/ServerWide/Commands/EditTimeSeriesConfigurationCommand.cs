@@ -6,7 +6,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditTimeSeriesConfigurationCommand : UpdateDatabaseCommand
     {
-        public TimeSeriesConfiguration Configuration { get; protected set; }
+        public TimeSeriesConfiguration Configuration { get; private set; }
 
         public EditTimeSeriesConfigurationCommand()
         {

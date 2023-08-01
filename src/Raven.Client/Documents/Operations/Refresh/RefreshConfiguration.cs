@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.Refresh
         public long? RefreshFrequencyInSec { get; set; }
 
 
-        protected bool Equals(RefreshConfiguration other)
+        private bool Equals(RefreshConfiguration other)
         {
             return Disabled == other.Disabled && RefreshFrequencyInSec == other.RefreshFrequencyInSec;
         }

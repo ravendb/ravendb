@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents
             return ValueTask.FromResult(InitializeAsyncDispose());
         }
 
-        protected IAsyncDisposable InitializeAsyncDispose()
+        private IAsyncDisposable InitializeAsyncDispose()
         {
             return new AsyncDisposableAction(async () =>
             {

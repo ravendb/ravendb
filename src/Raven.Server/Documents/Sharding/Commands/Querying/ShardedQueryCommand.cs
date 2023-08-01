@@ -45,7 +45,7 @@ public sealed class ShardedQueryCommand : AbstractQueryCommand<QueryResult, Blit
         Timeout = null; // we want to use global http timeout (infinite by default in sharding) even if WaitForNonStaleResultsTimeout is specified
     }
 
-    protected readonly string IndexName;
+    private readonly string IndexName;
 
     public string RaftUniqueRequestId { get; }
 

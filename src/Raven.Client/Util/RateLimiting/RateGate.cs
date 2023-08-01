@@ -189,7 +189,7 @@ namespace Raven.Client.Util.RateLimiting
         /// Releases unmanaged resources held by an instance of this class.
         /// </summary>
         /// <param name="isDisposing">Whether this object is being disposed.</param>
-        protected void Dispose(bool isDisposing)
+        private void Dispose(bool isDisposing)
         {
             if (!_isDisposed)
             {

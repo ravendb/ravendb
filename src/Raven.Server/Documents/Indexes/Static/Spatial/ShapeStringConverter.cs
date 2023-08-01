@@ -109,12 +109,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return true;
         }
 
-        protected string MakePoint(double x, double y)
+        private string MakePoint(double x, double y)
         {
             return string.Format(CultureInfo.InvariantCulture, "POINT ({0} {1})", x, y);
         }
 
-        protected string MakeCircle(double x, double y, double radius)
+        private string MakeCircle(double x, double y, double radius)
         {
             return string.Format(CultureInfo.InvariantCulture, "Circle({0} {1} d={2})", x, y, radius);
         }

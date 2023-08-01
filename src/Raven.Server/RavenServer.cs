@@ -1106,7 +1106,7 @@ namespace Raven.Server
             }
         }
 
-        protected async Task<byte[]> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
+        private async Task<byte[]> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             byte[] newCertBytes;
             if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)

@@ -26,13 +26,13 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly AbstractStaticIndexBase _compiled;
+        internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleCountersReferences _handleReferences;
         private HandleCompareExchangeCountersReferences _handleCompareExchangeReferences;
 
-        protected MapCountersIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
+        private MapCountersIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;

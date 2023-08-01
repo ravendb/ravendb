@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             }
         }
 
-        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+        private void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "RavenDB-19074 Implement AddPagingPerformanceHint, collect and pass real params");

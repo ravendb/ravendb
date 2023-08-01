@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, List<Document> revisionsResult, CancellationToken token)
+        private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, List<Document> revisionsResult, CancellationToken token)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;

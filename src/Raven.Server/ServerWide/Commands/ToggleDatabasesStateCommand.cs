@@ -6,7 +6,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class ToggleDatabasesStateCommand : UpdateValueCommand<ToggleDatabasesStateCommand.Parameters>
     {
-        protected ToggleDatabasesStateCommand()
+        public ToggleDatabasesStateCommand()
         {
             // for deserialization
         }

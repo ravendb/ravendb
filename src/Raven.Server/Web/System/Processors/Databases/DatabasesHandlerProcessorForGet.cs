@@ -33,7 +33,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
     {
     }
 
-    protected bool GetNamesOnly() => RequestHandler.GetBoolValueQueryString("namesOnly", required: false) ?? false;
+    private bool GetNamesOnly() => RequestHandler.GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
     protected override ValueTask<RavenCommand<DatabasesInfo>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context)
     {

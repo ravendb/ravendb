@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class PutRavenConnectionStringCommand : PutConnectionStringCommand<RavenConnectionString>
     {
-        protected PutRavenConnectionStringCommand()
+        public PutRavenConnectionStringCommand()
         {
             // for deserialization
         }
@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class PutSqlConnectionStringCommand : PutConnectionStringCommand<SqlConnectionString>
     {
-        protected PutSqlConnectionStringCommand()
+        public PutSqlConnectionStringCommand()
         {
             // for deserialization
         }
@@ -76,7 +76,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class PutOlapConnectionStringCommand : PutConnectionStringCommand<OlapConnectionString>
     {
-        protected PutOlapConnectionStringCommand()
+        public PutOlapConnectionStringCommand()
         {
             // for deserialization
         }
@@ -94,7 +94,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class PutElasticSearchConnectionStringCommand : PutConnectionStringCommand<ElasticSearchConnectionString>
     {
-        protected PutElasticSearchConnectionStringCommand()
+        public PutElasticSearchConnectionStringCommand()
         {
             // for deserialization
         }
@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class PutQueueConnectionStringCommand : PutConnectionStringCommand<QueueConnectionString>
     {
-        protected PutQueueConnectionStringCommand()
+        public PutQueueConnectionStringCommand()
         {
             // for deserialization
         }

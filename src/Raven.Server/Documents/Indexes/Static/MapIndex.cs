@@ -23,13 +23,13 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _suggestionsActive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly AbstractStaticIndexBase _compiled;
+        internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleDocumentReferences _handleReferences;
         private HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
-        protected MapIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
+        private MapIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;

@@ -103,7 +103,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
             MaxY = maxY;
         }
 
-        protected bool Equals(SpatialBounds other)
+        private bool Equals(SpatialBounds other)
         {
             return MinX.Equals(other.MinX) && MaxX.Equals(other.MaxX) && MinY.Equals(other.MinY) && MaxY.Equals(other.MaxY);
         }

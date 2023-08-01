@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class DeleteServerWideBackupConfigurationCommand : UpdateValueCommand<string>
     {
-        protected DeleteServerWideBackupConfigurationCommand()
+        public DeleteServerWideBackupConfigurationCommand()
         {
             // for deserialization
         }

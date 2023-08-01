@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.Context
     {
         private List<CompareExchangeChange> _compareExchangeNotifications;
 
-        protected readonly ClusterChanges _clusterChanges;
+        private readonly ClusterChanges _clusterChanges;
 
         public ClusterTransaction(Transaction transaction, ClusterChanges clusterChanges)
             : base(transaction)

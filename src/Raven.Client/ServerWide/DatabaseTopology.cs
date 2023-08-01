@@ -79,7 +79,7 @@ namespace Raven.Client.ServerWide
             _mentorNode = mentorNode;
         }
 
-        protected static ulong CalculateStringHash(string s)
+        private static ulong CalculateStringHash(string s)
         {
             return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encodings.Utf8);
         }

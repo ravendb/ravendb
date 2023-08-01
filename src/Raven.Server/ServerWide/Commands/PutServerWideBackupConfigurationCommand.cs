@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class PutServerWideBackupConfigurationCommand : UpdateValueCommand<ServerWideBackupConfiguration>
     {
-        protected PutServerWideBackupConfigurationCommand()
+        public PutServerWideBackupConfigurationCommand()
         {
             // for deserialization
         }

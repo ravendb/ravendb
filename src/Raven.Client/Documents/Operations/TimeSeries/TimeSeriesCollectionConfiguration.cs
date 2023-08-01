@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public RawTimeSeriesPolicy RawPolicy { get; set; }
 
-        protected bool Equals(TimeSeriesCollectionConfiguration other)
+        private bool Equals(TimeSeriesCollectionConfiguration other)
         {
             try
             {

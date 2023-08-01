@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Subscriptions
             Start();
         }
 
-        protected IEnumerable<SubscriptionTaskPerformanceStats> PrepareInitialPerformanceStats()
+        private IEnumerable<SubscriptionTaskPerformanceStats> PrepareInitialPerformanceStats()
         {
             var results = new List<SubscriptionTaskPerformanceStats>();
             

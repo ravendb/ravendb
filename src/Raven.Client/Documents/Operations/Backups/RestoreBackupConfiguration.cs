@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
         }
 
-        protected RestoreBackupConfiguration(RestoreBackupConfiguration other) : base(other)
+        private RestoreBackupConfiguration(RestoreBackupConfiguration other) : base(other)
         {
             BackupLocation = other.BackupLocation;
         }
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
         }
 
-        protected RestoreFromS3Configuration(RestoreFromS3Configuration other) : base(other)
+        private RestoreFromS3Configuration(RestoreFromS3Configuration other) : base(other)
         {
             Settings = new S3Settings(other.Settings);
         }
@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
         }
 
-        protected RestoreFromAzureConfiguration(RestoreFromAzureConfiguration other) : base(other)
+        private RestoreFromAzureConfiguration(RestoreFromAzureConfiguration other) : base(other)
         {
             Settings = new AzureSettings(other.Settings);
         }
@@ -159,7 +159,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
         }
 
-        protected RestoreFromGoogleCloudConfiguration(RestoreFromGoogleCloudConfiguration other) : base(other)
+        private RestoreFromGoogleCloudConfiguration(RestoreFromGoogleCloudConfiguration other) : base(other)
         {
             Settings = new GoogleCloudSettings(other.Settings);
         }

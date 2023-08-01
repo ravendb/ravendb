@@ -10,7 +10,7 @@ namespace Raven.Server.SqlMigration.Model
     public sealed class MigrationResult : IOperationResult
     {
         private readonly List<string> _messages;
-        protected MigrationProgress _progress;
+        private MigrationProgress _progress;
         private readonly Stopwatch _sw;
         public bool ShouldPersist => true;
 
@@ -88,7 +88,7 @@ namespace Raven.Server.SqlMigration.Model
 
     public sealed class MigrationProgress : IOperationProgress
     {
-        protected readonly MigrationResult _result;
+        private readonly MigrationResult _result;
 
         public MigrationProgress(MigrationResult result)
         {

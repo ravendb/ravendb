@@ -174,13 +174,13 @@ namespace Raven.Client.Http
             }
         }
 
-        public string LastNodeId { get; protected set; }
-        public string TopologyId { get; protected set; }
-        public long Etag { get; protected set; }
+        public string LastNodeId { get; private set; }
+        public string TopologyId { get; private set; }
+        public long Etag { get; private set; }
 
-        public Dictionary<string, string> Members { get; protected set; }
-        public Dictionary<string, string> Promotables { get; protected set; }
-        public Dictionary<string, string> Watchers { get; protected set; }
+        public Dictionary<string, string> Members { get; private set; }
+        public Dictionary<string, string> Promotables { get; private set; }
+        public Dictionary<string, string> Watchers { get; private set; }
 
         [JsonIgnore]
         internal int Count => Members.Count + Promotables.Count + Watchers.Count;

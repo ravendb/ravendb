@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class RemoveRavenConnectionStringCommand : RemoveConnectionStringCommand<RavenConnectionString>
     {
-        protected RemoveRavenConnectionStringCommand()
+        public RemoveRavenConnectionStringCommand()
         {
             // for deserialization
         }
@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class RemoveSqlConnectionStringCommand : RemoveConnectionStringCommand<SqlConnectionString>
     {
-        protected RemoveSqlConnectionStringCommand()
+        public RemoveSqlConnectionStringCommand()
         {
             // for deserialization
         }
@@ -67,7 +67,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class RemoveElasticSearchConnectionStringCommand : RemoveConnectionStringCommand<ElasticSearchConnectionString>
     {
-        protected RemoveElasticSearchConnectionStringCommand()
+        public RemoveElasticSearchConnectionStringCommand()
         {
             // for deserialization
         }
@@ -84,7 +84,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<OlapConnectionString>
     {
-        protected RemoveOlapConnectionStringCommand()
+        public RemoveOlapConnectionStringCommand()
         {
             // for deserialization
         }
@@ -102,7 +102,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
     public sealed class RemoveQueueConnectionStringCommand : RemoveConnectionStringCommand<QueueConnectionString>
     {
-        protected RemoveQueueConnectionStringCommand()
+        public RemoveQueueConnectionStringCommand()
         {
             // for deserialization
         }

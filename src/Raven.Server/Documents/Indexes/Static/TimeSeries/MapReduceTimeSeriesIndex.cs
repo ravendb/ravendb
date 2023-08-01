@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal new readonly AbstractStaticIndexBase _compiled;
+        internal new readonly AbstractStaticIndexBase _compiled;
 
         public MapReduceTimeSeriesIndex(MapReduceIndexDefinition definition, AbstractStaticIndexBase compiled) : base(definition, compiled)
         {

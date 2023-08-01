@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 token: token);
         }
 
-        protected async Task<IOperationResult> ExportDatabaseInternalAsync(
+        private async Task<IOperationResult> ExportDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
             long startDocumentEtag,
             long startRaftIndex,
