@@ -1,14 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Text.Unicode;
 using Corax.Mappings;
-using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
-using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
-namespace Corax.Queries;
+namespace Corax.Queries.TermProviders;
 
 public struct RegexTermProvider<TLookupIterator> : ITermProvider
     where TLookupIterator : struct, ILookupIterator

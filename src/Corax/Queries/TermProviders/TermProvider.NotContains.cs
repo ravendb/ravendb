@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
-using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
 
-namespace Corax.Queries
+namespace Corax.Queries.TermProviders
 {
     public struct NotContainsTermProvider<TLookupIterator> : ITermProvider
         where TLookupIterator : struct, ILookupIterator

@@ -1,10 +1,12 @@
 using System;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.TermProviders;
 using Voron;
 using Voron.Data.CompactTrees;
 using static Voron.Data.CompactTrees.CompactTree;
 using Voron.Data.Lookups;
+using Range = Corax.Queries.Meta.Range;
 
 namespace Corax;
 
