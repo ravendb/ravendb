@@ -723,14 +723,14 @@
                 <div class="properties-container">
                     <div class="properties-item">
                         <span class="properties-label">Store
-                            <a class="store-field-info-lucene pull-right" data-toggle="tooltip" data-bind="visible: isStoreField() && isLucene()">
+                            <a class="js-store-field-info pull-right" data-toggle="tooltip" data-bind="visible: isStoreField()">
                                 <i class="icon-info text-warning"></i>
                             </a>
                         </span>
-                        <div class="btn-group properties-value has-disable-reason"
-                             data-bind="validationElement: indexOrStore, attr: { 'data-original-title': isCorax() ? 'Fields are always stored when search engine is Corax' : '' }">
+                        <div class="btn-group properties-value"
+                             data-bind="validationElement: indexOrStore">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                    data-bind="css: { 'border-warning': isStoreField() && isLucene() }, disable: isCorax()">
+                                    data-bind="css: { 'border-warning': isStoreField() }">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
