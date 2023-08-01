@@ -117,7 +117,7 @@ namespace Raven.Embedded
             return runtimes;
         }
 
-        internal class RuntimeFrameworkVersion
+        internal sealed class RuntimeFrameworkVersion
         {
             private static readonly char[] Separators = { '.' };
 

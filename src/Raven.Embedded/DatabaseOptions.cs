@@ -3,7 +3,7 @@ using Raven.Client.ServerWide;
 
 namespace Raven.Embedded
 {
-    public class DatabaseOptions
+    public sealed class DatabaseOptions
     {
         public bool SkipCreatingDatabase { get; set; }
 

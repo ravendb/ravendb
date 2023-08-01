@@ -25,7 +25,7 @@ using Sparrow.Platform;
 
 namespace Raven.Embedded
 {
-    public class EmbeddedServer : IDisposable
+    public sealed class EmbeddedServer : IDisposable
     {
         public static EmbeddedServer Instance = new EmbeddedServer();
 

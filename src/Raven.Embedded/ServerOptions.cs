@@ -81,7 +81,7 @@ namespace Raven.Embedded
         }
 
 
-        public class SecurityOptions
+        public sealed class SecurityOptions
         {
             internal SecurityOptions() { }
 
