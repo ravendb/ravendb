@@ -10,7 +10,7 @@ namespace Sparrow.Server.Meters
 {
     internal sealed class TransactionPerformanceMetrics : PerformanceMetrics
     {
-        private class TransactionMeterItem : MeterItem
+        private sealed class TransactionMeterItem : MeterItem
         {
             public InternalWindowDuration InternalDurations;
             public long CommandsCounter;
@@ -96,7 +96,7 @@ namespace Sparrow.Server.Meters
             StoreInSummarizeItem(meterItem, adjustedTail);
         }
 
-        private class TransactionPerformanceMetricsRecentStats : PerformanceMetricsRecentStats
+        private sealed class TransactionPerformanceMetricsRecentStats : PerformanceMetricsRecentStats
         {
             public List<InternalWindowDuration> InternalWindows { get; set; }
 
