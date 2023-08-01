@@ -42,14 +42,15 @@ namespace SlowTests.Issues
                     var revisions = await session.Advanced.Revisions.GetForAsync<User>(id);
                     Assert.Equal(2, revisions.Count);
 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+
                     var configuration = new RevisionsConfiguration()
                     {
                         Default = null
                     };
+       
                     await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
-
-                    session.Delete(id);
-                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())

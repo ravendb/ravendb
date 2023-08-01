@@ -17,14 +17,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, OperationCancelToken token)
+        protected override void ScheduleEnforceConfigurationOperation(long operationId, bool includeForceCreated, OperationCancelToken token)
         {
             var t = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,
                 OperationType.EnforceRevisionConfiguration,
                 $"Enforce revision configuration in database '{RequestHandler.Database.Name}'.",
                 detailedDescription: null,
-                onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
+                onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, includeForceCreated, token),
                 token: token);
 
             _ = t.ContinueWith(_ =>

@@ -4,12 +4,29 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace FastTests.Utils
 {
     public class RevisionsHelper
     {
+        public static async Task SetupConflictedRevisionsAsync(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsCollectionConfiguration configuration)
+        {
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
+            if (serverStore == null)
+                throw new ArgumentNullException(nameof(serverStore));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            var result = await store.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(store.Database, configuration));
+
+            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
+        }
+
         public static async Task<long> SetupRevisionsAsync(
             IDocumentStore store,
             string database = null,

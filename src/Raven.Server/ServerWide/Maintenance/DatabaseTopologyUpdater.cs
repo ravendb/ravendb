@@ -348,6 +348,9 @@ namespace Raven.Server.ServerWide.Maintenance
         
         protected virtual (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, DatabaseObservationState state, string promotable, ClusterNodeStatusReport _)
         {
+            if (_server.DatabasesLandlord.ForTestingPurposes?.PreventNodePromotion == true)
+                return (false, "Preventing node promotion for testing purposes.");
+
             if (TryGetMentorNode(state.Name, state.DatabaseTopology, state.ClusterTopology, promotable, out var mentorNode) == false)
                 return (false, null);
 

@@ -411,7 +411,8 @@ namespace Raven.Client.Http
                         new ServerNode
                         {
                             Database = databaseName,
-                            Url = url
+                            Url = url,
+                            ServerRole = ServerNode.Role.Member
                         }
                     }
                 }),
@@ -419,16 +420,20 @@ namespace Raven.Client.Http
                 _disableTopologyUpdates = true,
                 _disableClientConfigurationUpdates = true
             };
+            executor._firstTopologyUpdate = executor.SingleTopologyUpdateAsync(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }
 
-        internal static RequestExecutor CreateForFixedTopology(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        internal static RequestExecutor CreateForShortTermUse(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            // This request executor doesn't call SingleTopologyUpdate so it won't attempt to reach the server of the url before it knows our certificate
+            // It's topology will also not have cluster tags populated so it cannot be used long term for operations with SelectedNodeTag
             var urls = ValidateUrls(initialUrls, certificate);
             var nodes = urls.Select(u => new ServerNode
             {
                 Database = databaseName,
-                Url = u
+                Url = u,
+                ServerRole = ServerNode.Role.Member
             }).ToList();
             var executor = new RequestExecutor(databaseName, certificate, conventions, urls)
             {
@@ -441,6 +446,7 @@ namespace Raven.Client.Http
                 _disableTopologyUpdates = true,
                 _disableClientConfigurationUpdates = true
             };
+            executor._firstTopologyUpdate = Task.CompletedTask;
             return executor;
         }
 
@@ -506,6 +512,11 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null, _usePrivateUrls);
+                    ForTestingPurposes?.SetCommandTimeout?.Invoke(command);
+
+                    if (DefaultTimeout.HasValue && DefaultTimeout.Value > command.Timeout)
+                        command.Timeout = DefaultTimeout.Value;
+
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -521,28 +532,9 @@ namespace Raven.Client.Http
 #endif
                     
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
-
-                    if (_nodeSelector == null)
-                    {
-                        _nodeSelector = new NodeSelector(topology);
-
-                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
-                        {
-                            ForTestingPurposes.OnBeforeScheduleSpeedTest?.Invoke(_nodeSelector);
-                            _nodeSelector.ScheduleSpeedTest();
-                        }
-                    }
-                    else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate: parameters.ForceUpdate))
-                    {
-                        DisposeAllFailedNodesTimers();
-                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
-                        {
-                            _nodeSelector.ScheduleSpeedTest();
-                        }
-                    }
-
-                    TopologyEtag = _nodeSelector.Topology.Etag;
-
+                    
+                    UpdateNodeSelector(topology, parameters.ForceUpdate);
+                    
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
@@ -560,6 +552,29 @@ namespace Raven.Client.Http
                 _updateDatabaseTopologySemaphore.Release();
             }
             return true;
+        }
+
+        protected void UpdateNodeSelector(Topology topology, bool forceUpdate)
+        {
+            if (_nodeSelector == null)
+            {
+                _nodeSelector = new NodeSelector(topology);
+
+                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                {
+                    ForTestingPurposes?.OnBeforeScheduleSpeedTest?.Invoke(_nodeSelector);
+                    _nodeSelector.ScheduleSpeedTest();
+                }
+            }
+            else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate))
+            {
+                DisposeAllFailedNodesTimers();
+                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                {
+                    _nodeSelector.ScheduleSpeedTest();
+                }
+            }
+            TopologyEtag = _nodeSelector.Topology.Etag;
         }
 
         protected void DisposeAllFailedNodesTimers()
@@ -587,7 +602,7 @@ namespace Raven.Client.Http
         {
             var topologyUpdate = _firstTopologyUpdate;
 
-            if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _disableTopologyUpdates)
+            if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion)
             {
                 var (nodeIndex, chosenNode) = ChooseNodeForRequest(command, sessionInfo);
                 return ExecuteAsync(chosenNode, nodeIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token);
@@ -598,17 +613,11 @@ namespace Raven.Client.Http
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
-            if (_disableTopologyUpdates == false)
+            if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
             {
-                // when we disable topology updates we cannot rely on the node tag,
-                // because the initial topology will not have them
-
-                if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
-                {
-                    return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
-                }
+                return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
-
+            
             switch (Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
@@ -670,7 +679,10 @@ namespace Raven.Client.Http
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug", topologyUpdate?.Exception);
                             }
 
-                            _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls, null);
+                            if (_disableTopologyUpdates == false)
+                                _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls, null);
+                            else
+                                _firstTopologyUpdate = SingleTopologyUpdateAsync(_lastKnownUrls);
                         }
 
                         topologyUpdate = _firstTopologyUpdate;
@@ -727,6 +739,62 @@ namespace Raven.Client.Http
             }));
         }
 
+        protected async Task SingleTopologyUpdateAsync(string[] initialUrls, Guid? applicationIdentifier = null)
+        {
+            if(Disposed)
+                return;
+
+            //fetch tag for each of the urls
+            Topology topology = new Topology() {Nodes = new List<ServerNode>(), Etag = TopologyEtag};
+            
+            foreach (var url in initialUrls)
+            {
+                var serverNode = new ServerNode
+                {
+                    Url = url,
+                    Database = _databaseName
+                };
+
+                try
+                {
+                    using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    {
+                        var command = new GetNodeInfoCommand(GlobalHttpClientTimeout);
+                        await ExecuteAsync(serverNode, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None)
+                            .ConfigureAwait(false);
+                        serverNode.ClusterTag = command.Result.NodeTag;
+                        serverNode.ServerRole = command.Result.ServerRole;
+                    }
+                }
+                catch (AuthorizationException)
+                {
+                    // auth exceptions will always happen, on all nodes
+                    // so errors immediately
+                    _lastKnownUrls = initialUrls;
+                    throw;
+                }
+                catch (DatabaseDoesNotExistException)
+                {
+                    // Will happen on all node in the cluster,
+                    // so errors immediately
+                    _lastKnownUrls = initialUrls;
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    serverNode.ClusterTag = "!";
+                    if(Logger.IsInfoEnabled)
+                        Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
+                }
+
+                topology.Nodes.Add(serverNode);
+
+                UpdateNodeSelector(topology, forceUpdate: true);
+            }
+            
+            _lastKnownUrls = initialUrls;
+        }
+
         protected async Task FirstTopologyUpdate(string[] initialUrls, Guid? applicationIdentifier = null)
         {
             initialUrls = ValidateUrls(initialUrls, Certificate);
@@ -779,6 +847,7 @@ namespace Raven.Client.Http
                 {
                     Url = url,
                     Database = _databaseName,
+                    ServerRole = ServerNode.Role.Member,
                     ClusterTag = "!"
                 }).ToList(),
                 Etag = TopologyEtag
@@ -1027,6 +1096,7 @@ namespace Raven.Client.Http
                         cts.CancelAfter(timeout.Value);
                         try
                         {
+                            ForTestingPurposes?.DelayRequest?.Invoke();
                             return await SendAsync(chosenNode, command, sessionInfo, request, cts.Token).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException e)
@@ -1614,7 +1684,8 @@ namespace Raven.Client.Http
 
             SpawnHealthChecks(chosenNode, nodeIndex.Value);
 
-            var (currentIndex, currentNode, topologyEtag) = _nodeSelector.GetPreferredNodeWithTopology();
+            var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
+            var topologyEtag = _nodeSelector.Topology?.Etag ?? -2;
 
             if (command.FailoverTopologyEtag != topologyEtag)
             {
@@ -2434,6 +2505,10 @@ namespace Raven.Client.Http
             public Action<Task[]> ExecuteOnAllToFigureOutTheFastestOnBeforeWait;
 
             internal Action<NodeSelector> OnBeforeScheduleSpeedTest;
+
+            internal Action DelayRequest;
+
+            internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
         }
     }
 }

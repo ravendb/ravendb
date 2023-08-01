@@ -531,6 +531,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // new server should have only 0 backups
                 var server = GetNewServer();
+                await server.ServerStore.EnsureNotPassiveAsync();
 
                 using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 using (var store2 = GetDocumentStore(new Options
@@ -711,6 +712,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // new server should have only one backup
                 var server = GetNewServer();
+                await server.ServerStore.EnsureNotPassiveAsync();
                 using (var store3 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,

@@ -689,7 +689,7 @@ namespace Raven.Server.Documents.Subscriptions
                                     {
                                         // check that the subscription exists on AppropriateNode
                                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                                        using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                        using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
                                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
                                                    ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                         {

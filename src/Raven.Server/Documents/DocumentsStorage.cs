@@ -1762,10 +1762,9 @@ namespace Raven.Server.Documents
                             DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 localChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
                         }
-
                         flags |= DocumentFlags.HasRevisions;
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
-                            modifiedTicks, nonPersistentFlags, newFlags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                            modifiedTicks, nonPersistentFlags, newFlags.Contain(DocumentFlags.Reverted) ? newFlags : flags);
                     }
                 }
 
@@ -1773,7 +1772,7 @@ namespace Raven.Server.Documents
                     revisionsStorage.Configuration == null &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id, flags: newFlags);
+                    revisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration != null &&

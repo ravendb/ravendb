@@ -193,6 +193,12 @@ namespace Raven.Server.Documents
                     newFlags |= DocumentFlags.Resolved;
                 }
 
+                var revisionsCount = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                if (revisionsCount > 0)
+                {
+                    newFlags |= DocumentFlags.HasRevisions;
+                }
+
                 if (collectionName.IsHiLo == false && newFlags.Contain(DocumentFlags.Artificial) == false)
                 {
                     Recreate(context, id, oldDoc, ref document, ref newFlags, nonPersistentFlags, ref documentDebugHash);
@@ -212,7 +218,13 @@ namespace Raven.Server.Documents
                         }
 
                         newFlags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, newFlags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, newFlags, nonPersistentFlags, changeVector, modifiedTicks,
+                            configuration, collectionName);
+
+                        var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                        if (revisionsCountAfterDelete == 0)
+                            newFlags = newFlags.Strip(DocumentFlags.HasRevisions);
+
                     }
                 }
 

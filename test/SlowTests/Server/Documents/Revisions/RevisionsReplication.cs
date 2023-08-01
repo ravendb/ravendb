@@ -282,6 +282,13 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
+                var config2 = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 0
+                };
+                await RevisionsHelper.SetupConflictedRevisionsAsync(store1, Server.ServerStore, configuration: config2);
+
                 await PutDocument(store1);
                 await PutDocument(store2);
 
@@ -294,11 +301,19 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 await EnsureReplicatingAsync(store2, store1);
 
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var revisionsCount1 = await session1.Advanced.Revisions.GetCountForAsync("foo/bar");
+                    Assert.Equal(5, revisionsCount1);
+
+                    var revisionsCount2 = await session2.Advanced.Revisions.GetCountForAsync("foo/bar");
+                    Assert.Equal(5, revisionsCount2);
+                }
                 var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var dbName = db.Name;
-
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
 
                 await EnsureReplicatingAsync(store1, store2);
 
@@ -964,7 +979,7 @@ namespace SlowTests.Server.Documents.Revisions
                 EnforceConfigurationResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token: token);
+                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(onProgress: null, token: token);
                 }
 
                 Assert.Equal(11, result.ScannedRevisions);
