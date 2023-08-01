@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class ReplayTxOperationResult : IOperationResult
+    public sealed class ReplayTxOperationResult : IOperationResult
     {
         public long ExecutedCommandsAmount { get; set; }
 

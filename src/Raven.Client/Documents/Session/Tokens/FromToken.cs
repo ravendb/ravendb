@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class FromToken : QueryToken
+    public sealed class FromToken : QueryToken
     {
         public string CollectionName { get; }
 

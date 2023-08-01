@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Refresh
 {
-    public class ConfigureRefreshOperation : IMaintenanceOperation<ConfigureRefreshOperationResult>
+    public sealed class ConfigureRefreshOperation : IMaintenanceOperation<ConfigureRefreshOperationResult>
     {
         private readonly RefreshConfiguration _configuration;
 

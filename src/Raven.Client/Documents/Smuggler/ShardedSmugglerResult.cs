@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler;
 
-public class ShardedSmugglerResult : IShardedOperationResult<ShardNodeSmugglerResult>
+public sealed class ShardedSmugglerResult : IShardedOperationResult<ShardNodeSmugglerResult>
 {
     public List<ShardNodeSmugglerResult> Results { get; set; }
 
@@ -47,7 +47,7 @@ public class ShardedSmugglerResult : IShardedOperationResult<ShardNodeSmugglerRe
     }
 }
 
-public class ShardNodeSmugglerResult : ShardNodeOperationResult<SmugglerResult>
+public sealed class ShardNodeSmugglerResult : ShardNodeOperationResult<SmugglerResult>
 {
     public override bool ShouldPersist => true;
 }

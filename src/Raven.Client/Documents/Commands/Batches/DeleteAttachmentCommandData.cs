@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class DeleteAttachmentCommandData : ICommandData
+    public sealed class DeleteAttachmentCommandData : ICommandData
     {
         public DeleteAttachmentCommandData(string documentId, string name, string changeVector)
         {

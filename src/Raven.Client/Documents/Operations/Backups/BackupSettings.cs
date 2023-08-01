@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class GetBackupConfigurationScript
+    public sealed class GetBackupConfigurationScript
     {
         public GetBackupConfigurationScript()
         {
@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class LocalSettings : BackupSettings
+    public sealed class LocalSettings : BackupSettings
     {
         /// <summary>
         /// Path to local folder. If not empty, backups will be held in this folder and not deleted. 
@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
     }
 
-    public class S3Settings : AmazonSettings
+    public sealed class S3Settings : AmazonSettings
     {
         /// <summary>
         /// S3 Bucket name.
@@ -272,7 +272,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class GlacierSettings : AmazonSettings
+    public sealed class GlacierSettings : AmazonSettings
     {
         /// <summary>
         /// Amazon Glacier Vault name.
@@ -345,7 +345,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class AzureSettings : BackupSettings, ICloudBackupSettings
+    public sealed class AzureSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Microsoft Azure Storage Container name.
@@ -427,7 +427,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class FtpSettings : BackupSettings
+    public sealed class FtpSettings : BackupSettings
     {
         public string Url { get; set; }
 
@@ -485,7 +485,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
-    public class GoogleCloudSettings : BackupSettings, ICloudBackupSettings
+    public sealed class GoogleCloudSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Google cloud storage bucket name must be globally unique

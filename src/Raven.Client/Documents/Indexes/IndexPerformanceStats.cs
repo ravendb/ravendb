@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class IndexPerformanceStats
+    public sealed class IndexPerformanceStats
     {
         public string Name { get; set; }
 

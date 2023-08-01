@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide.Tcp
 {
-    public class LicensedFeatures
+    public sealed class LicensedFeatures
     {
         public bool DataCompression;
 

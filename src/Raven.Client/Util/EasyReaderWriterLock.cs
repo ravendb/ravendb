@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Raven.Client.Util
 {
-    internal class EasyReaderWriterLock
+    internal sealed class EasyReaderWriterLock
     {
         readonly ReaderWriterLockSlim _inner = new ReaderWriterLockSlim();
 

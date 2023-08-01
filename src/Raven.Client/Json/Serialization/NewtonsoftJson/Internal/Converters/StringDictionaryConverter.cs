@@ -5,7 +5,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal class StringDictionaryConverter : JsonConverter
+    internal sealed class StringDictionaryConverter : JsonConverter
     {
         private static readonly StringDictionaryConverter CurrentCulture = new StringDictionaryConverter(StringComparison.CurrentCulture);
 

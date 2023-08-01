@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PatchByQueryOperation : IOperation<OperationIdResult>
+    public sealed class PatchByQueryOperation : IOperation<OperationIdResult>
     {
         private readonly IndexQuery _queryToUpdate;
         private readonly QueryOperationOptions _options;
@@ -28,12 +28,12 @@ namespace Raven.Client.Documents.Operations
             _options = options;
         }
 
-        public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new PatchByQueryCommand<Parameters>(conventions, context, _queryToUpdate, _options);
         }
 
-        internal class PatchByQueryCommand<T> : RavenCommand<OperationIdResult>
+        internal sealed class PatchByQueryCommand<T> : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery<T> _queryToUpdate;

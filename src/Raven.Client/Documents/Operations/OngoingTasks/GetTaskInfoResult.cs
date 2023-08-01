@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskSubscription : OngoingTask
+    public sealed class OngoingTaskSubscription : OngoingTask
     {
         public OngoingTaskSubscription()
         {
@@ -137,7 +137,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskReplication : OngoingTask
+    public sealed class OngoingTaskReplication : OngoingTask
     {
         public OngoingTaskReplication()
         {
@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskPullReplicationAsHub : OngoingTask
+    public sealed class OngoingTaskPullReplicationAsHub : OngoingTask
     {
         public OngoingTaskPullReplicationAsHub()
         {
@@ -183,7 +183,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskPullReplicationAsSink : OngoingTask
+    public sealed class OngoingTaskPullReplicationAsSink : OngoingTask
     {
         public OngoingTaskPullReplicationAsSink()
         {
@@ -223,7 +223,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskRavenEtl : OngoingTask
+    public sealed class OngoingTaskRavenEtl : OngoingTask
     {
         public OngoingTaskRavenEtl()
         {
@@ -250,7 +250,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskSqlEtl : OngoingTask
+    public sealed class OngoingTaskSqlEtl : OngoingTask
     {
         public OngoingTaskSqlEtl()
         {
@@ -281,7 +281,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskOlapEtl : OngoingTask
+    public sealed class OngoingTaskOlapEtl : OngoingTask
     {
         public OngoingTaskOlapEtl()
         {
@@ -304,7 +304,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskElasticSearchEtl : OngoingTask
+    public sealed class OngoingTaskElasticSearchEtl : OngoingTask
     {
         public OngoingTaskElasticSearchEtl()
         {
@@ -328,7 +328,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskQueueEtl : OngoingTask
+    public sealed class OngoingTaskQueueEtl : OngoingTask
     {
         public OngoingTaskQueueEtl()
         {
@@ -354,7 +354,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class OngoingTaskBackup : OngoingTask
+    public sealed class OngoingTaskBackup : OngoingTask
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
@@ -387,14 +387,14 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class ModifyOngoingTaskResult
+    public sealed class ModifyOngoingTaskResult
     {
         public long TaskId { get; set; }
         public long RaftCommandIndex;
         public string ResponsibleNode;
     }
 
-    public class NextBackup : IDynamicJson
+    public sealed class NextBackup : IDynamicJson
     {
         public TimeSpan TimeSpan { get; set; }
 
@@ -418,7 +418,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class RunningBackup : IDynamicJson
+    public sealed class RunningBackup : IDynamicJson
     {
         public DateTime? StartTime { get; set; }
 

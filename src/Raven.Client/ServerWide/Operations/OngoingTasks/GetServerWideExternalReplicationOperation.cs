@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
-    public class GetServerWideExternalReplicationOperation : IServerOperation<ServerWideExternalReplication>
+    public sealed class GetServerWideExternalReplicationOperation : IServerOperation<ServerWideExternalReplication>
     {
         private readonly string _name;
 

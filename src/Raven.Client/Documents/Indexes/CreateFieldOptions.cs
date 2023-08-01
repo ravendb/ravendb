@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Indexes
 {
-    public class CreateFieldOptions
+    public sealed class CreateFieldOptions
     {
         internal static readonly CreateFieldOptions Default = new CreateFieldOptions();
 

@@ -4,7 +4,7 @@ using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Extensions
 {
-    internal class PropertyNameConventionJSMetadataProvider : JavascriptMetadataProvider
+    internal sealed class PropertyNameConventionJSMetadataProvider : JavascriptMetadataProvider
     {
         private readonly DocumentConventions _conventions;
 
@@ -13,7 +13,7 @@ namespace Raven.Client.Extensions
             _conventions = conventions;
         }
 
-        public class MemberMetadata : IJavascriptMemberMetadata
+        public sealed class MemberMetadata : IJavascriptMemberMetadata
         {
             public string MemberName { get; set; }
         }

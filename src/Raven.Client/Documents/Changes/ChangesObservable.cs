@@ -5,7 +5,7 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class ChangesObservable<T, TConnectionState> : IChangesObservable<T> where TConnectionState : IChangesConnectionState<T>
+    internal sealed class ChangesObservable<T, TConnectionState> : IChangesObservable<T> where TConnectionState : IChangesConnectionState<T>
     {
         private readonly TConnectionState _connectionState;
         private readonly Func<T, bool> _filter;

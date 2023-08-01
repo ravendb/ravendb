@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
+    internal sealed class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
     {
         public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();

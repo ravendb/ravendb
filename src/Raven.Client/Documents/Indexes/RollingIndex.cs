@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class RollingIndex : IDynamicJson
+    public sealed class RollingIndex : IDynamicJson
     {
         public Dictionary<string, RollingIndexDeployment> ActiveDeployments = new Dictionary<string, RollingIndexDeployment>(StringComparer.OrdinalIgnoreCase);
 
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Indexes
         }
     }
 
-    public class RollingIndexDeployment : IDynamicJson
+    public sealed class RollingIndexDeployment : IDynamicJson
     {
         public RollingIndexState State { get; set; }
         public DateTime CreatedAt { get; set; }

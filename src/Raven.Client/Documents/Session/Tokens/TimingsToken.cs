@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class TimingsToken : QueryToken
+    public sealed class TimingsToken : QueryToken
     {
         public static TimingsToken Instance = new TimingsToken();
 

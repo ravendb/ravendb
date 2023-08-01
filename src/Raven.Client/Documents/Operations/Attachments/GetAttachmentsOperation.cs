@@ -17,7 +17,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
+    public sealed class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
     {
         private readonly AttachmentType _type;
         private readonly IEnumerable<AttachmentRequest> _attachments;
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentsCommand(conventions, context, _attachments, _type);
         }
 
-        internal class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
+        internal sealed class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;

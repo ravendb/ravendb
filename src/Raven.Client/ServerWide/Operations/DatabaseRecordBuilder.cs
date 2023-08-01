@@ -22,7 +22,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations;
 
-public class DatabaseRecordBuilder :
+public sealed class DatabaseRecordBuilder :
     IDatabaseRecordBuilderInitializer,
     IDatabaseRecordBuilder,
     IEtlConfigurationBuilder,

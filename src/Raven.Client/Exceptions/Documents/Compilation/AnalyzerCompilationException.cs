@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Exceptions.Documents.Compilation
 {
-    public class AnalyzerCompilationException : CompilationException
+    public sealed class AnalyzerCompilationException : CompilationException
     {
         public AnalyzerCompilationException()
         {

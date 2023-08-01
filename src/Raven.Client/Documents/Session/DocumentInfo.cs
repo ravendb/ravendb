@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Information held about an entity by the session
     /// </summary>
-    public class DocumentInfo : IDisposable
+    public sealed class DocumentInfo : IDisposable
     {
         /// <summary>
         /// Gets or sets the id.

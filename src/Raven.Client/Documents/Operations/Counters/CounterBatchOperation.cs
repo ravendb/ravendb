@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class CounterBatchOperation : IOperation<CountersDetail>
+    public sealed class CounterBatchOperation : IOperation<CountersDetail>
     {
         private readonly CounterBatch _counterBatch;
 
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Counters
             return new CounterBatchCommand(conventions, _counterBatch);
         }
 
-        internal class CounterBatchCommand : RavenCommand<CountersDetail>
+        internal sealed class CounterBatchCommand : RavenCommand<CountersDetail>
         {
             private readonly DocumentConventions _conventions;
             private readonly CounterBatch _counterBatch;

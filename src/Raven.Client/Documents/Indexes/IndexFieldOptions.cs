@@ -3,7 +3,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexFieldOptions
+    public sealed class IndexFieldOptions
     {
         public FieldStorage? Storage { get; set; }
 

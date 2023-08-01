@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session
 {
-    public class StreamQueryStatistics
+    public sealed class StreamQueryStatistics
     {
         public string IndexName { get; set; }
         public bool IsStale { get; set; }

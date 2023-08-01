@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetRevisionsBinEntryCommand : RavenCommand<BlittableArrayResult>
+    public sealed class GetRevisionsBinEntryCommand : RavenCommand<BlittableArrayResult>
     {
         private readonly int _start;
         private readonly int? _pageSize;

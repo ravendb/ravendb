@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class MaintenanceOperationExecutor
+    public sealed class MaintenanceOperationExecutor
     {
         private readonly DocumentStoreBase _store;
         private readonly string _nodeTag;

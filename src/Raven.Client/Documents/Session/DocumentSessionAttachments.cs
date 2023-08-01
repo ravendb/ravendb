@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSessionAttachments : DocumentSessionAttachmentsBase, IAttachmentsSessionOperations
+    public sealed class DocumentSessionAttachments : DocumentSessionAttachmentsBase, IAttachmentsSessionOperations
     {
         public DocumentSessionAttachments(InMemoryDocumentSessionOperations session) : base(session)
         {

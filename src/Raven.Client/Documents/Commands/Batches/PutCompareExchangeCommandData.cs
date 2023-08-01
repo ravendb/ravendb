@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class PutCompareExchangeCommandData : ICommandData
+    public sealed class PutCompareExchangeCommandData : ICommandData
     {
         public readonly long Index;
         public BlittableJsonReaderObject Document { get; }

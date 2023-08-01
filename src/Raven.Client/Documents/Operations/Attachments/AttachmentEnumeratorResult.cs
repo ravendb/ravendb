@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class AttachmentEnumeratorResult
+    public sealed class AttachmentEnumeratorResult
     {
         public Stream Stream { get; }
 

@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Sorters
 {
-    public class SorterDoesNotExistException : RavenException
+    public sealed class SorterDoesNotExistException : RavenException
     {
         public SorterDoesNotExistException()
         {

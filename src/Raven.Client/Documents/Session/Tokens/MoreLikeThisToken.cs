@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class MoreLikeThisToken : WhereToken
+    public sealed class MoreLikeThisToken : WhereToken
     {
         public string DocumentParameterName;
 

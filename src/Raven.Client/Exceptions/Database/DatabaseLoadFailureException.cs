@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseLoadFailureException : RavenException
+    public sealed class DatabaseLoadFailureException : RavenException
     {
         public DatabaseLoadFailureException()
         {

@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class ConfigureTimeSeriesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
+    public sealed class ConfigureTimeSeriesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly TimeSeriesConfiguration _configuration;
 
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    public class ConfigureTimeSeriesOperationResult
+    public sealed class ConfigureTimeSeriesOperationResult
     {
         public long? RaftCommandIndex { get; set; }
     }

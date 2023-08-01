@@ -6,14 +6,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class StartIndexingOperation : IMaintenanceOperation
+    public sealed class StartIndexingOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartIndexingCommand();
         }
 
-        internal class StartIndexingCommand : RavenCommand
+        internal sealed class StartIndexingCommand : RavenCommand
         {
             private readonly string _type;
 

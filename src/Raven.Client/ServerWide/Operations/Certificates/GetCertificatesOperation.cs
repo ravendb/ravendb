@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class GetCertificatesOperation : IServerOperation<CertificateDefinition[]>
+    public sealed class GetCertificatesOperation : IServerOperation<CertificateDefinition[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

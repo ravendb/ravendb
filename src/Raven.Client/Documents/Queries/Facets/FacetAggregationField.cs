@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetAggregationField
+    public sealed class FacetAggregationField
     {
         public string Name { get; set; }
 

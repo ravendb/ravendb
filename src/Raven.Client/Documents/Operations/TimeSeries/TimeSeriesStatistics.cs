@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesStatistics
+    public sealed class TimeSeriesStatistics
     {
         public string DocumentId { get; set; }
         
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    public class TimeSeriesItemDetail
+    public sealed class TimeSeriesItemDetail
     {
         public string Name { get; set; }
         public long NumberOfEntries { get; set; }

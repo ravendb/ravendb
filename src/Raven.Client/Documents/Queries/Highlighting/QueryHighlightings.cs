@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Queries.Highlighting
 {
-    public class QueryHighlightings
+    public sealed class QueryHighlightings
     {
         private readonly List<Highlightings> _highlightings = new List<Highlightings>();
 

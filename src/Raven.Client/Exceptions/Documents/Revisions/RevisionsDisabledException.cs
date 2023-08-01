@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Exceptions.Documents.Revisions
 {
-    public class RevisionsDisabledException : RavenException
+    public sealed class RevisionsDisabledException : RavenException
     {
         public RevisionsDisabledException() : base("Revisions are disabled")
         {

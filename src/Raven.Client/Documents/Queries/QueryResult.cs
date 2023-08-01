@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Queries
         internal long? AutoIndexCreationRaftIndex;
     }
 
-    public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
+    public sealed class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
     {
         /// <summary>
         /// Creates a snapshot of the query results

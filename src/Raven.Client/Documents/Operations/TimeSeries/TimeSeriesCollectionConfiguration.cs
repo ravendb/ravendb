@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesCollectionConfiguration : IDynamicJson
+    public sealed class TimeSeriesCollectionConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
 
@@ -350,7 +350,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    internal class TimeSeriesDownSamplePolicyComparer : IComparer<TimeSeriesPolicy>
+    internal sealed class TimeSeriesDownSamplePolicyComparer : IComparer<TimeSeriesPolicy>
     {
         public static TimeSeriesDownSamplePolicyComparer Instance = new TimeSeriesDownSamplePolicyComparer();
 

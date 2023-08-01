@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ModifyDatabaseTopologyResult
+    public sealed class ModifyDatabaseTopologyResult
     {
         /// <summary>
         /// The Raft Command Index that was executed 

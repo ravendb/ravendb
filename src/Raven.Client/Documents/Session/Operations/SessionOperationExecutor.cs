@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Session.Operations
     /// <summary>
     /// For internal session use only
     /// </summary>
-    internal class SessionOperationExecutor : OperationExecutor
+    internal sealed class SessionOperationExecutor : OperationExecutor
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

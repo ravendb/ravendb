@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class GetAttachmentOperation : IOperation<AttachmentResult>
+    public sealed class GetAttachmentOperation : IOperation<AttachmentResult>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentCommand(conventions, context, _documentId, _name, _type, _changeVector);
         }
 
-        internal class GetAttachmentCommand : RavenCommand<AttachmentResult>
+        internal sealed class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;

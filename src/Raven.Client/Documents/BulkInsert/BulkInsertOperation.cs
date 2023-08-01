@@ -27,14 +27,14 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Documents.BulkInsert
 {
-    public class BulkInsertOperation : BulkInsertOperationBase<object>, IDisposable, IAsyncDisposable
+    public sealed class BulkInsertOperation : BulkInsertOperationBase<object>, IDisposable, IAsyncDisposable
     {
         private readonly BulkInsertOptions _options;
         private readonly string _database;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        internal class BulkInsertStreamExposerContent : StreamExposerContent
+        internal sealed class BulkInsertStreamExposerContent : StreamExposerContent
         {
             public void Done()
             {
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        internal class BulkInsertCommand : RavenCommand<HttpResponseMessage>
+        internal sealed class BulkInsertCommand : RavenCommand<HttpResponseMessage>
         {
             public override bool IsReadRequest => false;
             private readonly BulkInsertStreamExposerContent _stream;
@@ -577,7 +577,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        internal class CountersBulkInsertOperation
+        internal sealed class CountersBulkInsertOperation
         {
             private readonly BulkInsertOperation _operation;
             private string _id;
@@ -792,7 +792,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class TimeSeriesBulkInsert : TimeSeriesBulkInsertBase
+        public sealed class TimeSeriesBulkInsert : TimeSeriesBulkInsertBase
         {
             public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name) : base(operation, id, name)
             {
@@ -819,7 +819,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class TypedTimeSeriesBulkInsert<TValues> : TimeSeriesBulkInsertBase where TValues : new()
+        public sealed class TypedTimeSeriesBulkInsert<TValues> : TimeSeriesBulkInsertBase where TValues : new()
         {
             public TypedTimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name) : base(operation, id, name)
             {

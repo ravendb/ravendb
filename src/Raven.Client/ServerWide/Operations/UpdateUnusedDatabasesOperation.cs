@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class UpdateUnusedDatabasesOperation : IServerOperation
+    public sealed class UpdateUnusedDatabasesOperation : IServerOperation
     {
         private readonly string _database;
         private readonly Parameters _parameters;
@@ -58,7 +58,7 @@ namespace Raven.Client.ServerWide.Operations
             public string RaftUniqueRequestId => RaftIdGenerator.NewId();
         }
 
-        internal class Parameters
+        internal sealed class Parameters
         {
             public HashSet<string> DatabaseIds { get; set; }
         }

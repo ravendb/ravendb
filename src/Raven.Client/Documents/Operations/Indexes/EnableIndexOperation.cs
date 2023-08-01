@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class EnableIndexOperation : IMaintenanceOperation
+    public sealed class EnableIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new EnableIndexCommand(_indexName, _clusterWide);
         }
 
-        internal class EnableIndexCommand : RavenCommand, IRaftCommand
+        internal sealed class EnableIndexCommand : RavenCommand, IRaftCommand
         {
             private readonly string _indexName;
             private readonly bool _clusterWide;

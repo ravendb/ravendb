@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
     [AttributeUsage(AttributeTargets.Property)]
-    internal class SecurityClearanceAttribute : Attribute
+    internal sealed class SecurityClearanceAttribute : Attribute
     {
         public SecurityClearance SecurityClearanceLevel { get; set; }
 

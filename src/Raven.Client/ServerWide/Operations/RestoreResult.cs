@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class RestoreResult : SmugglerResult
+    public sealed class RestoreResult : SmugglerResult
     {
         public string DataDirectory { get; set; }
 

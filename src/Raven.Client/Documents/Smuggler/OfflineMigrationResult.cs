@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Smuggler
 {
-    public class OfflineMigrationResult : SmugglerResult
+    public sealed class OfflineMigrationResult : SmugglerResult
     {
         public Counts DataExporter { get; set; }
 

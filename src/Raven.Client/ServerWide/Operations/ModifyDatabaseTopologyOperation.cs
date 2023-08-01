@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ModifyDatabaseTopologyOperation : IServerOperation<ModifyDatabaseTopologyResult>
+    public sealed class ModifyDatabaseTopologyOperation : IServerOperation<ModifyDatabaseTopologyResult>
     {
         private readonly string _databaseName;
         private readonly DatabaseTopology _databaseTopology;
@@ -31,7 +31,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ModifyDatabaseTopologyCommand(conventions, _databaseName, _databaseTopology);
         }
 
-        internal class ModifyDatabaseTopologyCommand : RavenCommand<ModifyDatabaseTopologyResult>, IRaftCommand
+        internal sealed class ModifyDatabaseTopologyCommand : RavenCommand<ModifyDatabaseTopologyResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly DatabaseTopology _databaseTopology;

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class CollectionStatistics
+    public sealed class CollectionStatistics
     {
         public CollectionStatistics()
         {
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class DetailedCollectionStatistics
+    public sealed class DetailedCollectionStatistics
     {
         public DetailedCollectionStatistics()
         {
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class CollectionDetails : IDynamicJson
+    public sealed class CollectionDetails : IDynamicJson
     {
         public string Name { get; set; }
         public long CountOfDocuments { get; set; }

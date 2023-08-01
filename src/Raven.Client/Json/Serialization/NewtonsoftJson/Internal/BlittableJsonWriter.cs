@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class BlittableJsonWriter : JsonWriter, IJsonWriter
+    internal sealed class BlittableJsonWriter : JsonWriter, IJsonWriter
     {
         private readonly LazyStringValue _metadataKey;
         private readonly LazyStringValue _metadataCollection;

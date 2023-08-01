@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Session
 {
-    public class SessionInfo
+    public sealed class SessionInfo
     {
         [ThreadStatic]
         private static int _clientSessionIdCounter;

@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class RangeFacet : FacetBase
+    public sealed class RangeFacet : FacetBase
     {
         private readonly FacetBase _parent;
 
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Queries.Facets
         }
     }
 
-    public class RangeFacet<T> : FacetBase
+    public sealed class RangeFacet<T> : FacetBase
     {
         public RangeFacet()
         {

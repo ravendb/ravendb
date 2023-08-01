@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class SeedIdentityForCommand : RavenCommand<long>, IRaftCommand
+    public sealed class SeedIdentityForCommand : RavenCommand<long>, IRaftCommand
     {
         private readonly string _id;
         private readonly long _value;

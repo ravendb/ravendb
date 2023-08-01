@@ -6,7 +6,7 @@ namespace Raven.Client.Exceptions.Documents
     /// <summary>
     /// This exception is raised when stored document has a collection mismatch
     /// </summary>
-    public class DocumentCollectionMismatchException : RavenException
+    public sealed class DocumentCollectionMismatchException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentCollectionMismatchException"/> class.

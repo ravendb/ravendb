@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class GetRawStreamResultCommand : RavenCommand<Stream>, IDisposable
+    public sealed class GetRawStreamResultCommand : RavenCommand<Stream>, IDisposable
     {
         private readonly string _commandUrl;
         private readonly HttpMethod _method;

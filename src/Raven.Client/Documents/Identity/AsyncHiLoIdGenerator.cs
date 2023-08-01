@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Identity
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action BeforeGeneratingDocumentId;
         }

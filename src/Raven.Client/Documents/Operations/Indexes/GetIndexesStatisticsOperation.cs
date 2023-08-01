@@ -8,7 +8,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexesStatisticsOperation : IMaintenanceOperation<IndexStats[]>
+    public sealed class GetIndexesStatisticsOperation : IMaintenanceOperation<IndexStats[]>
     {
         public GetIndexesStatisticsOperation()
         {
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexesStatisticsCommand();
         }
 
-        internal class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
+        internal sealed class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
         {
             internal const string IncludeStatsParamName = "includeStats";
             private bool? _includeStats;

@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class NodeInfo : IDynamicJson
+    public sealed class NodeInfo : IDynamicJson
     {
         public string NodeTag;
         public string TopologyId;
@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Commands
         }
     }
 
-    public class GetNodeInfoCommand : RavenCommand<NodeInfo>
+    public sealed class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
         public GetNodeInfoCommand() { }
 

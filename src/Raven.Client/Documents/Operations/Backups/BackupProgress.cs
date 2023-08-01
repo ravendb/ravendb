@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class ShardedBackupProgress : BackupProgress, IShardedOperationProgress
+    public sealed class ShardedBackupProgress : BackupProgress, IShardedOperationProgress
     {
         public int ShardNumber { get; set; }
         public string NodeTag { get; set; }

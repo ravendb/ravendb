@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class ReplaceClusterCertificateOperation : IServerOperation
+    public sealed class ReplaceClusterCertificateOperation : IServerOperation
     {
         private readonly byte[] _certBytes;
         private readonly bool _replaceImmediately;

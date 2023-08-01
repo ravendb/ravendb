@@ -18,7 +18,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Smuggler
 {
-    public class DatabaseSmuggler
+    public sealed class DatabaseSmuggler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseSmuggler).FullName);
 
@@ -424,7 +424,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        internal class StreamContentWithConfirmation : StreamContent
+        internal sealed class StreamContentWithConfirmation : StreamContent
         {
             private readonly TaskCompletionSource<object> _tcs;
             private readonly DatabaseSmuggler _parent;
@@ -484,7 +484,7 @@ namespace Raven.Client.Documents.Smuggler
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action BeforeSerializeToStreamAsync;
 

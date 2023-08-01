@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class UpdateExternalReplicationOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public sealed class UpdateExternalReplicationOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly ExternalReplication _newWatcher;
 

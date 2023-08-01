@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    public class TimeSeriesRangeResult<TValues> : TimeSeriesRangeResult where TValues : TimeSeriesEntry
+    public sealed class TimeSeriesRangeResult<TValues> : TimeSeriesRangeResult where TValues : TimeSeriesEntry
     {
         public new TValues[] Entries;
     }

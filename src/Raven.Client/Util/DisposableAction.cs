@@ -12,7 +12,7 @@ namespace Raven.Client.Util
     /// <summary>
     /// A helper class that translate between Disposable and Action
     /// </summary>
-    public class DisposableAction : IDisposable
+    public sealed class DisposableAction : IDisposable
     {
         private readonly Action _action;
 
@@ -34,7 +34,7 @@ namespace Raven.Client.Util
         }
     }
 
-    internal class AsyncDisposableAction : IAsyncDisposable
+    internal sealed class AsyncDisposableAction : IAsyncDisposable
     {
         private readonly Func<Task> _action;
 

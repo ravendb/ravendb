@@ -10,7 +10,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ServerOperationExecutor : IDisposable
+    public sealed class ServerOperationExecutor : IDisposable
     {
         private readonly ConcurrentDictionary<string, ServerOperationExecutor> _cache;
 

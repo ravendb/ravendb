@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyConditionalLoadOperation<T> : ILazyOperation
+    internal sealed class LazyConditionalLoadOperation<T> : ILazyOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _id;

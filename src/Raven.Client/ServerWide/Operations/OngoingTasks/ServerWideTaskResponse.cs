@@ -18,7 +18,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
         }
     }
 
-    public class ServerWideExternalReplicationResponse : ServerWideTaskResponse
+    public sealed class ServerWideExternalReplicationResponse : ServerWideTaskResponse
     {
 
     }

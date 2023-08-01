@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Identities
 {
-    public class SeedIdentityForOperation : IMaintenanceOperation<long>
+    public sealed class SeedIdentityForOperation : IMaintenanceOperation<long>
     {
         private readonly string _identityName;
         private readonly long _identityValue;

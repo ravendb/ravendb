@@ -6,14 +6,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class GetReplicationPerformanceStatisticsOperation : IMaintenanceOperation<ReplicationPerformance>
+    public sealed class GetReplicationPerformanceStatisticsOperation : IMaintenanceOperation<ReplicationPerformance>
     {
         public RavenCommand<ReplicationPerformance> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetReplicationPerformanceStatisticsCommand();
         }
 
-        internal class GetReplicationPerformanceStatisticsCommand : RavenCommand<ReplicationPerformance>
+        internal sealed class GetReplicationPerformanceStatisticsCommand : RavenCommand<ReplicationPerformance>
         {
             public GetReplicationPerformanceStatisticsCommand()
             {

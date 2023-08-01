@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class BackupResult : SmugglerResult
+    public sealed class BackupResult : SmugglerResult
     {
         public Counts SnapshotBackup { get; set; }
 
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class ShardedBackupResult : IShardedOperationResult<ShardNodeBackupResult>
+    public sealed class ShardedBackupResult : IShardedOperationResult<ShardNodeBackupResult>
     {
         public List<ShardNodeBackupResult> Results { get; set; }
 
@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class ShardNodeBackupResult : ShardNodeOperationResult<BackupResult>
+    public sealed class ShardNodeBackupResult : ShardNodeOperationResult<BackupResult>
     {
         public override bool ShouldPersist => true;
     }

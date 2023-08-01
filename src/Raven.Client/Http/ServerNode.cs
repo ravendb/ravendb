@@ -4,7 +4,7 @@ using static Sparrow.Hashing;
 
 namespace Raven.Client.Http
 {
-    public class ServerNode
+    public sealed class ServerNode
     {
         [Flags]
         public enum Role

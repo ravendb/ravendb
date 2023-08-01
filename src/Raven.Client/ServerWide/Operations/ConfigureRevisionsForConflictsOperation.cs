@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ConfigureRevisionsForConflictsOperation : IServerOperation<ConfigureRevisionsForConflictsResult>
+    public sealed class ConfigureRevisionsForConflictsOperation : IServerOperation<ConfigureRevisionsForConflictsResult>
     {
         private readonly string _database;
         private readonly RevisionsCollectionConfiguration _configuration;

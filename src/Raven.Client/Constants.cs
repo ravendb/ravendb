@@ -2,13 +2,13 @@ namespace Raven.Client
 {
     public static class Constants
     {
-        public class Json
+        public sealed class Json
         {
             private Json()
             {
             }
 
-            public class Fields
+            public sealed class Fields
             {
                 private Fields()
                 {
@@ -20,7 +20,7 @@ namespace Raven.Client
             }
         }
 
-        internal class QueryString
+        internal sealed class QueryString
         {
             private QueryString()
             {
@@ -31,7 +31,7 @@ namespace Raven.Client
             public const string ShardNumber = "shardNumber";
         }
 
-        public class Headers
+        public sealed class Headers
         {
             private Headers()
             {
@@ -86,13 +86,13 @@ namespace Raven.Client
             internal const string DatabaseMissing = "Database-Missing";
         }
 
-        public class Platform
+        public sealed class Platform
         {
             private Platform()
             {
             }
 
-            public class Windows
+            public sealed class Windows
             {
                 private Windows()
                 {
@@ -127,7 +127,7 @@ namespace Raven.Client
                 };
             }
 
-            public class Linux
+            public sealed class Linux
             {
                 private Linux()
                 {
@@ -139,7 +139,7 @@ namespace Raven.Client
             }
         }
 
-        public class Certificates
+        public sealed class Certificates
         {
             private Certificates()
             {
@@ -149,7 +149,7 @@ namespace Raven.Client
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
 
-        internal class Network
+        internal sealed class Network
         {
             public const string AnyIp = "0.0.0.0";
             public const int ZeroValue = 0;
@@ -158,7 +158,7 @@ namespace Raven.Client
             public const int DefaultSecuredRavenDbTcpPort = 38888;
         }
 
-        internal class DatabaseSettings
+        internal sealed class DatabaseSettings
         {
             private DatabaseSettings()
             {
@@ -167,13 +167,13 @@ namespace Raven.Client
             public const string StudioId = "DatabaseSettings/Studio";
         }
 
-        public class Configuration
+        public sealed class Configuration
         {
             private Configuration()
             {
             }
 
-            internal class Indexes
+            internal sealed class Indexes
             {
                 internal const string IndexingStaticSearchEngineType = "Indexing.Static.SearchEngineType";
             }
@@ -196,7 +196,7 @@ namespace Raven.Client
             public const string All = "@all_timeseries";
         }
 
-        public class Documents
+        public sealed class Documents
         {
             private Documents()
             {
@@ -215,7 +215,7 @@ namespace Raven.Client
                 BeginningOfTime
             }
 
-            public class Metadata
+            public sealed class Metadata
             {
                 private Metadata()
                 {
@@ -269,11 +269,11 @@ namespace Raven.Client
 
                 public const string Etag = "@etag";
 
-                internal class Sharding
+                internal sealed class Sharding
                 {
                     internal const string ShardNumber = "@shard-number";
 
-                    internal class Querying
+                    internal sealed class Querying
                     {
                         internal const string OrderByFields = "@order-by-fields";
 
@@ -284,14 +284,14 @@ namespace Raven.Client
                 }
             }
 
-            public class Collections
+            public sealed class Collections
             {
                 public const string AllDocumentsCollection = "@all_docs";
 
                 public const string EmptyCollection = "@empty";
             }
 
-            public class Indexing
+            public sealed class Indexing
             {
                 private Indexing()
                 {
@@ -299,7 +299,7 @@ namespace Raven.Client
 
                 public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
-                public class Fields
+                public sealed class Fields
                 {
                     private Fields()
                     {
@@ -343,7 +343,7 @@ namespace Raven.Client
 
                     public const string EmptyString = "EMPTY_STRING";
 
-                    public class JavaScript
+                    public sealed class JavaScript
                     {
                         private JavaScript()
                         {
@@ -361,7 +361,7 @@ namespace Raven.Client
                     }
                 }
 
-                public class Spatial
+                public sealed class Spatial
                 {
                     private Spatial()
                     {
@@ -379,7 +379,7 @@ namespace Raven.Client
                     public const double MilesToKm = 1.60934;
                 }
 
-                internal class Analyzers
+                internal sealed class Analyzers
                 {
                     private Analyzers()
                     {
@@ -393,13 +393,13 @@ namespace Raven.Client
                 }
             }
 
-            public class Querying
+            public sealed class Querying
             {
                 private Querying()
                 {
                 }
 
-                public class Facet
+                public sealed class Facet
                 {
                     private Facet()
                     {
@@ -408,12 +408,12 @@ namespace Raven.Client
                     public const string AllResults = "@AllResults";
                 }
 
-                internal class Fields
+                internal sealed class Fields
                 {
                     internal const string PowerBIJsonFieldName = "json()";
                 }
 
-                public class Sharding
+                public sealed class Sharding
                 {
                     private Sharding()
                     {
@@ -423,7 +423,7 @@ namespace Raven.Client
                 }
             }
 
-            public class Encryption
+            public sealed class Encryption
             {
                 private Encryption()
                 {
@@ -432,7 +432,7 @@ namespace Raven.Client
                 public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
             }
 
-            public class PeriodicBackup
+            public sealed class PeriodicBackup
             {
                 private PeriodicBackup()
                 {
@@ -450,7 +450,7 @@ namespace Raven.Client
 
                 public const string EncryptedIncrementalBackupExtension = ".ravendb-encrypted-incremental-backup";
 
-                public class Folders
+                public sealed class Folders
                 {
                     private Folders()
                     {
@@ -464,7 +464,7 @@ namespace Raven.Client
                 }
             }
 
-            internal class Blob
+            internal sealed class Blob
             {
                 public const string Document = "@raven-data";
 
@@ -484,7 +484,7 @@ namespace Raven.Client
             public const string CsvImportOptions = "csvImportOptions";
         }
 
-        internal class CompareExchange
+        internal sealed class CompareExchange
         {
             private CompareExchange()
             {
@@ -495,13 +495,13 @@ namespace Raven.Client
             public const string ObjectFieldName = "Object";
         }
 
-        internal class Monitoring
+        internal sealed class Monitoring
         {
             private Monitoring()
             {
             }
 
-            internal class Snmp
+            internal sealed class Snmp
             {
                 private Snmp()
                 {
@@ -511,13 +511,13 @@ namespace Raven.Client
             }
         }
 
-        internal class Fields
+        internal sealed class Fields
         {
             private Fields()
             {
             }
 
-            internal class CommandData
+            internal sealed class CommandData
             {
                 private CommandData()
                 {
@@ -529,7 +529,7 @@ namespace Raven.Client
             }
         }
 
-        internal class Obsolete
+        internal sealed class Obsolete
         {
             private Obsolete()
             {

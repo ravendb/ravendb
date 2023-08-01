@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class ReplayTransactionsRecordingOperation : IMaintenanceOperation<ReplayTxOperationResult>
+    public sealed class ReplayTransactionsRecordingOperation : IMaintenanceOperation<ReplayTxOperationResult>
     {
         private readonly Stream _replayStream;
         private readonly long _operationId;

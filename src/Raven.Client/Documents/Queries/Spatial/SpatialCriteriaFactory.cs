@@ -2,7 +2,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Queries.Spatial
 {
-    public class SpatialCriteriaFactory
+    public sealed class SpatialCriteriaFactory
     {
         public static SpatialCriteriaFactory Instance = new SpatialCriteriaFactory();
 

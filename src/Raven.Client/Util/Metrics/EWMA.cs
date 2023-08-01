@@ -8,7 +8,7 @@ namespace Raven.Client.Util.Metrics
     /// </summary>
     /// <see href="http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf"/>
     /// <see href="http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf" />
-    internal class EWMA
+    internal sealed class EWMA
     {
         private static readonly double M1Second = 1 - Math.Exp(-1);
         public static readonly double M1Alpha = 1 - Math.Exp(-5 / 60.0);

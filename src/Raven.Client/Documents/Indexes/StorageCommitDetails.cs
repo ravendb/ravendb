@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class StorageCommitDetails 
+    public sealed class StorageCommitDetails 
     {
         public int NumberOfModifiedPages { get; set; }
 

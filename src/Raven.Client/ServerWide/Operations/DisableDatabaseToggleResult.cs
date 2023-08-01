@@ -3,7 +3,7 @@
     /// <summary>
     /// The result of a disable or enable database
     /// </summary>
-    public class DisableDatabaseToggleResult
+    public sealed class DisableDatabaseToggleResult
     {
         /// <summary>
         ///  If database disabled.

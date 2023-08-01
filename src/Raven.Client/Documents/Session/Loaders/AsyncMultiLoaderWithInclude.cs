@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session.Loaders
     /// <summary>
     /// Fluent implementation for specifying include paths for loading documents
     /// </summary>
-    public class AsyncMultiLoaderWithInclude<T> : IAsyncLoaderWithInclude<T>
+    public sealed class AsyncMultiLoaderWithInclude<T> : IAsyncLoaderWithInclude<T>
     {
         private readonly IAsyncDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();

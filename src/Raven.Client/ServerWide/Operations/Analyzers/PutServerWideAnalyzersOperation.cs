@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Analyzers
 {
-    public class PutServerWideAnalyzersOperation : IServerOperation
+    public sealed class PutServerWideAnalyzersOperation : IServerOperation
     {
         private readonly AnalyzerDefinition[] _analyzersToAdd;
 

@@ -18,7 +18,7 @@ using static Sparrow.Extensions.RavenDateTimeExtensions;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    internal class TimeSeriesStreamOperation : StreamOperation
+    internal sealed class TimeSeriesStreamOperation : StreamOperation
     {
         private readonly string _docId;
         private readonly string _name;
@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        internal class TimeSeriesStreamEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        internal sealed class TimeSeriesStreamEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             private readonly JsonOperationContext _context;
             private readonly PeepingTomStream _peepingTomStream;
@@ -310,7 +310,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        internal class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        internal sealed class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {

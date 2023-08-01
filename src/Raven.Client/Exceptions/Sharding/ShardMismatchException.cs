@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Sharding;
 
-public class ShardMismatchException : RavenException
+public sealed class ShardMismatchException : RavenException
 {
     public ShardMismatchException()
     {

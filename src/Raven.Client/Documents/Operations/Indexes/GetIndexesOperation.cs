@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexesOperation : IMaintenanceOperation<IndexDefinition[]>
+    public sealed class GetIndexesOperation : IMaintenanceOperation<IndexDefinition[]>
     {
         private readonly int _start;
         private readonly int _pageSize;
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexesCommand(_start, _pageSize);
         }
 
-        internal class GetIndexesCommand : RavenCommand<IndexDefinition[]>
+        internal sealed class GetIndexesCommand : RavenCommand<IndexDefinition[]>
         {
             private readonly int _start;
             private readonly int _pageSize;

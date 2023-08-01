@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class RegisterReplicationHubAccessOperation : IMaintenanceOperation
+    public sealed class RegisterReplicationHubAccessOperation : IMaintenanceOperation
     {
         private readonly string _hubName;
         private readonly ReplicationHubAccess _access;

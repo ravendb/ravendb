@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class PutServerWideBackupConfigurationOperation : IServerOperation<PutServerWideBackupConfigurationResponse>
+    public sealed class PutServerWideBackupConfigurationOperation : IServerOperation<PutServerWideBackupConfigurationResponse>
     {
         private readonly ServerWideBackupConfiguration _configuration;
 
@@ -62,7 +62,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         }
     }
 
-    public class PutServerWideBackupConfigurationResponse : ServerWideTaskResponse
+    public sealed class PutServerWideBackupConfigurationResponse : ServerWideTaskResponse
     {
 
     }

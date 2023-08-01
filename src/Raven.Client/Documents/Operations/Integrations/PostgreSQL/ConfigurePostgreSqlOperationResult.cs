@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
 {
-    public class ConfigurePostgreSqlOperationResult
+    public sealed class ConfigurePostgreSqlOperationResult
     {
         public long? RaftCommandIndex { get; set; }
     }

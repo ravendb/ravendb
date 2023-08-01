@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class HeadDocumentCommand : RavenCommand<string>
+    public sealed class HeadDocumentCommand : RavenCommand<string>
     {
         private readonly string _id;
         private readonly string _changeVector;

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Session
 {
-    internal class DocumentsById : IEnumerable<KeyValuePair<string, DocumentInfo>>
+    internal sealed class DocumentsById : IEnumerable<KeyValuePair<string, DocumentInfo>>
     {
         private readonly Dictionary<string, DocumentInfo> _inner;
 
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class EntityInfo
+    public sealed class EntityInfo
     {
         public string Id { get; set; }
         public object Entity { get; set; }

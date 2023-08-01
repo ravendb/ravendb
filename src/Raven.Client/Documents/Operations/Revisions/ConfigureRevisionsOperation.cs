@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class ConfigureRevisionsOperation : IMaintenanceOperation<ConfigureRevisionsOperationResult>
+    public sealed class ConfigureRevisionsOperation : IMaintenanceOperation<ConfigureRevisionsOperationResult>
     {
         private readonly RevisionsConfiguration _configuration;
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
     }
 
-    public class ConfigureRevisionsOperationResult
+    public sealed class ConfigureRevisionsOperationResult
     {
         public long? RaftCommandIndex { get; set; }
     }

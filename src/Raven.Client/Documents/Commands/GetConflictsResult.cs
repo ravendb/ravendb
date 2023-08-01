@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetConflictsResult
+    public sealed class GetConflictsResult
     {
         public string Id { get; set; }
 
@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Commands
 
         public long TotalResults { get; set; }
 
-        public class Conflict
+        public sealed class Conflict
         {
             public DateTime LastModified { get; set; }
 
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Commands
         }
     }
 
-    internal class GetConflictsPreviewResult
+    internal sealed class GetConflictsPreviewResult
     {
         public List<ConflictPreview> Results { get; internal set; }
 
@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Commands
 
         public string ContinuationToken { get; set; }
 
-        public class ConflictPreview
+        public sealed class ConflictPreview
         {
             public string Id { get; set; }
 

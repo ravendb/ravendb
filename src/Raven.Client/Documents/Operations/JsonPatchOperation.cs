@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class JsonPatchOperation : IOperation<JsonPatchResult>
+    public sealed class JsonPatchOperation : IOperation<JsonPatchResult>
     {
         public string Id;
         public JsonPatchDocument JsonPatchDocument;
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations
             return new JsonPatchCommand(conventions, Id, JsonPatchDocument);
         }
 
-        internal class JsonPatchCommand : RavenCommand<JsonPatchResult>
+        internal sealed class JsonPatchCommand : RavenCommand<JsonPatchResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly string _id;
@@ -95,7 +95,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    internal class JsonOperation
+    internal sealed class JsonOperation
     {
         public List<Microsoft.AspNetCore.JsonPatch.Operations.Operation> Operations { get; set; }
     }

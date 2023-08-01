@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class PutSecretKeyCommand : RavenCommand
+    public sealed class PutSecretKeyCommand : RavenCommand
     {
         private readonly string _name;
         private readonly string _base64Key;

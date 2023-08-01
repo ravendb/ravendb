@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Http.Behaviors;
 
-internal class DefaultCommandResponseBehavior : AbstractCommandResponseBehavior
+internal sealed class DefaultCommandResponseBehavior : AbstractCommandResponseBehavior
 {
     public static DefaultCommandResponseBehavior Instance = new();
 

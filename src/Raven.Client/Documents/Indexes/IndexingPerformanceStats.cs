@@ -3,7 +3,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexingPerformanceStats : IndexingPerformanceBasicStats
+    public sealed class IndexingPerformanceStats : IndexingPerformanceBasicStats
     {
         public IndexingPerformanceStats()
         {

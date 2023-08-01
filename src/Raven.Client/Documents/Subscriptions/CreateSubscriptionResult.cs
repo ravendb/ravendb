@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Subscriptions
         public long RaftCommandIndex { get; set; }
     }
 
-    public class UpdateSubscriptionResult : CreateSubscriptionResult
+    public sealed class UpdateSubscriptionResult : CreateSubscriptionResult
     {
     }
 }

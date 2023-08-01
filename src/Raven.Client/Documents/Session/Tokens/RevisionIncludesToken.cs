@@ -4,7 +4,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class RevisionIncludesToken : QueryToken
+    public sealed class RevisionIncludesToken : QueryToken
     {
         private readonly string _dateTime;
         private readonly string _path;

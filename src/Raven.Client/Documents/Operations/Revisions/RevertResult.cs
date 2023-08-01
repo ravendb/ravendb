@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         public bool ShouldPersist => false;
     }
 
-    public class EnforceConfigurationResult : OperationResult
+    public sealed class EnforceConfigurationResult : OperationResult
     {
         public int RemovedRevisions { get; set; }
 
@@ -121,7 +121,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
     }
 
-    public class RevertResult : OperationResult
+    public sealed class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }
         private int _failedCollections { get; set; }

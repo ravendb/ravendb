@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class GroupByKeyToken : QueryToken
+    public sealed class GroupByKeyToken : QueryToken
     {
         private readonly string _fieldName;
         private readonly string _projectedName;

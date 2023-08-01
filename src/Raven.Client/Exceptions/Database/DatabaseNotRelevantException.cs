@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseNotRelevantException : RavenException
+    public sealed class DatabaseNotRelevantException : RavenException
     {
         public DatabaseNotRelevantException()
         {

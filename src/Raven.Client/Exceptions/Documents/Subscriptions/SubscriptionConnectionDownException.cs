@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionConnectionDownException : SubscriptionException
+    public sealed class SubscriptionConnectionDownException : SubscriptionException
     {
         public SubscriptionConnectionDownException(string message) : base(message)
         {

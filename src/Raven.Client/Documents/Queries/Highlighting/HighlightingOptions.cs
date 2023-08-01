@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.Highlighting
 {
-    public class HighlightingOptions
+    public sealed class HighlightingOptions
     {
         public string GroupKey { get; set; }
 

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    internal class LimitedStream : Stream
+    internal sealed class LimitedStream : Stream
     {
         public long OverallRead { get; private set; }
         private readonly long _length;

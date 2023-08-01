@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PatchOperation<TEntity> : PatchOperation
+    public sealed class PatchOperation<TEntity> : PatchOperation
     {
         public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfChangeVectorMismatch = false)
             : base(id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch)
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations
 
     public class PatchOperation : IOperation<PatchResult>
     {
-        public class Result<TEntity>
+        public sealed class Result<TEntity>
         {
             public PatchStatus Status { get; set; }
 
@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Operations
             return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
         }
 
-        internal class PatchCommand : RavenCommand<PatchResult>
+        internal sealed class PatchCommand : RavenCommand<PatchResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly string _id;

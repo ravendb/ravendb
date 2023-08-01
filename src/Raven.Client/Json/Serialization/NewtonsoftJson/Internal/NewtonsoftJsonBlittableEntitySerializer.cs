@@ -6,7 +6,7 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class NewtonsoftJsonBlittableEntitySerializer
+    internal sealed class NewtonsoftJsonBlittableEntitySerializer
     {
         private readonly LightWeightThreadLocal<BlittableJsonReader> _reader;
         private readonly LightWeightThreadLocal<IJsonSerializer> _deserializer;

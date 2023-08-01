@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class GetDatabaseTopologyCommand : RavenCommand<Topology>
+    public sealed class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
         private readonly Guid? _applicationIdentifier;
         private readonly bool _usePrivateUrls;

@@ -47,7 +47,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
     /// index this as a numeric value with {@link NumericField}
     /// and use {@link NumericRangeQuery} to query it.
     /// </summary>
-    internal class DateTools
+    internal sealed class DateTools
     {
         private static readonly string YEAR_FORMAT = "yyyy";
         private static readonly string MONTH_FORMAT = "yyyyMM";
@@ -302,7 +302,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         }
 
         /// <summary>Specifies the time granularity. </summary>
-        internal class Resolution
+        internal sealed class Resolution
         {
             /// <summary>
             /// Resolution by year

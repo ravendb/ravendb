@@ -7,7 +7,7 @@ using Raven.Client.Exceptions.Database;
 
 namespace Raven.Client.Http
 {
-    public class NodeSelector : IDisposable
+    public sealed class NodeSelector : IDisposable
     {
         private class NodeSelectorState
         {

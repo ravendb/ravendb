@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class JsonPatchResult : PatchResultBase
+    public sealed class JsonPatchResult : PatchResultBase
     {
 
     }

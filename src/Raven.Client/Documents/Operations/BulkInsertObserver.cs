@@ -3,7 +3,7 @@ using Raven.Client.Documents.BulkInsert;
 
 namespace Raven.Client.Documents.Operations;
 
-internal class BulkInsertObserver : IObserver<OperationStatusChange>
+internal sealed class BulkInsertObserver : IObserver<OperationStatusChange>
 {
     private readonly BulkInsertOperation _operation;
     

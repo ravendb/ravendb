@@ -8,7 +8,7 @@ using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Json
 {
-    internal class BlittableJsonContent : HttpContent
+    internal sealed class BlittableJsonContent : HttpContent
     {
         private readonly Func<Stream, Task> _asyncTaskWriter;
         private readonly DocumentConventions _conventions;

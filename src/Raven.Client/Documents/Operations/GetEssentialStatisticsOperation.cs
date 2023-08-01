@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations;
 
-public class GetEssentialStatisticsOperation : IMaintenanceOperation<EssentialDatabaseStatistics>
+public sealed class GetEssentialStatisticsOperation : IMaintenanceOperation<EssentialDatabaseStatistics>
 {
     private readonly string _debugTag;
 
@@ -24,7 +24,7 @@ public class GetEssentialStatisticsOperation : IMaintenanceOperation<EssentialDa
         return new GetEssentialStatisticsCommand(_debugTag);
     }
 
-    internal class GetEssentialStatisticsCommand : RavenCommand<EssentialDatabaseStatistics>
+    internal sealed class GetEssentialStatisticsCommand : RavenCommand<EssentialDatabaseStatistics>
     {
         private readonly string _debugTag;
 

@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
-    public class PutCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
+    public sealed class PutCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
     {
         private readonly string _key;
         private readonly T _value;

@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class RetentionPolicy : IDynamicJson
+    public sealed class RetentionPolicy : IDynamicJson
     {
         public bool Disabled { get; set; }
 

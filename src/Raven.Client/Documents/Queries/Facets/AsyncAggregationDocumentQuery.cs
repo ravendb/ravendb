@@ -3,7 +3,7 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    internal class AsyncAggregationDocumentQuery<T> : AggregationQueryBase, IAsyncAggregationDocumentQuery<T>
+    internal sealed class AsyncAggregationDocumentQuery<T> : AggregationQueryBase, IAsyncAggregationDocumentQuery<T>
     {
         private readonly AbstractDocumentQuery<T, AsyncDocumentQuery<T>> _source;
 

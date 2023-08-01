@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class ConditionalGetDocumentsCommand : RavenCommand<ConditionalGetResult>
+    public sealed class ConditionalGetDocumentsCommand : RavenCommand<ConditionalGetResult>
     {
         private readonly string _changeVector;
         private readonly string _id;
@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Commands
         public override bool IsReadRequest => false;
     }
 
-    public class ConditionalGetResult
+    public sealed class ConditionalGetResult
     {
         public BlittableJsonReaderArray Results { get; set; }
 

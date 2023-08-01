@@ -6,7 +6,7 @@
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class GetSubscriptionsResult
+    public sealed class GetSubscriptionsResult
     {
         public SubscriptionState[] Results;
     }

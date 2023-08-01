@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Security
 {
-    public class InsufficientTransportLayerProtectionException : SecurityException
+    public sealed class InsufficientTransportLayerProtectionException : SecurityException
     {
         public InsufficientTransportLayerProtectionException()
         {

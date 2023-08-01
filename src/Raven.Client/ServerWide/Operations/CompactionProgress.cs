@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class CompactionProgress : CompactionProgressBase<CompactionProgress>, IOperationProgress
+    public sealed class CompactionProgress : CompactionProgressBase<CompactionProgress>, IOperationProgress
     {
         private readonly CompactionResult _result;
         private Dictionary<string, CompactionProgress> _cachedIndexesResults;

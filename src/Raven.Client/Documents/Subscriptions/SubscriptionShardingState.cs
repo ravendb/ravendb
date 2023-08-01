@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions;
 
-public class SubscriptionShardingState : IDynamicJson
+public sealed class SubscriptionShardingState : IDynamicJson
 {
     public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
     public Dictionary<string, string> NodeTagPerShard { get; set; }

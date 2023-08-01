@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    internal class SubscriptionConnectionClientMessage
+    internal sealed class SubscriptionConnectionClientMessage
     {
         internal enum MessageType
         {
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVector { get; set; }
     }
 
-    internal class BatchFromServer
+    internal sealed class BatchFromServer
     {
         public List<SubscriptionConnectionServerMessage> Messages;
         public IDisposable ReturnContext;
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
-    internal class SubscriptionConnectionServerMessage
+    internal sealed class SubscriptionConnectionServerMessage
     {
         internal enum MessageType
         {
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Subscriptions
             ConcurrencyReconnect
         }
 
-        internal class SubscriptionRedirectData
+        internal sealed class SubscriptionRedirectData
         {
             public string CurrentTag;
             public string RedirectedTag;
@@ -106,7 +106,7 @@ namespace Raven.Client.Documents.Subscriptions
     /// <summary>
     /// Holds subscription connection properties, control both how client and server side behave
     /// </summary>
-    public class SubscriptionWorkerOptions
+    public sealed class SubscriptionWorkerOptions
     {
         internal const int DefaultSendBufferSizeInBytes = 32 * 1024;
 

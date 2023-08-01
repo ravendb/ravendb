@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Sorters
 {
-    public class DeleteSorterOperation : IMaintenanceOperation
+    public sealed class DeleteSorterOperation : IMaintenanceOperation
     {
         private readonly string _sorterName;
 

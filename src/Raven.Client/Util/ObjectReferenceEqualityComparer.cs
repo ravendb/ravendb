@@ -9,7 +9,7 @@ namespace Raven.Client.Util
     /// A generic object comparer that would only use object's reference, 
     /// ignoring any <see cref="IEquatable{T}"/> or <see cref="object.Equals(object)"/>  overrides.
     /// </summary>
-    internal class ObjectReferenceEqualityComparer<T> : EqualityComparer<T>
+    internal sealed class ObjectReferenceEqualityComparer<T> : EqualityComparer<T>
         where T : class
     {
         /// <summary>

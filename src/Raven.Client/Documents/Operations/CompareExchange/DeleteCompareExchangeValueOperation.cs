@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
-    public class DeleteCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
+    public sealed class DeleteCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
     {
         private readonly string _key;
         private readonly long _index;

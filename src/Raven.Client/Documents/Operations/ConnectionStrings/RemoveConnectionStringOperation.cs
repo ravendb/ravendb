@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
-    public class RemoveConnectionStringOperation<T> : IMaintenanceOperation<RemoveConnectionStringResult> where T : ConnectionString
+    public sealed class RemoveConnectionStringOperation<T> : IMaintenanceOperation<RemoveConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
 
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         }
     }
 
-    public class RemoveConnectionStringResult
+    public sealed class RemoveConnectionStringResult
     {
         public long RaftCommandIndex { get; set; }
     }

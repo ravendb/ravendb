@@ -8,7 +8,7 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Util
 {
-    internal class WebSocketStream : Stream
+    internal sealed class WebSocketStream : Stream
     {
         private readonly WebSocket _webSocket;
         private readonly CancellationToken _cancellationToken;

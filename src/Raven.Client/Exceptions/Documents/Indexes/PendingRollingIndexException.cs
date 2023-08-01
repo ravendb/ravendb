@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Exceptions.Documents.Indexes
 {
-    public class PendingRollingIndexException : RavenException
+    public sealed class PendingRollingIndexException : RavenException
     {
         public PendingRollingIndexException()
         {

@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication
 {
-    public class ReplicationClientConfiguration
+    public sealed class ReplicationClientConfiguration
     {
         public DynamicJsonValue ToJson()
         {

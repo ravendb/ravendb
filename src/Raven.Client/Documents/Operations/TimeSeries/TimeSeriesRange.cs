@@ -3,18 +3,18 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesRange : AbstractTimeSeriesRange
+    public sealed class TimeSeriesRange : AbstractTimeSeriesRange
     {
         public DateTime? From, To;
     }
 
-    internal class TimeSeriesTimeRange : AbstractTimeSeriesRange
+    internal sealed class TimeSeriesTimeRange : AbstractTimeSeriesRange
     {
         public TimeValue Time;
         public TimeSeriesRangeType Type;
     }
 
-    internal class TimeSeriesCountRange : AbstractTimeSeriesRange
+    internal sealed class TimeSeriesCountRange : AbstractTimeSeriesRange
     {
         public int Count;
         public TimeSeriesRangeType Type;

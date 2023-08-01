@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> AllResults();
     }
 
-    internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>, IRangeFacetOperations<T>
+    internal sealed class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>, IRangeFacetOperations<T>
     {
         private readonly DocumentConventions _conventions;
         private RangeFacet<T> _range;

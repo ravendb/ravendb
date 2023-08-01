@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Util
 {
-    public class Size
+    public sealed class Size
     {
         public Size()
         {

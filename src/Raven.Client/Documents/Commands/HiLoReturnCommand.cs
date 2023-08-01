@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class HiLoReturnCommand : RavenCommand
+    public sealed class HiLoReturnCommand : RavenCommand
     {
         private readonly string _tag;
         private readonly long _last;

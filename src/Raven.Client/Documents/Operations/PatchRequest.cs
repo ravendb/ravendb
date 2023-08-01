@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)
     /// </summary>
-    public class PatchRequest
+    public sealed class PatchRequest
     {
         /// <summary>
         /// JavaScript function to use to patch a document

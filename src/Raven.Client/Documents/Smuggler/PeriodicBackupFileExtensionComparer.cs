@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Smuggler
 {
-    internal class PeriodicBackupFileExtensionComparer : IComparer<string>
+    internal sealed class PeriodicBackupFileExtensionComparer : IComparer<string>
     {
         public static PeriodicBackupFileExtensionComparer Instance = new PeriodicBackupFileExtensionComparer();
 

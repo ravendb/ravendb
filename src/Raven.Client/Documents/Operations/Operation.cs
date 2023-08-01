@@ -15,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class Operation<TResult> : Operation
+    public sealed class Operation<TResult> : Operation
     {
         internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag = null)
             : base(requestExecutor, changes, conventions, id, nodeTag)

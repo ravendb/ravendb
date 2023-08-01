@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
+    public sealed class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
     {
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime? @from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false) : base(docId, timeseries, @from, to, start, pageSize, returnFullResults)
         {

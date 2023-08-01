@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Commercial
 {
-    public class LicenseActivationException : RavenException
+    public sealed class LicenseActivationException : RavenException
     {
 
         public LicenseActivationException()

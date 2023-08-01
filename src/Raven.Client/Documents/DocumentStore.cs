@@ -27,7 +27,7 @@ namespace Raven.Client.Documents
     /// <summary>
     /// Manages access to RavenDB and open sessions to work with RavenDB.
     /// </summary>
-    public class DocumentStore : DocumentStoreBase
+    public sealed class DocumentStore : DocumentStoreBase
     {
         private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>();
 
@@ -277,7 +277,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// validate the configuration for the document store
         /// </summary>
-        protected virtual void AssertValidConfiguration()
+        private void AssertValidConfiguration()
         {
             if (Urls == null || Urls.Length == 0)
             {
@@ -325,7 +325,7 @@ namespace Raven.Client.Documents
             }, CreateDatabaseChanges);
         }
 
-        internal virtual IDatabaseChanges CreateDatabaseChanges(DatabaseChangesOptions node)
+        internal IDatabaseChanges CreateDatabaseChanges(DatabaseChangesOptions node)
         {
             return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.TryRemove(node, out var _), node.NodeTag);
         }

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class ResetEtlOperation : IMaintenanceOperation
+    public sealed class ResetEtlOperation : IMaintenanceOperation
     {
         private readonly string _configurationName;
         private readonly string _transformationName;

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetConflictsCommand : RavenCommand<GetConflictsResult>
+    public sealed class GetConflictsCommand : RavenCommand<GetConflictsResult>
     {
         private readonly string _id;
         public override bool IsReadRequest => true;

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
-    public class GetPullReplicationTasksInfoOperation : IMaintenanceOperation<PullReplicationDefinitionAndCurrentConnections>
+    public sealed class GetPullReplicationTasksInfoOperation : IMaintenanceOperation<PullReplicationDefinitionAndCurrentConnections>
     {
         private readonly long _taskId;
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new GetPullReplicationTasksInfoCommand(_taskId);
         }
 
-        internal class GetPullReplicationTasksInfoCommand : RavenCommand<PullReplicationDefinitionAndCurrentConnections>
+        internal sealed class GetPullReplicationTasksInfoCommand : RavenCommand<PullReplicationDefinitionAndCurrentConnections>
         {
             private readonly long _taskId;
 

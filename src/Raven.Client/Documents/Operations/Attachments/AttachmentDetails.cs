@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         public string DocumentId;
     }
 
-    internal class AttachmentNameWithCount : AttachmentName
+    internal sealed class AttachmentNameWithCount : AttachmentName
     {
         public long Count { get; set; }
 
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         }
     }
 
-    public class AttachmentRequest
+    public sealed class AttachmentRequest
     {
         public AttachmentRequest(string documentId, string name)
         {

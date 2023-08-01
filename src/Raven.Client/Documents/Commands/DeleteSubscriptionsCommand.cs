@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DeleteSubscriptionCommand : RavenCommand, IRaftCommand
+    public sealed class DeleteSubscriptionCommand : RavenCommand, IRaftCommand
     {
         private readonly string _name;
 

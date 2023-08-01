@@ -14,7 +14,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    internal class TimeSeriesQueryVisitor<T>
+    internal sealed class TimeSeriesQueryVisitor<T>
     {
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private readonly IAbstractDocumentQuery<T> _documentQuery;
@@ -673,7 +673,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             throw new InvalidOperationException($"Failed to evaluate time-series {(groupBy ? "group by clause" : "name")} from argument '{argument}' ", e);
         }
 
-        internal class TimePeriodBuilder : ITimePeriodBuilder, ITimeSeriesAggregationOperations
+        internal sealed class TimePeriodBuilder : ITimePeriodBuilder, ITimeSeriesAggregationOperations
         {
             private int _duration;
             private string _methodName;

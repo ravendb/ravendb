@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Session.Querying.Sharding;
 
-internal class QueryShardedContextBuilder : IQueryShardedContextBuilder
+internal sealed class QueryShardedContextBuilder : IQueryShardedContextBuilder
 {
     public HashSet<string> DocumentIds { get; } = new(StringComparer.OrdinalIgnoreCase);
 

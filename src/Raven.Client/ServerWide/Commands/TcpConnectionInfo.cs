@@ -2,7 +2,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class TcpConnectionInfo
+    public sealed class TcpConnectionInfo
     {
         public int Port;
         public string Url;

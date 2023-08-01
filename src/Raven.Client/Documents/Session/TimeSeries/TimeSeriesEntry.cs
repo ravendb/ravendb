@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
     }
 
-    public class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new()
+    public sealed class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new()
     {
         public new T Value { get; set; }
 
@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class TimeSeriesValueAttribute : Attribute
+    public sealed class TimeSeriesValueAttribute : Attribute
     {
         public readonly byte Index;
 
@@ -200,7 +200,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
     }
 
-    public class TimeSeriesRollupEntry<TValues> : TimeSeriesEntry, IPostJsonDeserialization where TValues : new()
+    public sealed class TimeSeriesRollupEntry<TValues> : TimeSeriesEntry, IPostJsonDeserialization where TValues : new()
     {
         private int _dim;
 

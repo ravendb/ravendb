@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents
 {
-    public class DocumentDoesNotExistException : RavenException
+    public sealed class DocumentDoesNotExistException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentDoesNotExistException"/> class.

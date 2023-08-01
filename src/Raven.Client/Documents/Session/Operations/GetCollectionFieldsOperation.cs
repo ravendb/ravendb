@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    internal class GetCollectionFieldsOperation
+    internal sealed class GetCollectionFieldsOperation
     {
         private BlittableJsonReaderObject _result;
         private readonly GetCollectionFieldsCommand _command;

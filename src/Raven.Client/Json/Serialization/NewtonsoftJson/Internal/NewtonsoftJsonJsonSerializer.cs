@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class NewtonsoftJsonJsonSerializer : JsonSerializer, IJsonSerializer
+    internal sealed class NewtonsoftJsonJsonSerializer : JsonSerializer, IJsonSerializer
     {
         object IJsonSerializer.Deserialize(IJsonReader reader, Type type)
         {

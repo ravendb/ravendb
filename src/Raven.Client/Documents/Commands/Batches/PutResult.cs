@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Commands.Batches
     /// <summary>
     /// The result of a PUT operation
     /// </summary>
-    public class PutResult
+    public sealed class PutResult
     {
         /// <summary>
         /// Id of the document that was PUT.

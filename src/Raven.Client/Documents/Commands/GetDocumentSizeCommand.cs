@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands;
 
-internal class GetDocumentSizeCommand : RavenCommand<DocumentSizeDetails>
+internal sealed class GetDocumentSizeCommand : RavenCommand<DocumentSizeDetails>
 {
     private readonly string _id;
     public override bool IsReadRequest => true;

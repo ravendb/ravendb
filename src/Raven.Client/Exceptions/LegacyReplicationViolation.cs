@@ -1,7 +1,7 @@
 ﻿
 namespace Raven.Client.Exceptions
 {
-    public class LegacyReplicationViolationException : System.Exception
+    public sealed class LegacyReplicationViolationException : System.Exception
     {
         public LegacyReplicationViolationException() { }
         public LegacyReplicationViolationException(string message) : base(message) { }

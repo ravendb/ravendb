@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.MultiGet
 {
-    public class GetRequest
+    public sealed class GetRequest
     {
         /// <summary>
         /// Request url (relative).

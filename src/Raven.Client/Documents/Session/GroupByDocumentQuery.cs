@@ -3,14 +3,14 @@ using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session
 {
-    public class GroupByField
+    public sealed class GroupByField
     {
         public string FieldName { get; set; }
 
         public string ProjectedName { get; set; }
     }
 
-    public class GroupByDocumentQuery<T> : IGroupByDocumentQuery<T>
+    public sealed class GroupByDocumentQuery<T> : IGroupByDocumentQuery<T>
     {
         private readonly DocumentQuery<T> _query;
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class AsyncGroupByDocumentQuery<T> : IAsyncGroupByDocumentQuery<T>
+    public sealed class AsyncGroupByDocumentQuery<T> : IAsyncGroupByDocumentQuery<T>
     {
         private readonly AsyncDocumentQuery<T> _query;
 

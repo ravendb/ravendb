@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionDoesNotExistException : SubscriptionException
+    public sealed class SubscriptionDoesNotExistException : SubscriptionException
     {
         public SubscriptionDoesNotExistException(string message) : base(message)
         {

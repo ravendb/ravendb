@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
-    public class GetOngoingTaskInfoOperation : IMaintenanceOperation<OngoingTask>
+    public sealed class GetOngoingTaskInfoOperation : IMaintenanceOperation<OngoingTask>
     {
         private readonly string _taskName;
         private readonly long _taskId;
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new GetOngoingTaskInfoCommand(_taskId, _type);
         }
 
-        internal class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
+        internal sealed class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
         {
             private readonly string _taskName;
             private readonly long _taskId;

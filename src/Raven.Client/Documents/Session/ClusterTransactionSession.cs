@@ -283,7 +283,7 @@ namespace Raven.Client.Documents.Session
             sessionValue.UpdateState(index);
         }
 
-        internal class CompareExchangeSessionValue
+        internal sealed class CompareExchangeSessionValue
         {
             private readonly string _key;
 
@@ -579,7 +579,7 @@ namespace Raven.Client.Documents.Session
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> GetCompareExchangeValuesAsync<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval, CancellationToken token = default);
     }
 
-    public class ClusterTransactionOperationsAsync : ClusterTransactionOperationsBase<AsyncDocumentSession>, IClusterTransactionOperationsAsync, ILazyClusterTransactionOperationsAsync
+    public sealed class ClusterTransactionOperationsAsync : ClusterTransactionOperationsBase<AsyncDocumentSession>, IClusterTransactionOperationsAsync, ILazyClusterTransactionOperationsAsync
     {
         public ClusterTransactionOperationsAsync(AsyncDocumentSession session) : base(session)
         {
@@ -623,7 +623,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class ClusterTransactionOperations : ClusterTransactionOperationsBase<DocumentSession>, IClusterTransactionOperations, ILazyClusterTransactionOperations
+    public sealed class ClusterTransactionOperations : ClusterTransactionOperationsBase<DocumentSession>, IClusterTransactionOperations, ILazyClusterTransactionOperations
     {
         public ClusterTransactionOperations(DocumentSession session) : base(session)
         {

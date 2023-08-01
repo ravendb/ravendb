@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseLoadTimeoutException : RavenException
+    public sealed class DatabaseLoadTimeoutException : RavenException
     {
         public DatabaseLoadTimeoutException()
         {

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetBuildNumberOperation : IServerOperation<BuildNumber>
+    public sealed class GetBuildNumberOperation : IServerOperation<BuildNumber>
     {
         public RavenCommand<BuildNumber> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {

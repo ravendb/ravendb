@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Sharding
 {
-    public class NotSupportedInShardingException : RavenException
+    public sealed class NotSupportedInShardingException : RavenException
     {
         public NotSupportedInShardingException()
         {

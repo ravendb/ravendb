@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Identities
 {
-    public class GetIdentitiesOperation : IMaintenanceOperation<Dictionary<string, long>>
+    public sealed class GetIdentitiesOperation : IMaintenanceOperation<Dictionary<string, long>>
     {
         public RavenCommand<Dictionary<string, long>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

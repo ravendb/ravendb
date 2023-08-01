@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Expiration
 {
-    public class ConfigureExpirationOperation : IMaintenanceOperation<ConfigureExpirationOperationResult>
+    public sealed class ConfigureExpirationOperation : IMaintenanceOperation<ConfigureExpirationOperationResult>
     {
         private readonly ExpirationConfiguration _configuration;
 

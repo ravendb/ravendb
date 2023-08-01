@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Cluster
 {
-    public class NoLeaderException : RavenException
+    public sealed class NoLeaderException : RavenException
     {
         public NoLeaderException()
         {

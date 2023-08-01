@@ -143,7 +143,7 @@ public interface IFilterFactory<T>
 
 }
 
-internal class FilterFactory<T> : IFilterFactory<T>
+internal sealed class FilterFactory<T> : IFilterFactory<T>
 {
     private IAbstractDocumentQuery<T> _documentQuery;
 

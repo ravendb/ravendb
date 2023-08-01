@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations;
 
-public class IndexOptimizeResult : IOperationResult
+public sealed class IndexOptimizeResult : IOperationResult
 {
     public readonly string IndexName;
 

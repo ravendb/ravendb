@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class OrderByToken : QueryToken
+    public sealed class OrderByToken : QueryToken
     {
         private readonly string _fieldName;
         private readonly bool _descending;

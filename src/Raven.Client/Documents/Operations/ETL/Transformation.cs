@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class Transformation
+    public sealed class Transformation
     {
         internal const string LoadTo = "loadTo";
 
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal readonly CountersTransformation Counters;
         
-        internal class CountersTransformation
+        internal sealed class CountersTransformation
         {
             internal const string Load = "loadCounter";
 
@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Operations.ETL
         }
 
         internal readonly TimeSeriesTransformation TimeSeries;
-        internal class TimeSeriesTransformation
+        internal sealed class TimeSeriesTransformation
         {
             internal const string Marker = "$timeSeries/";
             
@@ -257,7 +257,7 @@ namespace Raven.Client.Documents.Operations.ETL
             TimeSeries = new TimeSeriesTransformation(this);
         }
         
-        public virtual bool Validate(ref List<string> errors, EtlType type)
+        public bool Validate(ref List<string> errors, EtlType type)
         {
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));

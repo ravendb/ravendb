@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler;
 
-public class ShardedSmugglerProgress : SmugglerResult.SmugglerProgress, IShardedOperationProgress
+public sealed class ShardedSmugglerProgress : SmugglerResult.SmugglerProgress, IShardedOperationProgress
 {
     public int ShardNumber { get; set; }
     public string NodeTag { get; set; }

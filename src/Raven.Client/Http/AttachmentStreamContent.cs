@@ -13,7 +13,7 @@ namespace Raven.Client.Http
     /// We use AttachmentStreamContent instead of StreamContent in order to not dispose the stream the user passes us
     /// so it will be usable again in failover scenarios.
     /// </summary>
-    public class AttachmentStreamContent : HttpContent
+    public sealed class AttachmentStreamContent : HttpContent
     {
         private readonly Stream _stream;
         private readonly CancellationToken _cancellationToken;

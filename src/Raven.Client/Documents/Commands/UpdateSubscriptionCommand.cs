@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class UpdateSubscriptionCommand : RavenCommand<UpdateSubscriptionResult>, IRaftCommand
+    internal sealed class UpdateSubscriptionCommand : RavenCommand<UpdateSubscriptionResult>, IRaftCommand
     {
         private readonly DocumentConventions _conventions;
         private readonly SubscriptionUpdateOptions _options;

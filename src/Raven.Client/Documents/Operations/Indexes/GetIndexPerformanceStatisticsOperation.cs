@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexPerformanceStatisticsOperation : IMaintenanceOperation<IndexPerformanceStats[]>
+    public sealed class GetIndexPerformanceStatisticsOperation : IMaintenanceOperation<IndexPerformanceStats[]>
     {
         private readonly string[] _indexNames;
 
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexPerformanceStatisticsCommand(_indexNames);
         }
 
-        internal class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
+        internal sealed class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
         {
             private readonly string[] _indexNames;
 

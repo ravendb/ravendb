@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Exceptions.Documents.Compilation
 {
-    public class IndexCompilationException : CompilationException
+    public sealed class IndexCompilationException : CompilationException
     {
         public IndexCompilationException()
         {

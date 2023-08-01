@@ -7,7 +7,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionBatch<T> : SubscriptionBatchBase<T>
+    public sealed class SubscriptionBatch<T> : SubscriptionBatchBase<T>
     {
         private readonly IDocumentStore _store;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;

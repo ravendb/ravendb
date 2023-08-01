@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// An implementation of <see cref="IRavenQueryProvider"/>
     /// </summary>
-    internal class RavenQueryProvider<T> : IRavenQueryProvider
+    internal sealed class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private Action<QueryResult> _afterQueryExecuted;
         private Action<IDocumentQueryCustomization> _customizeQuery;
@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Linq
         /// <returns>
         /// The value that results from executing the specified query.
         /// </returns>
-        public virtual object Execute(Expression expression)
+        public object Execute(Expression expression)
         {
             return GetQueryProviderProcessor<T>().Execute(expression);
         }
@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Linq
         /// Customizes the query using the specified action
         /// </summary>
         /// <param name="action">The action.</param>
-        public virtual void Customize(Action<IDocumentQueryCustomization> action)
+        public void Customize(Action<IDocumentQueryCustomization> action)
         {
             if (action == null)
                 return;
@@ -303,7 +303,7 @@ namespace Raven.Client.Documents.Linq
             return query.CountLazilyAsync(token);
         }
 
-        protected virtual RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
+        protected RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
         {
             return new RavenQueryProviderProcessor<TS>(
                 _queryGenerator,

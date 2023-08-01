@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class AttachmentStream : Stream
+    public sealed class AttachmentStream : Stream
     {
         private HttpResponseMessage _response;
         private Stream _stream;

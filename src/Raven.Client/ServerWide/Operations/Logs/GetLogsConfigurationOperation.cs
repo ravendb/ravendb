@@ -9,7 +9,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
-    public class GetLogsConfigurationOperation : IServerOperation<GetLogsConfigurationResult>
+    public sealed class GetLogsConfigurationOperation : IServerOperation<GetLogsConfigurationResult>
     {
         public RavenCommand<GetLogsConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -37,7 +37,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
         }
     }
 
-    public class GetLogsConfigurationResult
+    public sealed class GetLogsConfigurationResult
     {
         /// <summary>
         /// Current mode that is active

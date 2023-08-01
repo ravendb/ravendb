@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations
 {
-    public class CollectionOperationOptions
+    public sealed class CollectionOperationOptions
     {
         private int? _maxOpsPerSecond;
 

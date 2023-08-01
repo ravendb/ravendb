@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class DatabasePutResult
+    public sealed class DatabasePutResult
     {
         /// <summary>
         /// The Raft Command Index that was executed 

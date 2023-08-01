@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal class JsonEnumerableConverter : JsonConverter
+    internal sealed class JsonEnumerableConverter : JsonConverter
     {
         private readonly NewtonsoftJsonSerializationConventions _conventions;
 

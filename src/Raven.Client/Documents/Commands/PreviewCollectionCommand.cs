@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class PreviewCollectionCommand : RavenCommand<BlittableJsonReaderObject>
+    internal sealed class PreviewCollectionCommand : RavenCommand<BlittableJsonReaderObject>
     {
         private readonly string _collection;
 

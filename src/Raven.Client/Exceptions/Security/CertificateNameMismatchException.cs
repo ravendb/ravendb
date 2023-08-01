@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Security
 {
-    public class CertificateNameMismatchException : AuthenticationException
+    public sealed class CertificateNameMismatchException : AuthenticationException
     {
         public CertificateNameMismatchException()
         {

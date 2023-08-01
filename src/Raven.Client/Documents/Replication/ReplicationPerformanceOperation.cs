@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Replication
 {
-    public class ReplicationPerformanceOperation
+    public sealed class ReplicationPerformanceOperation
     {
         public ReplicationPerformanceOperation()
         {

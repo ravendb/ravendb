@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Indexes.Counters
     /// <summary>
     /// This class provides a way to define a strongly typed index on the client.
     /// </summary>
-    public class CountersIndexDefinitionBuilder<TDocument> : CountersIndexDefinitionBuilder<TDocument, TDocument>
+    public sealed class CountersIndexDefinitionBuilder<TDocument> : CountersIndexDefinitionBuilder<TDocument, TDocument>
     {
         public CountersIndexDefinitionBuilder(string indexName = null) : base(indexName)
         {

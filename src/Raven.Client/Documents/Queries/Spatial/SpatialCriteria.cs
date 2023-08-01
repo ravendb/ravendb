@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         }
     }
 
-    public class WktCriteria : SpatialCriteria
+    public sealed class WktCriteria : SpatialCriteria
     {
         private readonly string _shapeWkt;
         private readonly SpatialUnits? _radiusUnits;
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         }
     }
 
-    public class CircleCriteria : SpatialCriteria
+    public sealed class CircleCriteria : SpatialCriteria
     {
         private readonly double _radius;
         private readonly double _latitude;

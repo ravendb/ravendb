@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class GetTcpInfoForRemoteTaskCommand : RavenCommand<TcpConnectionInfo>
+    internal sealed class GetTcpInfoForRemoteTaskCommand : RavenCommand<TcpConnectionInfo>
     {
         private readonly string _remoteDatabase;
         private readonly string _remoteTask;

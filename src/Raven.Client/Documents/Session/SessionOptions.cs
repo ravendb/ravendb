@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
         NonTransactionalMultiBucket
     }
 
-    public class SessionOptions
+    public sealed class SessionOptions
     {
         public string Database { get; set; }
 

@@ -28,7 +28,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
-    public class DatabaseRecordWithEtag : DatabaseRecord
+    public sealed class DatabaseRecordWithEtag : DatabaseRecord
     {
         public long Etag { get; set; }
     }
@@ -545,7 +545,7 @@ namespace Raven.Client.ServerWide
         }
     }
     
-    public class IndexHistoryEntry
+    public sealed class IndexHistoryEntry
     {
         public IndexDefinition Definition { get; set; }
         
@@ -576,7 +576,7 @@ namespace Raven.Client.ServerWide
         HardDelete
     }
 
-    public class DocumentsCompressionConfiguration : IDynamicJson
+    public sealed class DocumentsCompressionConfiguration : IDynamicJson
     {
         public string[] Collections { get; set; }
         public bool CompressAllCollections { get; set; }

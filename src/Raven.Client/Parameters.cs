@@ -2,7 +2,7 @@
 
 namespace Raven.Client
 {
-    public class Parameters : Dictionary<string, object>
+    public sealed class Parameters : Dictionary<string, object>
     {
         public Parameters()
         {

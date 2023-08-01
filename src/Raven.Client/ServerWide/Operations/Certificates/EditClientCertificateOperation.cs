@@ -9,9 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class EditClientCertificateOperation : IServerOperation
+    public sealed class EditClientCertificateOperation : IServerOperation
     {
-        public class Parameters
+        public sealed class Parameters
         {
             public string Thumbprint { get; set; }
             public Dictionary<string, DatabaseAccess> Permissions { get; set; }

@@ -3,7 +3,7 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchOptions
+    public sealed class BatchOptions
     {
         public TimeSpan? RequestTimeout { get; set; }
         public ReplicationBatchOptions ReplicationOptions { get; set; }
@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public ShardedBatchOptions ShardedOptions { get; set; }
     }
 
-    public class IndexBatchOptions
+    public sealed class IndexBatchOptions
     {
         public bool WaitForIndexes { get; set; }
         public TimeSpan WaitForIndexesTimeout { get; set; }
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string[] WaitForSpecificIndexes { get; set; }
     }
 
-    public class ReplicationBatchOptions
+    public sealed class ReplicationBatchOptions
     {
         public bool WaitForReplicas { get; set; }
         public int NumberOfReplicasToWaitFor { get; set; }
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public bool ThrowOnTimeoutInWaitForReplicas { get; set; }
     }
 
-    public class ShardedBatchOptions
+    public sealed class ShardedBatchOptions
     {
         internal static readonly ShardedBatchOptions NonTransactionalMultiBucket = new() { BatchBehavior = ShardedBatchBehavior.NonTransactionalMultiBucket };
 

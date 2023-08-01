@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public class KafkaConnectionSettings
+public sealed class KafkaConnectionSettings
 {
     public string BootstrapServers { get; set; }
         

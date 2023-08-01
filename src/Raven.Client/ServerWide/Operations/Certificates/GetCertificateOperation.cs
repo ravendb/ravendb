@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class GetCertificateOperation : IServerOperation<CertificateDefinition>
+    public sealed class GetCertificateOperation : IServerOperation<CertificateDefinition>
     {
         private readonly string _thumbprint;
 

@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PutPullReplicationAsHubOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public sealed class PutPullReplicationAsHubOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly PullReplicationDefinition _pullReplicationDefinition;
 

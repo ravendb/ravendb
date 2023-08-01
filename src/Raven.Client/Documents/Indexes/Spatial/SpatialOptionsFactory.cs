@@ -2,14 +2,14 @@ using System;
 
 namespace Raven.Client.Documents.Indexes.Spatial
 {
-    public class SpatialOptionsFactory
+    public sealed class SpatialOptionsFactory
     {
         public GeographySpatialOptionsFactory Geography => new GeographySpatialOptionsFactory();
 
         public CartesianSpatialOptionsFactory Cartesian => new CartesianSpatialOptionsFactory();
     }
 
-    public class GeographySpatialOptionsFactory
+    public sealed class GeographySpatialOptionsFactory
     {
         /// <summary>
         /// Defines a Geohash Prefix Tree index using a default Max Tree Level <see cref="SpatialOptions.DefaultGeohashLevel" />
@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
         }
     }
 
-    public class CartesianSpatialOptionsFactory
+    public sealed class CartesianSpatialOptionsFactory
     {
         public SpatialOptions BoundingBoxIndex()
         {
@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
         }
     }
 
-    public class SpatialBounds
+    public sealed class SpatialBounds
     {
         public double MinX { get; }
         public double MaxX { get; }

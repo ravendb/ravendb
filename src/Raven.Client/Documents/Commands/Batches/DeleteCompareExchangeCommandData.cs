@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class DeleteCompareExchangeCommandData : ICommandData
+    public sealed class DeleteCompareExchangeCommandData : ICommandData
     {
         public readonly long Index;
 

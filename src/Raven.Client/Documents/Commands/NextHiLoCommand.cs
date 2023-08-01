@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class NextHiLoCommand : RavenCommand<HiLoResult>
+    public sealed class NextHiLoCommand : RavenCommand<HiLoResult>
     {
         private readonly string _tag;
         private readonly long _lastBatchSize;

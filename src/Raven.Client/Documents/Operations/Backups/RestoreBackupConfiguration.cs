@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class RestoreBackupConfiguration : RestoreBackupConfigurationBase
+    public sealed class RestoreBackupConfiguration : RestoreBackupConfigurationBase
     {
         public string BackupLocation { get; set; }
 
@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class RestoreFromS3Configuration : RestoreBackupConfigurationBase
+    public sealed class RestoreFromS3Configuration : RestoreBackupConfigurationBase
     {
         public S3Settings Settings { get; set; } = new S3Settings();
 
@@ -121,7 +121,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
     }
 
-    public class RestoreFromAzureConfiguration : RestoreBackupConfigurationBase
+    public sealed class RestoreFromAzureConfiguration : RestoreBackupConfigurationBase
     {
         public AzureSettings Settings { get; set; } = new AzureSettings();
 
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }  
     
-    public class RestoreFromGoogleCloudConfiguration : RestoreBackupConfigurationBase
+    public sealed class RestoreFromGoogleCloudConfiguration : RestoreBackupConfigurationBase
     {
         public GoogleCloudSettings Settings { get; set; } = new GoogleCloudSettings();
 

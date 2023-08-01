@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class PatchCommandData : ICommandData
+    public sealed class PatchCommandData : ICommandData
     {
         public PatchCommandData(string id, string changeVector, PatchRequest patch)
         {

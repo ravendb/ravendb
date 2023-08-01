@@ -6,7 +6,7 @@
 
 namespace Raven.Client.Documents.Operations
 {
-    public class OperationIdResult<TResult> : OperationIdResult
+    public sealed class OperationIdResult<TResult> : OperationIdResult
     {
         public TResult Result { get; set; }
     }

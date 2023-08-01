@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions.Documents.Indexes
     /// <summary>
     /// This exception is raised if creation of index is attempted when there is already an index with identical name
     /// </summary>
-    public class IndexAlreadyExistException : RavenException
+    public sealed class IndexAlreadyExistException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexOrTransformerAlreadyExistException"/> class.

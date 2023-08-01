@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Indexes
 {
-    public class AttachmentDoesNotExistException : RavenException
+    public sealed class AttachmentDoesNotExistException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AttachmentDoesNotExistException"/> class.

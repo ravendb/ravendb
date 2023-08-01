@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     ///   Based off of System.Linq.Expressions.ExpressionStringBuilder
     /// </summary>
-    internal class ExpressionStringBuilder : ExpressionVisitor
+    internal sealed class ExpressionStringBuilder : ExpressionVisitor
     {
         // Fields
         private readonly StringBuilder _out = new StringBuilder();

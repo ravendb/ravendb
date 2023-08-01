@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyGetCompareExchangeValuesOperation<T> : ILazyOperation
+    internal sealed class LazyGetCompareExchangeValuesOperation<T> : ILazyOperation
     {
         private readonly ClusterTransactionOperationsBase _clusterSession;
         private readonly DocumentConventions _conventions;

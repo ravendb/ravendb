@@ -1,6 +1,6 @@
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ModifySolverResult
+    public sealed class ModifySolverResult
     {
         /// <summary>
         /// Key of the database .

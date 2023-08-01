@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class UnregisterReplicationHubAccessOperation : IMaintenanceOperation
+    public sealed class UnregisterReplicationHubAccessOperation : IMaintenanceOperation
     {
         private readonly string _hubName;
         private readonly string _thumbprint;

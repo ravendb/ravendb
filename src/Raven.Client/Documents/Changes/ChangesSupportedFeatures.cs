@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Changes;
 
-internal class ChangesSupportedFeatures
+internal sealed class ChangesSupportedFeatures
 {
     public bool TopologyChange;
     public bool AggressiveCachingChange;

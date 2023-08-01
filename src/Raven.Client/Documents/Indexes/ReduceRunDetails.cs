@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class ReduceRunDetails
+    public sealed class ReduceRunDetails
     {
         public long ProcessPrivateMemory { get; set; }
 
@@ -17,7 +17,7 @@
         public TreesReduceDetails TreesReduceDetails { get; set; }
     }
 
-    public class TreesReduceDetails
+    public sealed class TreesReduceDetails
     {
         public int NumberOfModifiedLeafs { get; set; }
 
@@ -26,7 +26,7 @@
         public int NumberOfCompressedLeafs { get; set; }
     }
 
-    public class MapRunDetails
+    public sealed class MapRunDetails
     {
         public string BatchCompleteReason { get; set; }
 
@@ -39,7 +39,7 @@
         public long AllocationBudget { get; set; }
     }
 
-    public class ReferenceRunDetails
+    public sealed class ReferenceRunDetails
     {
         public int ReferenceAttempts { get; set; }
 
@@ -58,7 +58,7 @@
         public string BatchCompleteReason { get; set; }
     }
 
-    public class CleanupRunDetails
+    public sealed class CleanupRunDetails
     {
         public int DeleteSuccesses { get; set; }
 

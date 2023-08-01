@@ -10,7 +10,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexStats
+    public sealed class IndexStats
     {
         /// <summary>
         /// Index name.
@@ -166,7 +166,7 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexingPerformanceBasicStats LastBatchStats { get; set; }
 
-        public class MemoryStats
+        public sealed class MemoryStats
         {
             public MemoryStats()
             {
@@ -180,7 +180,7 @@ namespace Raven.Client.Documents.Indexes
             public Size MemoryBudget { get; set; }
         }
 
-        public class CollectionStats
+        public sealed class CollectionStats
         {
             public CollectionStats()
             {

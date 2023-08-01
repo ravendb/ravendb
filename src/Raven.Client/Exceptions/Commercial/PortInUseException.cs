@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Exceptions.Commercial;
 
-public class PortInUseException : RavenException
+public sealed class PortInUseException : RavenException
 {
 
     public PortInUseException()

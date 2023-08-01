@@ -10,7 +10,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Client.ServerWide.Operations.TrafficWatch
 {
-    public class PutTrafficWatchConfigurationOperation : IServerOperation
+    public sealed class PutTrafficWatchConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
 
@@ -46,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
             }
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             /// <summary>
             /// Traffic Watch logging mode.

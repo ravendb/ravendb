@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Security
 {
-    public class AuthorizationException : SecurityException
+    public sealed class AuthorizationException : SecurityException
     {
         public AuthorizationException()
         {

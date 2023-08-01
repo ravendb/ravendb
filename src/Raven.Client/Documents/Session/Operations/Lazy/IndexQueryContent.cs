@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class IndexQueryContent : GetRequest.IContent
+    internal sealed class IndexQueryContent : GetRequest.IContent
     {
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _query;

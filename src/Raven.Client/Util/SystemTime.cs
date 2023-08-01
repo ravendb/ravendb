@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Util
 {
-    public class SystemTime
+    public sealed class SystemTime
     {
         private static readonly SystemTime Instance = new SystemTime();
 

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetDetailedStatisticsOperation : IMaintenanceOperation<DetailedDatabaseStatistics>
+    public sealed class GetDetailedStatisticsOperation : IMaintenanceOperation<DetailedDatabaseStatistics>
     {
         private readonly string _debugTag;
 
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations
             return new GetDetailedStatisticsCommand(_debugTag);
         }
 
-        internal class GetDetailedStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
+        internal sealed class GetDetailedStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
         {
             private readonly string _debugTag;
 

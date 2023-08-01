@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class DeleteIndexErrorsOperation : IMaintenanceOperation
+    public sealed class DeleteIndexErrorsOperation : IMaintenanceOperation
     {
         private readonly string[] _indexNames;
 
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new DeleteIndexErrorsCommand(_indexNames);
         }
 
-        internal class DeleteIndexErrorsCommand : RavenCommand
+        internal sealed class DeleteIndexErrorsCommand : RavenCommand
         {
             private readonly string[] _indexNames;
 

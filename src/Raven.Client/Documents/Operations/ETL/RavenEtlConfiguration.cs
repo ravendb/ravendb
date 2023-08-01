@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class RavenEtlConfiguration : EtlConfiguration<RavenConnectionString>
+    public sealed class RavenEtlConfiguration : EtlConfiguration<RavenConnectionString>
     {
         private string _destination;
 

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Indexes.Counters
 {
-    public class AbstractJavaScriptCountersIndexCreationTask : AbstractCountersIndexCreationTask
+    public abstract class AbstractJavaScriptCountersIndexCreationTask : AbstractCountersIndexCreationTask
     {
         private readonly CountersIndexDefinition _definition = new CountersIndexDefinition();
 

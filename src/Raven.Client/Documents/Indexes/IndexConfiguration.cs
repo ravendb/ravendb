@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexConfiguration : Dictionary<string, string>, IFillFromBlittableJson
+    public sealed class IndexConfiguration : Dictionary<string, string>, IFillFromBlittableJson
     {
         public new void Add(string key, string value)
         {

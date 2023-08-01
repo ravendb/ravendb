@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class GetTimeSeriesStatisticsOperation : IOperation<TimeSeriesStatistics>
+    public sealed class GetTimeSeriesStatisticsOperation : IOperation<TimeSeriesStatistics>
     {
         private readonly string _documentId;
         /// <summary>
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new GetTimeSeriesStatisticsCommand(_documentId);
         }
 
-        internal class GetTimeSeriesStatisticsCommand : RavenCommand<TimeSeriesStatistics>
+        internal sealed class GetTimeSeriesStatisticsCommand : RavenCommand<TimeSeriesStatistics>
         {
             private readonly string _documentId;
 

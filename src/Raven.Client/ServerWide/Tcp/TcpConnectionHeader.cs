@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Tcp
 {
-    public class TcpConnectionHeaderMessage
+    public sealed class TcpConnectionHeaderMessage
     {
         public enum OperationTypes
         {
@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Tcp
             TestConnection
         }
 
-        public class AuthorizationInfo : IDynamicJson
+        public sealed class AuthorizationInfo : IDynamicJson
         {
             public enum AuthorizeMethod
             {
@@ -174,7 +174,7 @@ namespace Raven.Client.ServerWide.Tcp
             }
         }
 
-        public class SupportedFeatures
+        public sealed class SupportedFeatures
         {
             public readonly int ProtocolVersion;
 
@@ -207,22 +207,22 @@ namespace Raven.Client.ServerWide.Tcp
             public ReplicationFeatures Replication { get; set; }
 
             public bool DataCompression;
-            public class PingFeatures
+            public sealed class PingFeatures
             {
                 public bool BaseLine = true;
             }
 
-            public class NoneFeatures
+            public sealed class NoneFeatures
             {
                 public bool BaseLine = true;
             }
 
-            public class DropFeatures
+            public sealed class DropFeatures
             {
                 public bool BaseLine = true;
             }
 
-            public class SubscriptionFeatures
+            public sealed class SubscriptionFeatures
             {
                 public bool BaseLine = true;
 
@@ -233,25 +233,25 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool TimeSeriesIncludes;
             }
 
-            public class ClusterFeatures
+            public sealed class ClusterFeatures
             {
                 public bool BaseLine = true;
                 public bool MultiTree;
             }
 
-            public class HeartbeatsFeatures
+            public sealed class HeartbeatsFeatures
             {
                 public bool BaseLine = true;
                 public bool SendChangesOnly;
                 public bool IncludeServerInfo;
             }
 
-            public class TestConnectionFeatures
+            public sealed class TestConnectionFeatures
             {
                 public bool BaseLine = true;
             }
 
-            public class ReplicationFeatures
+            public sealed class ReplicationFeatures
             {
                 public bool BaseLine = true;
                 public bool MissingAttachments;
@@ -551,7 +551,7 @@ namespace Raven.Client.ServerWide.Tcp
             Supported
         }
 
-        public class NegotiationResponse
+        public sealed class NegotiationResponse
         {
             public int Version;
 

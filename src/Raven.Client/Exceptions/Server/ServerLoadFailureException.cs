@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Server
 {
-    public class ServerLoadFailureException : RavenException
+    public sealed class ServerLoadFailureException : RavenException
     {
         public ServerLoadFailureException()
         {

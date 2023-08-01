@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Analyzers
 {
-    public class AnalyzerDoesNotExistException : RavenException
+    public sealed class AnalyzerDoesNotExistException : RavenException
     {
         public AnalyzerDoesNotExistException()
         {

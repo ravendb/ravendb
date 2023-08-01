@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class RevisionsConfiguration : IFillFromBlittableJson
+    public sealed class RevisionsConfiguration : IFillFromBlittableJson
     {
         public RevisionsCollectionConfiguration Default { get; set; }
 

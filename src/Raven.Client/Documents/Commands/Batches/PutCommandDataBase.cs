@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
+    internal sealed class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
         public PutCommandDataWithBlittableJson(string id, string changeVector, string originalChangeVector, BlittableJsonReaderObject document)
             : base(id, changeVector, originalChangeVector, document)
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Commands.Batches
         }
     }
 
-    public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
+    public sealed class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
         public PutCommandData(string id, string changeVector,  DynamicJsonValue document)
             :base(id, changeVector, changeVector, document)

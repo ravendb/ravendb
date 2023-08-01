@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions
 {
-    public class CompareExchangeKeyTooBigException : RavenException
+    public sealed class CompareExchangeKeyTooBigException : RavenException
     {
         public CompareExchangeKeyTooBigException(string message)
             : base(message)

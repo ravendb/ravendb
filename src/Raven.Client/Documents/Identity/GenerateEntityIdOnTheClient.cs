@@ -7,7 +7,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Identity
 {
-    public class GenerateEntityIdOnTheClient
+    public sealed class GenerateEntityIdOnTheClient
     {
         private readonly DocumentConventions _conventions;
         private readonly Func<object, string> _generateId;

@@ -7,14 +7,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexingStatusOperation : IMaintenanceOperation<IndexingStatus>
+    public sealed class GetIndexingStatusOperation : IMaintenanceOperation<IndexingStatus>
     {
         public RavenCommand<IndexingStatus> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetIndexingStatusCommand();
         }
 
-        internal class GetIndexingStatusCommand : RavenCommand<IndexingStatus>
+        internal sealed class GetIndexingStatusCommand : RavenCommand<IndexingStatus>
         {
             public GetIndexingStatusCommand(string nodeTag = null)
             {

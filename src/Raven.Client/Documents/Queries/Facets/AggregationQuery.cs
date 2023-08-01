@@ -16,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    internal class AggregationQuery<T> : AggregationQueryBase, IAggregationQuery<T>
+    internal sealed class AggregationQuery<T> : AggregationQueryBase, IAggregationQuery<T>
     {
         private IQueryable<T> _source;
 

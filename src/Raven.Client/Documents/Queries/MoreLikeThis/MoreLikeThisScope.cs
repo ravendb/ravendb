@@ -3,7 +3,7 @@ using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisScope : IDisposable
+    public sealed class MoreLikeThisScope : IDisposable
     {
         private readonly MoreLikeThisToken _token;
         private readonly Func<object, string> _addQueryParameter;

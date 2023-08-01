@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    internal class RevisionIncludeResult
+    internal sealed class RevisionIncludeResult
     {
         public string Id { get; set; }
         public string ChangeVector { get; set; }

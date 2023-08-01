@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Changes
 {
-    public class ChangeProcessingException : RavenException
+    public sealed class ChangeProcessingException : RavenException
     {
         public ChangeProcessingException()
         {

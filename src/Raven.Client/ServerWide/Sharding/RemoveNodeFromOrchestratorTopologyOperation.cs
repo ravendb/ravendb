@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Sharding
 {
-    public class RemoveNodeFromOrchestratorTopologyOperation : IServerOperation<ModifyOrchestratorTopologyResult>
+    public sealed class RemoveNodeFromOrchestratorTopologyOperation : IServerOperation<ModifyOrchestratorTopologyResult>
     {
         private readonly string _databaseName;
         private readonly string _node;

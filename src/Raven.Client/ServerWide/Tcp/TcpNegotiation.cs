@@ -100,7 +100,7 @@ namespace Raven.Client.ServerWide.Tcp
             await writer.FlushAsync().ConfigureAwait(false);
         }
 
-        internal class SyncTcpNegotiation
+        internal sealed class SyncTcpNegotiation
         {
         }
     }

@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class GetClusterTopologyCommand : RavenCommand<ClusterTopologyResponse>
+    public sealed class GetClusterTopologyCommand : RavenCommand<ClusterTopologyResponse>
     {
         private readonly string _debugTag;
 

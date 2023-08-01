@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions
 {
-    public class ReplicationHubNotFoundException : RavenException
+    public sealed class ReplicationHubNotFoundException : RavenException
     {
         public ReplicationHubNotFoundException()
         {

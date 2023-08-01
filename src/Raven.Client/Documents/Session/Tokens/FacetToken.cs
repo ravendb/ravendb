@@ -7,7 +7,7 @@ using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class FacetToken : QueryToken
+    public sealed class FacetToken : QueryToken
     {
         private readonly string _facetSetupDocumentId;
         private readonly string _aggregateByFieldName;

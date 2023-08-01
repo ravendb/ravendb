@@ -12,7 +12,7 @@ namespace Raven.Client.Exceptions
     /// <summary>
     /// This exception is raised when a concurrency conflict is encountered
     /// </summary>
-    public class ClusterTransactionConcurrencyException : ConcurrencyException
+    public sealed class ClusterTransactionConcurrencyException : ConcurrencyException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterTransactionConcurrencyException "/> class.
@@ -43,7 +43,7 @@ namespace Raven.Client.Exceptions
         /// </summary>
         public ConcurrencyViolation[] ConcurrencyViolations { get; set; }
 
-        public class ConcurrencyViolation
+        public sealed class ConcurrencyViolation
         {
             public ViolationOnType Type { get; set; }
             public string Id { get; set; }

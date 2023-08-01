@@ -6,7 +6,7 @@
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class PutIndexResult
+    public sealed class PutIndexResult
     {
         /// <summary>
         /// Gets or sets the total results for this query

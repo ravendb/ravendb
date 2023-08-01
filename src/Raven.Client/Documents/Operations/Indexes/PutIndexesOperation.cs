@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class PutIndexesOperation : IMaintenanceOperation<PutIndexResult[]>
+    public sealed class PutIndexesOperation : IMaintenanceOperation<PutIndexResult[]>
     {
         private readonly IndexDefinition[] _indexToAdd;
 

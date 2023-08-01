@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisOptions
+    public sealed class MoreLikeThisOptions
     {
         public const int DefaultMaximumNumberOfTokensParsed = 5000;
         public const int DefaultMinimumTermFrequency = 2;

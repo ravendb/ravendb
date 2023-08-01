@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class CreateDatabaseOperation : IServerOperation<DatabasePutResult>
+    public sealed class CreateDatabaseOperation : IServerOperation<DatabasePutResult>
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly int _replicationFactor;
@@ -58,7 +58,7 @@ namespace Raven.Client.ServerWide.Operations
             return new CreateDatabaseCommand(conventions, _databaseRecord, _replicationFactor);
         }
 
-        internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>, IRaftCommand
+        internal sealed class CreateDatabaseCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly DatabaseRecord _databaseRecord;

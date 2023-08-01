@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions
 {
-    public class ClientVersionMismatchException : RavenException
+    public sealed class ClientVersionMismatchException : RavenException
     {
         public ClientVersionMismatchException()
         {

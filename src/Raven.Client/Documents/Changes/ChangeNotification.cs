@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class TopologyChange : DatabaseChange
+    public sealed class TopologyChange : DatabaseChange
     {
         public string Url;
         public string Database;
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
-    internal class AggressiveCacheChange : DatabaseChange
+    internal sealed class AggressiveCacheChange : DatabaseChange
     {
         internal static readonly AggressiveCacheChange Instance = new();
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
-    public class DocumentChange : DatabaseChange
+    public sealed class DocumentChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on document.
@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Changes
         Increment = 4
     }
 
-    public class CounterChange : DatabaseChange
+    public sealed class CounterChange : DatabaseChange
     {
         /// <summary>
         /// Counter name.
@@ -247,7 +247,7 @@ namespace Raven.Client.Documents.Changes
         Mixed = 3
     }
 
-    public class TimeSeriesChange : DatabaseChange
+    public sealed class TimeSeriesChange : DatabaseChange
     {
         /// <summary>
         /// Time Series name.
@@ -370,7 +370,7 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
-    public class IndexRenameChange : IndexChange
+    public sealed class IndexRenameChange : IndexChange
     {
         /// <summary>
         /// The old index name
@@ -408,7 +408,7 @@ namespace Raven.Client.Documents.Changes
         Tcp
     }
 
-    internal class TrafficWatchHttpChange : TrafficWatchChangeBase
+    internal sealed class TrafficWatchHttpChange : TrafficWatchChangeBase
     {
         public override TrafficWatchType TrafficWatchType => TrafficWatchType.Http;
         public long RequestId { get; set; }
@@ -442,7 +442,7 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
-    internal class TrafficWatchTcpChange : TrafficWatchChangeBase
+    internal sealed class TrafficWatchTcpChange : TrafficWatchChangeBase
     {
         public override TrafficWatchType TrafficWatchType => TrafficWatchType.Tcp;
         public string Source { get; set; }

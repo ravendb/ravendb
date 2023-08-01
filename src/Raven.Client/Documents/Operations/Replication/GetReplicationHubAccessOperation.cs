@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class GetReplicationHubAccessOperation : IMaintenanceOperation<DetailedReplicationHubAccess[]>
+    public sealed class GetReplicationHubAccessOperation : IMaintenanceOperation<DetailedReplicationHubAccess[]>
     {
         private readonly string _hubName;
         private readonly int _start;

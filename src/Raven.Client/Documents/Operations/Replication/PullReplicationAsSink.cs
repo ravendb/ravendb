@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationAsSink : ExternalReplicationBase
+    public sealed class PullReplicationAsSink : ExternalReplicationBase
     {
         public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetResult
+    public sealed class FacetResult
     {
         public string Name { get; set; }
 

@@ -15,7 +15,7 @@ namespace Raven.Client.Exceptions
 {
     internal static class ExceptionDispatcher
     {
-        public class ExceptionSchema
+        public sealed class ExceptionSchema
         {
             public string Url { get; set; }
 

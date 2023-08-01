@@ -10,7 +10,7 @@ using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Queries
 {
-    public class QueryData
+    public sealed class QueryData
     {
         public string[] Fields { get; set; }
 

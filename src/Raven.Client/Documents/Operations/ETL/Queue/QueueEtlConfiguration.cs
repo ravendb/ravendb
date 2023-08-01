@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue
 {
-    public class QueueEtlConfiguration : EtlConfiguration<QueueConnectionString>
+    public sealed class QueueEtlConfiguration : EtlConfiguration<QueueConnectionString>
     {
         public QueueEtlConfiguration()
         {

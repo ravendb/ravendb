@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class SetDatabaseDynamicDistributionOperation : IServerOperation
+    public sealed class SetDatabaseDynamicDistributionOperation : IServerOperation
     {
         private readonly bool _allowDynamicDistribution;
         private readonly string _databaseName;

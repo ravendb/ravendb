@@ -22,7 +22,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
     /// <summary>
     /// The default json contract will serialize all properties and all public fields
     /// </summary>
-    public class DefaultRavenContractResolver : DefaultContractResolver
+    public sealed class DefaultRavenContractResolver : DefaultContractResolver
     {
         [ThreadStatic]
         private static ExtensionDataSetter _currentExtensionSetter;

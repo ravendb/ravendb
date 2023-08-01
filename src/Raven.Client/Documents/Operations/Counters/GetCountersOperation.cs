@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class GetCountersOperation : IOperation<CountersDetail>
+    public sealed class GetCountersOperation : IOperation<CountersDetail>
     {
         private readonly string _docId;
         private readonly string[] _counters;
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Counters
             return new GetCounterValuesCommand(conventions, _docId, _counters, _returnFullResults);
         }
 
-        internal class GetCounterValuesCommand : RavenCommand<CountersDetail>
+        internal sealed class GetCounterValuesCommand : RavenCommand<CountersDetail>
         {
             private readonly DocumentConventions _conventions;
             private readonly string _docId;

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.Suggestions
 {
-    public class SuggestionWithTerm : SuggestionBase
+    public sealed class SuggestionWithTerm : SuggestionBase
     {
         public SuggestionWithTerm(string field)
             : base(field)
@@ -11,7 +11,7 @@
 
     }
 
-    public class SuggestionWithTerms : SuggestionBase
+    public sealed class SuggestionWithTerms : SuggestionBase
     {
         public SuggestionWithTerms(string field)
             : base(field)

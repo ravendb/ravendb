@@ -5,14 +5,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetCollectionStatisticsOperation : IMaintenanceOperation<CollectionStatistics>
+    public sealed class GetCollectionStatisticsOperation : IMaintenanceOperation<CollectionStatistics>
     {
         public RavenCommand<CollectionStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetCollectionStatisticsCommand();
         }
 
-        internal class GetCollectionStatisticsCommand : RavenCommand<CollectionStatistics>
+        internal sealed class GetCollectionStatisticsCommand : RavenCommand<CollectionStatistics>
         {
             public override bool IsReadRequest => true;
 

@@ -5,7 +5,7 @@ using Raven.Client.Http;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ServerWideOperation : Operation
+    public sealed class ServerWideOperation : Operation
     {
         public ServerWideOperation(RequestExecutor requestExecutor, DocumentConventions conventions, long id, string nodeTag = null)
             : base(requestExecutor, null, conventions, id, nodeTag)

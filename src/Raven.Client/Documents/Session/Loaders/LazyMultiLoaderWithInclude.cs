@@ -7,7 +7,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
-    internal class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
+    internal sealed class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
     {
         private readonly IDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();
@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Session.Loaders
         }
     }
 
-    internal class AsyncLazyMultiLoaderWithInclude<T> : IAsyncLazyLoaderWithInclude<T>
+    internal sealed class AsyncLazyMultiLoaderWithInclude<T> : IAsyncLazyLoaderWithInclude<T>
     {
         private readonly IAsyncDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();

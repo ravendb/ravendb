@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    internal class GetRevisionOperation
+    internal sealed class GetRevisionOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private BlittableArrayResult _result;
@@ -160,7 +160,7 @@ namespace Raven.Client.Documents.Session.Operations
         }
     }
 
-    internal class GetRevisionsCountOperation
+    internal sealed class GetRevisionsCountOperation
     {
         private readonly string _docId;
 
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Session.Operations
             return new GetRevisionsCountCommand(_docId);
         }
 
-        internal class GetRevisionsCountCommand : RavenCommand<long>
+        internal sealed class GetRevisionsCountCommand : RavenCommand<long>
         {
             private readonly string _id;
 
@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Session.Operations
             public override bool IsReadRequest => true;
         }
 
-        internal class DocumentRevisionsCount : IDynamicJson
+        internal sealed class DocumentRevisionsCount : IDynamicJson
         {
             public long RevisionsCount { get; set; }
 

@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Indexes
     /// the invocation to a regular method call so it can be understood by the server.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public class RavenMethodAttribute : Attribute
+    public sealed class RavenMethodAttribute : Attribute
     {
     }
 }

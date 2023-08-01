@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class ConfigureTimeSeriesValueNamesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
+    public sealed class ConfigureTimeSeriesValueNamesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly Parameters _parameters;
 
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters : IDynamicJson
+        public sealed class Parameters : IDynamicJson
         {
             public string Collection;
             public string TimeSeries;

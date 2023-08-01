@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class StartTransactionsRecordingOperation : IMaintenanceOperation
+    public sealed class StartTransactionsRecordingOperation : IMaintenanceOperation
     {
         private readonly string _filePath;
 
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             }
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string File { get; set; }
         }

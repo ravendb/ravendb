@@ -6,14 +6,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    internal class DatabaseHealthCheckOperation : IMaintenanceOperation
+    internal sealed class DatabaseHealthCheckOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DatabaseHealthCheckCommand();
         }
 
-        internal class DatabaseHealthCheckCommand : RavenCommand
+        internal sealed class DatabaseHealthCheckCommand : RavenCommand
         {
             public DatabaseHealthCheckCommand()
             {

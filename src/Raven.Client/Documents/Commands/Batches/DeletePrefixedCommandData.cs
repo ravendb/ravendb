@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class DeletePrefixedCommandData : DeleteCommandData
+    public sealed class DeletePrefixedCommandData : DeleteCommandData
     {
         public DeletePrefixedCommandData(string prefix) : base(prefix, null)
         {

@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
         ISuggestionOperations<T> WithOptions(SuggestionOptions options);
     }
 
-    internal class SuggestionBuilder<T> : ISuggestionBuilder<T>, ISuggestionOperations<T>
+    internal sealed class SuggestionBuilder<T> : ISuggestionBuilder<T>, ISuggestionOperations<T>
     {
         private readonly DocumentConventions _conventions;
         private SuggestionWithTerm _term;
