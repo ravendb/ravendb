@@ -23,7 +23,7 @@ public class NativeListTests : StorageTest
     {
         var random = new Random(12413123);
         var nativeList = new NativeList<long>();
-        var nativeListScope = nativeList.Initialize(Allocator, size);
+        nativeList.Initialize(Allocator, size);
         var managedList = new List<long>();
 
         for (int idX = 0; idX < size; ++idX)
@@ -31,10 +31,12 @@ public class NativeListTests : StorageTest
             var initCapacity = nativeList.Capacity;
             var randomLong = random.NextInt64(long.MinValue, long.MaxValue);
 
-            if (nativeList.TryPush(randomLong) == false )
-                nativeList.Grow(Allocator, 1, ref nativeListScope);
-            
-            nativeList.PushUnsafe(randomLong);
+            if (nativeList.TryPush(randomLong) == false)
+            {
+                nativeList.Grow(Allocator, 1);
+                nativeList.PushUnsafe(randomLong);
+            }
+
             managedList.Add(randomLong);
             Assert.Equal(managedList.Count, nativeList.Count);
 
@@ -50,13 +52,13 @@ public class NativeListTests : StorageTest
         Assert.True(CollectionsMarshal.AsSpan(managedList).SequenceEqual( nativeList.ToSpan()));
 
         var sizeBefore = nativeList.Capacity;
-        nativeList.ResetAndEnsureCapacity(Allocator, size, ref nativeListScope);
+        nativeList.ResetAndEnsureCapacity(Allocator, size);
         Assert.Equal(sizeBefore, nativeList.Capacity);
         Assert.Equal(0, nativeList.Count);
         
-        nativeList.ResetAndEnsureCapacity(Allocator, (int)(size * 1.1), ref nativeListScope);
+        nativeList.ResetAndEnsureCapacity(Allocator, (int)(size * 1.1));
         Assert.NotEqual(sizeBefore, nativeList.Count);
 
-        nativeListScope.Dispose();
+        nativeList.Dispose(Allocator);
     }
 }

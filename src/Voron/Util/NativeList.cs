@@ -11,44 +11,42 @@ namespace Voron.Util;
 public unsafe struct NativeList<T>
     where T: unmanaged
 {
+    private ByteString _storage;
+
     private int _count;
 
-    private int _capacity;
-
-    private T* _rawItems;
-
-    public T* RawItems => _rawItems;
-    public int Capacity => _capacity;
+    public T* RawItems => (T*)_storage.Ptr;
+    public int Capacity => _storage.Length / sizeof(T);
     public int Count => _count;
 
-    public readonly Span<T> ToSpan() => new(_rawItems, _count);
+    public readonly Span<T> ToSpan() => new(_storage.Ptr, _count);
     
     public bool IsValid => RawItems != null;
 
     public NativeList()
     {
-        _rawItems = null;
+        _storage = default;
     }
 
     public bool TryPush(in T l)
     {
-        if (_count == _capacity)
+        if (_count == Capacity)
             return false;
 
-        _rawItems[_count++] = l;
+        RawItems[_count++] = l;
         return true;
     }
 
     public void PushUnsafe(in T l)
     {
         Debug.Assert(Count < Capacity);
-        _rawItems[_count++] = l;
+        RawItems[_count++] = l;
     }
 
     public ref T AddByRefUnsafe()
     {
         Debug.Assert(Count < Capacity);
-        return ref _rawItems[_count++];
+        return ref RawItems[_count++];
     }
 
 
@@ -68,64 +66,63 @@ public unsafe struct NativeList<T>
             return false;
         }
         
-        value = _rawItems[--_count];
+        value = RawItems[--_count];
         return true;
     }
 
     public T PopUnsafe()
     {
-        return _rawItems[--_count];
+        return RawItems[--_count];
     }
 
-    public ByteStringContext<ByteStringMemoryCache>.InternalScope Initialize(ByteStringContext ctx, int count = 16)
+    public void Initialize(ByteStringContext ctx, int count = 16)
     {
-        _capacity = Math.Max(16, Bits.PowerOf2(count));
-
-        var scope = ctx.Allocate(_capacity * sizeof(T), out var mem);
-        _rawItems = (T*)mem.Ptr;
-        return scope;
+        var capacity = Math.Max(16, Bits.PowerOf2(count));
+        ctx.Allocate(capacity * sizeof(T), out _storage);
     }
     
-    public void Grow(ByteStringContext ctx, int addition, ref ByteStringContext<ByteStringMemoryCache>.InternalScope currentScope)
+    public void Grow(ByteStringContext ctx, int addition)
     {
-        _capacity = Math.Max(16, Bits.PowerOf2(_capacity + addition));
-        var scope = ctx.Allocate(_capacity * sizeof(T), out var mem);
-        if (RawItems != null)
+        var capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
+        ctx.Allocate(capacity * sizeof(T), out var mem);
+
+        if (_storage.HasValue)
         {
-            Memory.Copy(mem.Ptr, _rawItems, _count * sizeof(T));
-            currentScope.Dispose();
+            Memory.Copy(mem.Ptr, _storage.Ptr, _count * sizeof(T));
+            ctx.Release(ref _storage);
         }
-        _rawItems = (T*)mem.Ptr;
-        currentScope = scope;
+
+        _storage = mem;
     }
 
     public readonly void Sort()
     {
-        if (typeof(T) == typeof(int))
+        if (typeof(T) == typeof(int) || typeof(T) == typeof(long))
         {
-            Sorting.Run(new Span<int>(_rawItems, _count));
-        }
-        else if (typeof(T) == typeof(long))
-        {
-            Sorting.Run(new Span<long>(_rawItems, _count));
+            Sorting.Run(ToSpan());
         }
         else
         {
-            new Span<T>(_rawItems, _count).Sort();
+            ToSpan().Sort();
         }
     }
 
     public bool HasCapacityFor(int itemsToAdd)
     {
-        return _count + itemsToAdd < _capacity;
+        return _count + itemsToAdd < Capacity;
     }
 
-    public void ResetAndEnsureCapacity(ByteStringContext ctx, int size, ref ByteStringContext<ByteStringMemoryCache>.InternalScope currentScope)
+    public void ResetAndEnsureCapacity(ByteStringContext ctx, int size)
     {
-        if (size > _capacity)
-            Grow(ctx, size - _capacity + 1, ref currentScope);
+        if (size > Capacity)
+            Grow(ctx, size - Capacity + 1);
 
         // We will reset.
         _count = 0;
+    }
+
+    public void Dispose(ByteStringContext ctx)
+    {
+        ctx.Release(ref _storage);
     }
 }
