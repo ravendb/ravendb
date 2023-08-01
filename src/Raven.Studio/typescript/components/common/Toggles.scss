@@ -259,6 +259,8 @@ $separator-color: colors.$border-color-light-var;
         .vr {
             margin: $separator-margin 4px $separator-margin 0;
             background-color: colors.$border-color-var;
+            width: 2px;
+            opacity: 0.5;
         }
 
         .multi-toggle-item {
