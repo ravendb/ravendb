@@ -7,7 +7,7 @@ using Voron.Impl;
 
 namespace Corax.Mappings;
 
-public class IndexFieldBinding
+public sealed class IndexFieldBinding
 {
     public readonly int FieldId;
     public readonly Slice FieldName;

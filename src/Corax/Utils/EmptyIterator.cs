@@ -3,7 +3,7 @@ using Sparrow;
 
 namespace Corax.Utils;
 
-public class EmptyIterator : IReadOnlySpanIndexer
+public sealed class EmptyIterator : IReadOnlySpanIndexer
 {
     public static readonly EmptyIterator Instance = new();
 

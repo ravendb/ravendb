@@ -40,7 +40,7 @@ namespace Corax.Queries
             return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
 
-        internal class FunctionTable
+        internal sealed class FunctionTable
         {
             public readonly delegate*<ref UnaryMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref UnaryMatch, Span<long>, int, int> AndWithFunc;

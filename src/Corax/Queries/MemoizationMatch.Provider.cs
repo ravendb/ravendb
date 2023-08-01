@@ -10,7 +10,7 @@ using static Voron.Global.Constants;
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public class MemoizationMatchProvider<TInner> : IMemoizationMatchSource
+    public sealed class MemoizationMatchProvider<TInner> : IMemoizationMatchSource
              where TInner : IQueryMatch
     {
         private int _replayCounter;

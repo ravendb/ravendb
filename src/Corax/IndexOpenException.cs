@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Corax
 {
     [Serializable]
-    internal class IndexOpenException : Exception
+    internal sealed class IndexOpenException : Exception
     {
         public IndexOpenException()
         {

@@ -8,7 +8,7 @@ using Voron;
 
 namespace Corax.Mappings;
 
-public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
+public sealed class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
 {
     private readonly Dictionary<Slice, IndexFieldBinding> _fields;
     private readonly Dictionary<string, IndexFieldBinding> _fieldsByString;

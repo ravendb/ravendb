@@ -48,7 +48,7 @@ namespace Corax.Queries
             return _functionTable.FillAndRetrieveFunc(_inner);
         }
 
-        internal class FunctionTable
+        internal sealed class FunctionTable
         {
             public readonly delegate*<ref MemoizationMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MemoizationMatch, Span<long>, int, int> AndWithFunc;

@@ -457,7 +457,7 @@ namespace Corax
             void RestoreList(int old);
         }
 
-        public class IndexEntryBuilder : IDisposable, IIndexEntryBuilder
+        public sealed class IndexEntryBuilder : IDisposable, IIndexEntryBuilder
         {
             private readonly IndexWriter _parent;
             private long _entryId;

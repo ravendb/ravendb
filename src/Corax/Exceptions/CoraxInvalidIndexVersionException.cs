@@ -2,7 +2,7 @@
 
 namespace Corax.Exceptions;
 
-public class CoraxInvalidIndexVersionException : Exception
+public sealed class CoraxInvalidIndexVersionException : Exception
 {
     public CoraxInvalidIndexVersionException()
     {

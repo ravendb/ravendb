@@ -14,7 +14,7 @@ using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Queries;
 
-public class SpatialMatch : IQueryMatch
+public sealed class SpatialMatch : IQueryMatch
 {
     private readonly IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
