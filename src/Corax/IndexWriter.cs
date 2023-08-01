@@ -92,10 +92,13 @@ namespace Corax
         [StructLayout(LayoutKind.Sequential)]
         internal struct EntriesModifications : IDisposable
         {
-            private const int HasLong = 0b01;
-            private const int HasDouble = 0b10;
-            private const int HasNumericMask = 0b11;
-            private const int HasNumericBits = 2;
+            private const int ControlBits = 3;
+            private const int ControlMask = 0b111;
+
+            private const int HasLong = 0b001;
+            private const int HasDouble = 0b010;
+
+            private const int NeedSorting = 0b100;
 
             private int _termSize;
             private long _longValue;
@@ -103,8 +106,8 @@ namespace Corax
 
             public int TermSize
             {
-                get => _termSize >> HasNumericBits;
-                set => _termSize = _termSize & HasNumericMask | value << HasNumericBits;
+                get => _termSize >> ControlBits;
+                set => _termSize = _termSize & ControlMask | value << ControlBits;
             }
 
             public long? Long
@@ -160,7 +163,22 @@ namespace Corax
             public ByteStringContext<ByteStringMemoryCache>.InternalScope RemovalsScope;
             public ByteStringContext<ByteStringMemoryCache>.InternalScope UpdatesScope;
 
-            private bool _needToSortToDeleteDuplicates;
+            private bool NeedToSortToDeleteDuplicates
+            {
+                get => (_termSize & NeedSorting) != 0;
+                set
+                {
+                    if (value == false)
+                    {
+                        _termSize &= ~NeedSorting;
+                    }
+                    else
+                    {
+                        _termSize |= NeedSorting;
+                    }
+                } 
+            }
+            
 
 #if DEBUG
             private int _hasChangesCallCount = 0;
@@ -179,7 +197,7 @@ namespace Corax
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
                 TermSize = size;
-                _needToSortToDeleteDuplicates = true;
+                NeedToSortToDeleteDuplicates = true;
                 Additions = new();
                 AdditionsScope = Additions.Initialize(context);
                 Removals = new();
@@ -207,7 +225,7 @@ namespace Corax
             private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq )
             {
                 AssertPreparationIsNotFinished();
-                _needToSortToDeleteDuplicates = true;
+                NeedToSortToDeleteDuplicates = true;
 
                 if (list.Count > 0)
                 {
@@ -233,9 +251,9 @@ namespace Corax
 
             private void DeleteAllDuplicates([NotNull] ByteStringContext context)
             {
-                if (_needToSortToDeleteDuplicates == false)
+                if (NeedToSortToDeleteDuplicates == false)
                     return;
-                _needToSortToDeleteDuplicates = false;
+                NeedToSortToDeleteDuplicates = false;
                 
                 Additions.Sort();
                 Removals.Sort();
