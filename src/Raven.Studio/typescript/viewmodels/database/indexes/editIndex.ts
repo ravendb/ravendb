@@ -1106,7 +1106,7 @@ class editIndex extends shardViewModelBase {
     private initFieldTooltips() {
         this.setupDisableReasons();
 
-        popoverUtils.longWithHover($(".store-field-info-lucene"), 
+        popoverUtils.longWithHover($(".js-store-field-info"), 
             {
                 content: `
                          <h3 class="margin-top">Please verify whether you need to store the field in the index:</h3>
