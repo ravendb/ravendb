@@ -177,7 +177,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         return batchCollector;
     }
 
-    private class ShardedClusterTransactionBatchCollector : ClusterTransactionBatchCollector
+    private sealed class ShardedClusterTransactionBatchCollector : ClusterTransactionBatchCollector
     {
         private readonly ShardedDocumentDatabase _database;
 
