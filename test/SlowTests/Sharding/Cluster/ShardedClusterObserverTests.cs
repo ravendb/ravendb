@@ -221,6 +221,89 @@ namespace SlowTests.Sharding.Cluster
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task ClusterObserverWillSkipCommandIfChangingTheSameDatabaseRecordTwiceInOneIteration()
+        {
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "5000";
+
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3, dynamicNodeDistribution: true);
+            options.Server = cluster.Leader;
+            
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(3, record.Sharding.Orchestrator.Topology.Members.Count);
+                
+                cluster.Leader.ServerStore.Observer.Suspended = true;
+
+                var nodeToBringDown = record.Sharding.Orchestrator.Topology.Members.First(x => x != cluster.Leader.ServerStore.NodeTag);
+                var shardBroughtDown = record.Sharding.Shards.Single(shardTop => shardTop.Value.AllNodes.Contains(nodeToBringDown)).Key;
+                var server = Servers.Single(x => nodeToBringDown == x.ServerStore.NodeTag);
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+
+                cluster.Leader.ServerStore.Observer.Suspended = false;
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    if (record.Sharding.Orchestrator.Topology.Rehabs.Count == 1)
+                    {
+                        cluster.Leader.ServerStore.Observer.Suspended = true;
+                        //observerLastIteration = cluster.Leader.ServerStore.Observer.
+                    }
+
+                    return record.Sharding.Orchestrator.Topology.Rehabs.Count;
+                }, 1);
+
+                //decisions log commands will only contain orchestrator change but not the shard topology changes
+                var shardRehabCommandFired = false;
+                var orchestratorRehabCommandFired = false;
+                var (logs, iteration) = cluster.Leader.ServerStore.Observer.ReadDecisionsForDatabase();
+                foreach (var log in logs)
+                {
+                    if (log.Message.Contains("moved to rehab") && log.Database == ShardHelper.ToShardName(store.Database, shardBroughtDown))
+                        shardRehabCommandFired = true;
+                    if (log.Message.Contains("moved to rehab") && log.Database == store.Database)
+                        orchestratorRehabCommandFired = true;
+                }
+
+                Assert.False(shardRehabCommandFired);
+                Assert.True(orchestratorRehabCommandFired);
+
+                var concurrencyException = false;
+
+                using (cluster.Leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    string exception;
+                    foreach (var entry in cluster.Leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                    {
+                        var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
+                        if (type == "UpdateTopologyCommand")
+                        {
+                            exception = (entry[nameof(RachisLogHistory.LogHistoryColumn.ExceptionMessage)]?.ToString());
+                            if (exception?.Contains("Concurrency violation") == true)
+                                concurrencyException = true;
+                        }
+                    }
+                }
+                Assert.False(concurrencyException);
+
+                await AssertWaitForValueAsync(() =>
+                {
+                    var dbRecord = GetDatabaseRecord(store);
+                    return Task.FromResult(dbRecord.Sharding.Orchestrator.Topology.Rehabs.Count);
+                }, 1);
+
+                await AssertWaitForValueAsync(() =>
+                {
+                    var dbRecord = GetDatabaseRecord(store);
+                    return Task.FromResult(dbRecord.Sharding.Shards[shardBroughtDown].Rehabs.Count);
+                }, 0);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CanAddNodeToShard()
         {
             var database = GetDatabaseName();

@@ -35,10 +35,10 @@ public static class Program
             {
                 TryRemoveDatabasesFolder();
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new SubscriptionsWithReshardingTests(testOutputHelper))
+                using (var test = new ShardedClusterObserverTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.GetDocumentsWithFilteringAndModifications3();
+                    await test.ClusterObserverWillSkipCommandIfChangingTheSameDatabaseRecordTwiceInOneIteration();
                 }
             }
             catch (Exception e)
