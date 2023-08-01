@@ -5,6 +5,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 
 export function DatabaseNodeSetItem(props: { node: NodeInfo; isOffline?: boolean }) {
     const { node, isOffline } = props;
+
     return (
         <NodeSetItem
             key={node.tag}
@@ -18,13 +19,9 @@ export function DatabaseNodeSetItem(props: { node: NodeInfo; isOffline?: boolean
 }
 
 function colorForNodeType(type: databaseGroupNodeType, isOffline?: boolean) {
-    if (isOffline) {
-        return "muted";
-    }
-
     switch (type) {
         case "Member":
-            return "node";
+            return isOffline ? "muted" : "node";
         case "Rehab":
             return "danger";
         case "Promotable":

@@ -7,12 +7,12 @@ import { locationAwareLoadableData } from "components/models/common";
 
 interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
-    dbState: locationAwareLoadableData<DatabaseLocalInfo>[];
+    localInfos: locationAwareLoadableData<DatabaseLocalInfo>[];
     togglePanelCollapsed: () => void;
 }
 
 export function DatabaseTopology(props: DatabaseTopologyProps) {
-    const { db, dbState, togglePanelCollapsed } = props;
+    const { db, localInfos, togglePanelCollapsed } = props;
 
     if (db.sharded) {
         const shardedDb = db as ShardedDatabaseSharedInfo;
@@ -28,7 +28,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} dbState={dbState} />
+                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} localInfos={localInfos} />
                     ))}
                 </NodeSet>
 
@@ -49,7 +49,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                     <DatabaseTopologyNodeSetItem
                                         key={node.tag}
                                         node={node}
-                                        dbState={dbState}
+                                        localInfos={localInfos}
                                         shardNumber={shardNumber}
                                     />
                                 ))}
@@ -82,7 +82,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                 >
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} dbState={dbState} />
+                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} localInfos={localInfos} />
                     ))}
                     {db.deletionInProgress.map((node) => {
                         return (

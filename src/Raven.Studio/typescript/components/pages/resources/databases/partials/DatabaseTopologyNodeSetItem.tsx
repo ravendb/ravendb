@@ -7,19 +7,29 @@ import { DatabaseNodeSetItem } from "./DatabaseNodeSetItem";
 
 interface DatabaseTopologyNodeSetItemProps {
     node: NodeInfo;
-    dbState: locationAwareLoadableData<DatabaseLocalInfo>[];
+    localInfos: locationAwareLoadableData<DatabaseLocalInfo>[];
     shardNumber?: number;
 }
 
-export default function DatabaseTopologyNodeSetItem({ node, dbState, shardNumber }: DatabaseTopologyNodeSetItemProps) {
-    const localInfo = dbState.find((x) =>
-        databaseLocationComparator(x.location, {
-            nodeTag: node.tag,
-            shardNumber,
-        })
+export default function DatabaseTopologyNodeSetItem({
+    node,
+    localInfos,
+    shardNumber,
+}: DatabaseTopologyNodeSetItemProps) {
+    const localInfo = localInfos.find((x) =>
+        shardNumber != null
+            ? databaseLocationComparator(x.location, {
+                  nodeTag: node.tag,
+                  shardNumber,
+              })
+            : x.location.nodeTag === node.tag
     );
 
-    const isOffline = DatabaseUtils.formatUptime(localInfo?.data?.upTime) === "Offline";
+    if (!localInfo) {
+        return null;
+    }
+
+    const isOffline = localInfo.data ? DatabaseUtils.formatUptime(localInfo.data.upTime) === "Offline" : false;
 
     return <DatabaseNodeSetItem node={node} isOffline={isOffline} />;
 }
