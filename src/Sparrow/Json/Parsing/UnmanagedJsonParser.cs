@@ -940,7 +940,7 @@ namespace Sparrow.Json.Parsing
             }
         }
 
-        protected void ThrowException(string message, Exception inner = null)
+        private void ThrowException(string message, Exception inner = null)
         {
             throw new InvalidDataException($"{message} at {GenerateErrorState()}", inner);
         }

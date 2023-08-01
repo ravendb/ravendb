@@ -22,7 +22,7 @@ namespace Corax
         {
         }
 
-        protected IndexOpenException(SerializationInfo info, StreamingContext context) : base(info, context)
+        private IndexOpenException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
