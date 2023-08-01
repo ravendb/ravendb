@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Corax.Mappings;
-using Sparrow.Server;
-using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 
-namespace Corax.Queries
+namespace Corax.Queries.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct NotStartsWithTermProvider<TLookupIterator> : ITermProvider

@@ -14,6 +14,7 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Queries.TermProviders;
 using Corax.Utils;
 using Sparrow.Compression;
 using Sparrow.Server;

@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Corax.Mappings;
 using Voron;
 
-namespace Corax.Queries
+namespace Corax.Queries.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider<TTermsType> : ITermProvider

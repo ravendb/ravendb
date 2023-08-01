@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.TermProviders;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;

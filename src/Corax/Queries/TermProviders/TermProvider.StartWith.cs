@@ -5,9 +5,8 @@ using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
-using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
-namespace Corax.Queries
+namespace Corax.Queries.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct StartsWithTermProvider<TLookupIterator> : ITermProvider

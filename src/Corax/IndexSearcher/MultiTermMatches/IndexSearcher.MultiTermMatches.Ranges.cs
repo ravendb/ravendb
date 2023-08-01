@@ -3,10 +3,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.TermProviders;
 using Voron;
 using Voron.Data.Lookups;
 using static Voron.Data.CompactTrees.CompactTree;
-using Range = Corax.Queries.Range;
+using Range = Corax.Queries.Meta.Range;
 
 namespace Corax;
 

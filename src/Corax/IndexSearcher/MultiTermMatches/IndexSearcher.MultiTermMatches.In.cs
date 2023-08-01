@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.TermProviders;
 using Corax.Utils;
 using Voron;
 

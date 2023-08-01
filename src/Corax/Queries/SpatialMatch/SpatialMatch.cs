@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Corax.Mappings;
-using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Debugging;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Queries;
