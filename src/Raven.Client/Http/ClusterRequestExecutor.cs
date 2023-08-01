@@ -19,7 +19,7 @@ namespace Raven.Client.Http
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool userPrivateUrls = false)
+        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool userPrivateUrls = false, bool includePromotables = false)
         {
             throw new NotSupportedException();
         }
