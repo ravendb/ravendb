@@ -5,7 +5,7 @@ import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.Ongoing
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
 import classNames = require("classnames");
-import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
+import { Modal, ModalBody, Button, ModalFooter, Alert } from "reactstrap";
 import IconName from "typings/server/icons";
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
@@ -105,6 +105,15 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                         {idx < taskGroups.length - 1 && <hr className="m-0" />}
                     </div>
                 ))}
+
+                {type === "disable" && (
+                    <Alert color="warning">
+                        <small>
+                            Please note that <strong>disabling</strong> these tasks will cause continuous tombstone
+                            accumulation until they are re-enabled or deleted, leading to increased disk space usage.
+                        </small>
+                    </Alert>
+                )}
             </ModalBody>
             <ModalFooter>
                 <Button color="link" onClick={toggle} className="text-muted">
