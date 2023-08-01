@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Corax.Queries
 {
-    public class QueryInspectionNode
+    public sealed class QueryInspectionNode
     {
         public readonly string Operation;
         public readonly Dictionary<string, string> Parameters;

@@ -49,7 +49,7 @@ namespace Corax.Queries.SortingMatches
             _inner.Score(matches, scores, boostFactor);
         }
 
-        internal class FunctionTable
+        internal sealed class FunctionTable
         {
             public readonly delegate*<ref SortingMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref SortingMatch, long> TotalResultsFunc;

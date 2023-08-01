@@ -51,7 +51,7 @@ namespace Corax.Queries
 
         string DebugView => Inspect().ToString();
 
-        internal class FunctionTable
+        internal sealed class FunctionTable
         {
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MultiTermMatch, Span<long>, int, int> AndWithFunc;

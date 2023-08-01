@@ -12,7 +12,7 @@ using Voron.Data.CompactTrees;
 
 namespace Corax.Utils.Spatial;
 
-public class SpatialUtils
+public sealed class SpatialUtils
 {
     /// <summary>
     ///Source: https://github.com/apache/lucenenet/blob/master/src/Lucene.Net.Spatial/Query/SpatialArgs.cs

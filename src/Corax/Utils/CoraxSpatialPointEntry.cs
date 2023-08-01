@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Corax.Utils;
 
-public class CoraxSpatialPointEntry
+public sealed class CoraxSpatialPointEntry
 {
     public readonly double Latitude;
 

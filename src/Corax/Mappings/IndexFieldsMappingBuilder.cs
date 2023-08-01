@@ -7,7 +7,7 @@ using Voron;
 
 namespace Corax.Mappings;
 
-public class IndexFieldsMappingBuilder : IDisposable
+public sealed class IndexFieldsMappingBuilder : IDisposable
 {
     private readonly ByteStringContext _context;
     private const short LongSuffix = 19501; //"-L"

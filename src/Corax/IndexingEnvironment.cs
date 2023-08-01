@@ -9,7 +9,7 @@ using Voron;
 
 namespace Corax
 {
-    public class IndexingEnvironment : IDisposable
+    public sealed class IndexingEnvironment : IDisposable
     {
         public readonly StorageEnvironment Storage;
 

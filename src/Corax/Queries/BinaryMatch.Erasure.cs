@@ -47,7 +47,7 @@ namespace Corax.Queries
             return _inner.Inspect();
         }
 
-        internal class FunctionTable
+        internal sealed class FunctionTable
         {
             public readonly delegate*<ref BinaryMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref BinaryMatch, Span<long>, int, int> AndWithFunc;

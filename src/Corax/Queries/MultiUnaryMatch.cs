@@ -207,7 +207,7 @@ public unsafe struct MultiUnaryItem
         Double
     }
 
-    internal class GreaterThanMatchComparer
+    internal sealed class GreaterThanMatchComparer
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -227,7 +227,7 @@ public unsafe struct MultiUnaryItem
         }
     }
 
-    internal class GreaterThanOrEqualMatchComparer
+    internal sealed class GreaterThanOrEqualMatchComparer
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -267,7 +267,7 @@ public unsafe struct MultiUnaryItem
         }
     }
 
-    internal class LessThanOrEqualMatchComparer
+    internal sealed class LessThanOrEqualMatchComparer
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -287,7 +287,7 @@ public unsafe struct MultiUnaryItem
         }
     }
 
-    internal class NotEqualsMatchComparer
+    internal sealed class NotEqualsMatchComparer
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -307,7 +307,7 @@ public unsafe struct MultiUnaryItem
         }
     }
 
-    internal class EmptyComparer
+    internal sealed class EmptyComparer
     {
         private const string ErrorMessage = $"{nameof(EmptyComparer)} is only use to fill up static pointer. If you see this please report. There is a bug."; 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
