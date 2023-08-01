@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Util
 {
-    public class CSharpClassName
+    public sealed class CSharpClassName
     {
         public static string ConvertToValidClassName(string input)
         {

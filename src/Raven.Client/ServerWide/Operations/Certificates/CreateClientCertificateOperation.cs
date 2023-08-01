@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class CreateClientCertificateOperation : IServerOperation<CertificateRawData>
+    public sealed class CreateClientCertificateOperation : IServerOperation<CertificateRawData>
     {
         private readonly string _name;
         private readonly Dictionary<string, DatabaseAccess> _permissions;

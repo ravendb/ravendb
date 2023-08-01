@@ -9,9 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ReorderDatabaseMembersOperation : IServerOperation
+    public sealed class ReorderDatabaseMembersOperation : IServerOperation
     {
-        public class Parameters
+        public sealed class Parameters
         {
             public List<string> MembersOrder;
             public bool Fixed;

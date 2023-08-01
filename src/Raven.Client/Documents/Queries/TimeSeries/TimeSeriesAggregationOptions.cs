@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    public class TimeSeriesAggregationOptions
+    public sealed class TimeSeriesAggregationOptions
     {
         public InterpolationType Interpolation { get; set; }
     }

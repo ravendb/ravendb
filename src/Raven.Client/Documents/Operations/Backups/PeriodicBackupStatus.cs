@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class PeriodicBackupStatus : IDatabaseTaskStatus
+    public sealed class PeriodicBackupStatus : IDatabaseTaskStatus
     {
         public long TaskId { get; set; }
 
@@ -103,13 +103,13 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class Error
+    public sealed class Error
     {
         public string Exception { get; set; }
 
         public DateTime At { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {

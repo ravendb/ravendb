@@ -20,7 +20,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AsyncSessionDocumentTimeSeries<TValues> : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries, IAsyncSessionDocumentIncrementalTimeSeries, IAsyncSessionDocumentRollupTypedTimeSeries<TValues>, IAsyncSessionDocumentTypedTimeSeries<TValues>, IAsyncSessionDocumentTypedIncrementalTimeSeries<TValues> where TValues : new()
+    public sealed class AsyncSessionDocumentTimeSeries<TValues> : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries, IAsyncSessionDocumentIncrementalTimeSeries, IAsyncSessionDocumentRollupTypedTimeSeries<TValues>, IAsyncSessionDocumentTypedTimeSeries<TValues>, IAsyncSessionDocumentTypedIncrementalTimeSeries<TValues> where TValues : new()
     {
         public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name) : base(session, documentId, name)
         {

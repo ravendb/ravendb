@@ -2,7 +2,7 @@ using Raven.Client.Documents.Queries.Suggestions;
 
 namespace Raven.Client.Documents.Indexes.Suggestions
 {
-    public class SuggestionOptions
+    public sealed class SuggestionOptions
     {
         public SuggestionOptions()
         {

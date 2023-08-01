@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions.Documents.Indexes
     /// <summary>
     /// This exception is raised when a query is made against a non existing index
     /// </summary>
-    public class IndexDoesNotExistException : RavenException
+    public sealed class IndexDoesNotExistException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexDoesNotExistException"/> class.

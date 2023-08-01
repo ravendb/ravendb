@@ -21,9 +21,9 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Linq
 {
-    public class LinqPathProvider
+    public sealed class LinqPathProvider
     {
-        public class Result
+        public sealed class Result
         {
             public Type MemberType;
             public string Path;

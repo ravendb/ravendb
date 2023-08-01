@@ -2,7 +2,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Expiration
 {
-    public class ExpirationConfiguration : IDynamicJson
+    public sealed class ExpirationConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
 

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Sorters
 {
-    public class DeleteServerWideSorterOperation : IServerOperation
+    public sealed class DeleteServerWideSorterOperation : IServerOperation
     {
         private readonly string _sorterName;
 

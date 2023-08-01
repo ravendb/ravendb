@@ -8,7 +8,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    internal class LoadOperation
+    internal sealed class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Client");

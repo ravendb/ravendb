@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
-    public class ToggleServerWideTaskStateOperation : IServerOperation
+    public sealed class ToggleServerWideTaskStateOperation : IServerOperation
     {
         private readonly string _name;
         private readonly OngoingTaskType _type;

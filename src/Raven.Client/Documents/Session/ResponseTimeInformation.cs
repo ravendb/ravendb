@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Client.Documents.Session
 {
-    public class ResponseTimeInformation
+    public sealed class ResponseTimeInformation
     {
         public ResponseTimeInformation()
         {
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class ResponseTimeItem
+    public sealed class ResponseTimeItem
     {
         public string Url { get; set; }
         public TimeSpan Duration { get; set; }

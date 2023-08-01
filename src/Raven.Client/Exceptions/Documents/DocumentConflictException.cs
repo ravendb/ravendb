@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Exceptions.Documents
 {
-    public class DocumentConflictException : ConflictException
+    public sealed class DocumentConflictException : ConflictException
     {
         public string DocId { get; }
 

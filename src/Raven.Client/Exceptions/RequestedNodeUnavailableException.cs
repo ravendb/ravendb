@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions
 {
-    public class RequestedNodeUnavailableException : Exception
+    public sealed class RequestedNodeUnavailableException : Exception
     {
         public RequestedNodeUnavailableException()
         {

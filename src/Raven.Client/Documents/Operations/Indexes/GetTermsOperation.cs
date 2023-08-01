@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetTermsOperation : IMaintenanceOperation<string[]>
+    public sealed class GetTermsOperation : IMaintenanceOperation<string[]>
     {
         private readonly string _indexName;
         private readonly string _field;
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetTermsCommand(_indexName, _field, _fromValue, _pageSize);
         }
 
-        internal class GetTermsCommand : RavenCommand<string[]>
+        internal sealed class GetTermsCommand : RavenCommand<string[]>
         {
             private readonly string _indexName;
             private readonly string _field;

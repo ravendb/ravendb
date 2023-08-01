@@ -18,7 +18,7 @@ using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionWorker<T> : AbstractSubscriptionWorker<SubscriptionBatch<T>, T> where T : class
+    public sealed class SubscriptionWorker<T> : AbstractSubscriptionWorker<SubscriptionBatch<T>, T> where T : class
     {
         private readonly DocumentStore _store;
 

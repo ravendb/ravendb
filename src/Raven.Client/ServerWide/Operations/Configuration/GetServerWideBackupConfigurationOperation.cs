@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class GetServerWideBackupConfigurationOperation : IServerOperation<ServerWideBackupConfiguration>
+    public sealed class GetServerWideBackupConfigurationOperation : IServerOperation<ServerWideBackupConfiguration>
     {
         private readonly string _name;
 

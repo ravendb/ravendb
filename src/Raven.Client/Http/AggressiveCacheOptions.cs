@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Http
 {
-    public class AggressiveCacheOptions
+    public sealed class AggressiveCacheOptions
     {
         public AggressiveCacheOptions(TimeSpan duration, AggressiveCacheMode mode)
         {

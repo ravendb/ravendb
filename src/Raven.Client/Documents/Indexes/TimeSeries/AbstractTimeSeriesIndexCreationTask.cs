@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
     {
     }
 
-    public class AbstractTimeSeriesIndexCreationTask<TDocument, TReduceResult> : AbstractGenericTimeSeriesIndexCreationTask<TReduceResult>
+    public abstract class AbstractTimeSeriesIndexCreationTask<TDocument, TReduceResult> : AbstractGenericTimeSeriesIndexCreationTask<TReduceResult>
     {
         private (string TimeSeries, Expression<Func<IEnumerable<TimeSeriesSegment>, IEnumerable>> Map) _map;
 

@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionTryout
+    public sealed class SubscriptionTryout
     {
         public string ChangeVector { get; set; }
         public string Query { get; set; }
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
         public bool PinToMentorNode { get; set; }
     }
 
-    public class SubscriptionCreationOptions<T>
+    public sealed class SubscriptionCreationOptions<T>
     {
         public string Name { get; set; }
         public bool Disabled { get; set; }
@@ -48,13 +48,13 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
-    public class SubscriptionUpdateOptions : SubscriptionCreationOptions
+    public sealed class SubscriptionUpdateOptions : SubscriptionCreationOptions
     {
         public long? Id { get; set; }
         public bool CreateNew { get; set; }
     }
 
-    public class Revision<T> where T : class
+    public sealed class Revision<T> where T : class
     {
         public T Previous;
         public T Current;

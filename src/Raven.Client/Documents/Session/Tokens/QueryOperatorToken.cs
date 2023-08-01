@@ -3,7 +3,7 @@ using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class QueryOperatorToken : QueryToken
+    public sealed class QueryOperatorToken : QueryToken
     {
         private readonly QueryOperator _queryOperator;
 

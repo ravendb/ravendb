@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions;
 
-public class RavenTimeoutException : RavenException
+public sealed class RavenTimeoutException : RavenException
 {
     public RavenTimeoutException()
     {

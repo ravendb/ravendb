@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class BackupEncryptionSettings
+    public sealed class BackupEncryptionSettings
     {
         public string Key { get; set; }
         public EncryptionMode EncryptionMode { get; set; }

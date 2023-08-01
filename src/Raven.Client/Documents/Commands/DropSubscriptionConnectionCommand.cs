@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DropSubscriptionConnectionCommand : RavenCommand
+    public sealed class DropSubscriptionConnectionCommand : RavenCommand
     {
         private readonly string _name;
         private readonly string _workerId;

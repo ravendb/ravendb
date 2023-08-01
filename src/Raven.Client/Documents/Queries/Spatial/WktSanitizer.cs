@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Queries.Spatial
     /// We do this because we only index and query in 2D,
     /// but its nice to allow users to store shapes in 3D and 4D if they need to.
     /// </summary>
-    internal class WktSanitizer
+    internal sealed class WktSanitizer
     {
         private static readonly Regex RectangleRegex;
         private static readonly Regex DimensionFlagRegex;

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide.Operations.Integrations.PostgreSQL
 {
-    public class PostgreSqlConfiguration : IDynamicJson
+    public sealed class PostgreSqlConfiguration : IDynamicJson
     {
         public PostgreSqlAuthenticationConfiguration Authentication;
         public DynamicJsonValue ToJson()

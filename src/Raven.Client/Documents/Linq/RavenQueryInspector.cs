@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// Implements <see cref="IRavenQueryable{T}"/>
     /// </summary>
-    public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector, IAsyncEnumerable<T>
+    public sealed class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector, IAsyncEnumerable<T>
     {
         private Expression _expression;
         private IRavenQueryProvider _provider;

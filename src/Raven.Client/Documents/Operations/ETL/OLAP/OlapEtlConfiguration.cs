@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
-    public class OlapEtlConfiguration : EtlConfiguration<OlapConnectionString>
+    public sealed class OlapEtlConfiguration : EtlConfiguration<OlapConnectionString>
     {
         public string RunFrequency { get; set; }
 
@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         }
     }
 
-    public class OlapEtlTable
+    public sealed class OlapEtlTable
     {
         public string TableName { get; set; }
 

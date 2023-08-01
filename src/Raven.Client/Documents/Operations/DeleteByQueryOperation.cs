@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DeleteByQueryOperation<TEntity, TIndexCreator> : DeleteByQueryOperation<TEntity>
+    public sealed class DeleteByQueryOperation<TEntity, TIndexCreator> : DeleteByQueryOperation<TEntity>
         where TIndexCreator : AbstractIndexCreationTask, new()
     {
         public DeleteByQueryOperation(Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
@@ -79,7 +79,7 @@ namespace Raven.Client.Documents.Operations
             return new DeleteByQueryCommand<Parameters>(conventions, _queryToDelete, _options);
         }
 
-        internal class DeleteByQueryCommand<T> : RavenCommand<OperationIdResult>
+        internal sealed class DeleteByQueryCommand<T> : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery<T> _queryToDelete;

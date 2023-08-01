@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class BlittableJsonReader : JsonReader, IJsonReader
+    internal sealed class BlittableJsonReader : JsonReader, IJsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
 

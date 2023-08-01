@@ -7,14 +7,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class CounterBatch
+    public sealed class CounterBatch
     {
         public bool ReplyWithAllNodesValues;
         public List<DocumentCountersOperation> Documents = new List<DocumentCountersOperation>();
         public bool FromEtl;
     }
 
-    public class DocumentCountersOperation
+    public sealed class DocumentCountersOperation
     {
         public List<CounterOperation> Operations;
         public string DocumentId;
@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations.Counters
         GetAll
     }
 
-    public class CounterOperation
+    public sealed class CounterOperation
     {
         public CounterOperationType Type;
         public string CounterName;

@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Patching
 {
-    public class JavaScriptParseException : JavaScriptException
+    public sealed class JavaScriptParseException : JavaScriptException
     {
         public JavaScriptParseException()
         {

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Corax;
 
-public class NotImplementedInCoraxException : RavenException
+public sealed class NotImplementedInCoraxException : RavenException
 {
     public NotImplementedInCoraxException()
     {

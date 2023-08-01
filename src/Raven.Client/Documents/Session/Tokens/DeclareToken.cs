@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class DeclareToken : QueryToken
+    public sealed class DeclareToken : QueryToken
     {
         public string Name { get; }
 

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class ResetIndexOperation : IMaintenanceOperation
+    public sealed class ResetIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new ResetIndexCommand(_indexName);
         }
 
-        internal class ResetIndexCommand : RavenCommand
+        internal sealed class ResetIndexCommand : RavenCommand
         {
             private readonly string _indexName;
 

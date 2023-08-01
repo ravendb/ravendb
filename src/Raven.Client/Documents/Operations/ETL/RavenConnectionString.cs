@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class RavenConnectionString : ConnectionString
+    public sealed class RavenConnectionString : ConnectionString
     {
         public string Database { get; set; }
         public string[] TopologyDiscoveryUrls;

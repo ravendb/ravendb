@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesOperation
+    public sealed class TimeSeriesOperation
     {
         private SortedList<long, AppendOperation> _appends;
         private SortedList<long, IncrementOperation> _increments;
@@ -291,7 +291,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        public class AppendOperation
+        public sealed class AppendOperation
         {
             public DateTime Timestamp;
             public double[] Values;
@@ -338,7 +338,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
-        public class DeleteOperation
+        public sealed class DeleteOperation
         {
             public DateTime? From, To;
 
@@ -364,7 +364,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
-        public class IncrementOperation
+        public sealed class IncrementOperation
         {
             public DateTime Timestamp;
             public double[] Values;

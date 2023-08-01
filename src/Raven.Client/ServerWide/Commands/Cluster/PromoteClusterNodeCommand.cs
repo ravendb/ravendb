@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    internal class PromoteClusterNodeCommand : RavenCommand, IRaftCommand
+    internal sealed class PromoteClusterNodeCommand : RavenCommand, IRaftCommand
     {
         private readonly string _node;
 

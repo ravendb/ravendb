@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions
 {
-    public class InvalidNetworkTopologyException : Exception
+    public sealed class InvalidNetworkTopologyException : Exception
     {
         public InvalidNetworkTopologyException()
         {

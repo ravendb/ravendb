@@ -3,7 +3,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class ShapeToken : QueryToken
+    public sealed class ShapeToken : QueryToken
     {
         private readonly string _shape;
 

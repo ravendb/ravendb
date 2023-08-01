@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class CountersDetail
+    public sealed class CountersDetail
     {
         public List<CounterDetail> Counters { get; set; }
 
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Counters
         }
     }
 
-    public class CounterDetail
+    public sealed class CounterDetail
     {
         public string DocumentId { get; set; }
         public string CounterName { get; set; }
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.Counters
         }
     }
 
-    public class CounterGroupDetail : IDisposable
+    public sealed class CounterGroupDetail : IDisposable
     {
         public LazyStringValue DocumentId { get; set; }
 

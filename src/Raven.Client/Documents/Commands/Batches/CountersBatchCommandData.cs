@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class CountersBatchCommandData : ICommandData
+    public sealed class CountersBatchCommandData : ICommandData
     {
         public CountersBatchCommandData(string documentId, CounterOperation counterOperation)
             : this(documentId, new List<CounterOperation>

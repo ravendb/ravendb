@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class LuceneMergeDetails
+    public sealed class LuceneMergeDetails
     {
         public int TotalMergesCount { get; set; }
 

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.ServerWide.Operations
 {
-    public class ModifyDatabaseRecordResult
+    public sealed class ModifyDatabaseRecordResult
     {
         public long RaftCommandIndex { get; set; }
     }

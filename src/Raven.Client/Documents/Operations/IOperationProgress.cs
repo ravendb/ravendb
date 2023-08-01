@@ -25,12 +25,12 @@ namespace Raven.Client.Documents.Operations
     /// <summary>
     /// Used to describe operations with progress expressed as percentage (using processed / total items)
     /// </summary>
-    public class DeterminateProgress : IOperationProgress
+    public sealed class DeterminateProgress : IOperationProgress
     {
         public long Processed { get; set; }
         public long Total { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
@@ -63,11 +63,11 @@ namespace Raven.Client.Documents.Operations
     /// <summary>
     /// Used to describe operations with progress expressed as # of total items processes
     /// </summary>
-    public class IndeterminateProgressCount : IOperationProgress
+    public sealed class IndeterminateProgressCount : IOperationProgress
     {
         public long Processed { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class BulkInsertProgress : IOperationProgress
+    public sealed class BulkInsertProgress : IOperationProgress
     {
         public long Total { get; set; }
         public long BatchCount { get; set; }
@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Operations
             return msg;
         }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
@@ -144,7 +144,7 @@ namespace Raven.Client.Documents.Operations
     /// <summary>
     /// Used to describe indeterminate progress (we use text to describe progress)
     /// </summary>
-    public class IndeterminateProgress : IOperationProgress
+    public sealed class IndeterminateProgress : IOperationProgress
     {
         public string Progress { get; set; }
 

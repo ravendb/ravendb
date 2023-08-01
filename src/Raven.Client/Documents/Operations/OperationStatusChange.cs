@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class OperationStatusChange : DatabaseChange
+    public sealed class OperationStatusChange : DatabaseChange
     {
         public long OperationId { get; set; }
 

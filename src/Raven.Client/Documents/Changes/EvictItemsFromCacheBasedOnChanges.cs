@@ -12,7 +12,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
+    internal sealed class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
     {
         private readonly string _databaseName;
         private readonly DatabaseChanges _changes;

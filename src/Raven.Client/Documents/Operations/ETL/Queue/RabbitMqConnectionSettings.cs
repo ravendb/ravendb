@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public class RabbitMqConnectionSettings
+public sealed class RabbitMqConnectionSettings
 {
     public string ConnectionString { get; set; }
     

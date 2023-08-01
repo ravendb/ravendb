@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class GetPeriodicBackupStatusOperation : IMaintenanceOperation<GetPeriodicBackupStatusOperationResult>
+    public sealed class GetPeriodicBackupStatusOperation : IMaintenanceOperation<GetPeriodicBackupStatusOperationResult>
     {
         private readonly long _taskId;
 
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Operations.Backups
         internal bool IsSharded;
     }
 
-    public class GetPeriodicBackupStatusOperationResult : AbstractGetPeriodicBackupStatusOperationResult
+    public sealed class GetPeriodicBackupStatusOperationResult : AbstractGetPeriodicBackupStatusOperationResult
     {
         public PeriodicBackupStatus Status;
     }

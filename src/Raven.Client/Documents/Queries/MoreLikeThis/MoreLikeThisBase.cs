@@ -9,23 +9,23 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public MoreLikeThisOptions Options { get; set; }
     }
 
-    internal class MoreLikeThisUsingDocumentForQuery<T> : MoreLikeThisBase
+    internal sealed class MoreLikeThisUsingDocumentForQuery<T> : MoreLikeThisBase
     {
         public Expression<Func<T, bool>> ForQuery { get; set; }
     }
 
-    internal class MoreLikeThisUsingDocumentForDocumentQuery<T> : MoreLikeThisBase
+    internal sealed class MoreLikeThisUsingDocumentForDocumentQuery<T> : MoreLikeThisBase
     {
         public Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> ForDocumentQuery { get; set; }
 
         public Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> ForAsyncDocumentQuery { get; set; }
     }
 
-    public class MoreLikeThisUsingAnyDocument : MoreLikeThisBase
+    public sealed class MoreLikeThisUsingAnyDocument : MoreLikeThisBase
     {
     }
 
-    public class MoreLikeThisUsingDocument : MoreLikeThisBase
+    public sealed class MoreLikeThisUsingDocument : MoreLikeThisBase
     {
         public MoreLikeThisUsingDocument(string documentJson)
         {

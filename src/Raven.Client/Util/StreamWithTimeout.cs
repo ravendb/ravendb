@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-    internal class StreamWithTimeout : Stream, IAsyncDisposable
+    internal sealed class StreamWithTimeout : Stream, IAsyncDisposable
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);

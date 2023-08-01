@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class PutAttachmentOperation : IOperation<AttachmentDetails>
+    public sealed class PutAttachmentOperation : IOperation<AttachmentDetails>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector);
         }
 
-        internal class PutAttachmentCommand : RavenCommand<AttachmentDetails>
+        internal sealed class PutAttachmentCommand : RavenCommand<AttachmentDetails>
         {
             private readonly string _documentId;
             private readonly string _name;

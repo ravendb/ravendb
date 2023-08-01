@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class UpdateDatabaseOperation : IServerOperation<DatabasePutResult>
+    public sealed class UpdateDatabaseOperation : IServerOperation<DatabasePutResult>
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly long _etag;

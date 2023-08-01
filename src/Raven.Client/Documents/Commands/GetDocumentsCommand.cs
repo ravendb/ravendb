@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
+    public sealed class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly string _id;

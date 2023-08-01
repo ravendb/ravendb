@@ -10,39 +10,39 @@ namespace Raven.Client.Documents.Operations
         public T[] Results { get; set; }
     }
 
-    internal class GetIndexNamesResponse : ResultsResponse<string>
+    internal sealed class GetIndexNamesResponse : ResultsResponse<string>
     {
     }
 
-    internal class PutIndexesResponse : ResultsResponse<PutIndexResult>
+    internal sealed class PutIndexesResponse : ResultsResponse<PutIndexResult>
     {
     }
 
-    internal class GetIndexesResponse : ResultsResponse<IndexDefinition>
+    internal sealed class GetIndexesResponse : ResultsResponse<IndexDefinition>
     {
     }
 
-    internal class GetIndexStatisticsResponse : ResultsResponse<IndexStats>
+    internal sealed class GetIndexStatisticsResponse : ResultsResponse<IndexStats>
     {
     }
 
-    internal class GetCertificatesResponse : ResultsResponse<CertificateDefinition>
+    internal sealed class GetCertificatesResponse : ResultsResponse<CertificateDefinition>
     {
     }
 
-    internal class GetCertificatesMetadataResponse : ResultsResponse<CertificateMetadata>
+    internal sealed class GetCertificatesMetadataResponse : ResultsResponse<CertificateMetadata>
     {
     }
     
-    internal class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
+    internal sealed class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
     {
     }
 
-    internal class GetServerWideBackupConfigurationsResponse : ResultsResponse<ServerWideBackupConfiguration>
+    internal sealed class GetServerWideBackupConfigurationsResponse : ResultsResponse<ServerWideBackupConfiguration>
     {
     }
 
-    internal class GetServerWideExternalReplicationsResponse : ResultsResponse<ServerWideExternalReplication>
+    internal sealed class GetServerWideExternalReplicationsResponse : ResultsResponse<ServerWideExternalReplication>
     {
     }
 }

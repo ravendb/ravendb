@@ -10,9 +10,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class ExplainQueryCommand : RavenCommand<ExplainQueryCommand.ExplainQueryResult[]>
+    public sealed class ExplainQueryCommand : RavenCommand<ExplainQueryCommand.ExplainQueryResult[]>
     {
-        public class ExplainQueryResult
+        public sealed class ExplainQueryResult
         {
             public string Index { get; set; }
             public string Reason { get; set; }

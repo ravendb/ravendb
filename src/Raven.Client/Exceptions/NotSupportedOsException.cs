@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Exceptions
 {
-    public class NotSupportedOSException : RavenException
+    public sealed class NotSupportedOSException : RavenException
     {
     }
 }

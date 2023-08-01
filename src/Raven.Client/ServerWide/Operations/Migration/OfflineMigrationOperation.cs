@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Migration
 {
-    public class OfflineMigrationOperation : IServerOperation<OperationIdResult>
+    public sealed class OfflineMigrationOperation : IServerOperation<OperationIdResult>
     {
         private readonly OfflineMigrationConfiguration _configuration;
 

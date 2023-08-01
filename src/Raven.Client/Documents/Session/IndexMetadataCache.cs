@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
             return index;
         }
         
-        internal class IndexMetadataCacheItem
+        internal sealed class IndexMetadataCacheItem
         {
             public readonly string IndexName;
 

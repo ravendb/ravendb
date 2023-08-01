@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Documents.Indexes
 {
-    public class IndexInvalidException : RavenException
+    public sealed class IndexInvalidException : RavenException
     {
         public IndexInvalidException()
         {

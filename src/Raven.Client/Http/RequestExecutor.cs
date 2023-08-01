@@ -2198,7 +2198,7 @@ namespace Raven.Client.Http
             return hostname;
         }
 
-        public class NodeStatus : IDisposable
+        public sealed class NodeStatus : IDisposable
         {
             private TimeSpan _timerPeriod;
             private readonly RequestExecutor _requestExecutor;
@@ -2344,7 +2344,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public class UpdateTopologyParameters
+        public sealed class UpdateTopologyParameters
         {
             public ServerNode Node { get; }
             public int TimeoutInMs { get; set; } = 15000;
@@ -2416,7 +2416,7 @@ namespace Raven.Client.Http
             return ForTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             private readonly RequestExecutor _requestExecutor;
 

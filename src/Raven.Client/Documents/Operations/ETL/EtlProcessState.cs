@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class EtlProcessState : IDatabaseTaskStatus
+    public sealed class EtlProcessState : IDatabaseTaskStatus
     {
         public EtlProcessState()
         {

@@ -157,7 +157,7 @@ namespace Raven.Client.Documents.Session.Loaders
         internal bool IncludeTimeSeriesDocument;
     }
 
-    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>, ITimeSeriesIncludeBuilder
+    internal sealed class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>, ITimeSeriesIncludeBuilder
     {
         private readonly DocumentConventions _conventions;
 
@@ -807,7 +807,7 @@ namespace Raven.Client.Documents.Session.Loaders
         }
     }
 
-    internal class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>
+    internal sealed class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>
     {
         public static AbstractTimeSeriesRangeComparer Instance = new AbstractTimeSeriesRangeComparer();
 

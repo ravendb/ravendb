@@ -5,9 +5,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class IsDatabaseLoadedCommand : RavenCommand<IsDatabaseLoadedCommand.CommandResult>
+    public sealed class IsDatabaseLoadedCommand : RavenCommand<IsDatabaseLoadedCommand.CommandResult>
     {
-        public class CommandResult
+        public sealed class CommandResult
         {
             public string DatabaseName;
             public bool IsLoaded;

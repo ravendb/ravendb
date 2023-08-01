@@ -4,13 +4,13 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class StreamResult
+    public sealed class StreamResult
     {
         public HttpResponseMessage Response { get; set; }
         public Stream Stream { get; set; }
     }
 
-    public class StreamResult<TType> : AbstractStreamResult
+    public sealed class StreamResult<TType> : AbstractStreamResult
     {
         /// <summary>
         /// Document deserialized to <c>TType</c>.
@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands
         public TType Document { get; set; }
     }
 
-    public class TimeSeriesStreamResult<TType> : AbstractStreamResult
+    public sealed class TimeSeriesStreamResult<TType> : AbstractStreamResult
     {
         /// <summary>
         /// Time Series deserialized to <c>TType</c>.

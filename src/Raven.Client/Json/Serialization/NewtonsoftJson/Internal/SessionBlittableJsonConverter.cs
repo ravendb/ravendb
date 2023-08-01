@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class SessionBlittableJsonConverter : BlittableJsonConverterBase, ISessionBlittableJsonConverter
+    internal sealed class SessionBlittableJsonConverter : BlittableJsonConverterBase, ISessionBlittableJsonConverter
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

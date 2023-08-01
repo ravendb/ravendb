@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.ETL.SQL
 {
-    public class SqlProviderParser
+    public sealed class SqlProviderParser
     {
         public static SqlProvider GetSupportedProvider(string factoryName)
         {

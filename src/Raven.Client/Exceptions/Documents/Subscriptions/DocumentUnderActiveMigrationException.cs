@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class DocumentUnderActiveMigrationException : SubscriptionException
+    public sealed class DocumentUnderActiveMigrationException : SubscriptionException
     {
         public DocumentUnderActiveMigrationException(string message) : base(message)
         {

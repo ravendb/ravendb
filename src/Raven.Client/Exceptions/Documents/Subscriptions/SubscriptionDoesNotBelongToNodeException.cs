@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionDoesNotBelongToNodeException : SubscriptionException
+    public sealed class SubscriptionDoesNotBelongToNodeException : SubscriptionException
     {
         public string AppropriateNode;
         internal long Index;

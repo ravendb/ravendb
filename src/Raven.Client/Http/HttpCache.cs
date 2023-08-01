@@ -12,7 +12,7 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Http
 {
-    public class HttpCache : IDisposable, ILowMemoryHandler
+    public sealed class HttpCache : IDisposable, ILowMemoryHandler
     {
         internal const string NotFoundResponse = "404 Response";
 
@@ -392,7 +392,7 @@ namespace Raven.Client.Http
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public Action OnHttpCacheSetUpdate;
 

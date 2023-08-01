@@ -262,14 +262,14 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
-    public class AbstractIndexCreationTask<TDocument> : AbstractIndexCreationTask<TDocument, TDocument>
+    public abstract class AbstractIndexCreationTask<TDocument> : AbstractIndexCreationTask<TDocument, TDocument>
     {
     }
 
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
-    public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
+    public abstract class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
     {
         /// <summary>
         /// Creates the index definition.
@@ -476,7 +476,7 @@ namespace Raven.Client.Documents.Indexes
 #endif
     }
 
-    public class NoTrackingCommonApiForIndexes : ILoadCommonApiForIndexes
+    public sealed class NoTrackingCommonApiForIndexes : ILoadCommonApiForIndexes
     {
         public T LoadDocument<T>(string id)
         {

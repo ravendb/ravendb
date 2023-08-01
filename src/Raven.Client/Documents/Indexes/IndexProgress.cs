@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
 {
-    internal class IndexProgress
+    internal sealed class IndexProgress
     {
         public string Name { get; set; }
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Indexes
 
         public RollingIndex IndexRollingStatus { get; set; }
 
-        public class CollectionStats
+        public sealed class CollectionStats
         {
             public long LastProcessedItemEtag { get; set; }
 
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Indexes
         }
     }
 
-    internal class IndexesProgress
+    internal sealed class IndexesProgress
     {
         public IndexProgress[] Results { get; set; }
     }

@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Conventions
     ///     The set of conventions used by the <see cref="DocumentStore" /> which allow the users to customize
     ///     the way the Raven client API behaves
     /// </summary>
-    public class DocumentConventions : Client.Conventions
+    public sealed class DocumentConventions : Client.Conventions
     {
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public class AggressiveCacheConventions
+        public sealed class AggressiveCacheConventions
         {
             private readonly DocumentConventions _conventions;
             private readonly AggressiveCacheOptions _aggressiveCacheOptions;
@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public class BulkInsertConventions
+        public sealed class BulkInsertConventions
         {
             private readonly DocumentConventions _conventions;
             private Func<object, IMetadataDictionary, StreamWriter, bool> _trySerializeEntityToJsonStream;
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public class ShardingConventions
+        public sealed class ShardingConventions
         {
             private readonly DocumentConventions _conventions;
 

@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Queries
     /// <summary>
     /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IndexQuery<Parameters>
+    public sealed class IndexQuery : IndexQuery<Parameters>
     {
         /// <summary>
         /// Indicates if query results should be read from cache (if cached previously) or added to cache (if there were no cached items prior)

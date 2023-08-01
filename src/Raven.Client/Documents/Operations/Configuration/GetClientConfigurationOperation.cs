@@ -6,14 +6,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
-    public class GetClientConfigurationOperation : IMaintenanceOperation<GetClientConfigurationOperation.Result>
+    public sealed class GetClientConfigurationOperation : IMaintenanceOperation<GetClientConfigurationOperation.Result>
     {
         public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetClientConfigurationCommand();
         }
 
-        internal class GetClientConfigurationCommand : RavenCommand<Result>
+        internal sealed class GetClientConfigurationCommand : RavenCommand<Result>
         {
             public override bool IsReadRequest => true;
 
@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Configuration
             }
         }
 
-        public class Result
+        public sealed class Result
         {
             public long Etag { get; set; }
 

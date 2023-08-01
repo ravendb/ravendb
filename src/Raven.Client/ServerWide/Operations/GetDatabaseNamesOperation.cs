@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetDatabaseNamesOperation : IServerOperation<string[]>
+    public sealed class GetDatabaseNamesOperation : IServerOperation<string[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

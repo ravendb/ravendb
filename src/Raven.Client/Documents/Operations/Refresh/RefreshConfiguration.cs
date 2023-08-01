@@ -2,7 +2,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Refresh
 {
-    public class RefreshConfiguration : IDynamicJson
+    public sealed class RefreshConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
 

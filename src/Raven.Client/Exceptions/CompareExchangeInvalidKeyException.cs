@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions;
 
-public class CompareExchangeInvalidKeyException : RavenException
+public sealed class CompareExchangeInvalidKeyException : RavenException
 {
     public CompareExchangeInvalidKeyException(string message)
         : base(message)

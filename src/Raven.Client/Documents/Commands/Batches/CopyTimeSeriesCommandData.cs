@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    internal class CopyTimeSeriesCommandData : ICommandData
+    internal sealed class CopyTimeSeriesCommandData : ICommandData
     {
         public CopyTimeSeriesCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, DateTime? from = null, DateTime? to = null)
         {

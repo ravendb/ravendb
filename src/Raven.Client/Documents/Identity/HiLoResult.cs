@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Identity
     /// <summary>
     /// The result of a NextHiLo operation
     /// </summary>   
-    public class HiLoResult
+    public sealed class HiLoResult
     {
         public string Prefix { get; set; }
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Identity
 
     }
 
-    public class HiloDocument
+    public sealed class HiloDocument
     {
         public long Max { get; set; }
     }

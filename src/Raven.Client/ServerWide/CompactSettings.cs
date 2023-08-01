@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide
 {
-    public class CompactSettings
+    public sealed class CompactSettings
     {
         public string DatabaseName { get; set; }
 

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 {
-    public class ElasticSearchConnectionString : ConnectionString
+    public sealed class ElasticSearchConnectionString : ConnectionString
     {
         public string[] Nodes;
 
@@ -91,27 +91,27 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         }
     }
     
-    public class Authentication
+    public sealed class Authentication
     {
         public ApiKeyAuthentication ApiKey { get; set; }
         public BasicAuthentication Basic { get; set; }
         public CertificateAuthentication Certificate { get; set; }
     }
 
-    public class ApiKeyAuthentication
+    public sealed class ApiKeyAuthentication
     {
         public string ApiKeyId { get; set; }
         
         public string ApiKey { get; set; }
     }
     
-    public class BasicAuthentication
+    public sealed class BasicAuthentication
     {
         public string Username { get; set; }
         public string Password { get; set; }
     }
     
-    public class CertificateAuthentication
+    public sealed class CertificateAuthentication
     {
         public string[] CertificatesBase64 { get; set; }
     }

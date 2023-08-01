@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyStartsWithOperation<T> : ILazyOperation
+    internal sealed class LazyStartsWithOperation<T> : ILazyOperation
     {
         private readonly string _idPrefix;
 

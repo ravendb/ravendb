@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Integrations.PostgreSQL
 {
-    public class PostgreSqlAuthenticationConfiguration : IDynamicJson
+    public sealed class PostgreSqlAuthenticationConfiguration : IDynamicJson
     {
         public List<PostgreSqlUser> Users = new();
 

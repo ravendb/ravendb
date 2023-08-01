@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class ReplicationHubAccessResult
+    public sealed class ReplicationHubAccessResult
     {
         public DetailedReplicationHubAccess[] Results;
     }

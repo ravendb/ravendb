@@ -22,7 +22,7 @@ namespace Raven.Client.Util.RateLimiting
     ///     threads.
     ///     </para>
     /// </remarks>
-    internal class RateGate : IDisposable
+    internal sealed class RateGate : IDisposable
     {
         // Semaphore used to count and limit the number of occurrences per
         // unit time.
@@ -189,7 +189,7 @@ namespace Raven.Client.Util.RateLimiting
         /// Releases unmanaged resources held by an instance of this class.
         /// </summary>
         /// <param name="isDisposing">Whether this object is being disposed.</param>
-        protected virtual void Dispose(bool isDisposing)
+        protected void Dispose(bool isDisposing)
         {
             if (!_isDisposed)
             {

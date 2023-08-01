@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Exceptions.Documents.Compilation
 {
-    public class SorterCompilationException : CompilationException
+    public sealed class SorterCompilationException : CompilationException
     {
         public SorterCompilationException()
         {

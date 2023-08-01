@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class WaitForRaftIndexCommand : RavenCommand
+    public sealed class WaitForRaftIndexCommand : RavenCommand
     {
         private readonly long _index;
 

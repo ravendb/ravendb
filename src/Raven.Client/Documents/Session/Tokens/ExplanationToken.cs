@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class ExplanationToken : QueryToken
+    public sealed class ExplanationToken : QueryToken
     {
         private readonly string _optionsParameterName;
 

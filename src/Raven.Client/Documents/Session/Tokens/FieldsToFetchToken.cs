@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class FieldsToFetchToken : QueryToken
+    public sealed class FieldsToFetchToken : QueryToken
     {
         public readonly string[] FieldsToFetch;
         public readonly string[] Projections;

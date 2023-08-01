@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class GetCertificatesMetadataOperation : IServerOperation<CertificateMetadata[]>
+    public sealed class GetCertificatesMetadataOperation : IServerOperation<CertificateMetadata[]>
     {
         private readonly string _name;
 

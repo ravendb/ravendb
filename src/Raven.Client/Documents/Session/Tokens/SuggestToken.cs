@@ -4,7 +4,7 @@ using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class SuggestToken : QueryToken
+    public sealed class SuggestToken : QueryToken
     {
         public readonly string FieldName;
         private readonly string _alias;

@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class AttachmentResult : IDisposable
+    public sealed class AttachmentResult : IDisposable
     {
         public Stream Stream;
         public AttachmentDetails Details;

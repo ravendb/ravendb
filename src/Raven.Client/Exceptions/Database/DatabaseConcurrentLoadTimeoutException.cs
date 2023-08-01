@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseConcurrentLoadTimeoutException : RavenException
+    public sealed class DatabaseConcurrentLoadTimeoutException : RavenException
     {
         public DatabaseConcurrentLoadTimeoutException(string message)
             : base(message)

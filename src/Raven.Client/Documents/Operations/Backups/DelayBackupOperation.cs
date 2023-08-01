@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups;
 
-public class DelayBackupOperation : IMaintenanceOperation<OperationState>
+public sealed class DelayBackupOperation : IMaintenanceOperation<OperationState>
 {
     private readonly long _runningBackupTaskId;
     private readonly TimeSpan _duration;

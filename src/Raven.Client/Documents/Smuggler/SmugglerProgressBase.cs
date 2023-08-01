@@ -66,7 +66,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         throw new NotSupportedException();
     }
 
-    public class DatabaseRecordProgress : Counts
+    public sealed class DatabaseRecordProgress : Counts
     {
         public bool SortersUpdated { get; set; }
 
@@ -303,7 +303,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         }
     }
 
-    public class FileCounts
+    public sealed class FileCounts
     {
         public string CurrentFileName { get; set; }
         public long CurrentFile { get; set; }
@@ -395,7 +395,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         }
     }
 
-    public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
+    public sealed class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
     {
         public long SkippedCount { get; set; }
 
@@ -412,7 +412,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         }
     }
 
-    public class CountsWithSkippedCountAndLastEtagAndAttachments : CountsWithLastEtagAndAttachments
+    public sealed class CountsWithSkippedCountAndLastEtagAndAttachments : CountsWithLastEtagAndAttachments
     {
         public long SkippedCount { get; set; }
 

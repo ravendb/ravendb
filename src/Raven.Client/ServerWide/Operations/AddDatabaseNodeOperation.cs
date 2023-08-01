@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class AddDatabaseNodeOperation : IServerOperation<DatabasePutResult>
+    public sealed class AddDatabaseNodeOperation : IServerOperation<DatabasePutResult>
     {
         private readonly string _databaseName;
         private readonly string _node;

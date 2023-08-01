@@ -3,7 +3,7 @@ using Raven.Client.Documents.Replication;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class InternalReplication : ReplicationNode
+    public sealed class InternalReplication : ReplicationNode
     {
         private string _nodeTag;
         public string NodeTag

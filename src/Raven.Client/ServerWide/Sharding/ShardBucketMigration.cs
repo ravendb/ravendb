@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Client.ServerWide.Sharding;
 
-public class ShardBucketMigration : IDatabaseTask
+public sealed class ShardBucketMigration : IDatabaseTask
 {
     public MigrationStatus Status;
     public int Bucket;

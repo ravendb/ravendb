@@ -2024,7 +2024,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
     }
 
-    internal class AbstractDocumentQueryCache
+    internal sealed class AbstractDocumentQueryCache
     {
         public enum TransformationMode
         {

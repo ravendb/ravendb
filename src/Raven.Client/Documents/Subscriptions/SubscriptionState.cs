@@ -95,7 +95,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
-    public class SubscriptionStateWithNodeDetails : SubscriptionState
+    public sealed class SubscriptionStateWithNodeDetails : SubscriptionState
     {
         public NodeId ResponsibleNode { get; set; }
 

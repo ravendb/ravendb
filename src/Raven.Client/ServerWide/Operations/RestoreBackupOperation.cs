@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class RestoreBackupOperation : IServerOperation<OperationIdResult>
+    public sealed class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
         private readonly RestoreBackupConfigurationBase _restoreConfiguration;
         public string NodeTag;
@@ -31,7 +31,7 @@ namespace Raven.Client.ServerWide.Operations
             return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
         }
 
-        internal class RestoreBackupCommand : RavenCommand<OperationIdResult>
+        internal sealed class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly DocumentConventions _conventions;

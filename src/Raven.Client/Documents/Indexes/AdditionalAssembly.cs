@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class AdditionalAssembly : IDynamicJson
+    public sealed class AdditionalAssembly : IDynamicJson
     {
         public string AssemblyName { get; private set; }
 
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Indexes
             };
         }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue();
             if (AssemblyName != null)

@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyRevisionOperation<T> : ILazyOperation
+    internal sealed class LazyRevisionOperation<T> : ILazyOperation
     {
         private readonly GetRevisionOperation _getRevisionOperation;
         private Mode _mode;

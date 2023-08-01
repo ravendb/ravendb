@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal class BlittablePath
+    internal sealed class BlittablePath
     {
         private readonly string _expression;
         public List<object> Parts { get; }

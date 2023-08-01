@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
-    public class DeleteOngoingTaskOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public sealed class DeleteOngoingTaskOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly long _taskId;
         private readonly OngoingTaskType _taskType;

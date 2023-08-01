@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class SetIndexesPriorityOperation : IMaintenanceOperation
+    public sealed class SetIndexesPriorityOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string[] IndexNames { get; set; }
             public IndexPriority Priority { get; set; }

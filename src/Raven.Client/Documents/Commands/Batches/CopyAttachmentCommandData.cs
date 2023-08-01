@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class CopyAttachmentCommandData : ICommandData
+    public sealed class CopyAttachmentCommandData : ICommandData
     {
         public CopyAttachmentCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, string changeVector)
         {

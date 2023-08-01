@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
-    public class ClientConfiguration
+    public sealed class ClientConfiguration
     {
         private char? _identityPartsSeparator;
 

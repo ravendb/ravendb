@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Cluster
 {
-    public class NodeIsPassiveException : RavenException
+    public sealed class NodeIsPassiveException : RavenException
     {
         public NodeIsPassiveException()
         {

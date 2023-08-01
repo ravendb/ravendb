@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Queries.Explanation
 {
-    public class Explanations
+    public sealed class Explanations
     {
         private Dictionary<string, string[]> _explanations;
 

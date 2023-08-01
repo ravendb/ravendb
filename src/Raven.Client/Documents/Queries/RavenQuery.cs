@@ -6,7 +6,7 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Queries
 {
-    public class RavenQuery
+    public sealed class RavenQuery
     {
         public static T Load<T>(string id)
         {

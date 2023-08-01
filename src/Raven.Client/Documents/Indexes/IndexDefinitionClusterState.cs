@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    internal class IndexDefinitionClusterState
+    internal sealed class IndexDefinitionClusterState
     {
         public IndexDefinitionClusterState()
         {

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.SQL
 {
-    public class SqlConnectionString : ConnectionString
+    public sealed class SqlConnectionString : ConnectionString
     {
         public string ConnectionString { get; set; }
 

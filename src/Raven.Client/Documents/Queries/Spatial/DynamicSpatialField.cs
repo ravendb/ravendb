@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Queries.Spatial
 {
-    public class PointField : DynamicSpatialField
+    public sealed class PointField : DynamicSpatialField
     {
         public readonly string Latitude;
         public readonly string Longitude;
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         }
     }
 
-    public class WktField : DynamicSpatialField
+    public sealed class WktField : DynamicSpatialField
     {
         public readonly string Wkt;
 

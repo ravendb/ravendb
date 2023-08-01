@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class StopTransactionsRecordingOperation : IMaintenanceOperation
+    public sealed class StopTransactionsRecordingOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// Information about index failure rates
     /// </summary>
-    public class IndexFailureInformation
+    public sealed class IndexFailureInformation
     {
         private const float FailureThreshold = 0.15f;
 

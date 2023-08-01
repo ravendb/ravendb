@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Exceptions.Documents.Indexes
 {
-    internal class IndexCompactionInProgressException : RavenException
+    internal sealed class IndexCompactionInProgressException : RavenException
     {
         public IndexCompactionInProgressException()
         {

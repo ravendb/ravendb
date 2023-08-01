@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazySuggestionQueryOperation : ILazyOperation
+    internal sealed class LazySuggestionQueryOperation : ILazyOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly IndexQuery _indexQuery;

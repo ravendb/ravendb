@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
     /// <summary>
     /// This class provides a way to define a strongly typed index on the client.
     /// </summary>
-    public class TimeSeriesIndexDefinitionBuilder<TDocument> : TimeSeriesIndexDefinitionBuilder<TDocument, TDocument>
+    public sealed class TimeSeriesIndexDefinitionBuilder<TDocument> : TimeSeriesIndexDefinitionBuilder<TDocument, TDocument>
     {
         public TimeSeriesIndexDefinitionBuilder(string indexName = null) : base(indexName)
         {

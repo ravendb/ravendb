@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    internal class BatchOperation
+    internal sealed class BatchOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

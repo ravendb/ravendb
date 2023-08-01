@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate);
     }
 
-    internal class TimeSeriesLoadTagBuilder<TEntity, TTag> : ITimeSeriesLoadTagBuilder<TTag>
+    internal sealed class TimeSeriesLoadTagBuilder<TEntity, TTag> : ITimeSeriesLoadTagBuilder<TTag>
     {
         private readonly TimeSeriesQueryBuilder<TEntity> _parent;
 
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
     }
 
-    internal class TimeSeriesQueryBuilder<TEntity> : ITimeSeriesQueryBuilder, ITimeSeriesAggregationQueryable
+    internal sealed class TimeSeriesQueryBuilder<TEntity> : ITimeSeriesQueryBuilder, ITimeSeriesAggregationQueryable
     {
         private string _query;
         private string _name;

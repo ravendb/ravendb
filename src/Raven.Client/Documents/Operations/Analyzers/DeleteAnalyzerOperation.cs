@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Analyzers
 {
-    public class DeleteAnalyzerOperation : IMaintenanceOperation
+    public sealed class DeleteAnalyzerOperation : IMaintenanceOperation
     {
         private readonly string _analyzerName;
 

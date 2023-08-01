@@ -10,7 +10,7 @@ using Sparrow;
 
 namespace Raven.Client.Documents.TimeSeries
 {
-    public class TimeSeriesOperations
+    public sealed class TimeSeriesOperations
     {
         private readonly IDocumentStore _store;
         private readonly string _database;

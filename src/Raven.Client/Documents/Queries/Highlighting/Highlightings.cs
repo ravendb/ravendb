@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Queries.Highlighting
     /// <summary>
     ///     Query highlightings for the documents.
     /// </summary>
-    public class Highlightings
+    public sealed class Highlightings
     {
         private readonly Dictionary<string, string[]> _highlightings;
 

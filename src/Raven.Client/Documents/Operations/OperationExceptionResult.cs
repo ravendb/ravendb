@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class OperationExceptionResult : IOperationResult
+    public sealed class OperationExceptionResult : IOperationResult
     {
         public string Type { get; set; }
 

@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class KillOperationCommand : RavenCommand
+    public sealed class KillOperationCommand : RavenCommand
     {
         private readonly long _id;
 

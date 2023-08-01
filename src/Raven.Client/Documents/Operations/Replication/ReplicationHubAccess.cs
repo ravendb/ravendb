@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class ReplicationHubAccess : IDynamicJson
+    public sealed class ReplicationHubAccess : IDynamicJson
     {
         public string Name;
         public string CertificateBase64;

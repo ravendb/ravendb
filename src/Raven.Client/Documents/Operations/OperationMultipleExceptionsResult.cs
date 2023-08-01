@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations;
 
-public class OperationMultipleExceptionsResult : IOperationResult
+public sealed class OperationMultipleExceptionsResult : IOperationResult
 {
     public OperationMultipleExceptionsResult()
     {

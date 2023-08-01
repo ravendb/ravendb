@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Sharding;
 
-public class ShardedBatchBehaviorViolationException : RavenException
+public sealed class ShardedBatchBehaviorViolationException : RavenException
 {
     public ShardedBatchBehaviorViolationException()
     {

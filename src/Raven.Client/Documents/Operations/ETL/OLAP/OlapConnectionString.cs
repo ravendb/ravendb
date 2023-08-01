@@ -7,7 +7,7 @@ using static Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
-    public class OlapConnectionString : ConnectionString
+    public sealed class OlapConnectionString : ConnectionString
     {
         public override ConnectionStringType Type => ConnectionStringType.Olap;
 

@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.DocumentsCompression
 {
-    public class UpdateDocumentsCompressionConfigurationOperation : IMaintenanceOperation<DocumentCompressionConfigurationResult>
+    public sealed class UpdateDocumentsCompressionConfigurationOperation : IMaintenanceOperation<DocumentCompressionConfigurationResult>
     {
         private readonly DocumentsCompressionConfiguration _documentsCompressionConfiguration;
 

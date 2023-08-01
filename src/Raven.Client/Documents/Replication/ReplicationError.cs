@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Documents.Replication
 {
-    public class ReplicationError
+    public sealed class ReplicationError
     {
         public string Error { get; set; }
         public DateTime Timestamp { get; set; }

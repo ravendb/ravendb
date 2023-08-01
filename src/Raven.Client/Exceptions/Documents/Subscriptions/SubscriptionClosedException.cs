@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionClosedException : SubscriptionException
+    public sealed class SubscriptionClosedException : SubscriptionException
     {
         internal bool CanReconnect { get; set; }
         internal bool NoDocsLeft { get; set; }

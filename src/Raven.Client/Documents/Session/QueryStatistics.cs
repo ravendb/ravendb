@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// Statistics about a raven query.
     /// Such as how many records match the query
     /// </summary>
-    public class QueryStatistics
+    public sealed class QueryStatistics
     {
         /// <summary>
         /// Whether the query returned potentially stale results

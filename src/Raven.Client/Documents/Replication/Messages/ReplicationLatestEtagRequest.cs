@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Replication.Messages
 {
-    public class ReplicationLatestEtagRequest
+    public sealed class ReplicationLatestEtagRequest
     {
         public string SourceDatabaseName { get; set; }
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Replication.Messages
         }
     }
 
-    public class ReplicationInitialRequest
+    public sealed class ReplicationInitialRequest
     {
         public string PullReplicationDefinitionName { get; set; }
         

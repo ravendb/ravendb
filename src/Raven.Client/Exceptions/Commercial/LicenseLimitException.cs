@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Commercial
 {
-    public class LicenseLimitException : RavenException
+    public sealed class LicenseLimitException : RavenException
     {
         public LimitType Type { get; }
 

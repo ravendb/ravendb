@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetOptions
+    public sealed class FacetOptions
     {
         internal static readonly FacetOptions Default = new FacetOptions();
 

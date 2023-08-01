@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class StreamCommand : RavenCommand<StreamResult>
+    public sealed class StreamCommand : RavenCommand<StreamResult>
     {
         private readonly string _url;
 

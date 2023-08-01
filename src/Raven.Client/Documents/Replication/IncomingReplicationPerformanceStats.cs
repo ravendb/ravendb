@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Documents.Replication
 {
-    public class IncomingReplicationPerformanceStats : ReplicationPerformanceBase
+    public sealed class IncomingReplicationPerformanceStats : ReplicationPerformanceBase
     {
         public IncomingReplicationPerformanceStats()
         {
@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Replication
 
         public NetworkStats Network { get; set; }
         
-        public class NetworkStats
+        public sealed class NetworkStats
         {
             public int InputCount { get; set; }
 

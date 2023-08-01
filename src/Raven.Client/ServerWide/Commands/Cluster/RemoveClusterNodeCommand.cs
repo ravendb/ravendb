@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    internal class RemoveClusterNodeCommand : RavenCommand, IRaftCommand
+    internal sealed class RemoveClusterNodeCommand : RavenCommand, IRaftCommand
     {
         private readonly string _node;
 
@@ -35,7 +35,7 @@ namespace Raven.Client.ServerWide.Commands.Cluster
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 
-    internal class RemoveClusterNodeOperation : IOperation
+    internal sealed class RemoveClusterNodeOperation : IOperation
     {
         private readonly string _node;
 

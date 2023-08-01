@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Timings
 {
-    public class QueryTimings : IFillFromBlittableJson, IDynamicJson
+    public sealed class QueryTimings : IFillFromBlittableJson, IDynamicJson
     {
         public long DurationInMs { get; set; }
 

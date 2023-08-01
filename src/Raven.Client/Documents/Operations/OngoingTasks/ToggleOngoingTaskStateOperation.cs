@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
-    public class ToggleOngoingTaskStateOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public sealed class ToggleOngoingTaskStateOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly long _taskId;
         private readonly string _taskName;

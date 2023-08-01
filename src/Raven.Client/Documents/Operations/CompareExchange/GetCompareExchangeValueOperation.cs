@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
-    public class GetCompareExchangeValueOperation<T> : IOperation<CompareExchangeValue<T>>
+    public sealed class GetCompareExchangeValueOperation<T> : IOperation<CompareExchangeValue<T>>
     {
         private readonly string _key;
 

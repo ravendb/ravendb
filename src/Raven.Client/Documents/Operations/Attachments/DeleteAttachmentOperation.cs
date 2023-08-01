@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class DeleteAttachmentOperation : IOperation
+    public sealed class DeleteAttachmentOperation : IOperation
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new DeleteAttachmentCommand(_documentId, _name, _changeVector);
         }
 
-        internal class DeleteAttachmentCommand : RavenCommand
+        internal sealed class DeleteAttachmentCommand : RavenCommand
         {
             private readonly string _documentId;
             private readonly string _name;

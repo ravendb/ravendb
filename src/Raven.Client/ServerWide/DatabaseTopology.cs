@@ -47,7 +47,7 @@ namespace Raven.Client.ServerWide
         string NodeTag { get; }
     }
 
-    public class LeaderStamp : IDynamicJson
+    public sealed class LeaderStamp : IDynamicJson
     {
         public long Index = -1;
         public long Term = -1;
@@ -64,7 +64,7 @@ namespace Raven.Client.ServerWide
         }
     }
 
-    public class PromotableTask : IDatabaseTask
+    public sealed class PromotableTask : IDatabaseTask
     {
         private readonly string _tag;
         private readonly string _url;
@@ -137,7 +137,7 @@ namespace Raven.Client.ServerWide
         }
     }
 
-    public class OrchestratorTopology : DatabaseTopology
+    public sealed class OrchestratorTopology : DatabaseTopology
     {
         public void Update(DatabaseTopology topology)
         {

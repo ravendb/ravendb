@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member, or method info
     /// </summary>
-    internal class ExpressionInfo
+    internal sealed class ExpressionInfo
     {
         /// <summary>
         /// Gets the full path of the member being referred to by this node

@@ -19,7 +19,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Session.Operations
 {
-    public class QueryOperation
+    public sealed class QueryOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _indexName;

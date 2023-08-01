@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
 {
-    public class ClusterTopology
+    public sealed class ClusterTopology
     {
         public ClusterTopology(string topologyId, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId, long index)
         {
@@ -186,7 +186,7 @@ namespace Raven.Client.Http
         internal int Count => Members.Count + Promotables.Count + Watchers.Count;
     }
 
-    public class NodeStatus : IDynamicJson
+    public sealed class NodeStatus : IDynamicJson
     {
         public string Name { get; set; }
         public bool Connected { get; set; }

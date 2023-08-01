@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
+    public sealed class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly BackupConfiguration _backupConfiguration;
         
@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new BackupCommand(conventions, _backupConfiguration, null);
         }
 
-        internal class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
+        internal sealed class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             private readonly DateTime? _startTime;
             public override bool IsReadRequest => false;

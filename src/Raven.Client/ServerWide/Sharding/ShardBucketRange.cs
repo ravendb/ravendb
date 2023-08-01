@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide.Sharding;
 
-public class ShardBucketRange
+public sealed class ShardBucketRange
 {
     public int BucketRangeStart;
 

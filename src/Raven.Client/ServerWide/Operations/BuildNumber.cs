@@ -2,7 +2,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class BuildNumber : IDynamicJson
+    public sealed class BuildNumber : IDynamicJson
     {
         public string ProductVersion { get; set; }
 

@@ -69,14 +69,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-    public class ConfigureRawTimeSeriesPolicyOperation : ConfigureTimeSeriesPolicyOperation
+    public sealed class ConfigureRawTimeSeriesPolicyOperation : ConfigureTimeSeriesPolicyOperation
     {
         public ConfigureRawTimeSeriesPolicyOperation(string collection, RawTimeSeriesPolicy config) : base(collection, config)
         {
         }
     }
 
-    public class RemoveTimeSeriesPolicyOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
+    public sealed class RemoveTimeSeriesPolicyOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly string _collection;
         private readonly string _name;

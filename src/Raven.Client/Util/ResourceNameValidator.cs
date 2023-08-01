@@ -127,7 +127,7 @@ namespace Raven.Client.Util
         }
     }
     
-    internal class NameValidation
+    internal sealed class NameValidation
     {
         public bool IsValid { get; set; } 
         public string ErrorMessage { get; set; }

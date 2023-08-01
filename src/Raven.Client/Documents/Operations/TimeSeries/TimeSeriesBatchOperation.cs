@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesBatchOperation : IOperation
+    public sealed class TimeSeriesBatchOperation : IOperation
     {
         private readonly string _documentId;
         private readonly TimeSeriesOperation _operation;
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new TimeSeriesBatchCommand(conventions, _documentId, _operation);
         }
 
-        internal class TimeSeriesBatchCommand : RavenCommand
+        internal sealed class TimeSeriesBatchCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _documentId;

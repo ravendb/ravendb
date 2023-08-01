@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
-    public class GetConnectionStringsOperation: IMaintenanceOperation<GetConnectionStringsResult> 
+    public sealed class GetConnectionStringsOperation: IMaintenanceOperation<GetConnectionStringsResult> 
     {
         private readonly string _connectionStringName;
 
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         }
     }
 
-    public class GetConnectionStringsResult
+    public sealed class GetConnectionStringsResult
     {
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings { get; set; }
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings { get; set; }

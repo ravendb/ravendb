@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseIdleException : RavenException
+    public sealed class DatabaseIdleException : RavenException
     {
         public DatabaseIdleException()
         {

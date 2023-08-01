@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexingError
+    public sealed class IndexingError
     {
         public string Error { get; set; }
         public DateTime Timestamp { get; set; }

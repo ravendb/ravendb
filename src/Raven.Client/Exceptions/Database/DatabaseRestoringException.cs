@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseRestoringException : RavenException
+    public sealed class DatabaseRestoringException : RavenException
     {
         public DatabaseRestoringException()
         {

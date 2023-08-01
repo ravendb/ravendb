@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class GetDatabaseSettingsOperation : IMaintenanceOperation<DatabaseSettings>
+    public sealed class GetDatabaseSettingsOperation : IMaintenanceOperation<DatabaseSettings>
     {
         private readonly string _databaseName;
 

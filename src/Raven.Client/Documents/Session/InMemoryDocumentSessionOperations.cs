@@ -2362,7 +2362,7 @@ more responsive application.
         /// <summary>
         /// Data for a batch command to the server
         /// </summary>
-        internal class SaveChangesData
+        internal sealed class SaveChangesData
         {
             public readonly List<ICommandData> DeferredCommands;
             public readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary;
@@ -2379,7 +2379,7 @@ more responsive application.
                 OnSuccess = new ActionsToRunOnSuccess(session);
             }
 
-            internal class ActionsToRunOnSuccess
+            internal sealed class ActionsToRunOnSuccess
             {
                 private readonly InMemoryDocumentSessionOperations _session;
                 private readonly List<string> _documentsByIdToRemove = new List<string>();
@@ -2518,7 +2518,7 @@ more responsive application.
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action OnSessionDisposeAboutToThrowDueToRunningAsyncTask;
 
@@ -2622,7 +2622,7 @@ more responsive application.
         }
     }
 
-    internal class DocumentsByEntityHolder
+    internal sealed class DocumentsByEntityHolder
     {
         private readonly Dictionary<object, DocumentInfo> _documentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
@@ -2729,7 +2729,7 @@ more responsive application.
             return new DisposableAction(() => _prepareEntitiesPuts = false);
         }
 
-        internal class DocumentsByEntityEnumeratorResult
+        internal sealed class DocumentsByEntityEnumeratorResult
         {
             public object Key { get; set; }
 
@@ -2739,7 +2739,7 @@ more responsive application.
         }
     }
 
-    internal class DeletedEntitiesHolder
+    internal sealed class DeletedEntitiesHolder
     {
         private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
@@ -2825,7 +2825,7 @@ more responsive application.
             return new DisposableAction(() => _prepareEntitiesDeletes = false);
         }
 
-        public class DeletedEntitiesEnumeratorResult
+        public sealed class DeletedEntitiesEnumeratorResult
         {
             public object Entity { get; set; }
 

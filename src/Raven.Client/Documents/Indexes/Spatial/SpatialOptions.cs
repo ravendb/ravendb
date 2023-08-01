@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Client.Documents.Indexes.Spatial
 {
-    public class AutoSpatialOptions : SpatialOptions
+    public sealed class AutoSpatialOptions : SpatialOptions
     {
         public AutoSpatialMethodType MethodType { get; set; }
 

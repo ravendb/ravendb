@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseDoesNotExistException : RavenException
+    public sealed class DatabaseDoesNotExistException : RavenException
     {
         public DatabaseDoesNotExistException()
         {

@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Sorters
 {
-    public class PutSortersOperation : IMaintenanceOperation
+    public sealed class PutSortersOperation : IMaintenanceOperation
     {
         private readonly SorterDefinition[] _sortersToAdd;
 

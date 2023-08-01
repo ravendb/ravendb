@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide.Operations.Integrations
 {
-    public class IntegrationConfigurations
+    public sealed class IntegrationConfigurations
     {
         public PostgreSqlConfiguration PostgreSql;
     }

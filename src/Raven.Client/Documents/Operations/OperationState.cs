@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class OperationState
+    public sealed class OperationState
     {
         public IOperationResult Result { get; set; }
 

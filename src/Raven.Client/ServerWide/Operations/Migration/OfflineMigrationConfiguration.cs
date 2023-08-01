@@ -6,7 +6,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations.Migration
 {
-    public class OfflineMigrationConfiguration
+    public sealed class OfflineMigrationConfiguration
     {
         private const string StorageExporterExecutable = "Raven.StorageExporter.exe";
         private const string EsentDBDataFile = "Data";

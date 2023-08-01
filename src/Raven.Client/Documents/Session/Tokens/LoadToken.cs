@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class LoadToken : QueryToken
+    public sealed class LoadToken : QueryToken
     {
         public string Argument { get; }
 

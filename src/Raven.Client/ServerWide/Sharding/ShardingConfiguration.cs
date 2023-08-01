@@ -2,7 +2,7 @@
 
 namespace Raven.Client.ServerWide.Sharding;
 
-public class ShardingConfiguration
+public sealed class ShardingConfiguration
 {
     public OrchestratorConfiguration Orchestrator;
 

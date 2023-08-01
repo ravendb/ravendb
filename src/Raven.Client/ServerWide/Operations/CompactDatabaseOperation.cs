@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class CompactDatabaseOperation : IServerOperation<OperationIdResult>
+    public sealed class CompactDatabaseOperation : IServerOperation<OperationIdResult>
     {
         private readonly string _nodeTag;
         private readonly CompactSettings _compactSettings;

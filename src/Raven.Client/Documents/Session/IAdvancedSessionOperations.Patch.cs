@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
         void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valToAdd);
     }
 
-    public class JavascriptMethodNameAttribute : Attribute
+    public sealed class JavascriptMethodNameAttribute : Attribute
     {
         public string Name { get; }
 
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class JavaScriptArray<U>
+    public sealed class JavaScriptArray<U>
     {
 
         [JavascriptMethodName("push")]
@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class JavaScriptDictionary<TKey, TValue>
+    public sealed class JavaScriptDictionary<TKey, TValue>
     {
         public JavaScriptDictionary<TKey, TValue> Add(TKey key, TValue value)
         {

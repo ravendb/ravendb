@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Http
 {
-    public class ClusterRequestExecutor : RequestExecutor
+    public sealed class ClusterRequestExecutor : RequestExecutor
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 

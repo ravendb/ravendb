@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexingPerformanceOperation
+    public sealed class IndexingPerformanceOperation
     {
         public IndexingPerformanceOperation()
         {

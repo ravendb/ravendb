@@ -3,7 +3,7 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.Suggestions
 {
-    internal class AsyncSuggestionDocumentQuery<T> : SuggestionQueryBase, IAsyncSuggestionDocumentQuery<T>
+    internal sealed class AsyncSuggestionDocumentQuery<T> : SuggestionQueryBase, IAsyncSuggestionDocumentQuery<T>
     {
         private readonly AsyncDocumentQuery<T> _source;
 

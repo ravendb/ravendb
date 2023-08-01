@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations;
 
-public class DetailedDatabaseStatistics : DatabaseStatistics
+public sealed class DetailedDatabaseStatistics : DatabaseStatistics
 {
     /// <summary>
     /// Total number of identities in database.

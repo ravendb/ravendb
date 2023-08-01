@@ -3,7 +3,7 @@ using Raven.Client.Http;
 
 namespace Raven.Client.Exceptions
 {
-    public class AllTopologyNodesDownException : Exception
+    public sealed class AllTopologyNodesDownException : Exception
     {
         public Topology FailedTopology { get; }
 

@@ -19,12 +19,12 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Util
 {
-    internal class JavascriptConversionExtensions
+    internal sealed class JavascriptConversionExtensions
     {
         internal const string TransparentIdentifier = "<>h__TransparentIdentifier";
         private const string DefaultAliasPrefix = "__rvn";
 
-        public class CustomMethods : JavascriptConversionExtension
+        public sealed class CustomMethods : JavascriptConversionExtension
         {
             public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
             public int Suffix { get; set; }
@@ -119,7 +119,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class DictionarySupport : JavascriptConversionExtension
+        public sealed class DictionarySupport : JavascriptConversionExtension
         {
             public enum DictionaryInnerCall
             {
@@ -284,7 +284,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class LinqMethodsSupport : JavascriptConversionExtension
+        public sealed class LinqMethodsSupport : JavascriptConversionExtension
         {
             public static readonly LinqMethodsSupport Instance = new LinqMethodsSupport();
 
@@ -820,7 +820,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NullableSupport : JavascriptConversionExtension
+        public sealed class NullableSupport : JavascriptConversionExtension
         {
             public static readonly NullableSupport Instance = new NullableSupport();
 
@@ -873,7 +873,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class CompareExchangeSupport : JavascriptConversionExtension
+        public sealed class CompareExchangeSupport : JavascriptConversionExtension
         {
             public static readonly CompareExchangeSupport Instance = new CompareExchangeSupport();
 
@@ -911,7 +911,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class CounterSupport : JavascriptConversionExtension
+        public sealed class CounterSupport : JavascriptConversionExtension
         {
             public static readonly CounterSupport Instance = new CounterSupport();
 
@@ -955,7 +955,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class LoadSupport : JavascriptConversionExtension
+        public sealed class LoadSupport : JavascriptConversionExtension
         {
             public bool HasLoad { get; set; }
             public Expression Arg { get; set; }
@@ -1019,7 +1019,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class MathSupport : JavascriptConversionExtension
+        public sealed class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();
 
@@ -1081,7 +1081,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ReservedWordsSupport : JavascriptConversionExtension
+        public sealed class ReservedWordsSupport : JavascriptConversionExtension
         {
             public static readonly ReservedWordsSupport Instance = new ReservedWordsSupport();
 
@@ -1110,7 +1110,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class WrappedConstantSupport<T> : JavascriptConversionExtension
+        public sealed class WrappedConstantSupport<T> : JavascriptConversionExtension
         {
             private readonly IAbstractDocumentQuery<T> _documentQuery;
             private readonly List<string> _projectionParameters;
@@ -1159,7 +1159,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class JsonPropertyAttributeSupport : JavascriptConversionExtension
+        public sealed class JsonPropertyAttributeSupport : JavascriptConversionExtension
         {
             public static readonly JsonPropertyAttributeSupport Instance = new JsonPropertyAttributeSupport();
 
@@ -1190,7 +1190,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ReplaceParameterWithNewName : JavascriptConversionExtension
+        public sealed class ReplaceParameterWithNewName : JavascriptConversionExtension
         {
             private readonly string _newName;
             private readonly ParameterExpression _parameter;
@@ -1217,7 +1217,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class TransparentIdentifierSupport : JavascriptConversionExtension
+        public sealed class TransparentIdentifierSupport : JavascriptConversionExtension
         {
             private bool _doNotIgnore;
             private int _maxSuffixToNotIgnore = -1;
@@ -1341,7 +1341,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class InvokeSupport : JavascriptConversionExtension
+        public sealed class InvokeSupport : JavascriptConversionExtension
         {
             public static readonly InvokeSupport Instance = new InvokeSupport();
 
@@ -1377,7 +1377,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ValueTypeParseSupport : JavascriptConversionExtension
+        public sealed class ValueTypeParseSupport : JavascriptConversionExtension
         {
             public static readonly ValueTypeParseSupport Instance = new ValueTypeParseSupport();
 
@@ -1412,7 +1412,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ToStringSupport : JavascriptConversionExtension
+        public sealed class ToStringSupport : JavascriptConversionExtension
         {
             public static readonly ToStringSupport Instance = new ToStringSupport();
 
@@ -1611,7 +1611,7 @@ namespace Raven.Client.Util
         }
         
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-        public class DateOnlySupport : DateSupportBase<DateOnly>
+        public sealed class DateOnlySupport : DateSupportBase<DateOnly>
         {
             public static DateOnlySupport Instance = new DateOnlySupport();
             
@@ -1636,7 +1636,7 @@ namespace Raven.Client.Util
         }
 #endif
         
-        public class DateTimeSupport : DateSupportBase<DateTime>
+        public sealed class DateTimeSupport : DateSupportBase<DateTime>
         {
             public static DateTimeSupport Instance = new DateTimeSupport();
 
@@ -1672,7 +1672,7 @@ namespace Raven.Client.Util
             }
         }
         
-        public class TimeSpanSupport : JavascriptConversionExtension
+        public sealed class TimeSpanSupport : JavascriptConversionExtension
         {
             public static TimeSpanSupport Instance = new TimeSpanSupport();
 
@@ -1714,7 +1714,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class SubscriptionsWrappedConstantSupport : JavascriptConversionExtension
+        public sealed class SubscriptionsWrappedConstantSupport : JavascriptConversionExtension
         {
             private readonly DocumentConventions _conventions;
 
@@ -1842,7 +1842,7 @@ namespace Raven.Client.Util
             };
         }
 
-        public class ConstSupport : JavascriptConversionExtension
+        public sealed class ConstSupport : JavascriptConversionExtension
         {
             private readonly DocumentConventions _conventions;
 
@@ -1910,7 +1910,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NullCoalescingSupport : JavascriptConversionExtension
+        public sealed class NullCoalescingSupport : JavascriptConversionExtension
         {
             public static NullCoalescingSupport Instance = new NullCoalescingSupport();
 
@@ -1935,7 +1935,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ListInitSupport : JavascriptConversionExtension
+        public sealed class ListInitSupport : JavascriptConversionExtension
         {
             public static readonly ListInitSupport Instance = new ListInitSupport();
 
@@ -1974,7 +1974,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ConstantSupport : JavascriptConversionExtension
+        public sealed class ConstantSupport : JavascriptConversionExtension
         {
             public static readonly ConstantSupport Instance = new ConstantSupport();
 
@@ -2015,7 +2015,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NewSupport : JavascriptConversionExtension
+        public sealed class NewSupport : JavascriptConversionExtension
         {
             public static readonly NewSupport Instance = new NewSupport();
 
@@ -2179,7 +2179,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NullComparisonSupport : JavascriptConversionExtension
+        public sealed class NullComparisonSupport : JavascriptConversionExtension
         {
             public static readonly NullComparisonSupport Instance = new NullComparisonSupport();
 
@@ -2219,7 +2219,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NestedConditionalSupport : JavascriptConversionExtension
+        public sealed class NestedConditionalSupport : JavascriptConversionExtension
         {
             public static readonly NestedConditionalSupport Instance = new NestedConditionalSupport();
 
@@ -2247,7 +2247,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class StringSupport : JavascriptConversionExtension
+        public sealed class StringSupport : JavascriptConversionExtension
         {
             public static readonly StringSupport Instance = new StringSupport();
 
@@ -2472,7 +2472,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class MetadataSupport : JavascriptConversionExtension
+        public sealed class MetadataSupport : JavascriptConversionExtension
         {
             public static readonly MetadataSupport Instance = new MetadataSupport();
 
@@ -2522,7 +2522,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class IdentityPropertySupport : JavascriptConversionExtension
+        public sealed class IdentityPropertySupport : JavascriptConversionExtension
         {
             private readonly DocumentConventions _conventions;
             private readonly string _parameterName;
@@ -2600,7 +2600,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class MemberInit : JavascriptConversionExtension
+        public sealed class MemberInit : JavascriptConversionExtension
         {
             public static MemberInit Instance { get; } = new MemberInit();
 
@@ -2617,7 +2617,7 @@ namespace Raven.Client.Util
             }
         }
 
-        internal class TimeSeriesSupport<T> : JavascriptConversionExtension
+        internal sealed class TimeSeriesSupport<T> : JavascriptConversionExtension
         {
             private readonly RavenQueryProviderProcessor<T> _queryProviderProcessor;
 
@@ -2643,7 +2643,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class TypedParameterSupport : JavascriptConversionExtension
+        public sealed class TypedParameterSupport : JavascriptConversionExtension
         {
             public readonly string Name;
 

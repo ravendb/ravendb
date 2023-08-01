@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         void SetStream(StreamOperation.TimeSeriesStreamEnumerator stream);
     }
 
-    internal class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
+    internal sealed class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
     {
         private readonly IAsyncEnumerator<BlittableJsonReaderObject> _outer;
         private readonly CancellationToken _token;
@@ -128,19 +128,19 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _timeSeriesStream = new TimeSeriesStreamEnumerator<TResult>(stream);
         }
     }
-    public class TimeSeriesRawResult : TimeSeriesQueryStreamResultBase<TimeSeriesEntry>
+    public sealed class TimeSeriesRawResult : TimeSeriesQueryStreamResultBase<TimeSeriesEntry>
     {
     }
 
-    public class TimeSeriesRawResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesEntry<T>> where T : new()
+    public sealed class TimeSeriesRawResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesEntry<T>> where T : new()
     {
     }
 
-    public class TimeSeriesAggregationResult : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation>
+    public sealed class TimeSeriesAggregationResult : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation>
     {
     }
 
-    public class TimeSeriesAggregationResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation<T>> where T : new()
+    public sealed class TimeSeriesAggregationResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation<T>> where T : new()
     {
     }
 
@@ -172,7 +172,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
     }
 
-    public class TimeSeriesRangeAggregation<T> : TimeSeriesRangeAggregation where T : new()
+    public sealed class TimeSeriesRangeAggregation<T> : TimeSeriesRangeAggregation where T : new()
     {
         private T _max;
         private T _min;

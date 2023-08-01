@@ -1030,7 +1030,7 @@ namespace Raven.Client.Documents.Subscriptions
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal bool SimulateUnexpectedException;
         }

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseSchemaErrorException : RavenException
+    public sealed class DatabaseSchemaErrorException : RavenException
     {
         public DatabaseSchemaErrorException()
         {

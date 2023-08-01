@@ -5,7 +5,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Spatial
 {
-    public class DynamicSpatialFieldFactory<TEntity>
+    public sealed class DynamicSpatialFieldFactory<TEntity>
     {
         private readonly DocumentConventions _conventions;
         public static readonly DynamicSpatialFieldFactory<TEntity> Instance = new(DocumentConventions.Default);

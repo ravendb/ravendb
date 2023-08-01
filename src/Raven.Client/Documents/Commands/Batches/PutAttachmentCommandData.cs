@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class PutAttachmentCommandData : ICommandData
+    public sealed class PutAttachmentCommandData : ICommandData
     {
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector) : this(documentId, name, stream, contentType, changeVector, false)
         {

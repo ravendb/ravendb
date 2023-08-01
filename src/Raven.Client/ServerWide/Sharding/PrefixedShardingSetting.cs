@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Sharding;
 
-public class PrefixedShardingSetting
+public sealed class PrefixedShardingSetting
 {
     public string Prefix { get; set; }
 

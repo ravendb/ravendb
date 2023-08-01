@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes.Counters
 {
-    public class CounterEntry
+    public sealed class CounterEntry
     {
         public string DocumentId { get; set; }
 

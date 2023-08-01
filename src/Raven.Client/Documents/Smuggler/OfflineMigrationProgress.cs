@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Smuggler
 {
-    public class OfflineMigrationProgress : SmugglerResult.SmugglerProgress
+    public sealed class OfflineMigrationProgress : SmugglerResult.SmugglerProgress
     {
         public Counts DataExporter => ((OfflineMigrationResult)_result).DataExporter;
 

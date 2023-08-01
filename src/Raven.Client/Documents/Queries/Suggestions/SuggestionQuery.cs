@@ -16,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Suggestions
 {
-    internal class SuggestionQuery<T> : SuggestionQueryBase, ISuggestionQuery<T>
+    internal sealed class SuggestionQuery<T> : SuggestionQueryBase, ISuggestionQuery<T>
     {
         private IQueryable<T> _source;
         private readonly Func<IQueryable<T>, Expression> _convertExpressionIfNecessary;

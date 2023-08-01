@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class IncrementalTimeSeriesBatchCommandData : TimeSeriesCommandData
+    public sealed class IncrementalTimeSeriesBatchCommandData : TimeSeriesCommandData
     {
         public IncrementalTimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.IncrementOperation> increments) : base(documentId, name)
         {
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public override CommandType Type => CommandType.TimeSeriesWithIncrements;
     }
 
-    public class TimeSeriesBatchCommandData : TimeSeriesCommandData
+    public sealed class TimeSeriesBatchCommandData : TimeSeriesCommandData
     {
         public TimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.AppendOperation> appends, 
             List<TimeSeriesOperation.DeleteOperation> deletes) : base(documentId, name)

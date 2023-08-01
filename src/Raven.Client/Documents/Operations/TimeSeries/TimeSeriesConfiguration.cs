@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesConfiguration : IDynamicJson, IPostJsonDeserialization
+    public sealed class TimeSeriesConfiguration : IDynamicJson, IPostJsonDeserialization
     {
         internal const char TimeSeriesRollupSeparator = '@';
         internal static readonly TimeSpan DefaultPolicyCheckFrequency = TimeSpan.FromMinutes(10);

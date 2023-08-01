@@ -3,7 +3,7 @@ using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
-    internal class DocumentQueryHelper
+    internal sealed class DocumentQueryHelper
     {
         internal static void AddSpaceIfNeeded(QueryToken previousToken, QueryToken currentToken, StringBuilder writer)
         {

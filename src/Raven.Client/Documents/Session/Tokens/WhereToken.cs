@@ -23,14 +23,14 @@ namespace Raven.Client.Documents.Session.Tokens
             CmpXchg
         }
 
-        public class WhereMethodCall
+        public sealed class WhereMethodCall
         {
             public MethodsType MethodType;
             public string[] Parameters;
             public string Property;
         }
         
-        public class WhereOptions
+        public sealed class WhereOptions
         {
             public SearchOperator? SearchOperator{ get; private set; }
             public string FromParameterName{ get; private set; }

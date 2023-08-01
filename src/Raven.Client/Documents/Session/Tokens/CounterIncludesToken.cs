@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class CounterIncludesToken : QueryToken
+    public sealed class CounterIncludesToken : QueryToken
     {
         private string _sourcePath;
         private readonly string _counterName;

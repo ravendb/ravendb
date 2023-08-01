@@ -6,7 +6,7 @@ using Sparrow.Platform;
 
 namespace Raven.Client.Exceptions
 {
-    internal class UnsuccessfulFileAccessException : Exception
+    internal sealed class UnsuccessfulFileAccessException : Exception
     {
         internal static string GetMessage(string filePath, FileAccess accessType, Exception underlyingException)
         {

@@ -26,7 +26,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class DocumentSubscriptions : IDisposable
+    public sealed class DocumentSubscriptions : IDisposable
     {
         private readonly DocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();

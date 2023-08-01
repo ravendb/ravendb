@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexOperation : IMaintenanceOperation<IndexDefinition>
+    public sealed class GetIndexOperation : IMaintenanceOperation<IndexDefinition>
     {
         private readonly string _indexName;
 

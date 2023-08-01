@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class DocumentsChanges
+    public sealed class DocumentsChanges
     {
         /// <summary>
         /// Previous field value.

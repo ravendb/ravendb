@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
+        public sealed class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
         {
             private readonly AsyncDocumentSession _parent;
             private readonly IAbstractDocumentQueryImpl<T> _query;

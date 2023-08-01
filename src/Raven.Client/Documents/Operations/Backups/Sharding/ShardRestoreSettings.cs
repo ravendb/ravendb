@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups.Sharding
 {
-    public class ShardedRestoreSettings : IDynamicJson
+    public sealed class ShardedRestoreSettings : IDynamicJson
     {
         public Dictionary<int, SingleShardRestoreSetting> Shards { get; set; }
 
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
         }
     }
 
-    public class SingleShardRestoreSetting : IDynamicJson
+    public sealed class SingleShardRestoreSetting : IDynamicJson
     {
         public int ShardNumber { get; set; }
         public string NodeTag { get; set; }

@@ -14,7 +14,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AsyncSessionDocumentCounters : SessionCountersBase, IAsyncSessionDocumentCounters
+    public sealed class AsyncSessionDocumentCounters : SessionCountersBase, IAsyncSessionDocumentCounters
     {
         public AsyncSessionDocumentCounters(InMemoryDocumentSessionOperations session, string documentId) : base(session, documentId)
         {

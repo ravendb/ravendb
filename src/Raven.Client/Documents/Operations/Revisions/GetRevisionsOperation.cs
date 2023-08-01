@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class GetRevisionsOperation<T> : IOperation<RevisionsResult<T>>
+    public sealed class GetRevisionsOperation<T> : IOperation<RevisionsResult<T>>
     {
         private readonly Parameters _parameters;
 
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new GetRevisionsResultCommand(_parameters.Id, _parameters.Start, _parameters.PageSize, serialization: store.Conventions.Serialization);
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string Id { get; set; }
 

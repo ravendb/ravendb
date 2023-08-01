@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class HighlightingToken : QueryToken
+    public sealed class HighlightingToken : QueryToken
     {
         private readonly string _fieldName;
         private readonly int _fragmentLength;

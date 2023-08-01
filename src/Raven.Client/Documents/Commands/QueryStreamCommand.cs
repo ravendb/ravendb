@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class QueryStreamCommand : RavenCommand<StreamResult>
+    public sealed class QueryStreamCommand : RavenCommand<StreamResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;

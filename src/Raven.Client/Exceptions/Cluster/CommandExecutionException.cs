@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Cluster
 {
-    public class CommandExecutionException : RavenException
+    public sealed class CommandExecutionException : RavenException
     {
         public CommandExecutionException()
         {

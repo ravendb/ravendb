@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Smuggler
 {
-    public class DatabaseSmugglerExportOptions : DatabaseSmugglerOptions, IDatabaseSmugglerExportOptions
+    public sealed class DatabaseSmugglerExportOptions : DatabaseSmugglerOptions, IDatabaseSmugglerExportOptions
     {
     }
 

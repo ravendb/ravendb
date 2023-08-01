@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetValue
+    public sealed class FacetValue
     {
         public string Name { get; set; }
 

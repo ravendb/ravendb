@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ToggleDatabasesStateOperation : IServerOperation<DisableDatabaseToggleResult>
+    public sealed class ToggleDatabasesStateOperation : IServerOperation<DisableDatabaseToggleResult>
     {
         private readonly bool _disable;
         private readonly Parameters _parameters;
@@ -95,7 +95,7 @@ namespace Raven.Client.ServerWide.Operations
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string[] DatabaseNames { get; set; }
         }

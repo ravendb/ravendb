@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class SetIndexesLockOperation : IMaintenanceOperation
+    public sealed class SetIndexesLockOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexLockCommand(conventions, context, _parameters);
         }
 
-        internal class SetIndexLockCommand : RavenCommand, IRaftCommand
+        internal sealed class SetIndexLockCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string[] IndexNames { get; set; }
             public IndexLockMode Mode { get; set; }

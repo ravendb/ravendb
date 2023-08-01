@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions
     /// <summary>
     /// This exception is raised when a bad response is send from the server
     /// </summary>
-    public class BadResponseException : RavenException
+    public sealed class BadResponseException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="BadResponseException"/> class.

@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Queries
     /// <summary>
     /// Holds different setting options for base operations.
     /// </summary>
-    public class QueryOperationOptions
+    public sealed class QueryOperationOptions
     {
         private int? _maxOpsPerSecond;
 

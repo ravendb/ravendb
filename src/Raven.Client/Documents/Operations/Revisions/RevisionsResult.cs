@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class RevisionsResult<T>
+    public sealed class RevisionsResult<T>
     {
         public List<T> Results { get; set; }
 

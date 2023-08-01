@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Documents.Counters
 {
-    public class CounterOverflowException : RavenException
+    public sealed class CounterOverflowException : RavenException
     {
         public CounterOverflowException()
         {

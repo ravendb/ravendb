@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.BulkInsert;
 
-internal class BulkInsertWriter : BulkInsertWriterBase
+internal sealed class BulkInsertWriter : BulkInsertWriterBase
 {
     private readonly StreamWriter[] _writers = new StreamWriter[2];
 

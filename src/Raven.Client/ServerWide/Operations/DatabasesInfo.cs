@@ -9,12 +9,12 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class DatabasesInfo
+    public sealed class DatabasesInfo
     {
         public List<DatabaseInfo> Databases { get; set; }
     }
 
-    public class BackupInfo : IDynamicJson
+    public sealed class BackupInfo : IDynamicJson
     {
         public DateTime? LastBackup { get; set; }
 
@@ -120,7 +120,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class MountPointUsage
+    public sealed class MountPointUsage
     {
         public string Name { get; set; }
 
@@ -148,7 +148,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class DiskSpaceResult
+    public sealed class DiskSpaceResult
     {
         public string DriveName { get; set; }
 
@@ -170,7 +170,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class IoStatsResult
+    public sealed class IoStatsResult
     {
         public double IoReadOperations { get; set; }
 
@@ -195,7 +195,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class NodesTopology : IDynamicJson
+    public sealed class NodesTopology : IDynamicJson
     {
         public List<NodeId> Members { get; set; }
         public List<NodeId> Promotables { get; set; }
@@ -227,7 +227,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class DatabaseGroupNodeStatus : IDynamicJson
+    public sealed class DatabaseGroupNodeStatus : IDynamicJson
     {
         public DatabasePromotionStatus LastStatus;
         public string LastError;
@@ -242,7 +242,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class NodeId : IDynamicJson
+    public sealed class NodeId : IDynamicJson
     {
         public string NodeTag;
         public string NodeUrl;

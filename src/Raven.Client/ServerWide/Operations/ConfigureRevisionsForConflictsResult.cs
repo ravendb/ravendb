@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.ServerWide.Operations
 {
-    public class ConfigureRevisionsForConflictsResult
+    public sealed class ConfigureRevisionsForConflictsResult
     {
         public long? RaftCommandIndex;
     }

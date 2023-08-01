@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        internal class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>, StreamOperation.YieldStreamResults> where T : ITimeSeriesQueryStreamResult, new()
+        internal sealed class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>, StreamOperation.YieldStreamResults> where T : ITimeSeriesQueryStreamResult, new()
         {
             private readonly AsyncDocumentSession _parent;
             private readonly AsyncDocumentQuery<T> _query;

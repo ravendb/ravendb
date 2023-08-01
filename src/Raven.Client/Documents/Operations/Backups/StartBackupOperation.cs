@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class StartBackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
+    public sealed class StartBackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new StartBackupCommand(_isFullBackup, _taskId);
         }
 
-        internal class StartBackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
+        internal sealed class StartBackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => true;
 
@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class StartBackupOperationResult
+    public sealed class StartBackupOperationResult
     {
         public string ResponsibleNode { get; set; }
 

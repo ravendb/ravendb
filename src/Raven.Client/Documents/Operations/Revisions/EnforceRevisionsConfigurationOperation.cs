@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class EnforceRevisionsConfigurationOperation : IOperation<OperationIdResult>
+    public sealed class EnforceRevisionsConfigurationOperation : IOperation<OperationIdResult>
     {
         private readonly long? _operationId;
 
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new EnforceRevisionsConfigurationCommand(_operationId);
         }
 
-        internal class EnforceRevisionsConfigurationCommand : RavenCommand<OperationIdResult>
+        internal sealed class EnforceRevisionsConfigurationCommand : RavenCommand<OperationIdResult>
         {
             private readonly long? _operationId;
 

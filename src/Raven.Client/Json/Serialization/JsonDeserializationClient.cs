@@ -47,7 +47,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization
 {
-    internal class JsonDeserializationClient : JsonDeserializationBase
+    internal sealed class JsonDeserializationClient : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, SmugglerProgressBase.CountsWithSkippedCountAndLastEtag> CountsWithSkippedCountAndLastEtag = GenerateJsonDeserializationRoutine<SmugglerProgressBase.CountsWithSkippedCountAndLastEtag>();
 

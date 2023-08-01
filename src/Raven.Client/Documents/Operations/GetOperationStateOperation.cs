@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetOperationStateOperation : IMaintenanceOperation<OperationState>
+    public sealed class GetOperationStateOperation : IMaintenanceOperation<OperationState>
     {
         private readonly long _id;
         private readonly string _nodeTag;
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations
             return new GetOperationStateCommand(_id, _nodeTag);
         }
 
-        internal class GetOperationStateCommand : RavenCommand<OperationState>
+        internal sealed class GetOperationStateCommand : RavenCommand<OperationState>
         {
             public override bool IsReadRequest => true;
 

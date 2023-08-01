@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
+    public sealed class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
         internal readonly string ChangeVector;
         public readonly string[] ChangeVectors;

@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class ServerWideStudioConfiguration : StudioConfiguration
+    public sealed class ServerWideStudioConfiguration : StudioConfiguration
     {
         public int? ReplicationFactor { get; set; }
 

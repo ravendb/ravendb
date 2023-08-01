@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class BeforeStoreEventArgs : EventArgs
+    public sealed class BeforeStoreEventArgs : EventArgs
     {
         private IMetadataDictionary _documentMetadata;
 
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
-    public class AfterSaveChangesEventArgs : EventArgs
+    public sealed class AfterSaveChangesEventArgs : EventArgs
     {
         private IMetadataDictionary _documentMetadata;
 
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
-    public class BeforeDeleteEventArgs : EventArgs
+    public sealed class BeforeDeleteEventArgs : EventArgs
     {
         private IMetadataDictionary _documentMetadata;
 
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Session
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
-    public class BeforeQueryEventArgs : EventArgs
+    public sealed class BeforeQueryEventArgs : EventArgs
     {
         public BeforeQueryEventArgs(InMemoryDocumentSessionOperations session, IDocumentQueryCustomization queryCustomization)
         {
@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Session
         public IDocumentQueryCustomization QueryCustomization { get; }
     }
 
-    public class SessionCreatedEventArgs : EventArgs
+    public sealed class SessionCreatedEventArgs : EventArgs
     {
         public SessionCreatedEventArgs(InMemoryDocumentSessionOperations session)
         {
@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session
         public InMemoryDocumentSessionOperations Session { get; }
     }
 
-    public class BeforeConversionToDocumentEventArgs : EventArgs
+    public sealed class BeforeConversionToDocumentEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class AfterConversionToDocumentEventArgs : EventArgs
+    public sealed class AfterConversionToDocumentEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class BeforeConversionToEntityEventArgs : EventArgs
+    public sealed class BeforeConversionToEntityEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class AfterConversionToEntityEventArgs : EventArgs
+    public sealed class AfterConversionToEntityEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -161,7 +161,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class FailedRequestEventArgs : EventArgs
+    public sealed class FailedRequestEventArgs : EventArgs
     {
         public string Database { get; }
 
@@ -185,7 +185,7 @@ namespace Raven.Client.Documents.Session
             Request = request;
         }
     }
-    public class BeforeRequestEventArgs : EventArgs
+    public sealed class BeforeRequestEventArgs : EventArgs
     {
         public string Database { get; }
         public string Url { get; }
@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class SucceedRequestEventArgs : EventArgs
+    public sealed class SucceedRequestEventArgs : EventArgs
     {
         public string Database { get; }
         public string Url { get; }
@@ -219,7 +219,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class TopologyUpdatedEventArgs : EventArgs
+    public sealed class TopologyUpdatedEventArgs : EventArgs
     {
         public Topology Topology { get; }
 
@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class SessionDisposingEventArgs : EventArgs
+    public sealed class SessionDisposingEventArgs : EventArgs
     {
         public InMemoryDocumentSessionOperations Session { get; }
 
@@ -242,7 +242,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class BulkInsertOnProgressEventArgs : EventArgs
+    public sealed class BulkInsertOnProgressEventArgs : EventArgs
     {
         public BulkInsertProgress Progress { get; }
         

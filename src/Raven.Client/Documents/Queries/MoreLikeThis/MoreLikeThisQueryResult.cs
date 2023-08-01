@@ -2,7 +2,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisQueryResult : MoreLikeThisQueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
+    public sealed class MoreLikeThisQueryResult : MoreLikeThisQueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
     {
     }
 

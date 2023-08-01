@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Http
 {
-    public class ClusterTopologyResponse
+    public sealed class ClusterTopologyResponse
     {
         public string Leader;
         public string NodeTag;

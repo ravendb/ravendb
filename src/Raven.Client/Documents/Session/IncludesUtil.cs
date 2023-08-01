@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    internal class IncludesUtil
+    internal sealed class IncludesUtil
     {
         private static readonly Regex IncludePrefixRegex = new Regex(@"(\([^\)]+\))$",
    RegexOptions.Compiled |

@@ -50,11 +50,11 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class LastRaftIndex
+    public sealed class LastRaftIndex
     {
         public long? LastEtag { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class LocalBackup : BackupStatus
+    public sealed class LocalBackup : BackupStatus
     {
         public string BackupDirectory { get; set; }
         public string FileName { get; set; }
@@ -100,32 +100,32 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class UploadToS3 : CloudUploadStatus
+    public sealed class UploadToS3 : CloudUploadStatus
     {
         
     }
 
-    public class UploadToGlacier : CloudUploadStatus
+    public sealed class UploadToGlacier : CloudUploadStatus
     {
 
     }
 
-    public class UploadToAzure : CloudUploadStatus
+    public sealed class UploadToAzure : CloudUploadStatus
     {
 
     }
 
-    public class UploadToGoogleCloud : CloudUploadStatus
+    public sealed class UploadToGoogleCloud : CloudUploadStatus
     {
 
     }
 
-    public class UploadToFtp : CloudUploadStatus
+    public sealed class UploadToFtp : CloudUploadStatus
     {
 
     }
 
-    public class UploadProgress
+    public sealed class UploadProgress
     {
         public UploadProgress()
         {

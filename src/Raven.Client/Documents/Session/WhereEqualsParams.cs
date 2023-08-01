@@ -3,7 +3,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Parameters for the Where Equals call
     /// </summary>
-    public class WhereParams
+    public sealed class WhereParams
     {
         /// <summary>
         /// Create a new instance 

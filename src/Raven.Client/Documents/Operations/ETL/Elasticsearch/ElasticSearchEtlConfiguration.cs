@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 {
-    public class ElasticSearchEtlConfiguration : EtlConfiguration<ElasticSearchConnectionString>
+    public sealed class ElasticSearchEtlConfiguration : EtlConfiguration<ElasticSearchConnectionString>
     {
         private string _destination;
         

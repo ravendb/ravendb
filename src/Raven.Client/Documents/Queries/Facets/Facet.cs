@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class Facet : FacetBase
+    public sealed class Facet : FacetBase
     {
         internal Func<DocumentConventions, string> _originalFieldNamePathEvaluator;
         /// Name of field the facet aggregate on
@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Queries.Facets
         }
     }
 
-    public class Facet<T> : FacetBase
+    public sealed class Facet<T> : FacetBase
     {
         /// <summary>
         /// Name of field the facet aggregate on

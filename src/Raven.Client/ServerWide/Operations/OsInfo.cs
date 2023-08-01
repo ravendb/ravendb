@@ -2,7 +2,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class OsInfo : IDynamicJson
+    public sealed class OsInfo : IDynamicJson
     {
         public OSType Type { get; set; }
 

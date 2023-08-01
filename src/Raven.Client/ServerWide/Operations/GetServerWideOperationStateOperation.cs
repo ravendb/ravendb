@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetServerWideOperationStateOperation : IServerOperation<OperationState>
+    public sealed class GetServerWideOperationStateOperation : IServerOperation<OperationState>
     {
         private readonly long _id;
 
@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Operations
             return new GetServerWideOperationStateCommand(_id);
         }
 
-        internal class GetServerWideOperationStateCommand : RavenCommand<OperationState>
+        internal sealed class GetServerWideOperationStateCommand : RavenCommand<OperationState>
         {
             public override bool IsReadRequest => true;
 

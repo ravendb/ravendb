@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class DetailedReplicationHubAccess
+    public sealed class DetailedReplicationHubAccess
     {
         public string Name;
         public string Thumbprint;
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Replication
         }
     }
 
-    internal class ReplicationHubAccessResponse
+    internal sealed class ReplicationHubAccessResponse
     {
         public long RaftCommandIndex { get; set; }
     }

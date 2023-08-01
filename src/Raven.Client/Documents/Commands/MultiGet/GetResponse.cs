@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.MultiGet
 {
-    public class GetResponse
+    public sealed class GetResponse
     {
         public GetResponse()
         {

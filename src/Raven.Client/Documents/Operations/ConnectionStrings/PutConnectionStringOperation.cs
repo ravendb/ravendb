@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
-    public class PutConnectionStringOperation<T> : IMaintenanceOperation<PutConnectionStringResult> where T : ConnectionString
+    public sealed class PutConnectionStringOperation<T> : IMaintenanceOperation<PutConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         }
     }
 
-    public class PutConnectionStringResult
+    public sealed class PutConnectionStringResult
     {
         public long RaftCommandIndex { get; set; }
     }

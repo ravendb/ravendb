@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class CertificateDefinition : CertificateMetadata
+    public sealed class CertificateDefinition : CertificateMetadata
     {
         public string Certificate;
         public string Password;
@@ -72,7 +72,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         ValidUser
     }
 
-    public class CertificateRawData
+    public sealed class CertificateRawData
     {
         public byte[] RawData;
     }

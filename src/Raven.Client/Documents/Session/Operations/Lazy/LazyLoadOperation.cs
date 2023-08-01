@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyLoadOperation<T> : ILazyOperation
+    internal sealed class LazyLoadOperation<T> : ILazyOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly LoadOperation _loadOperation;

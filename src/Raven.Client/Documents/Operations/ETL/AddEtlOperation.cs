@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class AddEtlOperation<T> : IMaintenanceOperation<AddEtlOperationResult> where T : ConnectionString
+    public sealed class AddEtlOperation<T> : IMaintenanceOperation<AddEtlOperationResult> where T : ConnectionString
     {
         private readonly EtlConfiguration<T> _configuration;
 
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations.ETL
         }
     }
 
-    public class AddEtlOperationResult
+    public sealed class AddEtlOperationResult
     {
         public long RaftCommandIndex { get; set; }
 

@@ -9,11 +9,11 @@ using Sparrow.Logging;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
-    public class SetLogsConfigurationOperation : IServerOperation
+    public sealed class SetLogsConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
 
-        public class Parameters
+        public sealed class Parameters
         {
             public LogMode Mode { get; set; }
             public TimeSpan? RetentionTime { get; set; }

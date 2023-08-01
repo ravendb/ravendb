@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class IndexErrors
+    public sealed class IndexErrors
     {
         public IndexErrors()
         {

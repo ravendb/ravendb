@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionCreationException : SubscriptionException
+    public sealed class SubscriptionCreationException : SubscriptionException
     {
         public SubscriptionCreationException(string message) : base(message)
         {

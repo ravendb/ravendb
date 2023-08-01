@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ModifyConflictSolverOperation : IServerOperation<ModifySolverResult>
+    public sealed class ModifyConflictSolverOperation : IServerOperation<ModifySolverResult>
     {
         private readonly string _database;
         public Dictionary<string, ScriptResolver> CollectionByScript;

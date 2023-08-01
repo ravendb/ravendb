@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
-    public class DeleteServerWideTaskOperation : IServerOperation
+    public sealed class DeleteServerWideTaskOperation : IServerOperation
     {
         private readonly string _name;
         private readonly OngoingTaskType _type;

@@ -5,7 +5,7 @@ namespace Raven.Client.Util.Metrics
     /// <summary>
     /// Provides support for atomic operations around a <see cref="long" /> value
     /// </summary>
-    internal class AtomicLong
+    internal sealed class AtomicLong
     {
         private long _value;
 

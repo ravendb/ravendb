@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Indexes
 {
-    public class BoostedValue
+    public sealed class BoostedValue
     {
         /// <summary>
         /// Boost factor.

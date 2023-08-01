@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class UpdatePeriodicBackupOperationResult
+    public sealed class UpdatePeriodicBackupOperationResult
     {
         public long RaftCommandIndex { get; set; }
 

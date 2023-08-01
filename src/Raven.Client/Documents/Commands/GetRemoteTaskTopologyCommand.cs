@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class GetRemoteTaskTopologyCommand : RavenCommand<string[]>
+    internal sealed class GetRemoteTaskTopologyCommand : RavenCommand<string[]>
     {
         private readonly string _remoteDatabase;
         private readonly string _databaseGroupId;

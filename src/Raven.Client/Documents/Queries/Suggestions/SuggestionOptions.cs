@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Queries.Suggestions
 {
-    public class SuggestionOptions
+    public sealed class SuggestionOptions
     {
         internal static readonly SuggestionOptions Default = new SuggestionOptions();
 

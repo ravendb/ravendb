@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class SetDatabasesLockOperation : IServerOperation
+    public sealed class SetDatabasesLockOperation : IServerOperation
     {
         private readonly Parameters _parameters;
 
@@ -72,7 +72,7 @@ namespace Raven.Client.ServerWide.Operations
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters
+        public sealed class Parameters
         {
             public string[] DatabaseNames { get; set; }
             public DatabaseLockMode Mode { get; set; }

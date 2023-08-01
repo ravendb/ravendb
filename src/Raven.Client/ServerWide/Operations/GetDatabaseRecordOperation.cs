@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetDatabaseRecordOperation : IServerOperation<DatabaseRecordWithEtag>
+    public sealed class GetDatabaseRecordOperation : IServerOperation<DatabaseRecordWithEtag>
     {
         private readonly string _database;
 

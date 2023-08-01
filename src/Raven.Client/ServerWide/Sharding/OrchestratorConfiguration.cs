@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.ServerWide.Sharding;
 
-public class OrchestratorConfiguration
+public sealed class OrchestratorConfiguration
 {
     public OrchestratorTopology Topology;
 }

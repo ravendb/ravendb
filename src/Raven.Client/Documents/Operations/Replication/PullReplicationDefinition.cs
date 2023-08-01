@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationDefinition : IDynamicJsonValueConvertible
+    public sealed class PullReplicationDefinition : IDynamicJsonValueConvertible
     {
         public TimeSpan DelayReplicationFor;
         public bool Disabled;

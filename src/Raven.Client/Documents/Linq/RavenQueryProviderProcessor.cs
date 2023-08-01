@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// Process a Linq expression to a Lucene query
     /// </summary>
-    internal class RavenQueryProviderProcessor<T>
+    internal sealed class RavenQueryProviderProcessor<T>
     {
         private readonly Action<IDocumentQueryCustomization> _customizeQuery;
         /// <summary>
@@ -679,7 +679,7 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        protected virtual ExpressionInfo GetMember(Expression expression)
+        protected ExpressionInfo GetMember(Expression expression)
         {
             var parameterExpression = GetParameterExpressionIncludingConversions(expression);
             if (parameterExpression != null)
@@ -4130,7 +4130,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         #endregion
     }
 
-    public class FieldToFetch
+    public sealed class FieldToFetch
     {
         public FieldToFetch(string name, string alias)
         {

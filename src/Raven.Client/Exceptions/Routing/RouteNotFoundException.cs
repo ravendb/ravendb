@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions.Routing
     /// <summary>
     /// This exception is raised when a request is created to a route that was not found on the server.
     /// </summary>
-    public class RouteNotFoundException : RavenException
+    public sealed class RouteNotFoundException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RouteNotFoundException"/> class.

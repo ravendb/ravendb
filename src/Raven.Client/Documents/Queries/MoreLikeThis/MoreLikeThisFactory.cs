@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         IMoreLikeThisOperations<T> WithOptions(MoreLikeThisOptions options);
     }
 
-    internal class MoreLikeThisBuilder<T> : IMoreLikeThisBuilder<T>, IMoreLikeThisBuilderForDocumentQuery<T>, IMoreLikeThisBuilderForAsyncDocumentQuery<T>, IMoreLikeThisOperations<T>
+    internal sealed class MoreLikeThisBuilder<T> : IMoreLikeThisBuilder<T>, IMoreLikeThisBuilderForDocumentQuery<T>, IMoreLikeThisBuilderForAsyncDocumentQuery<T>, IMoreLikeThisOperations<T>
     {
         public IMoreLikeThisOperations<T> UsingAnyDocument()
         {

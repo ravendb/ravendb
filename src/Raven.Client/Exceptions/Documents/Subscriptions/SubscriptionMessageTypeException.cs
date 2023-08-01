@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionMessageTypeException : SubscriptionException
+    public sealed class SubscriptionMessageTypeException : SubscriptionException
     {
         public SubscriptionMessageTypeException(string message) : base(message)
         {

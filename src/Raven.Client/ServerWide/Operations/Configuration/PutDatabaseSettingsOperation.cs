@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class PutDatabaseSettingsOperation : IMaintenanceOperation
+    public sealed class PutDatabaseSettingsOperation : IMaintenanceOperation
     {
         private readonly string _databaseName;
         private readonly Dictionary<string, string> _configurationSettings;

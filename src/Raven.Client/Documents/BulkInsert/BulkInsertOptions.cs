@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.BulkInsert
 {
-    public class BulkInsertOptions
+    public sealed class BulkInsertOptions
     {
         public CompressionLevel CompressionLevel { get; set; } = CompressionLevel.NoCompression;
 

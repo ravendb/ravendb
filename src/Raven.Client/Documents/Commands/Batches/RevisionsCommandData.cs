@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class ForceRevisionCommandData : ICommandData
+    public sealed class ForceRevisionCommandData : ICommandData
     {
         public ForceRevisionCommandData(string id)
         {
@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Name { get; } = null;
         public string ChangeVector { get; }
     
-        public virtual DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
+        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DynamicJsonValue
             {

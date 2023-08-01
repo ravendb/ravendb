@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetSubscriptionStateCommand: RavenCommand<SubscriptionState>
+    public sealed class GetSubscriptionStateCommand: RavenCommand<SubscriptionState>
     {
         private readonly string _subscriptionName;
         public override bool IsReadRequest => true;

@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
-    public class CompareExchangeValue<T> : ICompareExchangeValue
+    public sealed class CompareExchangeValue<T> : ICompareExchangeValue
     {
         public string Key { get; }
         public long Index { get; internal set; }
