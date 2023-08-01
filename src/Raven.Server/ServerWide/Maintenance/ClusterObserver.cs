@@ -223,6 +223,10 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
 
                             UpdateReshardingStatus(context, rawRecord, newStats, ref confirmCommands);
+
+                            //if orchestrator topology was changed, we skip the checks for the shard topologies to avoid concurrency exception
+                            if (updateReason != null)
+                                continue;
                         }
 
                         var mergedState = new MergedDatabaseObservationState(rawRecord);
@@ -248,6 +252,8 @@ namespace Raven.Server.ServerWide.Maintenance
                                 };
 
                                 updateCommands.Add((cmd, updateReason));
+                                //breaking here to only change the db record once in order to avoid concurrency exception
+                                break;
                             }
                         }
 
