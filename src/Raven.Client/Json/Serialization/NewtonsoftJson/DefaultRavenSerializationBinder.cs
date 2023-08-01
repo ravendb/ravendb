@@ -5,7 +5,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson;
 
-public sealed class DefaultRavenSerializationBinder : DefaultSerializationBinder
+public class DefaultRavenSerializationBinder : DefaultSerializationBinder
 {
     public static readonly DefaultRavenSerializationBinder Instance = new();
 
