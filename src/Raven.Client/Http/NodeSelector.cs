@@ -129,6 +129,17 @@ namespace Raven.Client.Http
             if (state.Nodes.Count == 0)
                 throw new DatabaseDoesNotExistException("There are no nodes in the topology at all");
 
+            var stateFailures = state.Failures;
+            var serverNodes = state.Nodes;
+            var len = Math.Min(serverNodes.Count, stateFailures.Length);
+            for (int i = 0; i < len; i++)
+            {
+                if (stateFailures[i] == 0)
+                {
+                    return (i, serverNodes[i]);
+                }
+            }
+            
             return state.GetNodeWhenEveryoneMarkedAsFaulted();
         }
 

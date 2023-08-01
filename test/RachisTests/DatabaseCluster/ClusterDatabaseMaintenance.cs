@@ -12,13 +12,12 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -211,6 +210,74 @@ namespace RachisTests.DatabaseCluster
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
 
+            }
+        }
+
+        [Fact]
+        public async Task RequestExecutorWillChooseRehabNodeIfTheRestOfClusterIsDown()
+        {
+            var clusterSize = 2;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ReplicationFactor = 2,
+                       Server = cluster.Nodes[0],
+            }))
+            {
+                var watcher = cluster.Nodes[1];
+                var leader = cluster.Nodes[0];
+
+                //prevent leader from promoting any rehabs
+                leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
+                
+                var re = store.GetRequestExecutor();
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return re.Topology?.Nodes.Count ?? 0;
+                }, 2);
+
+                var r = await DisposeServerAndWaitForFinishOfDisposalAsync(watcher);
+
+                //wait for it to go to rehab state
+                var rehabs = await WaitForValueAsync(async () => await GetRehabCount(store), 1);
+                Assert.Equal(1, rehabs);
+
+                //bring it back up but it will stay in rehab
+                cluster.Nodes[1] = GetNewServer(new ServerCreationOptions
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    DataDirectory = r.DataDirectory,
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = r.Url
+                    }
+                });
+                watcher = cluster.Nodes[1];
+
+                //wait until watcher catches up to the leader's topology
+                var updateTopCommandIndex = Cluster.LastRaftIndexForCommand(leader, nameof(UpdateTopologyCommand));
+                await watcher.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, updateTopCommandIndex);
+
+                // force update the client's topology
+                var preferredNode = await re.GetPreferredNode();
+                await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+
+                await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
+                
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return re.Topology?.Nodes.Count(x => x.ServerRole == ServerNode.Role.Rehab);
+                }, 1);
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+                }
             }
         }
 
