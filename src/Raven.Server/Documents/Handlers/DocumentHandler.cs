@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -222,8 +223,9 @@ namespace Raven.Server.Documents.Handlers
             GetCountersQueryString(Database, context, out var includeCounters);
             GetRevisionsQueryString(Database, context, out var includeRevisions);
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
-            var loadFromClusterWideTx = GetBoolValueQueryString("loadFromClusterWideTx", required: false) ?? false;
-            GetCompareExchangeValueQueryString(Database, loadFromClusterWideTx, out var includeCompareExchangeValues);
+            var txMode = GetStringQueryString("txMode", required: false);
+            var clusterWideTx = txMode != null && Enum.TryParse<TransactionMode>(txMode, ignoreCase: true, out var v) && v == TransactionMode.ClusterWide;
+            GetCompareExchangeValueQueryString(Database, clusterWideTx, out var includeCompareExchangeValues);
 
             // we have to read this _before_ we open the transaction
             long lastModifiedIndex = Database.RachisLogIndexNotifications.LastModifiedIndex;
@@ -241,7 +243,7 @@ namespace Raven.Server.Documents.Handlers
                     
                     if (document == null)
                     {
-                        if (loadFromClusterWideTx)
+                        if (clusterWideTx)
                         {
                             Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
                             includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
@@ -258,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
                     else
                     {
                         string changeVector = document.ChangeVector;
-                        if (loadFromClusterWideTx && 
+                        if (clusterWideTx && 
                             changeVector.Contains(Database.ClusterTransactionId) == false)
                         {
                             Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
@@ -299,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
                 var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly,
                     documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, 
                     includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
-                    includeCompareExchangeValues?.Results, loadFromClusterWideTx);
+                    includeCompareExchangeValues?.Results, clusterWideTx);
 
                 if (ShouldAddPagingPerformanceHint(numberOfResults))
                 {
@@ -336,13 +338,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void GetCompareExchangeValueQueryString(DocumentDatabase database, bool loadFromClusterWideTx,
+        private void GetCompareExchangeValueQueryString(DocumentDatabase database, bool clusterWideTx,
             out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
         {
             includeCompareExchangeValues = null;
 
             var compareExchangeValues = GetStringValuesQueryString("cmpxchg", required: false);
-            if (compareExchangeValues.Count == 0 && loadFromClusterWideTx == false)
+            if (compareExchangeValues.Count == 0 && clusterWideTx == false)
                 return;
 
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(database, compareExchangeValues);
@@ -476,7 +478,7 @@ namespace Raven.Server.Documents.Handlers
             Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
             Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues,
-            bool includeAtomicGuardsForMissingDocuments)
+            bool clusterWideTx)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;
@@ -521,15 +523,16 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
+                    if (clusterWideTx)
+                    {
+                        foreach (var (k,v) in compareExchangeValues)
+                        {
+                            v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag,v.Index,Database.ClusterTransactionId);
+                        }
+                    }
                     await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
                 }
 
-                if (includeAtomicGuardsForMissingDocuments)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.ClusterTransactionId));
-                    writer.WriteString(Database.ClusterTransactionId);
-                }
                 writer.WriteEndObject();
             }
             return (numberOfResults, totalDocumentsSizeInBytes);

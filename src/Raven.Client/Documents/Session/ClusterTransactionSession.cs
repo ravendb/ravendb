@@ -35,19 +35,17 @@ namespace Raven.Client.Documents.Session
 
         private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
 
-        private Dictionary<string, long> _missingDocumentsToAtomicGuardIndex;
-        private string _clusterTransactionId;
+        private Dictionary<string, string> _missingDocumentsToAtomicGuardIndex;
 
         internal bool TryGetMissingAtomicGuardFor(string docId, out string changeVector)
         {
-            if (_missingDocumentsToAtomicGuardIndex?.TryGetValue(docId, out var index) == true)
+            if (_missingDocumentsToAtomicGuardIndex == null)
             {
-                changeVector = $"TXRN:{index}-{_clusterTransactionId}";
-                return true;
+                changeVector = null;
+                return false;
             }
 
-            changeVector = null;
-            return false;
+            return _missingDocumentsToAtomicGuardIndex.TryGetValue(docId, out changeVector);
         }
 
         internal int NumberOfTrackedCompareExchangeValues => _state.Count;
@@ -249,10 +247,11 @@ namespace Raven.Client.Documents.Session
 
                     var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
                     if(includingMissingAtomicGuards  &&
-                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.InvariantCultureIgnoreCase))
+                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) && 
+                        val.ChangeVector != null)
                     {
-                        _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.Index);
+                        _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.ChangeVector);
                     }
                     else
                     {
@@ -557,11 +556,6 @@ namespace Raven.Client.Documents.Session
             {
                 throw new ArgumentException(message);
             }
-        }
-
-        public void SetClusterTransactionId(string clusterTransactionId)
-        {
-            _clusterTransactionId = clusterTransactionId;
         }
     }
 
