@@ -5136,7 +5136,7 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        protected class IndexQueryDoneRunning : IDisposable
+        protected sealed class IndexQueryDoneRunning : IDisposable
         {
             private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
 

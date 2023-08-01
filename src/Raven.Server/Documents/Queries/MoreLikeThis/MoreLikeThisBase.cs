@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         }
 
         /// <summary> PriorityQueue that orders words by score.</summary>
-        protected class FreqQ : PriorityQueue<object[]>
+        protected sealed class FreqQ : PriorityQueue<object[]>
         {
             internal FreqQ(int s)
             {

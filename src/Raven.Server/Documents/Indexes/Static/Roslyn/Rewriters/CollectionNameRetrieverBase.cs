@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public HashSet<Collection> Collections { get; protected set; }
 
-        protected class MethodSyntaxRewriter : CollectionNameRetrieverBase
+        protected sealed class MethodSyntaxRewriter : CollectionNameRetrieverBase
         {
             private readonly string _nodePrefix;
             private readonly string _itemName;
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
         }
 
-        protected class QuerySyntaxRewriter : CollectionNameRetrieverBase
+        protected sealed class QuerySyntaxRewriter : CollectionNameRetrieverBase
         {
             private readonly string _nodePrefix;
             private readonly string _itemName;

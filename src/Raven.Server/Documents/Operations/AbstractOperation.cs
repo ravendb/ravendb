@@ -121,7 +121,7 @@ public abstract class AbstractOperation
         };
     }
 
-    protected class ThrottledNotification
+    protected sealed class ThrottledNotification
     {
         public OperationChanged Notification;
 

@@ -115,7 +115,7 @@ namespace Sparrow.Json
             }
         }
 
-        protected class ListCache<T>
+        protected sealed class ListCache<T>
         {
             private static readonly int MaxSize = PlatformDetails.Is32Bits ? 256 : 1024;
 

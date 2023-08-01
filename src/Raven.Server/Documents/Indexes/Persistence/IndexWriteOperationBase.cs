@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats);
 
-        protected class IndexWriteOperationStats
+        protected sealed class IndexWriteOperationStats
         {
             public IndexingStatsScope DeleteStats;
             public IndexingStatsScope ConvertStats;

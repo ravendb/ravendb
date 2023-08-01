@@ -124,7 +124,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         writer.WriteEndArray();
     }
     
-    protected class PreviewCollectionResult
+    protected sealed class PreviewCollectionResult
     {
         public List<Document> Results;
         public long TotalResults;

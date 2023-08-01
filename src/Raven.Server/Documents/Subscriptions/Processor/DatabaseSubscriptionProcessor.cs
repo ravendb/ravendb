@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             _returnRun = Database.Scripts.GetScriptRunner(Patch, true, out Run);
         }
 
-        private protected class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier
+        private protected sealed class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier
         {
             public static readonly ProjectionMetadataModifier Instance = new ProjectionMetadataModifier();
 
