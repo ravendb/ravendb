@@ -3,7 +3,7 @@ using Lucene.Net.Analysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
-    public class LowerCaseWhitespaceAnalyzer : LowerCaseKeywordAnalyzer
+    public sealed class LowerCaseWhitespaceAnalyzer : LowerCaseKeywordAnalyzer
     {
         public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
         {

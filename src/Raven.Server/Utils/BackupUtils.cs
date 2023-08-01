@@ -549,7 +549,7 @@ internal static class BackupUtils
         }
     }
 
-    public class NextBackupOccurrenceParameters
+    public sealed class NextBackupOccurrenceParameters
     {
         public string BackupFrequency { get; set; }
 
@@ -560,7 +560,7 @@ internal static class BackupUtils
         public Action<OnParsingErrorParameters> OnParsingError { get; set; }
     }
 
-    public class OnParsingErrorParameters
+    public sealed class OnParsingErrorParameters
     {
         public Exception Exception { get; set; }
 
@@ -569,7 +569,7 @@ internal static class BackupUtils
         public PeriodicBackupConfiguration Configuration { get; set; }
     }
 
-    public class NextBackupDetailsParameters
+    public sealed class NextBackupDetailsParameters
     {
         public PeriodicBackupConfiguration Configuration { get; set; }
 
@@ -586,7 +586,7 @@ internal static class BackupUtils
         public Action<PeriodicBackupConfiguration> OnMissingNextBackupInfo { get; set; }
     }
 
-    public class BackupInfoParameters
+    public sealed class BackupInfoParameters
     {
         public TransactionOperationContext Context { get; set; }
         public ServerStore ServerStore { get; set; }
@@ -613,7 +613,7 @@ internal static class BackupUtils
         public ServerStore ServerStore { get; set; }
     }
 
-    public class NextIdleDatabaseActivityParameters : EarliestIdleDatabaseActivityParameters
+    public sealed class NextIdleDatabaseActivityParameters : EarliestIdleDatabaseActivityParameters
     {
         public PeriodicBackupConfiguration Configuration { get; set; }
 

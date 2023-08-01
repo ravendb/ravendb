@@ -3,7 +3,7 @@ using Raven.Client.Exceptions;
 
 namespace Raven.Server.ServerWide
 {
-    public class ClusterNodesVersionMismatchException : RavenException
+    public sealed class ClusterNodesVersionMismatchException : RavenException
     {
         public ClusterNodesVersionMismatchException()
         {

@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
-    public class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions, IDatabaseSmugglerExportOptions
+    public sealed class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions, IDatabaseSmugglerExportOptions
     {
         public bool ReadLegacyEtag { get; set; }
 

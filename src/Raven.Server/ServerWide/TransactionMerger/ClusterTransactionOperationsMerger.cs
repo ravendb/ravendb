@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.TransactionMerger;
 
-public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsMerger<ClusterOperationContext, ClusterTransaction>
+public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOperationsMerger<ClusterOperationContext, ClusterTransaction>
 {
     public ClusterTransactionOperationsMerger(RavenConfiguration configuration, SystemTime time, CancellationToken shutdown)
         : base("Cluster", configuration, time, shutdown)

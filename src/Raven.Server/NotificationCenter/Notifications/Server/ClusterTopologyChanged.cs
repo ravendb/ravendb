@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Server
 {
-    public class ClusterTopologyChanged : Notification
+    public sealed class ClusterTopologyChanged : Notification
     {
         private ClusterTopologyChanged() : base(NotificationType.ClusterTopologyChanged, null)
         {

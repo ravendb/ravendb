@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class DatabasesDebugHandler : ServerRequestHandler
+    public sealed class DatabasesDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/databases/idle", "GET", AuthorizationStatus.Operator)]
         public async Task Idle()
@@ -50,7 +50,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public class IdleDatabaseStatistics : IDynamicJson
+        public sealed class IdleDatabaseStatistics : IDynamicJson
         {
             public IdleDatabaseStatistics()
             {

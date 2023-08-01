@@ -17,7 +17,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations.Queries;
 
-public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<ShardedIndexEntriesQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
+public sealed class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<ShardedIndexEntriesQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _query;
     private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;

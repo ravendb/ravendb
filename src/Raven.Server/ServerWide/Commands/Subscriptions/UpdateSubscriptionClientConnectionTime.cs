@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class UpdateSubscriptionClientConnectionTime : UpdateValueForDatabaseCommand
+    public sealed class UpdateSubscriptionClientConnectionTime : UpdateValueForDatabaseCommand
     {
         public string SubscriptionName;
         public string NodeTag;

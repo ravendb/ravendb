@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedDatabaseDebugInfoPackageHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedDatabaseDebugInfoPackageHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/info-package", "GET")]
         public async Task GetInfoPackage()

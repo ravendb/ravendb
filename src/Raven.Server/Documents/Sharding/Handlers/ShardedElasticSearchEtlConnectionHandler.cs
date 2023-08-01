@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedElasticSearchEtlConnectionHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedElasticSearchEtlConnectionHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/admin/etl/elasticsearch/test-connection", "POST")]
     public async Task TestConnection()

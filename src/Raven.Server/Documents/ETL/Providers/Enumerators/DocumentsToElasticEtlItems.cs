@@ -5,7 +5,7 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
 namespace Raven.Server.Documents.ETL.Providers.Enumerators
 {
-    public class DocumentsToElasticSearchEtlItems : IEnumerator<ElasticSearchItem>
+    public sealed class DocumentsToElasticSearchEtlItems : IEnumerator<ElasticSearchItem>
     {
         private readonly string _collection;
         private readonly IEnumerator<Document> _docs;

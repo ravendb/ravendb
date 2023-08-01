@@ -18,7 +18,7 @@ public partial class ShardedDatabaseContext
 {
     public readonly ShardedIndexesContext Indexes;
 
-    public class ShardedIndexesContext
+    public sealed class ShardedIndexesContext
     {
         private readonly Logger _logger;
 

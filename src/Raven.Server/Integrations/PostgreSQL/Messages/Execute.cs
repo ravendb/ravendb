@@ -5,7 +5,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class Execute : ExtendedProtocolMessage
+    public sealed class Execute : ExtendedProtocolMessage
     {
         public string PortalName;
         public int MaxRows;

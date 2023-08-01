@@ -8,7 +8,7 @@ using Sparrow.Platform;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Database)]
-    public class DatabaseConfiguration : ConfigurationCategory
+    public sealed class DatabaseConfiguration : ConfigurationCategory
     {
         public DatabaseConfiguration(bool forceUsing32BitsPager)
         {

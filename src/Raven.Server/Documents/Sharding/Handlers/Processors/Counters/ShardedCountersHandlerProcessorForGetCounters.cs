@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 {
-    internal class ShardedCountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedCountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedCountersHandlerProcessorForGetCounters([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

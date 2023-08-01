@@ -22,7 +22,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class MapCountersIndex : MapIndexBase<MapIndexDefinition, IndexField>
+    public sealed class MapCountersIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

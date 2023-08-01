@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class DocumentTransactionCache
+    public sealed class DocumentTransactionCache
     {
         public long LastDocumentEtag;
         public long LastTombstoneEtag;
@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide.Context
 
         public long LastEtag;
 
-        public class CollectionCache
+        public sealed class CollectionCache
         {
             public long LastDocumentEtag;
             public long LastTombstoneEtag;

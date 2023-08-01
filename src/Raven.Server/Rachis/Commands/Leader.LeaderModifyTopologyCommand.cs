@@ -17,7 +17,7 @@ namespace Raven.Server.Rachis;
 
 public partial class Leader
 {
-    public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+    public sealed class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
     {
         private readonly RachisConsensus _engine;
         private readonly Leader.TopologyModification _modification;

@@ -15,7 +15,7 @@ using Sparrow.Binary;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
-    public class RavenAwsGlacierClient : IDisposable
+    public sealed class RavenAwsGlacierClient : IDisposable
     {
         internal Size MaxUploadArchiveSize = new Size(256, SizeUnit.Megabytes);
         internal Size MinOnePartUploadSizeLimit = new Size(128, SizeUnit.Megabytes);

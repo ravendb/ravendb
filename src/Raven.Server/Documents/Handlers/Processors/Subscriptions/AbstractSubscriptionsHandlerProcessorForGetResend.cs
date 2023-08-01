@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         }
     }
 
-    public class SubscriptionBatchesState
+    public sealed class SubscriptionBatchesState
     {
         public HashSet<long> Active;
         public List<ResendItem> Results;

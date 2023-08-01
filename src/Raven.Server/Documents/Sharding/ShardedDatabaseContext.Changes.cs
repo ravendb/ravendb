@@ -10,7 +10,7 @@ public partial class ShardedDatabaseContext
 {
     public ShardedDocumentsChanges Changes;
 
-    public class ShardedDocumentsChanges : DocumentsChangesBase<ShardedChangesClientConnection, TransactionOperationContext>
+    public sealed class ShardedDocumentsChanges : DocumentsChangesBase<ShardedChangesClientConnection, TransactionOperationContext>
     {
         private readonly ShardedDatabaseContext _context;
 

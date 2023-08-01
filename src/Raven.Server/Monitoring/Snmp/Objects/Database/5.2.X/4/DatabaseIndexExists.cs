@@ -5,7 +5,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseIndexExists : DatabaseIndexScalarObjectBase<OctetString>
+    public sealed class DatabaseIndexExists : DatabaseIndexScalarObjectBase<OctetString>
     {
         public DatabaseIndexExists(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
             : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Exists)

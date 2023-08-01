@@ -9,7 +9,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class AttachmentTombstoneReplicationItem : ReplicationBatchItem
+    public sealed class AttachmentTombstoneReplicationItem : ReplicationBatchItem
     {
         public Slice Key;
         public DocumentFlags Flags;

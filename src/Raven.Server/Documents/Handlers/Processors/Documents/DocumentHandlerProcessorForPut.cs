@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForPut : AbstractDocumentHandlerProcessorForPut<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForPut : AbstractDocumentHandlerProcessorForPut<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForPut([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

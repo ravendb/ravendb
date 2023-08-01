@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedRevisionsHandlerProcessorForRevertRevisions : AbstractRevisionsHandlerProcessorForRevertRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedRevisionsHandlerProcessorForRevertRevisions : AbstractRevisionsHandlerProcessorForRevertRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedRevisionsHandlerProcessorForRevertRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

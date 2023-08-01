@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCountersCommand : AbstractIncludeCountersCommand
+    public sealed class IncludeCountersCommand : AbstractIncludeCountersCommand
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;

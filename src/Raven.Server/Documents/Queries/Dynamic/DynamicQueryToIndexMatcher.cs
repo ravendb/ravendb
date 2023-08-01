@@ -9,7 +9,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
-    public class DynamicQueryMatchResult
+    public sealed class DynamicQueryMatchResult
     {
         public static DynamicQueryMatchResult Failure = new DynamicQueryMatchResult("Failure/None", DynamicQueryMatchType.Failure)
         {
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         Complete,
     }
 
-    public class DynamicQueryToIndexMatcher
+    public sealed class DynamicQueryToIndexMatcher
     {
         private readonly IndexStore _indexStore;
 
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _indexStore = indexStore;
         }
 
-        public class Explanation
+        public sealed class Explanation
         {
             public Explanation(string index, string reason)
             {

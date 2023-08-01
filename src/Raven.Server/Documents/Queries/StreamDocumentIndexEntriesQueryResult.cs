@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamDocumentIndexEntriesQueryResult : StreamQueryResult<BlittableJsonReaderObject>
+    public sealed class StreamDocumentIndexEntriesQueryResult : StreamQueryResult<BlittableJsonReaderObject>
     {
         public override async ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
         {

@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedStorageHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedStorageHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/debug/storage/report", "GET")]
     public async Task Report()

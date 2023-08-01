@@ -7,7 +7,7 @@ using Sparrow.Platform;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Storage)]
-    public class StorageConfiguration : ConfigurationCategory
+    public sealed class StorageConfiguration : ConfigurationCategory
     {
         public StorageConfiguration()
         {

@@ -21,7 +21,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Web.System
 {
-    public class BuildVersionHandler : ServerRequestHandler
+    public sealed class BuildVersionHandler : ServerRequestHandler
     {
         private static readonly Lazy<byte[]> VersionBuffer = new Lazy<byte[]>(GetVersionBuffer);
 

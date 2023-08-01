@@ -12,7 +12,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DeleteOngoingTaskCommand : UpdateDatabaseCommand
+    public sealed class DeleteOngoingTaskCommand : UpdateDatabaseCommand
     {
         public long TaskId;
         public OngoingTaskType TaskType;

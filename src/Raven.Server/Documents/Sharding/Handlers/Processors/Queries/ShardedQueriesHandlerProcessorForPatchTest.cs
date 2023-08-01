@@ -10,7 +10,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandlerProcessorForPatchTest<ShardedQueriesHandler, TransactionOperationContext>
+internal sealed class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandlerProcessorForPatchTest<ShardedQueriesHandler, TransactionOperationContext>
 {
     public ShardedQueriesHandlerProcessorForPatchTest([NotNull] ShardedQueriesHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {

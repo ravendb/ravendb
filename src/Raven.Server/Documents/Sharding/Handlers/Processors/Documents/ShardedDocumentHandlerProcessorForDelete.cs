@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<ShardedDocumentHandler, TransactionOperationContext>
+internal sealed class ShardedDocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForDelete([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {

@@ -7,7 +7,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class TransactionsModeHandler : DatabaseRequestHandler
+    public sealed class TransactionsModeHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/transactions-mode", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task CommitNonLazyTx()

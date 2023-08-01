@@ -19,7 +19,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation>
+    internal sealed class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
         private readonly OlapEtlConfiguration _config;

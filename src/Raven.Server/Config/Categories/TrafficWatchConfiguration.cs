@@ -10,7 +10,7 @@ using Size = Sparrow.Size;
 namespace Raven.Server.Config.Categories;
 
 [ConfigurationCategory(ConfigurationCategoryType.TrafficWatch)]
-public class TrafficWatchConfiguration : ConfigurationCategory
+public sealed class TrafficWatchConfiguration : ConfigurationCategory
 {
     [Description("Traffic Watch logging mode.")]
     [DefaultValue(TrafficWatchMode.Off)]

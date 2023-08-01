@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL;
 
-internal class ShardedEtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForProgress<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedEtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForProgress<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedEtlHandlerProcessorForProgress([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

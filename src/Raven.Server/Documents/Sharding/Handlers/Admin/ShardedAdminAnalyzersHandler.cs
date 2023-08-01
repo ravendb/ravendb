@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    public class ShardedAdminAnalyzersHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedAdminAnalyzersHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/analyzers", "PUT")]
         public async Task Put()

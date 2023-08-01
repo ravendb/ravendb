@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             return (RequestHandler.GetStringQueryString("name"), RequestHandler.GetStringQueryString("path"));
         }
 
-        internal class IndexesDumpCommand : RavenCommand
+        internal sealed class IndexesDumpCommand : RavenCommand
         {
             private readonly string _name;
             private readonly string _path;

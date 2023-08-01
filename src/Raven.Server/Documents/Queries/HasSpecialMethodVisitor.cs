@@ -4,7 +4,7 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class HasSpecialMethodVisitor : EsprimaVisitor
+    public sealed class HasSpecialMethodVisitor : EsprimaVisitor
     {
         private readonly QueryMetadata _queryMetadata;
 

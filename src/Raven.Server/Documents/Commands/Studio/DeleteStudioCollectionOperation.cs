@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Studio
 {
-    public class DeleteStudioCollectionOperation : IOperation<OperationIdResult>
+    public sealed class DeleteStudioCollectionOperation : IOperation<OperationIdResult>
     {
         private readonly long? _operationId;
         private readonly string _collectionName;
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Commands.Studio
             return new DeleteStudioCollectionCommand(conventions, _operationId, _collectionName, _excludeIds);
         }
 
-        internal class DeleteStudioCollectionCommand : RavenCommand<OperationIdResult>
+        internal sealed class DeleteStudioCollectionCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly long? _operationId;

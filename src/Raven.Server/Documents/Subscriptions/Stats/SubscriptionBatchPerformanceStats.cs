@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
-    public class SubscriptionBatchPerformanceStats
+    public sealed class SubscriptionBatchPerformanceStats
     {
         public long BatchId { get; set; }
         public long ConnectionId { get; set; }

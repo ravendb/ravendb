@@ -28,7 +28,7 @@ namespace Lucene.Net.Search.Vectorhighlight
     /// FieldFragList has a list of "frag info" that is used by FragmentsBuilder class
     /// to create fragments (snippets).
     ///</summary>
-    public class FieldFragList
+    public sealed class FieldFragList
     {
         private int fragCharSize;
         public List<WeightedFragInfo> fragInfos = new List<WeightedFragInfo>();
@@ -54,7 +54,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             fragInfos.Add(new WeightedFragInfo(startOffset, endOffset, phraseInfoList));
         }
 
-        public class WeightedFragInfo
+        public sealed class WeightedFragInfo
         {
 
             internal List<SubInfo> subInfos;
@@ -85,7 +85,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 return sb.ToString();
             }
 
-            internal class SubInfo
+            internal sealed class SubInfo
             {
                 internal String text;  // unnecessary member, just exists for debugging purpose
                 internal List<Toffs> termsOffsets;   // usually termsOffsets.size() == 1,

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditRevisionsConfigurationCommand : UpdateDatabaseCommand
+    public sealed class EditRevisionsConfigurationCommand : UpdateDatabaseCommand
     {
         public RevisionsConfiguration Configuration { get; protected set; }
 

@@ -4,7 +4,7 @@ using Raven.Server.Documents.Indexes.Sorting;
 
 namespace Raven.Server.Documents.Queries.Sorting.Custom
 {
-    public class CustomComparatorSource : FieldComparatorSource
+    public sealed class CustomComparatorSource : FieldComparatorSource
     {
         private readonly IndexQueryServerSide _query;
         private readonly SorterFactory _factory;

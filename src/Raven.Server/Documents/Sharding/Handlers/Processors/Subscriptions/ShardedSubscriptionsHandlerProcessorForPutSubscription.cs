@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForPutSubscription : AbstractSubscriptionsHandlerProcessorForPutSubscription<ShardedSubscriptionsHandler, TransactionOperationContext>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForPutSubscription : AbstractSubscriptionsHandlerProcessorForPutSubscription<ShardedSubscriptionsHandler, TransactionOperationContext>
     {
         public ShardedSubscriptionsHandlerProcessorForPutSubscription([NotNull] ShardedSubscriptionsHandler requestHandler) : base(requestHandler)
         {

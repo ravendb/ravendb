@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DeleteCertificateCollectionFromClusterCommand : DeleteMultipleValuesCommand
+    public sealed class DeleteCertificateCollectionFromClusterCommand : DeleteMultipleValuesCommand
     {
         public DeleteCertificateCollectionFromClusterCommand() { }
         public DeleteCertificateCollectionFromClusterCommand(string requestId) : base(requestId)

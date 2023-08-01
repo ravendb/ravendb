@@ -8,11 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Attachments
 {
-    internal class GetAttachmentHashCountCommand : RavenCommand<GetAttachmentHashCountCommand.Response>
+    internal sealed class GetAttachmentHashCountCommand : RavenCommand<GetAttachmentHashCountCommand.Response>
     {
         private readonly string _hash;
 
-        public class Response
+        public sealed class Response
         {
             public string Hash { get; set; }
 

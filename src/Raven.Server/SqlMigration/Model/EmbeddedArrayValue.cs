@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.Model
 {
-    public class EmbeddedArrayValue
+    public sealed class EmbeddedArrayValue
     {
         public DynamicJsonArray ArrayOfNestedObjects { get; set; }
         public List<DynamicJsonValue> SpecialColumnsValues { get; set; }

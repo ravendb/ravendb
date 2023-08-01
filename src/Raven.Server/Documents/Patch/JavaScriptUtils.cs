@@ -24,7 +24,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JavaScriptUtils
+    public sealed class JavaScriptUtils
     {
         private JsonOperationContext Context
         {

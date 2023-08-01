@@ -27,7 +27,7 @@ namespace Lucene.Net.Search
     /// Regular expression based query.
     /// </summary>
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexQuery.java.htm</remarks>
-    public class RegexQuery : MultiTermQuery, IEquatable<RegexQuery>
+    public sealed class RegexQuery : MultiTermQuery, IEquatable<RegexQuery>
     {
         private readonly System.Text.RegularExpressions.Regex _regex;
         public Term Term { get; }

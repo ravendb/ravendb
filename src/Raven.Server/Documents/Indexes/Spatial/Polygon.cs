@@ -5,7 +5,7 @@ using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {
-    public class Polygon : SpatialShapeBase
+    public sealed class Polygon : SpatialShapeBase
     {
         public readonly List<Coordinates> Vertices;
 

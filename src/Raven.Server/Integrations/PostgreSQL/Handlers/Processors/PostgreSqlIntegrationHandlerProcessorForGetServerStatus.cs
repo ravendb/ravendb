@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal class PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TRequestHandler, TOperationContext> : AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>
+internal sealed class PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TRequestHandler, TOperationContext> : AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext 
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {

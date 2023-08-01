@@ -10,7 +10,7 @@ using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<
+    internal sealed class OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<
         DatabaseRequestHandler, DocumentsOperationContext>
     {
         private readonly OngoingTasksHandler _ongoingTasksHandler;

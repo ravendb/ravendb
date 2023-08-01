@@ -7,7 +7,7 @@ using Raven.Server.Documents.Sharding.Executors;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSeriesRangesCommand.Response>
+internal sealed class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSeriesRangesCommand.Response>
 {
     public HttpRequest _request { get; }
 

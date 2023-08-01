@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 {
-    internal class ShardedStatsHandlerProcessorForDatabaseHealthCheck : AbstractStatsHandlerProcessorForDatabaseHealthCheck<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStatsHandlerProcessorForDatabaseHealthCheck : AbstractStatsHandlerProcessorForDatabaseHealthCheck<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStatsHandlerProcessorForDatabaseHealthCheck([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

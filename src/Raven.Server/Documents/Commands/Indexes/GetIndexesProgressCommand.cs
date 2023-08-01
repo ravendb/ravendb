@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Indexes;
 
-internal class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
+internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 {
     public GetIndexesProgressCommand(string nodeTag)
     {

@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide
     /// <summary>
     /// This class is useful for interacting with local endpoints without going through HTTP
     /// </summary>
-    public class LocalEndpointClient
+    public sealed class LocalEndpointClient
     {
         private readonly RavenServer _server;
         public const string DebugPackage = "DebugPackage";

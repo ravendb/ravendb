@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class DatabaseIndexingSpeedPayload : AbstractClusterDashboardNotification
+    public sealed class DatabaseIndexingSpeedPayload : AbstractClusterDashboardNotification
     {
         public override ClusterDashboardNotificationType Type => ClusterDashboardNotificationType.DatabaseIndexing;
 

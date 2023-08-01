@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
-    public class SorterCompilationCache : AbstractCompilationCache<SorterFactory>
+    public sealed class SorterCompilationCache : AbstractCompilationCache<SorterFactory>
     {
         public static readonly SorterCompilationCache Instance = new();
 

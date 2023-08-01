@@ -103,7 +103,7 @@ namespace Raven.Server.Utils
             return true;
         }
 
-        public class CertificateHolder : IDisposable
+        public sealed class CertificateHolder : IDisposable
         {
             public string CertificateForClients;
             public X509Certificate2 Certificate;

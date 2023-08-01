@@ -6,7 +6,7 @@ using Raven.Server.Utils.Features;
 
 namespace Raven.Server.Exceptions
 {
-    public class FeaturesAvailabilityException : Exception
+    public sealed class FeaturesAvailabilityException : Exception
     {
      
         public FeaturesAvailabilityException()

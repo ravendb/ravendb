@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Storage;
 
-internal class GetStorageReportCommand : RavenCommand
+internal sealed class GetStorageReportCommand : RavenCommand
 {
     public GetStorageReportCommand(string nodeTag)
     {

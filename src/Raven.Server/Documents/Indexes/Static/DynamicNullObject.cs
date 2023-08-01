@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
+    public sealed class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {
         public static DynamicNullObject Null = new DynamicNullObject(isExplicitNull: false);
 

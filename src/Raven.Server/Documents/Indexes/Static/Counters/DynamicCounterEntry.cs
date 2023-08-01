@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class DynamicCounterEntry : AbstractDynamicObject
+    public sealed class DynamicCounterEntry : AbstractDynamicObject
     {
         internal CounterGroupItemMetadata _counterItemMetadata;
 

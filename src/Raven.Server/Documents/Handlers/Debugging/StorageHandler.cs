@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class StorageHandler : DatabaseRequestHandler
+    public sealed class StorageHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/storage/manual-flush", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task ManualFlush()

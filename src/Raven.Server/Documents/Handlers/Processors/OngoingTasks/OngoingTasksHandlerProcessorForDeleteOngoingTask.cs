@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForDeleteOngoingTask : AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForDeleteOngoingTask : AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForDeleteOngoingTask([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

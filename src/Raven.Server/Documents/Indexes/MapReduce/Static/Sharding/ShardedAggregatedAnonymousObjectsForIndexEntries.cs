@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 
-public class ShardedAggregatedAnonymousObjectsForIndexEntries : AggregatedAnonymousObjects
+public sealed class ShardedAggregatedAnonymousObjectsForIndexEntries : AggregatedAnonymousObjects
 {
     public ShardedAggregatedAnonymousObjectsForIndexEntries(List<object> results, IPropertyAccessor propertyAccessor, string reduceKeyHash, JsonOperationContext indexContext) 
         : base(results, propertyAccessor, indexContext)

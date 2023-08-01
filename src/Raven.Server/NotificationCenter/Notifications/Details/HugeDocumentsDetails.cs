@@ -6,7 +6,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class HugeDocumentsDetails : INotificationDetails
+    public sealed class HugeDocumentsDetails : INotificationDetails
     {
         private const int SizeLimit = 100;
         private const double CleanupFactor = 0.3;

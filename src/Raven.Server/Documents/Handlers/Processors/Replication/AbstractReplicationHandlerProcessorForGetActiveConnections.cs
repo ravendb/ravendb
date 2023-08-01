@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         protected override RavenCommand<ReplicationActiveConnectionsPreview> CreateCommandForNode(string nodeTag) => new GetReplicationActiveConnectionsInfoCommand(nodeTag);
     }
 
-    public class ReplicationActiveConnectionsPreview
+    public sealed class ReplicationActiveConnectionsPreview
     {
         public List<IncomingConnectionInfo> IncomingConnections;
 

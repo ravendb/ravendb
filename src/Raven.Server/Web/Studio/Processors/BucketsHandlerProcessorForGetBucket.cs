@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal class BucketsHandlerProcessorForGetBucket : AbstractBucketsHandlerProcessorForGetBucket<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class BucketsHandlerProcessorForGetBucket : AbstractBucketsHandlerProcessorForGetBucket<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public BucketsHandlerProcessorForGetBucket([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

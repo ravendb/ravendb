@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class StreamCsvDocumentQueryResultWriter : StreamCsvResultWriter<Document>
+    public sealed class StreamCsvDocumentQueryResultWriter : StreamCsvResultWriter<Document>
     {
         public override async ValueTask AddResultAsync(Document res, CancellationToken token)
         {

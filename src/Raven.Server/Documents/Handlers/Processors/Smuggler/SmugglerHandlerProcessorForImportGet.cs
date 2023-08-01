@@ -4,7 +4,7 @@ using Raven.Server.Smuggler.Documents.Handlers;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler;
 
-internal class SmugglerHandlerProcessorForImportGet : AbstractSmugglerHandlerProcessorForImportGet<SmugglerHandler, DocumentsOperationContext>
+internal sealed class SmugglerHandlerProcessorForImportGet : AbstractSmugglerHandlerProcessorForImportGet<SmugglerHandler, DocumentsOperationContext>
 {
     public SmugglerHandlerProcessorForImportGet([NotNull] SmugglerHandler requestHandler) : base(requestHandler)
     {

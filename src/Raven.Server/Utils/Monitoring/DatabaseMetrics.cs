@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Monitoring
 {
-    public class DatabaseMetrics
+    public sealed class DatabaseMetrics
     {
         public string DatabaseName { get; set; }
         public string DatabaseId { get; set; }
@@ -38,7 +38,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
 
-    public class DatabaseStatistics
+    public sealed class DatabaseStatistics
     {
         public double DocPutsPerSec { get; set; }
         public double MapIndexIndexesPerSec { get; set; }
@@ -63,7 +63,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
 
-    public class DatabaseCounts
+    public sealed class DatabaseCounts
     {
         public long Documents { get; set; }
         public long Revisions { get; set; }
@@ -90,7 +90,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
     
-    public class DatabaseIndexesMetrics
+    public sealed class DatabaseIndexesMetrics
     {
         public long Count { get; set; }
         public int StaleCount { get; set; }
@@ -117,7 +117,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
 
-    public class DatabaseStorageMetrics
+    public sealed class DatabaseStorageMetrics
     {
         public long DocumentsAllocatedDataFileInMb { get; set; }
         public long DocumentsUsedDataFileInMb { get; set; }
@@ -150,7 +150,7 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
     
-    public class DatabasesMetrics
+    public sealed class DatabasesMetrics
     {
         public List<DatabaseMetrics> Results { get; set; } = new List<DatabaseMetrics>();
         public string PublicServerUrl { get; set; }

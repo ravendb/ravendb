@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Subscriptions;
 
-public class GetSubscriptionConnectionsDetailsCommand : RavenCommand<SubscriptionConnectionsDetails>
+public sealed class GetSubscriptionConnectionsDetailsCommand : RavenCommand<SubscriptionConnectionsDetails>
 {
     private readonly string _subscriptionName;
 

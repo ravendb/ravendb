@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForSetPriority : AbstractIndexHandlerProcessorForSetPriority<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForSetPriority : AbstractIndexHandlerProcessorForSetPriority<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForSetPriority([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

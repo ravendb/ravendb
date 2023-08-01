@@ -28,9 +28,9 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class CountersHandler : DatabaseRequestHandler
+    public sealed class CountersHandler : DatabaseRequestHandler
     {
-        public class ExecuteCounterBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public sealed class ExecuteCounterBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public bool HasWrites;
             public string LastChangeVector;
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class SmugglerCounterBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+        public sealed class SmugglerCounterBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly DocumentDatabase _database;
             private readonly List<CounterGroupDetail> _counterGroups;
@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class ExecuteCounterBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, CountersHandler.ExecuteCounterBatchCommand>
+    public sealed class ExecuteCounterBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, CountersHandler.ExecuteCounterBatchCommand>
     {
         public bool ReplyWithAllNodesValues;
         public bool FromEtl;
@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class SmugglerCounterBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, CountersHandler.SmugglerCounterBatchCommand>
+    public sealed class SmugglerCounterBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, CountersHandler.SmugglerCounterBatchCommand>
     {
         public List<CounterGroupDetail> CounterGroups;
         public Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> LegacyDictionary;

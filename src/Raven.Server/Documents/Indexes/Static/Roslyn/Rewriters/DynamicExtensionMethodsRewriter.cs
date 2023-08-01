@@ -7,7 +7,7 @@ using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class DynamicExtensionMethodsRewriter : CSharpSyntaxRewriter
+    public sealed class DynamicExtensionMethodsRewriter : CSharpSyntaxRewriter
     {
         private static readonly string[] MethodNames = typeof(DynamicExtensionMethods)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)

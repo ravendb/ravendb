@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal class StudioDatabaseTasksHandlerProcessorForGetIndexDefaults : AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class StudioDatabaseTasksHandlerProcessorForGetIndexDefaults : AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public StudioDatabaseTasksHandlerProcessorForGetIndexDefaults([NotNull] DatabaseRequestHandler requestHandler) 
         : base(requestHandler)

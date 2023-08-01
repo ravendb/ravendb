@@ -13,7 +13,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public class HugeDocuments : IDisposable
+    public sealed class HugeDocuments : IDisposable
     {
         private static readonly string PerformanceHintSource = "Documents";
         internal static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.HugeDocuments}/{PerformanceHintSource}";

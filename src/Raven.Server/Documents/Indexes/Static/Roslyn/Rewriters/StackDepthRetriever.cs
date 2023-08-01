@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
-public class StackDepthRetriever : CSharpSyntaxRewriter
+public sealed class StackDepthRetriever : CSharpSyntaxRewriter
 {
     private int _letCounter;
 

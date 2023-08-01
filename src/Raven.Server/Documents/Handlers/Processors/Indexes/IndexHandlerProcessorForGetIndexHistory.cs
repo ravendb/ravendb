@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForGetIndexHistory<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+internal sealed class IndexHandlerProcessorForGetIndexHistory<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
 

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Exceptions
 {
-    public class IndexWriteException : Exception
+    public sealed class IndexWriteException : Exception
     {
         public IndexWriteException()
         {

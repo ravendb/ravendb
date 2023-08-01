@@ -19,7 +19,7 @@ namespace Raven.Server.Routing
 {
     public delegate Task HandleRequest(RequestHandlerContext ctx);
 
-    public class RouteInformation
+    public sealed class RouteInformation
     {
         public AuthorizationStatus AuthorizationStatus;
         public readonly EndpointType? EndpointType;

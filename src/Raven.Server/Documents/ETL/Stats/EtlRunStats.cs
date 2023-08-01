@@ -3,7 +3,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class EtlRunStats
+    public sealed class EtlRunStats
     {
         public readonly Dictionary<EtlItemType, int> NumberOfExtractedItems = new Dictionary<EtlItemType, int>()
         {

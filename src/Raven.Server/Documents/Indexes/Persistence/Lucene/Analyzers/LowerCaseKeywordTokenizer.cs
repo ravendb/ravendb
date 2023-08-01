@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         }
     }
 
-    public class LowerCaseKeywordTokenizer : LowerCaseTokenizerBase<LowerCaseKeywordTokenizerHelper>
+    public sealed class LowerCaseKeywordTokenizer : LowerCaseTokenizerBase<LowerCaseKeywordTokenizerHelper>
     {
         public LowerCaseKeywordTokenizer(System.IO.TextReader input)
             : base(input)

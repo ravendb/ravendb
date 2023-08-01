@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
-internal class DatabaseNotificationCenterHandlerProcessorForStats : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class DatabaseNotificationCenterHandlerProcessorForStats : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public DatabaseNotificationCenterHandlerProcessorForStats([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler)

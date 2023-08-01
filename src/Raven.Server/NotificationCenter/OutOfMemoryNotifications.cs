@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class OutOfMemoryNotifications
+    public sealed class OutOfMemoryNotifications
     {
         private readonly TimeSpan _updateFrequency = TimeSpan.FromSeconds(15);
         private readonly ConditionalWeakTable<StorageEnvironment, ConcurrentDictionary<Type, NotificationTime>> _notificationsMetadataTable = new();

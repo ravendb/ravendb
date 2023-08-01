@@ -23,7 +23,7 @@ using System.Collections.Generic;
 
 namespace Lucene.Net.Search.Vectorhighlight
 {
-    public class HashMap<K, V> : Dictionary<K, V>
+    public sealed class HashMap<K, V> : Dictionary<K, V>
     {
         V _NullKeyValue = default(V);
 

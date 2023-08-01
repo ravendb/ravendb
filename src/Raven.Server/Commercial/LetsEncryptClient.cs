@@ -16,7 +16,7 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
 {
-    public class LetsEncryptClient
+    public sealed class LetsEncryptClient
     {
         public const string StagingV2 = "https://acme-staging-v02.api.letsencrypt.org/directory";
         public const string ProductionV2 = "https://acme-v02.api.letsencrypt.org/directory";
@@ -434,7 +434,7 @@ namespace Raven.Server.Commercial
             return (cert, key);
         }
 
-        public class CachedCertificateResult
+        public sealed class CachedCertificateResult
         {
             public RSA PrivateKey;
             public X509Certificate2 Certificate;
@@ -607,7 +607,7 @@ namespace Raven.Server.Commercial
             public string TermsOfService { get; set; }
         }
 
-        public class Problem
+        public sealed class Problem
         {
             [JsonProperty("type")]
             public string Type { get; set; }
@@ -618,7 +618,7 @@ namespace Raven.Server.Commercial
             public string RawJson { get; set; }
         }
 
-        public class LetsEncryptException : Exception
+        public sealed class LetsEncryptException : Exception
         {
             public LetsEncryptException(Problem problem, HttpResponseMessage response)
                 : base($"{problem.Type}: {problem.Detail}")

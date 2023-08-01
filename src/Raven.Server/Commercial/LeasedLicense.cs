@@ -2,7 +2,7 @@ using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Commercial
 {
-    public class LeasedLicense
+    public sealed class LeasedLicense
     {
         public License License { get; set; }
 

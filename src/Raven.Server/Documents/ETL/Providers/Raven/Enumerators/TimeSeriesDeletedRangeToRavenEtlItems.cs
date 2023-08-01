@@ -4,7 +4,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class TimeSeriesDeletedRangeToRavenEtlItems : IEnumerator<RavenEtlItem>
+    public sealed class TimeSeriesDeletedRangeToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly IEnumerator<TimeSeriesDeletedRangeItem> _timeSeries;
         private readonly string _collection;

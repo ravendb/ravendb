@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ToggleServerWideTaskStateCommand : UpdateValueCommand<ToggleServerWideTaskStateCommand.Parameters>
+    public sealed class ToggleServerWideTaskStateCommand : UpdateValueCommand<ToggleServerWideTaskStateCommand.Parameters>
     {
         protected ToggleServerWideTaskStateCommand()
         {
@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public class Parameters : IDynamicJson
+        public sealed class Parameters : IDynamicJson
         {
             public OngoingTaskType Type { get; set; }
 

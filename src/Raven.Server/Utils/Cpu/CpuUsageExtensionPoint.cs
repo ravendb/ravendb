@@ -12,7 +12,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Utils.Cpu
 {
-    public class CpuUsageExtensionPoint : IDisposable
+    public sealed class CpuUsageExtensionPoint : IDisposable
     {
         private readonly JsonContextPool _contextPool;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<MachineCpu>("Server");

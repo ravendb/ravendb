@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionsHandlerProcessorForDropSubscriptionConnection : AbstractSubscriptionsHandlerProcessorForDropSubscriptionConnection<DatabaseRequestHandler, DocumentsOperationContext, SubscriptionConnectionsState>
+    internal sealed class SubscriptionsHandlerProcessorForDropSubscriptionConnection : AbstractSubscriptionsHandlerProcessorForDropSubscriptionConnection<DatabaseRequestHandler, DocumentsOperationContext, SubscriptionConnectionsState>
     {
         public SubscriptionsHandlerProcessorForDropSubscriptionConnection([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.Database.SubscriptionStorage)
         {

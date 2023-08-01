@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal class RevisionsHandlerProcessorForGetRevisions : AbstractRevisionsHandlerProcessorForGetRevisions<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class RevisionsHandlerProcessorForGetRevisions : AbstractRevisionsHandlerProcessorForGetRevisions<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public RevisionsHandlerProcessorForGetRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

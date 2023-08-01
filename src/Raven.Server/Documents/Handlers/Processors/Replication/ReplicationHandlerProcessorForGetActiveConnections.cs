@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetActiveConnections : AbstractReplicationHandlerProcessorForGetActiveConnections<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetActiveConnections : AbstractReplicationHandlerProcessorForGetActiveConnections<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetActiveConnections([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

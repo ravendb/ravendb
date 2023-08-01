@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedAdminTimesSeriesHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedAdminTimesSeriesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/timeseries/policy", "PUT")]
         public async Task AddTimeSeriesPolicy()

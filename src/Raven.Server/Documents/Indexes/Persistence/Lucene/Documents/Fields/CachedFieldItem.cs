@@ -4,7 +4,7 @@ using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
-    public class CachedFieldItem<T> : IDisposable where T : AbstractField
+    public sealed class CachedFieldItem<T> : IDisposable where T : AbstractField
     {
         public FieldCacheKey Key;
 

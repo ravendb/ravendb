@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class EtlErrorInfo : IDynamicJsonValueConvertible
+    public sealed class EtlErrorInfo : IDynamicJsonValueConvertible
     {
         public string DocumentId { get; set; }
         public DateTime Date { get; set; }

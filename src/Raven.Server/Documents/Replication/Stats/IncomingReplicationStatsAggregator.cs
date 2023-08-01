@@ -6,7 +6,7 @@ using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
-    public class IncomingReplicationStatsAggregator : StatsAggregator<IncomingReplicationRunStats, IncomingReplicationStatsScope>
+    public sealed class IncomingReplicationStatsAggregator : StatsAggregator<IncomingReplicationRunStats, IncomingReplicationStatsScope>
     {
         private volatile IncomingReplicationPerformanceStats _performanceStats;
 
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Replication.Stats
         }
     }
 
-    public class IncomingReplicationStatsScope : StatsScope<IncomingReplicationRunStats, IncomingReplicationStatsScope>
+    public sealed class IncomingReplicationStatsScope : StatsScope<IncomingReplicationRunStats, IncomingReplicationStatsScope>
     {
         private readonly IncomingReplicationRunStats _stats;
 
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Replication.Stats
         }
     }
 
-    public class IncomingReplicationRunStats : ReplicationRunStatsBase
+    public sealed class IncomingReplicationRunStats : ReplicationRunStatsBase
     {
         public int InputCount;
 

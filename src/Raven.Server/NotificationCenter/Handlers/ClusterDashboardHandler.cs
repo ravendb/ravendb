@@ -23,7 +23,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ClusterDashboardHandler : ServerNotificationHandlerBase
+    public sealed class ClusterDashboardHandler : ServerNotificationHandlerBase
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardHandler>("Server");
 

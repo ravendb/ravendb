@@ -11,7 +11,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class Indexing : IDisposable
+    public sealed class Indexing : IDisposable
     {
         private static readonly string Source = "Indexing";
         private static readonly string HighOutputsRate = PerformanceHint.GetKey(PerformanceHintType.Indexing, Source);

@@ -23,7 +23,7 @@ namespace Raven.Server.Utils.Cpu
         public long ActiveCores { get; }
     }
 
-    internal class WindowsInfo : ProcessInfo
+    internal sealed class WindowsInfo : ProcessInfo
     {
         public ulong SystemIdleTime { get; set; }
 
@@ -32,7 +32,7 @@ namespace Raven.Server.Utils.Cpu
         public ulong SystemUserTime { get; set; }
     }
 
-    internal class LinuxInfo : ProcessInfo
+    internal sealed class LinuxInfo : ProcessInfo
     {
         public ulong TotalUserTime { private get; set; }
 
@@ -56,7 +56,7 @@ namespace Raven.Server.Utils.Cpu
         public ulong TotalIdle => TotalIdleTime + TotalIoWait;
     }
 
-    internal class MacInfo : ProcessInfo
+    internal sealed class MacInfo : ProcessInfo
     {
         public ulong TotalTicks { get; set; }
 

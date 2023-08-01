@@ -4,7 +4,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerGcFinalizationPendingCount : ServerGcBase<Gauge32>
+    public sealed class ServerGcFinalizationPendingCount : ServerGcBase<Gauge32>
     {
         public ServerGcFinalizationPendingCount(MetricCacher metricCacher, GCKind gcKind)
             : base(metricCacher, gcKind, SnmpOids.Server.GcFinalizationPendingCount)

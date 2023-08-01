@@ -16,7 +16,7 @@ using Sparrow.Server.Collections;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ReshardingHandler : ServerRequestHandler
+    public sealed class ReshardingHandler : ServerRequestHandler
     {
         [RavenAction("/admin/resharding/start", "POST", AuthorizationStatus.Operator)]
         public async Task StartResharding()
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public class ReshardingResult : IOperationResult, IOperationProgress
+        public sealed class ReshardingResult : IOperationResult, IOperationProgress
         {
             public string Message { get; set; }
 
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public class ReshardingOperationDetails : IOperationDetailedDescription
+        public sealed class ReshardingOperationDetails : IOperationDetailedDescription
         {
             public int ToShard { get; set; }
             public int FromBucket { get; set; }

@@ -8,7 +8,7 @@ using Version = Lucene.Net.Util.Version;
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     [NotForQuerying]
-    public class NGramAnalyzer : Analyzer
+    public sealed class NGramAnalyzer : Analyzer
     {
         private readonly int _minGram;
         private readonly int _maxGram;

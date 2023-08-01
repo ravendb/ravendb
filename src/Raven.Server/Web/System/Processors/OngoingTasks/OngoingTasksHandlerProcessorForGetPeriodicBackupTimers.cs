@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public OngoingTasksHandlerProcessorForGetPeriodicBackupTimers([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

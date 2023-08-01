@@ -6,7 +6,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal class AttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AttachmentHandlerProcessorForGetHashCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedPullReplicationHandlerProcessorForGetListHubAccess : AbstractPullReplicationHandlerProcessorForGetListHubAccess<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedPullReplicationHandlerProcessorForGetListHubAccess : AbstractPullReplicationHandlerProcessorForGetListHubAccess<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedPullReplicationHandlerProcessorForGetListHubAccess([NotNull] ShardedDatabaseRequestHandler requestHandler)
             : base(requestHandler, requestHandler.ContextPool)

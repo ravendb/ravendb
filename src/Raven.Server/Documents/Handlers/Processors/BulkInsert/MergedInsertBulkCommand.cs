@@ -14,7 +14,7 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-public class MergedInsertBulkCommand : DocumentMergedTransactionCommand
+public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
 {
     public Logger Logger;
     public DocumentDatabase Database;

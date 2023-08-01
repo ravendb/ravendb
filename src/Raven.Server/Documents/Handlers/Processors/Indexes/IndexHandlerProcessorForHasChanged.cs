@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForHasChanged : AbstractIndexHandlerProcessorForHasChanged<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForHasChanged : AbstractIndexHandlerProcessorForHasChanged<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForHasChanged([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

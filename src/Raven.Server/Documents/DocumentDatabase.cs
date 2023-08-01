@@ -1996,7 +1996,7 @@ namespace Raven.Server.Documents
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
 

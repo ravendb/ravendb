@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
-    public class DrivesUsage : AbstractDashboardNotification
+    public sealed class DrivesUsage : AbstractDashboardNotification
     {
         public List<MountPointUsage> Items { get; set; }
 
@@ -15,7 +15,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class MountPointUsage : IDynamicJson
+    public sealed class MountPointUsage : IDynamicJson
     {
         public string MountPoint { get; set; }
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class DatabaseDiskUsage : IDynamicJson
+    public sealed class DatabaseDiskUsage : IDynamicJson
     {
         public string Database { get; set; }
 

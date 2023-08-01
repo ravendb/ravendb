@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForJavaScriptPut : AbstractAdminIndexHandlerProcessorForJavaScriptPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAdminIndexHandlerProcessorForJavaScriptPut : AbstractAdminIndexHandlerProcessorForJavaScriptPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAdminIndexHandlerProcessorForJavaScriptPut([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

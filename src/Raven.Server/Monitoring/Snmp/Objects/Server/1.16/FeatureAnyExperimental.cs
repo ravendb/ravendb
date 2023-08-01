@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class FeatureAnyExperimental : ScalarObjectBase<OctetString>
+    public sealed class FeatureAnyExperimental : ScalarObjectBase<OctetString>
     {
         private readonly ServerStore _serverStore;
 

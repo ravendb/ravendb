@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.TimeSeries
                 throw new InvalidOperationException("This segment contains duplicate values and need to be recomputed");
         }
 
-        public class ReadTimestampState
+        public sealed class ReadTimestampState
         {
             public int Delta;
             public ulong Status;

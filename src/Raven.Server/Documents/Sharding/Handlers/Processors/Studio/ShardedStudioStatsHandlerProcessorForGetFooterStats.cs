@@ -13,7 +13,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
-    internal class ShardedStudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStudioStatsHandlerProcessorForGetFooterStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

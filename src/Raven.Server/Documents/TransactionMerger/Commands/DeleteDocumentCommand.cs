@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class DeleteDocumentCommand : DocumentMergedTransactionCommand
+    public sealed class DeleteDocumentCommand : DocumentMergedTransactionCommand
     {
         private readonly string _id;
         private readonly string _expectedChangeVector;
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
         }
     }
 
-    public class DeleteDocumentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentCommand>
+    public sealed class DeleteDocumentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentCommand>
     {
         public string Id { get; set; }
         public string ChangeVector { get; set; }

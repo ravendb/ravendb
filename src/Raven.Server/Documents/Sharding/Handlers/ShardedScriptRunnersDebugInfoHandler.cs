@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedScriptRunnersDebugInfoHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedScriptRunnersDebugInfoHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/script-runners", "GET")]
         public async Task GetJSDebugInfo()

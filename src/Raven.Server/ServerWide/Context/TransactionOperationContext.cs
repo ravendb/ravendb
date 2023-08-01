@@ -9,7 +9,7 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
+    public sealed class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
     {
         public bool IgnoreStalenessDueToReduceOutputsToDelete;
 

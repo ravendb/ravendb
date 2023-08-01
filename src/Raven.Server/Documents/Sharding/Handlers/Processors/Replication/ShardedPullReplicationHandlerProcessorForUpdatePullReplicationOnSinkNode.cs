@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode : AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode : AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Maintenance
         NoChange = 32
     }
 
-    public class MaintenanceReport : IDynamicJson
+    public sealed class MaintenanceReport : IDynamicJson
     {
         public ServerReport ServerReport;
         public Dictionary<string, DatabaseStatusReport> DatabasesReport;
@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
     }
 
-    public class ServerReport : IDynamicJson
+    public sealed class ServerReport : IDynamicJson
     {
         public bool? OutOfCpuCredits;
 
@@ -57,7 +57,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
     }
 
-    public class DatabaseStatusReport : IDynamicJson
+    public sealed class DatabaseStatusReport : IDynamicJson
     {
         public string Name;
         public string NodeName;
@@ -70,7 +70,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public long LastCompareExchangeIndex { get; set; }
 
-        public class ObservedIndexStatus
+        public sealed class ObservedIndexStatus
         {
             public bool IsSideBySide;
             public long LastIndexedEtag;
@@ -134,7 +134,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
     }
 
-    public class ClusterNodeStatusReport : IDynamicJson
+    public sealed class ClusterNodeStatusReport : IDynamicJson
     {
         // public string ClusterTag { get; set; }
 

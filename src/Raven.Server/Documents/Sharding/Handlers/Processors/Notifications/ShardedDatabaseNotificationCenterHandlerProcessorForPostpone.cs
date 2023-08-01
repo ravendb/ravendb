@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Notifications;
 
-internal class ShardedDatabaseNotificationCenterHandlerProcessorForPostpone : AbstractDatabaseNotificationCenterHandlerProcessorForPostpone<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedDatabaseNotificationCenterHandlerProcessorForPostpone : AbstractDatabaseNotificationCenterHandlerProcessorForPostpone<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedDatabaseNotificationCenterHandlerProcessorForPostpone([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

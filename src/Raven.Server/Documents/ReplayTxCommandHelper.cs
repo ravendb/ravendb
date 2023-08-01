@@ -300,7 +300,7 @@ namespace Raven.Server.Documents
         DisposePrevTx
     }
 
-    internal class ReplayProgress
+    internal sealed class ReplayProgress
     {
         public long CommandsProgress;
     }
@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    internal class StartRecordingDetails : RecordingDetails
+    internal sealed class StartRecordingDetails : RecordingDetails
     {
         private const string DetailsType = "StartRecording";
         public string Version { get; }
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    internal class RecordingCommandDetails<TOperationContext, TTransaction> : RecordingDetails
+    internal sealed class RecordingCommandDetails<TOperationContext, TTransaction> : RecordingDetails
         where TOperationContext : TransactionOperationContext<TTransaction>
         where TTransaction : RavenTransaction
     {
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public class ReplayTransactionsException : Exception
+    public sealed class ReplayTransactionsException : Exception
     {
         public string Context { get; }
 

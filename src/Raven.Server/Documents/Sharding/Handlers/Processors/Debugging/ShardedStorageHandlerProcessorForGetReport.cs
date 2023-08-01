@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Debugging;
 
-internal class ShardedStorageHandlerProcessorForGetReport : AbstractStorageHandlerProcessorForGetReport<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStorageHandlerProcessorForGetReport : AbstractStorageHandlerProcessorForGetReport<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStorageHandlerProcessorForGetReport([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

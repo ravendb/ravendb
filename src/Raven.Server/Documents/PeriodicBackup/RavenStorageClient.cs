@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new AggregateException(exceptions);
         }
 
-        public class Blob : IDisposable
+        public sealed class Blob : IDisposable
         {
             private IDisposable _toDispose;
 
@@ -88,14 +88,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public class ListBlobResult
+        public sealed class ListBlobResult
         {
             public IEnumerable<BlobProperties> List { get; set; }
 
             public string ContinuationToken { get; set; }
         }
 
-        public class BlobProperties
+        public sealed class BlobProperties
         {
             public string Name { get; set; }
         }

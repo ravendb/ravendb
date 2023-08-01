@@ -11,7 +11,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminAnalyzersHandler : DatabaseRequestHandler
+    public sealed class AdminAnalyzersHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/analyzers", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()

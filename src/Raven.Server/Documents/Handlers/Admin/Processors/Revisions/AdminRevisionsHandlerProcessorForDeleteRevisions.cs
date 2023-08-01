@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
-    internal class AdminRevisionsHandlerProcessorForDeleteRevisions : AbstractAdminRevisionsHandlerProcessorForDeleteRevisions<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AdminRevisionsHandlerProcessorForDeleteRevisions : AbstractAdminRevisionsHandlerProcessorForDeleteRevisions<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AdminRevisionsHandlerProcessorForDeleteRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
 
-        internal class DeleteRevisionsCommand : DocumentMergedTransactionCommand
+        internal sealed class DeleteRevisionsCommand : DocumentMergedTransactionCommand
         {
             private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             }
         }
 
-        internal class DeleteRevisionsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsCommand>
+        internal sealed class DeleteRevisionsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsCommand>
         {
             public string[] Ids;
 

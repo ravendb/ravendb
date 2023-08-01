@@ -15,7 +15,7 @@ using Operation = Microsoft.AspNetCore.JsonPatch.Operations.Operation;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class JsonPatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    public sealed class JsonPatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly string _id;
         private readonly List<Command> _commands;
@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             };
         }
 
-        public class JsonPatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+        public sealed class JsonPatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
             public string Id;
             public List<Command> Commands;

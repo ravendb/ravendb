@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Indexing;
 
-public class LuceneCleaner : ILowMemoryHandler
+public sealed class LuceneCleaner : ILowMemoryHandler
 {
     private readonly AsyncReaderWriterLock _runningQueryLock = new();
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LuceneCleaner>("Memory");

@@ -9,7 +9,7 @@ namespace Raven.Server.Utils
     /// A reference that can be used with lambda expression
     /// to pass a value out.
     /// </summary>
-    public class Reference<T>
+    public sealed class Reference<T>
     {
         /// <summary>
         /// Gets or sets the value.

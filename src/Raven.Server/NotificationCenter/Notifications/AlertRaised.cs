@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
 {
-    public class AlertRaised : Notification
+    public sealed class AlertRaised : Notification
     {
         private AlertRaised(string database) : base(NotificationType.AlertRaised, database)
         {

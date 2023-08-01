@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedElasticSearchEtlHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedElasticSearchEtlHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/admin/etl/elasticsearch/test", "POST")]
     public async Task Test()

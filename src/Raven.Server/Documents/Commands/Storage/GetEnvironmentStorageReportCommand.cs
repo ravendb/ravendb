@@ -7,7 +7,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Commands.Storage;
 
-internal class GetEnvironmentStorageReportCommand : RavenCommand
+internal sealed class GetEnvironmentStorageReportCommand : RavenCommand
 {
     private readonly string _name;
     private readonly StorageEnvironmentWithType.StorageEnvironmentType _type;

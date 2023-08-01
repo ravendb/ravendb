@@ -6,7 +6,7 @@ using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
-    public class FastBitArrayScorer : Scorer
+    public sealed class FastBitArrayScorer : Scorer
     {
         private FastBitArray _docs;
         private readonly bool _disposeArray;

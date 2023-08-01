@@ -16,7 +16,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public class ClusterTransactionMergedCommand : TransactionMergedCommand
+public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
 {
     private readonly ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
     public readonly Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();

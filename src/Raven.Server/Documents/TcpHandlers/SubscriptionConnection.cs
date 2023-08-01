@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.TcpHandlers
         Error
     }
 
-    public class SubscriptionOperationScope
+    public sealed class SubscriptionOperationScope
     {
         public const string ConnectionPending = "ConnectionPending";
         public const string ConnectionActive = "ConnectionActive";
@@ -459,7 +459,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
     }
 
-    public class SubscriptionConnectionsDetails
+    public sealed class SubscriptionConnectionsDetails
     {
         public List<SubscriptionConnectionDetails> Results;
         public SubscriptionMode SubscriptionMode;
@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
     }
 
-    public class SubscriptionConnectionDetails
+    public sealed class SubscriptionConnectionDetails
     {
         public string ClientUri { get; set; }
         public string WorkerId { get; set; }

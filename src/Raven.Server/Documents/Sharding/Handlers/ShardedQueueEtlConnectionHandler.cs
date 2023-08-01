@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedQueueEtlConnectionHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedQueueEtlConnectionHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/etl/queue/kafka/test-connection", "POST")]
         public async Task GetTestKafkaConnectionResult()

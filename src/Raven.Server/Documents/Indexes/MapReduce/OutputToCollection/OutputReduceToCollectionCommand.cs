@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class OutputReduceToCollectionCommandBatcher : IDisposable
+    public sealed class OutputReduceToCollectionCommandBatcher : IDisposable
     {
         private static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public class OutputReduceToCollectionCommand : OutputReduceAbstractCommand
+    public sealed class OutputReduceToCollectionCommand : OutputReduceAbstractCommand
     {
         private const string MultipleOutputsForSameReduceKeyHashSeparator = "/";
 
@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             return GetOutputDocumentKey(reduceKeyHash) + MultipleOutputsForSameReduceKeyHashSeparator;
         }
 
-        public class OutputReduceToCollectionReferencesCommand
+        public sealed class OutputReduceToCollectionReferencesCommand
         {
             private readonly OutputReduceToCollectionCommand _parent;
             private readonly MapReduceIndex _index;
@@ -607,7 +607,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public class OutputReduceToCollectionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, OutputReduceToCollectionCommand>
+    public sealed class OutputReduceToCollectionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, OutputReduceToCollectionCommand>
     {
         public string OutputReduceToCollection;
         public long? ReduceOutputIndex;

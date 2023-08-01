@@ -23,7 +23,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
-    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase<OrchestratorIncludesCommandImpl>
+    public sealed class OrchestratedSubscriptionConnection : SubscriptionConnectionBase<OrchestratorIncludesCommandImpl>
     {
         private SubscriptionConnectionsStateOrchestrator _state;
         private readonly ShardedDatabaseContext _databaseContext;

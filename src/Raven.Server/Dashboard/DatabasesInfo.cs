@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
-    public class DatabasesInfo : AbstractDashboardNotification
+    public sealed class DatabasesInfo : AbstractDashboardNotification
     {
         public List<DatabaseInfoItem> Items { get; set; }
 
@@ -16,7 +16,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class DatabaseInfoItem : IDynamicJson
+    public sealed class DatabaseInfoItem : IDynamicJson
     {
         public string Database { get; set; }
 

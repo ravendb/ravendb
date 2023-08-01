@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Indexing
 {
-    public class IndexOutputFilesSummary
+    public sealed class IndexOutputFilesSummary
     {
         public long TotalWritten { get; private set; }
 

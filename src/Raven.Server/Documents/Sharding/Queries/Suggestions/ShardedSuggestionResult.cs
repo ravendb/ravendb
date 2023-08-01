@@ -4,11 +4,11 @@ using Raven.Server.Documents.Indexes.Persistence;
 
 namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
-internal class ShardedSuggestionResult : SuggestionResult
+internal sealed class ShardedSuggestionResult : SuggestionResult
 {
     public Popularity SuggestionsWithPopularity;
 
-    internal class Popularity
+    internal sealed class Popularity
     {
         public List<SuggestWord> Values;
     }

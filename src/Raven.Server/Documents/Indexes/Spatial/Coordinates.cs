@@ -3,7 +3,7 @@ using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {
-    public class Coordinates
+    public sealed class Coordinates
     {
         public readonly double Latitude;
         public readonly double Longitude;

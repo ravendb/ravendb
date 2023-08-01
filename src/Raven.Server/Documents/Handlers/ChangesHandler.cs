@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ChangesHandler : DatabaseRequestHandler
+    public sealed class ChangesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetChanges()

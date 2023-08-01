@@ -7,7 +7,7 @@ using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
-    public class CoraxHighlightingTermIndex
+    public sealed class CoraxHighlightingTermIndex
     {
         public static string[] DefaultPreTags = {
             "<b style=\"background:yellow\">", "<b style=\"background:lawngreen\">", "<b style=\"background:aquamarine\">",

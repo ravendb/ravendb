@@ -10,7 +10,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class DocumentReplicationItem : ReplicationBatchItem
+    public sealed class DocumentReplicationItem : ReplicationBatchItem
     {
         public BlittableJsonReaderObject Data;
         public LazyStringValue Collection;

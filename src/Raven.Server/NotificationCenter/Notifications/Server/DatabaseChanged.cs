@@ -2,7 +2,7 @@
 
 namespace Raven.Server.NotificationCenter.Notifications.Server
 {
-    public class DatabaseChanged : Notification
+    public sealed class DatabaseChanged : Notification
     {
         private DatabaseChanged(string database) : base(NotificationType.DatabaseChanged, database)
         {

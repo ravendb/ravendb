@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class SpatialFieldRewriter : CSharpSyntaxRewriter
+    public sealed class SpatialFieldRewriter : CSharpSyntaxRewriter
     {
         public static readonly SpatialFieldRewriter Instance = new SpatialFieldRewriter();
 

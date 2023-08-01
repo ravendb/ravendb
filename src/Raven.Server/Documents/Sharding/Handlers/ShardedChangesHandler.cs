@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedChangesHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedChangesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/changes", "GET")]
         public async Task GetChanges()

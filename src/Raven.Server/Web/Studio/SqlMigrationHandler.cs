@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
-    public class SqlMigrationHandler : DatabaseRequestHandler
+    public sealed class SqlMigrationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task SqlSchema()

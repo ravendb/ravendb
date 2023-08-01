@@ -23,7 +23,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedDatabaseRequestHandler, ShardStreamItem<Document>>
+public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedDatabaseRequestHandler, ShardStreamItem<Document>>
 {
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private IDisposable _releaseContext;

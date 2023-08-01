@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
                    select value;
         }
 
-        public class SubQueryResult
+        public sealed class SubQueryResult
         {
             public int LuceneId { get; set; }
             public string RavenDocId { get; set; }

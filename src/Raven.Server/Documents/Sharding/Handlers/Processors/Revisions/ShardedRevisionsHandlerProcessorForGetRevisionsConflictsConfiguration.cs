@@ -4,7 +4,7 @@ using Raven.Server.Documents.Handlers.Processors.Revisions;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<ShardedDatabaseRequestHandler>
+    internal sealed class ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<ShardedDatabaseRequestHandler>
     {
         public ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) 
             : base(requestHandler)

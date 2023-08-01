@@ -20,7 +20,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class ShardedAdminDatabaseHandler : ServerRequestHandler
+    public sealed class ShardedAdminDatabaseHandler : ServerRequestHandler
     {
         [RavenAction("/admin/databases/orchestrator", "PUT", AuthorizationStatus.Operator)]
         public async Task AddNodeToOrchestratorTopology()

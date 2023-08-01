@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler;
 
-internal class ShardedSmugglerHandlerProcessorForImportGet : AbstractSmugglerHandlerProcessorForImportGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedSmugglerHandlerProcessorForImportGet : AbstractSmugglerHandlerProcessorForImportGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedSmugglerHandlerProcessorForImportGet([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

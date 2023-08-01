@@ -5,7 +5,7 @@ using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class FtpRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public sealed class FtpRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
         private readonly RavenFtpClient _client;
 

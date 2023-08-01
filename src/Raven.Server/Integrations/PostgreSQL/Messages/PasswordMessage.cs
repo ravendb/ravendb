@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
-    public class PasswordMessage : Message
+    public sealed class PasswordMessage : Message
     {
         public string Password;
 

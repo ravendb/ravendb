@@ -20,7 +20,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString, EtlStatsScope, EtlPerformanceOperation>
+    public sealed class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly RavenEtlConfiguration _configuration;
         private readonly ServerStore _serverStore;

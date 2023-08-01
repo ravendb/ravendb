@@ -5,7 +5,7 @@ using Jint.Runtime.Interop;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintGuidConverter : IObjectConverter
+    public sealed class JintGuidConverter : IObjectConverter
     {
         public bool TryConvert(Engine engine, object value, out JsValue result)
         {

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public class From50000 : ISchemaUpdate
+    public sealed class From50000 : ISchemaUpdate
     {
         public int From => 50_000;
 

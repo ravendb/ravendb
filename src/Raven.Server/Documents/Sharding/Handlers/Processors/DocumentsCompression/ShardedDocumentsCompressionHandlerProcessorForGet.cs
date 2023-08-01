@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.DocumentsCompression
 {
-    internal class ShardedDocumentsCompressionHandlerProcessorForGet : AbstractDocumentsCompressionHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedDocumentsCompressionHandlerProcessorForGet : AbstractDocumentsCompressionHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedDocumentsCompressionHandlerProcessorForGet([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

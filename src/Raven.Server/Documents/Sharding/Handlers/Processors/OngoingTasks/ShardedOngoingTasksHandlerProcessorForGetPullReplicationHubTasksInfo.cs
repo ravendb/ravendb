@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

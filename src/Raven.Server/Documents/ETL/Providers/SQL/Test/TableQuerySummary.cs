@@ -7,13 +7,13 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Test
 {
-    public class TableQuerySummary
+    public sealed class TableQuerySummary
     {
         public string TableName { get; set; }
         public CommandData[] Commands { get; set; }
 
 
-        public class CommandData
+        public sealed class CommandData
         {
             public string CommandText { get; set; }
             public KeyValuePair<string, object>[] Params { get; set; }

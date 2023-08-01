@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
-    internal class ShardedAdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAdminIndexHandlerProcessorForDump([NotNull] ShardedDatabaseRequestHandler requestHandler)
             : base(requestHandler)

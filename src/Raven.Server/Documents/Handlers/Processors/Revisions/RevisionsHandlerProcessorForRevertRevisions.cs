@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal class RevisionsHandlerProcessorForRevertRevisions : AbstractRevisionsHandlerProcessorForRevertRevisions<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class RevisionsHandlerProcessorForRevertRevisions : AbstractRevisionsHandlerProcessorForRevertRevisions<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public RevisionsHandlerProcessorForRevertRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

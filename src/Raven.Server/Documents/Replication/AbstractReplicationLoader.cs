@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Replication
             return ForTestingPurposes = new TestingStuff();
         }
 
-        public class TestingStuff
+        public sealed class TestingStuff
         {
             public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
             public Action<Exception> OnIncomingReplicationHandlerFailure;

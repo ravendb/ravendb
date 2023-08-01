@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
-internal class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public EtlHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

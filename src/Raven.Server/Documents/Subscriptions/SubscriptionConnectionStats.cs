@@ -3,7 +3,7 @@ using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionMetrics : IDisposable
+    public sealed class SubscriptionConnectionMetrics : IDisposable
     {
         public SubscriptionConnectionMetrics()
         {

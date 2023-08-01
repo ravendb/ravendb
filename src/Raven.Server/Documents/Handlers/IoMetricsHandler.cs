@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class IoMetricsHandler : DatabaseRequestHandler
+    public sealed class IoMetricsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/io-metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Get()

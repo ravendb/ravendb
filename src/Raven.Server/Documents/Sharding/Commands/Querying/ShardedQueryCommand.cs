@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
-public class ShardedQueryCommand : AbstractQueryCommand<QueryResult, BlittableJsonReaderObject>
+public sealed class ShardedQueryCommand : AbstractQueryCommand<QueryResult, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _indexQuery;
     private readonly DocumentConventions _conventions;

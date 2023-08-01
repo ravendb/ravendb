@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Documents
 {
-    public class ConfigurationStorage : IDisposable
+    public sealed class ConfigurationStorage : IDisposable
     {
         private readonly DocumentDatabase _db;
         private const string ResourceName = nameof(ConfigurationStorage);

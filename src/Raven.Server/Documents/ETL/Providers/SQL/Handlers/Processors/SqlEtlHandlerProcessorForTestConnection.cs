@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers.Processors;
 
-internal class SqlEtlHandlerProcessorForTestConnection<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+internal sealed class SqlEtlHandlerProcessorForTestConnection<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
     public SqlEtlHandlerProcessorForTestConnection([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)

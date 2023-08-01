@@ -17,7 +17,7 @@ using DataColumn = Parquet.Data.DataColumn;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class ParquetTransformedItems : OlapTransformedItems
+    public sealed class ParquetTransformedItems : OlapTransformedItems
     {
         public const string DefaultIdColumn = "_id";
         public const string LastModifiedColumn = "_lastModifiedTime";

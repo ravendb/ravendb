@@ -6,7 +6,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Rachis.Json.Sync
 {
-    internal class RachisBlittableJsonTextWriter : BlittableJsonTextWriter
+    internal sealed class RachisBlittableJsonTextWriter : BlittableJsonTextWriter
     {
         private readonly Action _afterFlush;
 

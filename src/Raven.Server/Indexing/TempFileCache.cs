@@ -175,7 +175,7 @@ namespace Raven.Server.Indexing
         }
     }
 
-    public class TempFileStream : Stream
+    public sealed class TempFileStream : Stream
     {
         public FileStream InnerStream;
         private long _length;

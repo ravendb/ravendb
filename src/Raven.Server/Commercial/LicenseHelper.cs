@@ -19,7 +19,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseHelper
+    public sealed class LicenseHelper
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseHelper>("Server");
         public static readonly string LicenseStringConfigurationName = RavenConfiguration.GetKey(x => x.Licensing.License);

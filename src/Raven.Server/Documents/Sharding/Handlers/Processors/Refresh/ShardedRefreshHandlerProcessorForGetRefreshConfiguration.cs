@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Refresh;
 
-internal class ShardedRefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedRefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedRefreshHandlerProcessorForGetRefreshConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

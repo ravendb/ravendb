@@ -12,7 +12,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Analyzers
 {
-    public class AdminAnalyzersHandler : ServerRequestHandler
+    public sealed class AdminAnalyzersHandler : ServerRequestHandler
     {
         [RavenAction("/admin/analyzers", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()

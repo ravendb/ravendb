@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    public class DeleteServerWideSorterCommand : DeleteValueCommand
+    public sealed class DeleteServerWideSorterCommand : DeleteValueCommand
     {
         public DeleteServerWideSorterCommand()
         {

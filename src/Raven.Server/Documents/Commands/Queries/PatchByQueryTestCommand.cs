@@ -13,13 +13,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Commands.Queries;
 
-public class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestCommand.Response>
+public sealed class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestCommand.Response>
 {
     private readonly DocumentConventions _conventions;
     private readonly string _id;
     private readonly IndexQueryServerSide _query;
 
-    public class Response : PatchResult
+    public sealed class Response : PatchResult
     {
         public List<string> Output { get; set; }
 

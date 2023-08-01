@@ -8,7 +8,7 @@ using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
+    public sealed class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
     {
         private readonly DocumentDatabase _documentDatabase;
 

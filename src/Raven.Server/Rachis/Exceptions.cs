@@ -18,7 +18,7 @@ namespace Raven.Server.Rachis
         }
     }
 
-    public class RachisInvalidOperationException : RachisException
+    public sealed class RachisInvalidOperationException : RachisException
     {
         public RachisInvalidOperationException()
         {
@@ -39,7 +39,7 @@ namespace Raven.Server.Rachis
         }
     }
 
-    public class RachisTopologyChangeException : RachisException
+    public sealed class RachisTopologyChangeException : RachisException
     {
         protected RachisTopologyChangeException()
         {
@@ -60,7 +60,7 @@ namespace Raven.Server.Rachis
         }
     }
 
-    public class RachisConcurrencyException : RachisException
+    public sealed class RachisConcurrencyException : RachisException
     {
         public RachisConcurrencyException()
         {
@@ -81,7 +81,7 @@ namespace Raven.Server.Rachis
         }
     }
 
-    public class RachisApplyException : RachisException
+    public sealed class RachisApplyException : RachisException
     {
         public RachisApplyException()
         {

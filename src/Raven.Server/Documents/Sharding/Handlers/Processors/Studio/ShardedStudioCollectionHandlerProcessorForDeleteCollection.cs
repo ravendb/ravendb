@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
-    internal class ShardedStudioCollectionHandlerProcessorForDeleteCollection : AbstractStudioCollectionHandlerProcessorForDeleteCollection<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStudioCollectionHandlerProcessorForDeleteCollection : AbstractStudioCollectionHandlerProcessorForDeleteCollection<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStudioCollectionHandlerProcessorForDeleteCollection([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -13,7 +13,7 @@ using Sparrow;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Backup)]
-    public class BackupConfiguration : ConfigurationCategory
+    public sealed class BackupConfiguration : ConfigurationCategory
     {
         [Description("Local backups can only be created under this root path.")]
         [DefaultValue(null)]

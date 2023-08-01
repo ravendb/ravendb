@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class EtlTaskStats : IDynamicJson
+    public sealed class EtlTaskStats : IDynamicJson
     {
         public string TaskName { get; set; }
 

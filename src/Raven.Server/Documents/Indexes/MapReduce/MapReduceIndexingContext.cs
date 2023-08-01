@@ -9,7 +9,7 @@ using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public class MapReduceIndexingContext : IDisposable
+    public sealed class MapReduceIndexingContext : IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MapReduceResultsStore>("MapReduceIndexingContext");
 

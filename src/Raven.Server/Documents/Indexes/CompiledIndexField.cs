@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract object GetValue(object value, object blittableValue);
     }
 
-    public class SimpleField : CompiledIndexField
+    public sealed class SimpleField : CompiledIndexField
     {
         public SimpleField(string name)
             : base(name)
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class JsNestedField : NestedField
+    public sealed class JsNestedField : NestedField
     {
         public readonly string PropertyName;
 

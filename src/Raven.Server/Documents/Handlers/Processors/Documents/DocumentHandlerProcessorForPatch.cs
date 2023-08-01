@@ -14,7 +14,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForPatch : AbstractDocumentHandlerProcessorForPatch<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandlerProcessorForPatch<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForPatch([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

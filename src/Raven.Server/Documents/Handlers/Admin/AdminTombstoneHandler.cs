@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminTombstoneHandler : DatabaseRequestHandler
+    public sealed class AdminTombstoneHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/tombstones/cleanup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Cleanup()

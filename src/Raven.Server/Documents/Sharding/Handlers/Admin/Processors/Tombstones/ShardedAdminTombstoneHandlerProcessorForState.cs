@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Tombstones;
 
-internal class ShardedAdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAdminTombstoneHandlerProcessorForState([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -6,7 +6,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioCollectionsHandler : DatabaseRequestHandler
+    public sealed class StudioCollectionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PreviewCollection()

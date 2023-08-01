@@ -18,7 +18,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Studio;
 
-internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabases.StudioDatabasesInfo>
+internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabases.StudioDatabasesInfo>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
@@ -70,12 +70,12 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
         context.Write(writer, djv);
     }
 
-    internal class StudioDatabasesInfo
+    internal sealed class StudioDatabasesInfo
     {
         public List<StudioDatabaseInfo> Databases { get; set; }
     }
 
-    internal class StudioDatabaseInfo : IDynamicJson
+    internal sealed class StudioDatabaseInfo : IDynamicJson
     {
         private StudioDatabaseInfo()
         {
@@ -167,7 +167,7 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
             return result;
         }
 
-        public class ShardingInfo : IDynamicJson
+        public sealed class ShardingInfo : IDynamicJson
         {
             private ShardingInfo()
             {
@@ -226,7 +226,7 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
                 return result;
             }
 
-            public class OrchestratorInfo : IDynamicJson
+            public sealed class OrchestratorInfo : IDynamicJson
             {
                 public NodesTopology NodesTopology { get; set; }
 

@@ -16,7 +16,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class SubscriptionsHandler : DatabaseRequestHandler
+    public sealed class SubscriptionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Try()
@@ -147,14 +147,14 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class DocumentWithException : IDynamicJson
+    public sealed class DocumentWithException : IDynamicJson
     {
         public string Id { get; set; }
         public string ChangeVector { get; set; }
         public string Exception { get; set; }
         public object DocumentData { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {

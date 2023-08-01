@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Sorters
 {
-    public class SortersHandler : ServerRequestHandler
+    public sealed class SortersHandler : ServerRequestHandler
     {
         [RavenAction("/sorters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()

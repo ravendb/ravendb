@@ -23,7 +23,7 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
+    public sealed class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         internal const string IndexBulkAction = @"{""index"":{""_id"":null}}";
 

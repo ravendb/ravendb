@@ -10,7 +10,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForOpenFaultyIndex : AbstractIndexHandlerProcessorForOpenFaultyIndex<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForOpenFaultyIndex : AbstractIndexHandlerProcessorForOpenFaultyIndex<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForOpenFaultyIndex([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

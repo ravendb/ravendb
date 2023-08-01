@@ -10,7 +10,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Documents
 {
-    public class DatabaseInfoCache
+    public sealed class DatabaseInfoCache
     {
 
         protected readonly Logger Logger;

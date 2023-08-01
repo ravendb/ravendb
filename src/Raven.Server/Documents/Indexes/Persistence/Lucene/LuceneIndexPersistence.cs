@@ -32,7 +32,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class LuceneIndexPersistence : IndexPersistenceBase
+    public sealed class LuceneIndexPersistence : IndexPersistenceBase
     {
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
         internal IndexReader _lastReader;

@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
-    public class VaultNotFoundException : Exception
+    public sealed class VaultNotFoundException : Exception
     {
         public VaultNotFoundException()
         {

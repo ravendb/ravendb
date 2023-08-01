@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminIndexHandlerProcessorForStaticPut([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

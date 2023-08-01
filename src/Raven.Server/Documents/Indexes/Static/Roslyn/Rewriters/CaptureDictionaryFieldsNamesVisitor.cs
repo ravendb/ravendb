@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class CaptureDictionaryFieldsNamesVisitor : CSharpSyntaxRewriter
+    public sealed class CaptureDictionaryFieldsNamesVisitor : CSharpSyntaxRewriter
     {
         public const string SupportedGenericDictionaryType = "Dictionary<string, object>";
 

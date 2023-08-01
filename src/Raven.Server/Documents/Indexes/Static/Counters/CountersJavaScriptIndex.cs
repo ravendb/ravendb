@@ -4,7 +4,7 @@ using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class CountersJavaScriptIndex : AbstractCountersAndTimeSeriesJavaScriptIndex
+    public sealed class CountersJavaScriptIndex : AbstractCountersAndTimeSeriesJavaScriptIndex
     {
         private const string MapPrefix = "counters.";
 

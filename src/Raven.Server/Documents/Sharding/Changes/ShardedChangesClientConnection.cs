@@ -19,7 +19,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
-public class ShardedChangesClientConnection : AbstractChangesClientConnection<TransactionOperationContext>, IObserver<BlittableJsonReaderObject>
+public sealed class ShardedChangesClientConnection : AbstractChangesClientConnection<TransactionOperationContext>, IObserver<BlittableJsonReaderObject>
 {
     private readonly ConcurrentDictionary<string, IDisposable> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
 

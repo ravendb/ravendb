@@ -11,7 +11,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerCache : ILowMemoryHandler
+    public sealed class ScriptRunnerCache : ILowMemoryHandler
     {
         internal static string PolyfillJs;
 

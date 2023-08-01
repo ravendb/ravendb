@@ -11,7 +11,7 @@ using Raven.Server.Documents.Indexes.Errors;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseNumberOfFaultyIndexes : DatabaseScalarObjectBase<Integer32>
+    public sealed class DatabaseNumberOfFaultyIndexes : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseNumberOfFaultyIndexes(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.NumberOfFaultyIndexes, index)

@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetConflicts([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
-    public class IndexingSpeed : AbstractDashboardNotification
+    public sealed class IndexingSpeed : AbstractDashboardNotification
     {
         public List<IndexingSpeedItem> Items { get; set; }
 
@@ -15,7 +15,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class IndexingSpeedItem : IDynamicJson
+    public sealed class IndexingSpeedItem : IDynamicJson
     {
         public string Database { get; set; }
 

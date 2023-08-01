@@ -10,7 +10,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Subscriptions.Processor
 {
-    public class TestDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor, IEtagSettable
+    public sealed class TestDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor, IEtagSettable
     {
         private readonly SubscriptionConnection.ParsedSubscription _subscription;
         private readonly TimeSpan _timeLimit;
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         }
     }
 
-    public class TestRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor, IEtagSettable
+    public sealed class TestRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor, IEtagSettable
     {
         private readonly SubscriptionConnection.ParsedSubscription _subscription;
         private readonly TimeSpan _timeLimit;

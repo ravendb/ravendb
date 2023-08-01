@@ -675,7 +675,7 @@ namespace Raven.Server.Web
             }
         }
 
-        public class AllowedDbs
+        public sealed class AllowedDbs
         {
             public bool HasAccess { get; set; }
 

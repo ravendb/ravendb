@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding
             return ForTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             private readonly ShardedDatabaseContext _databaseContext;
 

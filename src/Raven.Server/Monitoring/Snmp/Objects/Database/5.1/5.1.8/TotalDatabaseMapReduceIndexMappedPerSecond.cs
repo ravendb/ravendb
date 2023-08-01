@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalDatabaseMapReduceIndexMappedPerSecond : DatabaseBase<Gauge32>
+    public sealed class TotalDatabaseMapReduceIndexMappedPerSecond : DatabaseBase<Gauge32>
     {
         public TotalDatabaseMapReduceIndexMappedPerSecond(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.TotalMapReduceIndexMappedPerSecond)

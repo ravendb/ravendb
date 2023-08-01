@@ -14,7 +14,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
-internal class DatabaseQueriesHandlerProcessorForPatchTest : AbstractQueriesHandlerProcessorForPatchTest<QueriesHandler, DocumentsOperationContext>
+internal sealed class DatabaseQueriesHandlerProcessorForPatchTest : AbstractQueriesHandlerProcessorForPatchTest<QueriesHandler, DocumentsOperationContext>
 {
     public DatabaseQueriesHandlerProcessorForPatchTest([NotNull] QueriesHandler requestHandler) : base(requestHandler, requestHandler.Database.QueryMetadataCache)
     {

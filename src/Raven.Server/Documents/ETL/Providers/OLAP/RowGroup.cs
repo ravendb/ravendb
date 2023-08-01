@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class RowGroup
+    public sealed class RowGroup
     {
         public RowGroup()
         {

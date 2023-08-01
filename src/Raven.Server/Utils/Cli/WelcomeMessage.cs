@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cli
 {
-    public class WelcomeMessage : ConsoleMessage
+    public sealed class WelcomeMessage : ConsoleMessage
     {
         public const string AsciiHeader = @"       _____                       _____  ____ {0}      |  __ \                     |  __ \|  _ \ {0}      | |__) |__ ___   _____ _ __ | |  | | |_) |{0}      |  _  // _` \ \ / / _ \ '_ \| |  | |  _ < {0}      | | \ \ (_| |\ V /  __/ | | | |__| | |_) |{0}      |_|  \_\__,_| \_/ \___|_| |_|_____/|____/ {0}{0}";
 
@@ -42,7 +42,7 @@ namespace Raven.Server.Utils.Cli
         }
     }
 
-    public class ClusterMessage : ConsoleMessage
+    public sealed class ClusterMessage : ConsoleMessage
     {
         private string _nodeTag;
         private string _clusterId;

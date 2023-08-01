@@ -16,7 +16,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         Failed = (byte)'E'
     }
 
-    public class PgTransaction : IDisposable
+    public sealed class PgTransaction : IDisposable
     {
         public TransactionState State { get; private set; } = TransactionState.Idle;
         public DocumentDatabase DocumentDatabase { get; }

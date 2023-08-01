@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
 {
-    public class License
+    public sealed class License
     {
         public Guid Id { get; set; }
 

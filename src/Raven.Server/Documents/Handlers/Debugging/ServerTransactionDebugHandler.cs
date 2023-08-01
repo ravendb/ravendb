@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ServerTransactionDebugHandler : ServerRequestHandler
+    public sealed class ServerTransactionDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/txinfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task TxInfo()

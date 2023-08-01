@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
-public class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionActionsBase<PutShardedSubscriptionCommand>
+public sealed class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionActionsBase<PutShardedSubscriptionCommand>
 {
     public ShardedDatabaseSubscriptionActions(ServerStore serverStore, string name) : base(serverStore, name)
     {

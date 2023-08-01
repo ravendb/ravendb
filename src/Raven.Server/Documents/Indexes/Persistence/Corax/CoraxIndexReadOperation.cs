@@ -1411,7 +1411,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        internal class GrowableHashSet<TItem>
+        internal sealed class GrowableHashSet<TItem>
         {
             private List<HashSet<TItem>> _hashSetsBucket;
             private HashSet<TItem> _newestHashSet;

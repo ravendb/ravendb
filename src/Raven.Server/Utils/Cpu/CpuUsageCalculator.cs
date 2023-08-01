@@ -20,7 +20,7 @@ namespace Raven.Server.Utils.Cpu
         void Init();
     }
 
-    public class CpuUsageStats
+    public sealed class CpuUsageStats
     {
         public static readonly CpuUsageStats EmptyCpuUsage = new(0.0, 0.0, (double?)null);
         public CpuUsageStats(double machineCpuUsage, double processCpuUsage, double? machineIoWait)
@@ -114,7 +114,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    internal class WindowsCpuUsageCalculator : CpuUsageCalculator<WindowsInfo>
+    internal sealed class WindowsCpuUsageCalculator : CpuUsageCalculator<WindowsInfo>
     {
         protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(WindowsInfo windowsInfo)
         {
@@ -173,7 +173,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    internal class LinuxCpuUsageCalculator : CpuUsageCalculator<LinuxInfo>
+    internal sealed class LinuxCpuUsageCalculator : CpuUsageCalculator<LinuxInfo>
     {
         private static readonly char[] Separators = { ' ', '\t' };
 
@@ -234,7 +234,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    internal class MacInfoCpuUsageCalculator : CpuUsageCalculator<MacInfo>
+    internal sealed class MacInfoCpuUsageCalculator : CpuUsageCalculator<MacInfo>
     {
         private static readonly unsafe int HostCpuLoadInfoSize = sizeof(host_cpu_load_info) / sizeof(uint);
 
@@ -275,7 +275,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    internal class ExtensionPointCpuUsageCalculator : ICpuUsageCalculator
+    internal sealed class ExtensionPointCpuUsageCalculator : ICpuUsageCalculator
     {
         private readonly CpuUsageExtensionPoint _inspector;
 

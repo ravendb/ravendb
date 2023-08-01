@@ -7,7 +7,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.TimeSeries
 {
-    public class TimeSeriesIncludesField
+    public sealed class TimeSeriesIncludesField
     {
         public TimeSeriesIncludesField()
         {

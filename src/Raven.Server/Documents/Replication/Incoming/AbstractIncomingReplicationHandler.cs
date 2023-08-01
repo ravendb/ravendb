@@ -668,7 +668,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        public class DataForReplicationCommand : IDisposable
+        public sealed class DataForReplicationCommand : IDisposable
         {
             internal string SourceDatabaseId { get; set; }
 

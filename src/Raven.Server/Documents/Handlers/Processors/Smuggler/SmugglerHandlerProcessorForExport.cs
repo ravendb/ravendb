@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 {
-    internal class SmugglerHandlerProcessorForExport : AbstractSmugglerHandlerProcessorForExport<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class SmugglerHandlerProcessorForExport : AbstractSmugglerHandlerProcessorForExport<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public SmugglerHandlerProcessorForExport([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

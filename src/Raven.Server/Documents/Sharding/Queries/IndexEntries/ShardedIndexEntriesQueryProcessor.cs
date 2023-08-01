@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Queries.IndexEntries;
 
-public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<ShardedIndexEntriesQueryResult>
+public sealed class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<ShardedIndexEntriesQueryResult>
 {
     public ShardedIndexEntriesQueryProcessor(
         TransactionOperationContext context,

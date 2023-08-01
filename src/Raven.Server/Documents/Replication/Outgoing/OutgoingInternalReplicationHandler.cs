@@ -14,7 +14,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public class OutgoingInternalReplicationHandler : DatabaseOutgoingReplicationHandler
+    public sealed class OutgoingInternalReplicationHandler : DatabaseOutgoingReplicationHandler
     {
         private long _lastDestinationEtag;
 
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
         }
 
-        internal class UpdateSiblingCurrentEtag : DocumentMergedTransactionCommand
+        internal sealed class UpdateSiblingCurrentEtag : DocumentMergedTransactionCommand
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
             private readonly AsyncManualResetEvent _trigger;
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        internal class UpdateSiblingCurrentEtagDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, UpdateSiblingCurrentEtag>
+        internal sealed class UpdateSiblingCurrentEtagDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, UpdateSiblingCurrentEtag>
         {
             public ReplicationMessageReply ReplicationBatchReply;
 

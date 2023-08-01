@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedSampleDataHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedSampleDataHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/studio/sample-data", "POST")]
         public async Task CreateSampleData()

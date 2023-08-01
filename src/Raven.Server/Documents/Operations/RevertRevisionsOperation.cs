@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
+    public sealed class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
     {
         private readonly RevertRevisionsRequest _request;
 
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Operations
             return new RevertRevisionsCommand(conventions, _request);
         }
 
-        public class RevertRevisionsCommand : RavenCommand<OperationIdResult>
+        public sealed class RevertRevisionsCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly RevertRevisionsRequest _request;

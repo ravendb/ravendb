@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ConflictManager
+    public sealed class ConflictManager
     {
         private readonly DocumentDatabase _database;
 

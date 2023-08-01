@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public class MetadataFieldCache
+        public sealed class MetadataFieldCache
         {
             public readonly LazyStringValue Id;
             public readonly LazyStringValue Key;

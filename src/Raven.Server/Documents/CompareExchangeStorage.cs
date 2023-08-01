@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents;
 
-public class CompareExchangeStorage : AbstractCompareExchangeStorage
+public sealed class CompareExchangeStorage : AbstractCompareExchangeStorage
 {
     public CompareExchangeStorage(DocumentDatabase database)
         : base(database.ServerStore)

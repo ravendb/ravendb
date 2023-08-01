@@ -9,7 +9,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions;
 
-internal class SubscriptionsHandlerProcessorForPerformanceLive : AbstractSubscriptionsHandlerProcessorForPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class SubscriptionsHandlerProcessorForPerformanceLive : AbstractSubscriptionsHandlerProcessorForPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public SubscriptionsHandlerProcessorForPerformanceLive([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    internal class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    internal sealed class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly ElasticSearchEtlConfiguration _config;
         private readonly Dictionary<string, ElasticSearchIndexWithRecords> _indexes;

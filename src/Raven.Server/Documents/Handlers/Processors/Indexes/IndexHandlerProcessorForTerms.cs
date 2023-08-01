@@ -14,7 +14,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
-    internal class IndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class IndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

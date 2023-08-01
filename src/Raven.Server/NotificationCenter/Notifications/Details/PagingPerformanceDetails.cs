@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    internal class PagingPerformanceDetails : INotificationDetails
+    internal sealed class PagingPerformanceDetails : INotificationDetails
     {
         public PagingPerformanceDetails()
         {
@@ -64,7 +64,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 actionDetails.Dequeue();
         }
 
-        internal class ActionDetails
+        internal sealed class ActionDetails
         {
             public string Details { get; set; }
             public long Duration { get; set; }

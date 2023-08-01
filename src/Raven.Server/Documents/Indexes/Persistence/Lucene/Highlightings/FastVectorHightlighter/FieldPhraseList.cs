@@ -27,7 +27,7 @@ namespace Lucene.Net.Search.Vectorhighlight
     /// FieldPhraseList has a list of WeightedPhraseInfo that is used by FragListBuilder
     /// to create a FieldFragList object.
     /// </summary>
-    public class FieldPhraseList
+    public sealed class FieldPhraseList
     {
         public LinkedList<WeightedPhraseInfo> phraseList = new LinkedList<WeightedPhraseInfo>();
         
@@ -116,7 +116,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             phraseList.AddLast(wpi);
         }
 
-        public class WeightedPhraseInfo
+        public sealed class WeightedPhraseInfo
         {
 
             internal String text;  // unnecessary member, just exists for debugging purpose
@@ -203,7 +203,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 return sb.ToString();
             }
 
-            public class Toffs
+            public sealed class Toffs
             {
                 internal int startOffset;
                 internal int endOffset;

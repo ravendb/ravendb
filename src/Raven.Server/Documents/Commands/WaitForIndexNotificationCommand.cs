@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands;
 
-internal class WaitForIndexNotificationCommand : RavenCommand
+internal sealed class WaitForIndexNotificationCommand : RavenCommand
 {
     private readonly List<long> _indexes;
 

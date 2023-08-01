@@ -55,7 +55,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public class AllocationInfo
+        public sealed class AllocationInfo
         {
             public string Type;
             public ulong Allocations;

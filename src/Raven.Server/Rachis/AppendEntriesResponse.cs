@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Rachis
 {
-    public class AppendEntriesResponse
+    public sealed class AppendEntriesResponse
     {
         public long LastLogIndex { get; set; }
 

@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ConnectionShutdownInfo
+    public sealed class ConnectionShutdownInfo
     {
         private readonly TimeSpan _initialTimeout = TimeSpan.FromMilliseconds(1000);
         private readonly int _retriesCount = 0;

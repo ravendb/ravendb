@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class InExpression : QueryExpression
+    public sealed class InExpression : QueryExpression
     {
         public bool All;
         public QueryExpression Source;

@@ -8,7 +8,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 
-public class DatabaseIndexReadOperationFactory : IIndexReadOperationFactory
+public sealed class DatabaseIndexReadOperationFactory : IIndexReadOperationFactory
 {
     public LuceneIndexReadOperation CreateLuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
         QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)

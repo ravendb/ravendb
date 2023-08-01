@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    internal class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
+    internal sealed class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public AutoMapIndexDefinition(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState, long? indexVersion = null)

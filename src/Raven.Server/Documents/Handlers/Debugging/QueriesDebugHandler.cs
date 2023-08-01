@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class QueriesDebugHandler : DatabaseRequestHandler
+    public sealed class QueriesDebugHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task KillQuery()

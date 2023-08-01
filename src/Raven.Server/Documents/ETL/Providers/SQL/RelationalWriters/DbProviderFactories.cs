@@ -7,7 +7,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
-    public class DbProviderFactories
+    public sealed class DbProviderFactories
     {
         public static DbProviderFactory GetFactory(string factoryName)
         {

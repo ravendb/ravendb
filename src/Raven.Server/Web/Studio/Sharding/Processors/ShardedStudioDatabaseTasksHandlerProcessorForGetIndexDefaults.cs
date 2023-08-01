@@ -6,7 +6,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal class ShardedStudioDatabaseTasksHandlerProcessorForGetIndexDefaults : AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStudioDatabaseTasksHandlerProcessorForGetIndexDefaults : AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStudioDatabaseTasksHandlerProcessorForGetIndexDefaults([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)

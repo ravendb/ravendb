@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
 {
-    public class DeleteServerWideAnalyzerCommand : DeleteValueCommand
+    public sealed class DeleteServerWideAnalyzerCommand : DeleteValueCommand
     {
         public DeleteServerWideAnalyzerCommand()
         {

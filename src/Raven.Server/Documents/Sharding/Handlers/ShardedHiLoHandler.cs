@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedHiLoHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedHiLoHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/hilo/next", "GET")]
         public async Task GetNextHiLo()

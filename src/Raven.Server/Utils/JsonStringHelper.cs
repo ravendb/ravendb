@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Raven.Server.Utils;
 
-public class JsonStringHelper
+public sealed class JsonStringHelper
 {
     public static string Indent(string json)
     {

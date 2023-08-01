@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal class TimeSeriesHandlerProcessorForGetDebugSegmentsSummary : AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class TimeSeriesHandlerProcessorForGetDebugSegmentsSummary : AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public TimeSeriesHandlerProcessorForGetDebugSegmentsSummary([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

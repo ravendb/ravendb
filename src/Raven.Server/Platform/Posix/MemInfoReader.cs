@@ -69,7 +69,7 @@ namespace Raven.Server.Platform.Posix
         }
     }
 
-    public class MemInfo
+    public sealed class MemInfo
     {
         public static readonly Dictionary<string, PropertyInfo> AllProperties = new Dictionary<string, PropertyInfo>();
 

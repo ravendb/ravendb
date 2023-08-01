@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Server.Config
 {
-    public class ConfigurationEnumValueException : Exception
+    public sealed class ConfigurationEnumValueException : Exception
     {
         private Type _enumType;
 

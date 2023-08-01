@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DeleteServerWideTaskCommand : UpdateValueCommand<DeleteServerWideTaskCommand.DeleteConfiguration>
+    public sealed class DeleteServerWideTaskCommand : UpdateValueCommand<DeleteServerWideTaskCommand.DeleteConfiguration>
     {
         protected DeleteServerWideTaskCommand()
         {
@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide.Commands
             AssertClusterAdmin(isClusterAdmin);
         }
 
-        public class DeleteConfiguration : IDynamicJson
+        public sealed class DeleteConfiguration : IDynamicJson
         {
             public OngoingTaskType Type { get; set; }
 

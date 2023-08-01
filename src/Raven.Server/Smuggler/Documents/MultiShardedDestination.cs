@@ -22,7 +22,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class MultiShardedDestination : ISmugglerDestination
+    public sealed class MultiShardedDestination : ISmugglerDestination
     {
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly ShardedDatabaseRequestHandler _handler;
@@ -86,7 +86,7 @@ namespace Raven.Server.Smuggler.Documents
             _destinations[shardNumber] = destination;
         }
 
-        internal class StreamDestinationHolder : IAsyncDisposable
+        internal sealed class StreamDestinationHolder : IAsyncDisposable
         {
             public Stream InputStream;
             public StreamExposerContent OutStream;

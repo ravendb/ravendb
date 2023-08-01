@@ -6,7 +6,7 @@ namespace Raven.Server.Web.ResponseCompression
     /// <summary>
     /// Options for the DeflateCompressionProvider
     /// </summary>
-    public class DeflateCompressionProviderOptions : IOptions<DeflateCompressionProviderOptions>
+    public sealed class DeflateCompressionProviderOptions : IOptions<DeflateCompressionProviderOptions>
     {
         /// <summary>
         /// What level of compression to use for the stream. The default is Fastest.

@@ -126,7 +126,7 @@ namespace Raven.Server.Web.Studio
             return null;
         }
     }
-    public class FolderPathOptions
+    public sealed class FolderPathOptions
     {
         public SortedSet<string> List { get; } = new SortedSet<string>();
     }

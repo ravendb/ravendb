@@ -4,7 +4,7 @@ using Voron.Impl.Scratch;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class GlobalIndexingScratchSpaceMonitor : IScratchSpaceMonitor
+    public sealed class GlobalIndexingScratchSpaceMonitor : IScratchSpaceMonitor
     {
         public GlobalIndexingScratchSpaceMonitor(Size indexingGlobalScratchSpaceLimit)
         {

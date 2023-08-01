@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
 {
-    internal class StreamingHandlerProcessorForGetStreamQuery : AbstractStreamingHandlerProcessorForGetStreamQuery<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class StreamingHandlerProcessorForGetStreamQuery : AbstractStreamingHandlerProcessorForGetStreamQuery<DatabaseRequestHandler, DocumentsOperationContext>
     {
         protected QueryOperationContext _queryContext;
 

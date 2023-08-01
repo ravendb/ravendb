@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal class AttachmentHandlerProcessorForPutAttachment : AbstractAttachmentHandlerProcessorForPutAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AttachmentHandlerProcessorForPutAttachment : AbstractAttachmentHandlerProcessorForPutAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForPutAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

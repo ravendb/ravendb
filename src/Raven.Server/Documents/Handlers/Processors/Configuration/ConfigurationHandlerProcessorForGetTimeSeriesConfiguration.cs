@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration;
 
-internal class ConfigurationHandlerProcessorForGetTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class ConfigurationHandlerProcessorForGetTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public ConfigurationHandlerProcessorForGetTimeSeriesConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

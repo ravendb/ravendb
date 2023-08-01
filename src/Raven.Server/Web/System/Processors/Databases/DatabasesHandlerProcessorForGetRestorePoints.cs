@@ -17,7 +17,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.Databases;
 
-internal class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHandlerProxyReadProcessor<RestorePoints>
+internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHandlerProxyReadProcessor<RestorePoints>
 {
     public DatabasesHandlerProcessorForGetRestorePoints([NotNull] RequestHandler requestHandler)
         : base(requestHandler)

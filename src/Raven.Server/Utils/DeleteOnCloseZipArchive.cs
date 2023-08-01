@@ -3,7 +3,7 @@ using System.IO.Compression;
 
 namespace Raven.Server.Utils
 {
-    public class DeleteOnCloseZipArchive : ZipArchive
+    public sealed class DeleteOnCloseZipArchive : ZipArchive
     {
         private readonly string _filePath;
 

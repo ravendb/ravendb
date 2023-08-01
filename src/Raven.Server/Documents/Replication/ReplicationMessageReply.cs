@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationMessageReply
+    public sealed class ReplicationMessageReply
     {
         public enum ReplyType
         {

@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 
-internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : IndexWriteOperationBase
+internal sealed class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : IndexWriteOperationBase
 {
     private readonly TWriter _writer;
     private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;

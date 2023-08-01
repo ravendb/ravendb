@@ -12,7 +12,7 @@ using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Smuggler;
 
-public class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
+public sealed class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
 {
     private readonly DocumentDatabase _database;
 

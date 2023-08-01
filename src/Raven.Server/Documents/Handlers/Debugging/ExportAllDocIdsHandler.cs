@@ -9,7 +9,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class AllDocumentIdsDebugHandler : DatabaseRequestHandler
+    public sealed class AllDocumentIdsDebugHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/documents/export-all-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ExportAllDocIds()

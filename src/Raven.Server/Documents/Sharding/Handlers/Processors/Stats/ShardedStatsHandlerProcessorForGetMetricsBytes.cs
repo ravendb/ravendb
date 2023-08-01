@@ -8,7 +8,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 {
-    internal class ShardedStatsHandlerProcessorForGetMetricsBytes : AbstractStatsHandlerProcessorForGetMetricsBytes<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStatsHandlerProcessorForGetMetricsBytes : AbstractStatsHandlerProcessorForGetMetricsBytes<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStatsHandlerProcessorForGetMetricsBytes([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

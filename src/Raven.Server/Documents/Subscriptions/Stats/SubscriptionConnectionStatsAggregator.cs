@@ -10,7 +10,7 @@ using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
-    public class SubscriptionConnectionStatsAggregator : StatsAggregator<SubscriptionConnectionRunStats, SubscriptionConnectionStatsScope>
+    public sealed class SubscriptionConnectionStatsAggregator : StatsAggregator<SubscriptionConnectionRunStats, SubscriptionConnectionStatsScope>
     {
         private volatile SubscriptionConnectionPerformanceStats _connectionPerformanceStats;
         

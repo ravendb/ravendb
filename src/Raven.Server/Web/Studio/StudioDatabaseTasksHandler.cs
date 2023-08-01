@@ -5,7 +5,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioDatabaseTasksHandler : DatabaseRequestHandler
+    public sealed class StudioDatabaseTasksHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetFolderPathOptionsForDatabaseAdmin()

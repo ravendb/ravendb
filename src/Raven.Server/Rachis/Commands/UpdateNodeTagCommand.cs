@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Rachis.Commands;
 
-public class UpdateNodeTagCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class UpdateNodeTagCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
     private readonly string _tag;

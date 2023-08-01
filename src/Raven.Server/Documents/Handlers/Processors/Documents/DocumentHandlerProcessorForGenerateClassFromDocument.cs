@@ -9,7 +9,7 @@ using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForGenerateClassFromDocument : AbstractDocumentHandlerProcessorForGenerateClassFromDocument<DocumentHandler, DocumentsOperationContext>
+internal sealed class DocumentHandlerProcessorForGenerateClassFromDocument : AbstractDocumentHandlerProcessorForGenerateClassFromDocument<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForGenerateClassFromDocument([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {

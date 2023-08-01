@@ -230,7 +230,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         };
     }
 
-    internal class BulkOperationCommand<T> : DocumentMergedTransactionCommand where T : DocumentMergedTransactionCommand
+    internal sealed class BulkOperationCommand<T> : DocumentMergedTransactionCommand where T : DocumentMergedTransactionCommand
     {
         private readonly T _command;
         private readonly bool _retrieveDetails;

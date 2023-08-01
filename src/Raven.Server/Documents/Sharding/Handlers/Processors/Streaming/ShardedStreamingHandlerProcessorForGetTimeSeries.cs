@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 {
-    internal class ShardedStreamingHandlerProcessorForGetTimeSeries : AbstractStreamingHandlerProcessorForGetTimeSeries<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStreamingHandlerProcessorForGetTimeSeries : AbstractStreamingHandlerProcessorForGetTimeSeries<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStreamingHandlerProcessorForGetTimeSeries([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

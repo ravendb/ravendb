@@ -1609,7 +1609,7 @@ namespace Raven.Server.Documents.Revisions
             list.Add(revision);
         }
 
-        internal class RevertDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class RevertDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly List<Document> _list;
             private readonly CancellationToken _token;
@@ -1685,7 +1685,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        internal class RevertDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevertDocumentsCommand>
+        internal sealed class RevertDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevertDocumentsCommand>
         {
             public readonly List<Document> List;
 

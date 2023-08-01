@@ -6,7 +6,7 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Tcp;
 
-internal class ShardedTcpManagementHandlerProcessorForGetAll : AbstractTcpManagementHandlerProcessorForGetAll<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedTcpManagementHandlerProcessorForGetAll : AbstractTcpManagementHandlerProcessorForGetAll<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedTcpManagementHandlerProcessorForGetAll([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

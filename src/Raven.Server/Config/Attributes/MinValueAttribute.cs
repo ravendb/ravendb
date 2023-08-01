@@ -9,7 +9,7 @@ using System;
 namespace Raven.Server.Config.Attributes
 {
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-    public class MinValueAttribute : Attribute
+    public sealed class MinValueAttribute : Attribute
     {
         public int Int32Value { get; set; }
 

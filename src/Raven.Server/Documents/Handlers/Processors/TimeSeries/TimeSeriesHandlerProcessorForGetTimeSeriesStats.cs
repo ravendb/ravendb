@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal class TimeSeriesHandlerProcessorForGetTimeSeriesStats : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesStats<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class TimeSeriesHandlerProcessorForGetTimeSeriesStats : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesStats<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public TimeSeriesHandlerProcessorForGetTimeSeriesStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

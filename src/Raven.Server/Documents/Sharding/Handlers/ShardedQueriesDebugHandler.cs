@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedQueriesDebugHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedQueriesDebugHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/debug/queries/kill", "POST")]
     public async Task KillQuery()

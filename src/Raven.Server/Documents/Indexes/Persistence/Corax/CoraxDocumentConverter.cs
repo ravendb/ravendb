@@ -10,7 +10,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class CoraxDocumentConverter : CoraxDocumentConverterBase
+public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
 {
     public CoraxDocumentConverter(
         Index index,

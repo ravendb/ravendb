@@ -9,14 +9,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.DocumentsCompression
 {
-    public class GetDocumentsCompressionConfigurationOperation : IMaintenanceOperation<DocumentsCompressionConfiguration>
+    public sealed class GetDocumentsCompressionConfigurationOperation : IMaintenanceOperation<DocumentsCompressionConfiguration>
     {
         public RavenCommand<DocumentsCompressionConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetDocumentsCompressionConfigurationCommand();
         }
 
-        internal class GetDocumentsCompressionConfigurationCommand : RavenCommand<DocumentsCompressionConfiguration>
+        internal sealed class GetDocumentsCompressionConfigurationCommand : RavenCommand<DocumentsCompressionConfiguration>
         {
             public override bool IsReadRequest => true;
 

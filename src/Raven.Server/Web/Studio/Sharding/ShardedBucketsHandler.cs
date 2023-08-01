@@ -5,7 +5,7 @@ using Raven.Server.Web.Studio.Sharding.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding
 {
-    public class ShardedBucketsHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedBucketsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/sharding/buckets", "GET")]
         public async Task GetBuckets()

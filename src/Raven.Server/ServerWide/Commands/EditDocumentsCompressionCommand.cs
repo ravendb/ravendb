@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditDocumentsCompressionCommand : UpdateDatabaseCommand
+    public sealed class EditDocumentsCompressionCommand : UpdateDatabaseCommand
     {
         public DocumentsCompressionConfiguration Configuration;
         

@@ -15,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Queries
 {
-    internal class ShardedQueryStreamProcessor : AbstractShardedQueryProcessor<PostQueryStreamCommand, StreamResult, ShardedStreamQueryResult>
+    internal sealed class ShardedQueryStreamProcessor : AbstractShardedQueryProcessor<PostQueryStreamCommand, StreamResult, ShardedStreamQueryResult>
     {
         private readonly string _debug;
         private readonly bool _ignoreLimit;

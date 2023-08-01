@@ -8,7 +8,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class MigratorOptions
+    public sealed class MigratorOptions
     {
         public string MigrationStateKey { get; set; }
 
@@ -33,7 +33,7 @@ namespace Raven.Server.Smuggler.Migration
         public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
     }
 
-    public class MigratorParameters
+    public sealed class MigratorParameters
     {
         public RavenHttpClient HttpClient { get; set; }
 

@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetOutgoingFailureStats : AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetOutgoingFailureStats : AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetOutgoingFailureStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

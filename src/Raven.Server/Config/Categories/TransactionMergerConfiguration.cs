@@ -8,7 +8,7 @@ using Sparrow.Platform;
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.TransactionMerger)]
-    public class TransactionMergerConfiguration : ConfigurationCategory
+    public sealed class TransactionMergerConfiguration : ConfigurationCategory
     {
         public TransactionMergerConfiguration(bool forceUsing32BitsPager)
         {

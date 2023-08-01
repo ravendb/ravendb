@@ -4,7 +4,7 @@ using Raven.Client.Util;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class EtlPerformanceStats
+    public sealed class EtlPerformanceStats
     {
         public EtlPerformanceStats(TimeSpan duration)
         {

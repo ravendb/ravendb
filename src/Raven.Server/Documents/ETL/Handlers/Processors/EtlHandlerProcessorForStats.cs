@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
-internal class EtlHandlerProcessorForStats : AbstractEtlHandlerProcessorForStats<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class EtlHandlerProcessorForStats : AbstractEtlHandlerProcessorForStats<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public EtlHandlerProcessorForStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

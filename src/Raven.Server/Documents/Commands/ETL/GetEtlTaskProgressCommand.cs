@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
-internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
+internal sealed class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
 {
     private readonly string[] _names;
 
@@ -43,7 +43,7 @@ internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
         Result = JsonDeserializationServer.EtlTaskProgressResponse(response).Results;
     }
 
-    internal class EtlTaskProgressResponse
+    internal sealed class EtlTaskProgressResponse
     {
         public EtlTaskProgress[] Results { get; set; }
     }

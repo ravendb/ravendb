@@ -7,7 +7,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class AdminJsConsole
+    public sealed class AdminJsConsole
     {
         private readonly DocumentDatabase _database;
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("Server");
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class AdminJsScript
+    public sealed class AdminJsScript
     {
         public string Script;
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Patch
 
         }
     }
-    public class AdminJsScriptKey : ScriptRunnerCache.Key
+    public sealed class AdminJsScriptKey : ScriptRunnerCache.Key
     {
         private readonly string _script;
 

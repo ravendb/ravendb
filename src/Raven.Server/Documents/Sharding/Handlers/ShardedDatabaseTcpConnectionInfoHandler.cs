@@ -5,7 +5,7 @@ using Raven.Server.Web.System.Processors.Tcp;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedDatabaseTcpConnectionInfoHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedDatabaseTcpConnectionInfoHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/info/tcp", "GET")]
     public async Task Get()

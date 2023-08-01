@@ -6,7 +6,7 @@ using Raven.Server.Web.Operations.Processors;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Operations;
 
-internal class ShardedOperationsHandlerProcessorForKill : AbstractOperationsHandlerProcessorForKill<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedOperationsHandlerProcessorForKill : AbstractOperationsHandlerProcessorForKill<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedOperationsHandlerProcessorForKill([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

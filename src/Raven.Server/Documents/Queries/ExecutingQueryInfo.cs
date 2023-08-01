@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class ExecutingQueryInfo
+    public sealed class ExecutingQueryInfo
     {
         public DateTime StartTime { get; }
 

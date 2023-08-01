@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
-    internal class ShardedStudioCollectionFieldsHandlerProcessorForGetCollectionFields : AbstractStudioCollectionFieldsHandlerProcessorForGetCollectionFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedStudioCollectionFieldsHandlerProcessorForGetCollectionFields : AbstractStudioCollectionFieldsHandlerProcessorForGetCollectionFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStudioCollectionFieldsHandlerProcessorForGetCollectionFields([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

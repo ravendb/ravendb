@@ -11,7 +11,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateClusterIdentityCommand : UpdateValueForDatabaseCommand
+    public sealed class UpdateClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
         public Dictionary<string, long> Identities { get; set; }
 

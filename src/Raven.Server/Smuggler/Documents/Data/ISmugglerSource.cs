@@ -72,7 +72,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         Import
     }
 
-    public class SmugglerInitializeResult : IDisposable
+    public sealed class SmugglerInitializeResult : IDisposable
     {
         private readonly IDisposable _disposable;
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         }
     }
 
-    public class IndexDefinitionAndType
+    public sealed class IndexDefinitionAndType
     {
         public object IndexDefinition;
 

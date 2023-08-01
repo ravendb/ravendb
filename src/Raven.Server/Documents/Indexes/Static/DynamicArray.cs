@@ -866,7 +866,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _inner?.GetHashCode() ?? 0;
         }
 
-        public class DynamicGrouping : DynamicArray, IGrouping<object, object>
+        public sealed class DynamicGrouping : DynamicArray, IGrouping<object, object>
         {
             private readonly IGrouping<dynamic, dynamic> _grouping;
 

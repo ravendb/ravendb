@@ -23,7 +23,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminIndexHandler : DatabaseRequestHandler
+    public sealed class AdminIndexHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await processor.ExecuteAsync();
         }
 
-        public class DumpIndexResult : IOperationResult
+        public sealed class DumpIndexResult : IOperationResult
         {
             public string Message { get; set; }
 
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        public class DumpIndexProgress : IOperationProgress
+        public sealed class DumpIndexProgress : IOperationProgress
         {
             public int ProcessedFiles { get; set; }
             public int TotalFiles { get; set; }
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             public long CurrentFileSizeInBytes { get; internal set; }
             public long CurrentFileCopiedBytes { get; internal set; }
 
-            public virtual DynamicJsonValue ToJson()
+            public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue(GetType())
                 {

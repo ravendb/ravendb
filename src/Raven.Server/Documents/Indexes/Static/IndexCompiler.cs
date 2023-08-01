@@ -985,7 +985,7 @@ namespace Raven.Server.Documents.Indexes.Static
             public string Code { get; set; }
         }
 
-        public class IndexMethods
+        public sealed class IndexMethods
         {
             public bool HasLoadDocument { get; set; }
 

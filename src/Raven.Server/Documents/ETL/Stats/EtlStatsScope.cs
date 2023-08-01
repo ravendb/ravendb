@@ -11,7 +11,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class OlapEtlStatsScope : AbstractEtlStatsScope<OlapEtlStatsScope, OlapEtlPerformanceOperation>
+    public sealed class OlapEtlStatsScope : AbstractEtlStatsScope<OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
         public OlapEtlStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
         {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.ETL.Stats
         }
     }
 
-    public class EtlStatsScope : AbstractEtlStatsScope<EtlStatsScope, EtlPerformanceOperation>
+    public sealed class EtlStatsScope : AbstractEtlStatsScope<EtlStatsScope, EtlPerformanceOperation>
     {
         public EtlStatsScope(EtlRunStats stats, bool start = true)
             : base(stats, start)

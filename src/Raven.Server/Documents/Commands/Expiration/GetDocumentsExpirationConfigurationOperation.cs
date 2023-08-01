@@ -8,14 +8,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Expiration
 {
-    internal class GetDocumentsExpirationConfigurationOperation : IMaintenanceOperation<ExpirationConfiguration>
+    internal sealed class GetDocumentsExpirationConfigurationOperation : IMaintenanceOperation<ExpirationConfiguration>
     {
         public RavenCommand<ExpirationConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetDocumentsExpirationConfigurationCommand();
         }
 
-        internal class GetDocumentsExpirationConfigurationCommand : RavenCommand<ExpirationConfiguration>
+        internal sealed class GetDocumentsExpirationConfigurationCommand : RavenCommand<ExpirationConfiguration>
         {
             public override bool IsReadRequest => true;
 

@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedIdentityHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedIdentityHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/identity/next", "POST")]
         public async Task NextIdentityFor()

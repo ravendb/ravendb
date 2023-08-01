@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamBlittableDocumentQueryResultWriter : AbstractDocumentStreamQueryResultWriter<BlittableJsonReaderObject>
+    public sealed class StreamBlittableDocumentQueryResultWriter : AbstractDocumentStreamQueryResultWriter<BlittableJsonReaderObject>
     {
         private bool _first = true;
 

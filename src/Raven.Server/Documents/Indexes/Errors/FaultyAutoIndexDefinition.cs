@@ -7,7 +7,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    internal class FaultyAutoIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
+    internal sealed class FaultyAutoIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
     {
         public readonly AutoIndexDefinitionBaseServerSide Definition;
 

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Patch
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)
     /// </summary>
-    public class PatchRequest : ScriptRunnerCache.Key
+    public sealed class PatchRequest : ScriptRunnerCache.Key
     {
         /// <summary>
         /// JavaScript function to use to patch a document
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Patch
             runner.AddScript(GenerateRootScript());
         }
 
-        protected virtual string GenerateRootScript()
+        protected string GenerateRootScript()
         {
             switch (Type)
             {

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Streaming;
 
-public class StreamResultsWriter : IStreamResultsWriter<Document>
+public sealed class StreamResultsWriter : IStreamResultsWriter<Document>
 {
     private readonly AsyncBlittableJsonTextWriter _writer;
     private readonly JsonOperationContext _context;

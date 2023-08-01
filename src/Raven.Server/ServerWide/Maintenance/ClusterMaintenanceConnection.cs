@@ -4,7 +4,7 @@ using Raven.Client.ServerWide.Tcp;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    public class ClusterMaintenanceConnection
+    public sealed class ClusterMaintenanceConnection
     {
         public Stream Stream { get; set; }
         public TcpClient TcpClient { get; set; }

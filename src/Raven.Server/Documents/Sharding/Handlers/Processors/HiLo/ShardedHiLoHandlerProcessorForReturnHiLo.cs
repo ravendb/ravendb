@@ -11,7 +11,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.HiLo;
 
-internal class ShardedHiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorForReturnHiLo<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedHiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorForReturnHiLo<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedHiLoHandlerProcessorForReturnHiLo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutRavenConnectionStringCommand : PutConnectionStringCommand<RavenConnectionString>
+    public sealed class PutRavenConnectionStringCommand : PutConnectionStringCommand<RavenConnectionString>
     {
         protected PutRavenConnectionStringCommand()
         {
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutSqlConnectionStringCommand : PutConnectionStringCommand<SqlConnectionString>
+    public sealed class PutSqlConnectionStringCommand : PutConnectionStringCommand<SqlConnectionString>
     {
         protected PutSqlConnectionStringCommand()
         {
@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutOlapConnectionStringCommand : PutConnectionStringCommand<OlapConnectionString>
+    public sealed class PutOlapConnectionStringCommand : PutConnectionStringCommand<OlapConnectionString>
     {
         protected PutOlapConnectionStringCommand()
         {
@@ -92,7 +92,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutElasticSearchConnectionStringCommand : PutConnectionStringCommand<ElasticSearchConnectionString>
+    public sealed class PutElasticSearchConnectionStringCommand : PutConnectionStringCommand<ElasticSearchConnectionString>
     {
         protected PutElasticSearchConnectionStringCommand()
         {
@@ -110,7 +110,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutQueueConnectionStringCommand : PutConnectionStringCommand<QueueConnectionString>
+    public sealed class PutQueueConnectionStringCommand : PutConnectionStringCommand<QueueConnectionString>
     {
         protected PutQueueConnectionStringCommand()
         {

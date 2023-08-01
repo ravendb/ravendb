@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers;
 
-public class ShardedSortersHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedSortersHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/sorters", "GET")]
     public async Task Get()

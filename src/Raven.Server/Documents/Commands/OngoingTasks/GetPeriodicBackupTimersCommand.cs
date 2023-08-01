@@ -9,9 +9,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Commands.OngoingTasks;
 
-internal class GetPeriodicBackupTimersCommand : RavenCommand<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>
+internal sealed class GetPeriodicBackupTimersCommand : RavenCommand<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>
 {
-    public class PeriodicBackupTimersResponse
+    public sealed class PeriodicBackupTimersResponse
     {
         public List<PeriodicBackupInfo> Timers { get; set; } = new();
 

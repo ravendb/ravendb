@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Integrations.PostgreSQL.Exceptions
 {
-    public class PgErrorException : Exception
+    public sealed class PgErrorException : Exception
     {
         public string ErrorCode;
 

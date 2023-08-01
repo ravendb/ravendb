@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerResult : IDisposable
+    public sealed class ScriptRunnerResult : IDisposable
     {
         private readonly ScriptRunner.SingleRun _parent;
 

@@ -22,7 +22,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public class TimeSeriesRollups
+    public sealed class TimeSeriesRollups
     {
         private readonly DocumentDatabase _database;
         private static readonly TableSchema RollupSchema;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector
         }
 
-        internal class RollupState
+        internal sealed class RollupState
         {
             public Slice Key;
             public string DocId;
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.TimeSeries
             name = Encoding.UTF8.GetString(bytes.Slice(index, bytes.Length - index));
         }
 
-        internal class TimeSeriesRetentionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class TimeSeriesRetentionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public const int BatchSize = 1024;
 
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return new TimeSeriesRetentionCommandDto(_keys, _collection, _to);
             }
 
-            public class TimeSeriesRetentionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, TimeSeriesRetentionCommand>
+            public sealed class TimeSeriesRetentionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, TimeSeriesRetentionCommand>
             {
                 public List<Slice> _keys;
                 public string _collection;
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal class AddedNewRollupPoliciesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class AddedNewRollupPoliciesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public const int BatchSize = 1024;
             private readonly CollectionName _collection;
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return new AddedNewRollupPoliciesCommandDto(_collection, _from, _to, _skip);
             }
 
-            public class AddedNewRollupPoliciesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AddedNewRollupPoliciesCommand>
+            public sealed class AddedNewRollupPoliciesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AddedNewRollupPoliciesCommand>
             {
                 public CollectionName _name;
                 public TimeSeriesPolicy _from;
@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.TimeSeries
             table.DeleteByPrimaryKeyPrefix(prefix);
         }
 
-        internal class RollupTimeSeriesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class RollupTimeSeriesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly TimeSeriesConfiguration _configuration;
             private readonly DateTime _now;
@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return new RollupTimeSeriesCommandDto(_configuration, _now, _states, _isFirstInTopology);
             }
 
-            public class RollupTimeSeriesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RollupTimeSeriesCommand>
+            public sealed class RollupTimeSeriesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RollupTimeSeriesCommand>
             {
                 public TimeSeriesConfiguration _configuration;
                 public DateTime _now;
@@ -979,7 +979,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public class RollupExceedNumberOfValuesException : Exception
+        public sealed class RollupExceedNumberOfValuesException : Exception
         {
             public RollupExceedNumberOfValuesException()
             {

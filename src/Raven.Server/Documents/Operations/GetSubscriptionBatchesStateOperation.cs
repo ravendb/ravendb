@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class GetSubscriptionBatchesStateOperation : IMaintenanceOperation<SubscriptionBatchesState>
+    public sealed class GetSubscriptionBatchesStateOperation : IMaintenanceOperation<SubscriptionBatchesState>
     {
         private readonly string _subscriptionName;
 
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Operations
             return new GetSubscriptionBatchesStateCommand(_subscriptionName);
         }
 
-        internal class GetSubscriptionBatchesStateCommand : RavenCommand<SubscriptionBatchesState>
+        internal sealed class GetSubscriptionBatchesStateCommand : RavenCommand<SubscriptionBatchesState>
         {
             private readonly string _subscriptionName;
 

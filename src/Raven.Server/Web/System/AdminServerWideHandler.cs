@@ -23,7 +23,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminServerWideHandler : ServerRequestHandler
+    public sealed class AdminServerWideHandler : ServerRequestHandler
     {
         [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.ClusterAdmin)]
         public async Task GetConfigurationServerWide()
@@ -251,7 +251,7 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public class ServerWideTasksResult<T> : IDynamicJsonValueConvertible
+    public sealed class ServerWideTasksResult<T> : IDynamicJsonValueConvertible
         where T : IDynamicJsonValueConvertible
     {
         public List<T> Results;

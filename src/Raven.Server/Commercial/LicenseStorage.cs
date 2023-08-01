@@ -10,7 +10,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseStorage
+    public sealed class LicenseStorage
     {
         private StorageEnvironment _environment;
 

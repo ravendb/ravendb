@@ -833,7 +833,7 @@ namespace Raven.Server.Documents
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public ManualResetEventSlim DelayDocumentLoad;
         }
@@ -2254,7 +2254,7 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public class CollectionStats
+        public sealed class CollectionStats
         {
             public string Name;
             public long Count;

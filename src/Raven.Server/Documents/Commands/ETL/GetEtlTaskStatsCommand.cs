@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
-internal class GetEtlTaskStatsCommand : RavenCommand<EtlTaskStats[]>
+internal sealed class GetEtlTaskStatsCommand : RavenCommand<EtlTaskStats[]>
 {
     private readonly string[] _names;
 

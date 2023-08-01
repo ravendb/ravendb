@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Config
 {
-    public class SettingsResult : IDynamicJson
+    public sealed class SettingsResult : IDynamicJson
     {
         public List<ConfigurationEntryValue> Settings { get; set; }
 
@@ -84,7 +84,7 @@ namespace Raven.Server.Config
         }
     }
 
-    public class ConfigurationEntryDatabaseValue : ConfigurationEntryServerValue
+    public sealed class ConfigurationEntryDatabaseValue : ConfigurationEntryServerValue
     {
         public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, DatabaseRecord dbRecord, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
             : base(configuration.ServerWideSettings, metadata, authenticationStatus)
@@ -173,7 +173,7 @@ namespace Raven.Server.Config
         }
     }
 
-    public class ConfigurationEntrySingleValue : IDynamicJson
+    public sealed class ConfigurationEntrySingleValue : IDynamicJson
     {
         public string Value { get; set; }
         public bool HasValue { get; set; }
@@ -192,7 +192,7 @@ namespace Raven.Server.Config
         }
     }
 
-    public class ConfigurationEntrySinglePendingValue : IDynamicJson
+    public sealed class ConfigurationEntrySinglePendingValue : IDynamicJson
     {
         public bool HasValue { get; set; }
         public string Value { get; set; }

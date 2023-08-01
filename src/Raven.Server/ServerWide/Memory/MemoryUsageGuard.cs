@@ -6,7 +6,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Memory
 {
-    public class MemoryUsageGuard
+    public sealed class MemoryUsageGuard
     {
         public static bool TryIncreasingMemoryUsageForThread(NativeMemory.ThreadStats threadStats,
             ref Size currentMaximumAllowedMemory,

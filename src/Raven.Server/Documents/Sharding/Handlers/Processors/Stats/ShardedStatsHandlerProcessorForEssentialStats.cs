@@ -14,7 +14,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 
-internal class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedStatsHandlerProcessorForEssentialStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

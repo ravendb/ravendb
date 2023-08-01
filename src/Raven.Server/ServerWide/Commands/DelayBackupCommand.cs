@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands;
 
-public class DelayBackupCommand : UpdateValueForDatabaseCommand
+public sealed class DelayBackupCommand : UpdateValueForDatabaseCommand
 {
     public long TaskId;
     public DateTime DelayUntil;
@@ -64,7 +64,7 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         };
     }
 
-    public class DelayBackupCommandState
+    public sealed class DelayBackupCommandState
     {
         public long TaskId;
         public DateTime DelayUntil;

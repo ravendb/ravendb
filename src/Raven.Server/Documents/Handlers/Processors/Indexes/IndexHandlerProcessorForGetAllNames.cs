@@ -7,7 +7,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForGetAllNames : AbstractIndexHandlerProcessorForGetAllNames<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForGetAllNames : AbstractIndexHandlerProcessorForGetAllNames<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForGetAllNames([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

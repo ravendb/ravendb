@@ -20,7 +20,7 @@ using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class RavenFtpClient : RavenStorageClient
+    public sealed class RavenFtpClient : RavenStorageClient
     {
         private readonly string _url;
         private readonly int? _port;

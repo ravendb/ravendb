@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseCountOfStaleIndexes : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseCountOfStaleIndexes : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfStaleIndexes(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfStaleIndexes, index)

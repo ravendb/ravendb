@@ -13,7 +13,7 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
 {
-    internal class ShardedBucketsHandlerProcessorForGetBuckets : AbstractBucketsHandlerProcessorForGetBuckets<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedBucketsHandlerProcessorForGetBuckets : AbstractBucketsHandlerProcessorForGetBuckets<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedBucketsHandlerProcessorForGetBuckets([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

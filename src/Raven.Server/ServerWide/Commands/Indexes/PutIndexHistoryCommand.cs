@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes;
 
-public class PutIndexHistoryCommand : UpdateDatabaseCommand
+public sealed class PutIndexHistoryCommand : UpdateDatabaseCommand
 {
     public string IndexName { get; set; }
     public List<IndexHistoryEntry> IndexHistory { get; set; }

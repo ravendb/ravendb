@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Raven.Server.Utils
 {
-    public class PartialStream : Stream
+    public sealed class PartialStream : Stream
     {
         private readonly Stream _inner;
         private int _size;

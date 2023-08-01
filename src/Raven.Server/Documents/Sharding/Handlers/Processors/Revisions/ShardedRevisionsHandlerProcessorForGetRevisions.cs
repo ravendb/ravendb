@@ -18,7 +18,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedRevisionsHandlerProcessorForGetRevisions : AbstractRevisionsHandlerProcessorForGetRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedRevisionsHandlerProcessorForGetRevisions : AbstractRevisionsHandlerProcessorForGetRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedRevisionsHandlerProcessorForGetRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    internal class ShardedAdminRevisionsHandler : ShardedDatabaseRequestHandler
+    internal sealed class ShardedAdminRevisionsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/revisions", "DELETE")]
         public async Task DeleteRevisionsFor()

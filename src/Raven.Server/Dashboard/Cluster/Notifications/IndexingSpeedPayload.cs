@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class IndexingSpeedPayload : AbstractClusterDashboardNotification
+    public sealed class IndexingSpeedPayload : AbstractClusterDashboardNotification
     {
         public double IndexedPerSecond { get; set; }
 

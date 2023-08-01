@@ -9,7 +9,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseDataWrittenPerSecond : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseDataWrittenPerSecond : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseDataWrittenPerSecond(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.DataWrittenPerSecond, index)

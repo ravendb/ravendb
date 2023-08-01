@@ -23,7 +23,7 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Static.NuGet
 {
-    public class NuGetFetcher
+    public sealed class NuGetFetcher
     {
         private readonly string _rootPath;
         private readonly PackageSource _packageSource;
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             return path;
         }
 
-        public class NuGetPackage
+        public sealed class NuGetPackage
         {
             public string Path { get; set; }
 

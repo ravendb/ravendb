@@ -15,7 +15,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         private ShardedPagingContinuation _continuationToken;
 
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             public RavenCommand<GetConflictsPreviewResult> CreateCommandForShard(int shardNumber) => new GetConflictsOperation.GetConflictsCommand(_token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        public class ConflictsLastModifiedComparer : Comparer<ShardStreamItem<GetConflictsPreviewResult.ConflictPreview>>
+        public sealed class ConflictsLastModifiedComparer : Comparer<ShardStreamItem<GetConflictsPreviewResult.ConflictPreview>>
         {
             public override int Compare(ShardStreamItem<GetConflictsPreviewResult.ConflictPreview> x,
                 ShardStreamItem<GetConflictsPreviewResult.ConflictPreview> y)

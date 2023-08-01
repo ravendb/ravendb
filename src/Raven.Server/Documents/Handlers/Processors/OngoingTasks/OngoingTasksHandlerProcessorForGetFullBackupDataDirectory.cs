@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {

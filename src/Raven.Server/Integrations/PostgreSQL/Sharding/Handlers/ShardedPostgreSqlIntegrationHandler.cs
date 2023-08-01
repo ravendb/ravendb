@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.Sharding.Handlers;
 
-public class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/server/status", "GET")]
     public async Task GetServerStatus()

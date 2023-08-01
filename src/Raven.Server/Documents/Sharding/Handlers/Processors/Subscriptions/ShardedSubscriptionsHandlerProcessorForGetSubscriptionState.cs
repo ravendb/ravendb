@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForGetSubscriptionState : AbstractSubscriptionsHandlerProcessorForGetSubscriptionState<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForGetSubscriptionState : AbstractSubscriptionsHandlerProcessorForGetSubscriptionState<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
         public ShardedSubscriptionsHandlerProcessorForGetSubscriptionState([NotNull] ShardedDatabaseRequestHandler requestHandler) 
             : base(requestHandler, requestHandler.DatabaseContext.SubscriptionsStorage)

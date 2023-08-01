@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetReplicationActiveConnectionsInfoCommand : RavenCommand<ReplicationActiveConnectionsPreview>
+    internal sealed class GetReplicationActiveConnectionsInfoCommand : RavenCommand<ReplicationActiveConnectionsPreview>
     {
         public GetReplicationActiveConnectionsInfoCommand()
         {

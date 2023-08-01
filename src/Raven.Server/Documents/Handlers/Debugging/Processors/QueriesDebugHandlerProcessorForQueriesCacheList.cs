@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Debugging.Processors;
 
-internal class QueriesDebugHandlerProcessorForQueriesCacheList : AbstractQueriesDebugHandlerProcessorForQueriesCacheList<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class QueriesDebugHandlerProcessorForQueriesCacheList : AbstractQueriesDebugHandlerProcessorForQueriesCacheList<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public QueriesDebugHandlerProcessorForQueriesCacheList([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

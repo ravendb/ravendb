@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
-    public class SubscriptionBatchPerformanceOperation
+    public sealed class SubscriptionBatchPerformanceOperation
     {
         public SubscriptionBatchPerformanceOperation(TimeSpan duration)
         {

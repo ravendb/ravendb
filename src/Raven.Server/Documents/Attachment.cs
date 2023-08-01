@@ -4,7 +4,7 @@ using Voron;
 
 namespace Raven.Server.Documents
 {
-    public class Attachment
+    public sealed class Attachment
     {
         public long StorageId;
         public LazyStringValue Key;

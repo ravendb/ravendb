@@ -23,7 +23,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class MemoryDebugHandler : ServerRequestHandler
+    public sealed class MemoryDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/memory/gc", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GcInfo()
@@ -530,7 +530,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return prefixLength;
         }
 
-        internal class MemoryInfo
+        internal sealed class MemoryInfo
         {
             public string PhysicalMemory { get; set; }
             public string WorkingSet { get; set; }
@@ -558,7 +558,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public MemoryInfoMappingItem[] Mappings { get; set; }
         }
 
-        internal class MemoryInfoMappingItem
+        internal sealed class MemoryInfoMappingItem
         {
             public string Directory { get; set; }
             public long TotalDirectorySize { get; set; }
@@ -566,7 +566,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public Dictionary<string, MemoryInfoMappingFileInfo> Details { get; set; }
         }
 
-        internal class MemoryInfoMappingFileInfo
+        internal sealed class MemoryInfoMappingFileInfo
         {
             public long FileSize { get; set; }
             public string HumaneFileSize { get; set; }
@@ -575,7 +575,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public MemoryInfoMappingDetails[] Mappings { get; set; }
         }
 
-        internal class MemoryInfoMappingDetails
+        internal sealed class MemoryInfoMappingDetails
         {
             public long Size { get; set; }
             public long Count { get; set; }

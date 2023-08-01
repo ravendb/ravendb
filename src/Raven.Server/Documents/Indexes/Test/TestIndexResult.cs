@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Test;
 
-public class TestIndexResult
+public sealed class TestIndexResult
 {
     public List<BlittableJsonReaderObject> IndexEntries;
     public List<Document> QueryResults;

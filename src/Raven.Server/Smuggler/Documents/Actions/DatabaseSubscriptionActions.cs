@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
-public class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBase<PutSubscriptionCommand>
+public sealed class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBase<PutSubscriptionCommand>
 {
     public DatabaseSubscriptionActions(ServerStore serverStore, string name) : base(serverStore, name)
     {

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardIncludesCommandImpl : DatabaseIncludesCommandImpl
+public sealed class ShardIncludesCommandImpl : DatabaseIncludesCommandImpl
 {
     public ShardIncludesCommandImpl(IncludeDocumentsCommand includeDocumentsCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand,
         IncludeCountersCommand includeCountersCommand)

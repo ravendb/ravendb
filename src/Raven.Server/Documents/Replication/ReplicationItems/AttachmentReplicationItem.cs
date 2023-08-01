@@ -13,7 +13,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class AttachmentReplicationItem : ReplicationBatchItem
+    public sealed class AttachmentReplicationItem : ReplicationBatchItem
     {
         public LazyStringValue Name;
         public LazyStringValue ContentType;

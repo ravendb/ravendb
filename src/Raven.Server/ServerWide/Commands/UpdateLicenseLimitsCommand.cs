@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateLicenseLimitsCommand : UpdateValueCommand<NodeLicenseLimits>
+    public sealed class UpdateLicenseLimitsCommand : UpdateValueCommand<NodeLicenseLimits>
     {
         public static int NodeInfoUpdate = -1;
 

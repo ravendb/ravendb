@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands;
 
-public class DeleteDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+public sealed class DeleteDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
 {
     private readonly List<string> _ids;
     private readonly DocumentDatabase _database;
@@ -33,7 +33,7 @@ public class DeleteDocumentsCommand : MergedTransactionCommand<DocumentsOperatio
         };
     }
 
-    public class DeleteDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentsCommand>
+    public sealed class DeleteDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentsCommand>
     {
         public List<string> Ids { get; set; }
 

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Utils.Metrics
 {
-    public class Clock
+    public sealed class Clock
     {
         public const int NanosecondsInSecond = 1000 * 1000 * 1000;
         public const int NanosecondsInMillisecond = 1000 * 1000;

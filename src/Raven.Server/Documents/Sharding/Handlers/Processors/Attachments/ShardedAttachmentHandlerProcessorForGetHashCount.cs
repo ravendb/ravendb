@@ -12,7 +12,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
-internal class ShardedAttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAttachmentHandlerProcessorForGetHashCount([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

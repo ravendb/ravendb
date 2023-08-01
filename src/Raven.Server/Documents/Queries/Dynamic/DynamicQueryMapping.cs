@@ -15,7 +15,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
-    public class DynamicQueryMapping
+    public sealed class DynamicQueryMapping
     {
         public string ForCollection { get; private set; }
 

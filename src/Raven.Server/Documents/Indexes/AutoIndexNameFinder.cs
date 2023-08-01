@@ -10,7 +10,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class AutoIndexNameFinder
+    public sealed class AutoIndexNameFinder
     {
         public static string FindMapIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {

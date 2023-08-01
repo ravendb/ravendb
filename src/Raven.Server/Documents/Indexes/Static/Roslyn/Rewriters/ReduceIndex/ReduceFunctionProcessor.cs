@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
-    public class ReduceFunctionProcessor : CSharpSyntaxRewriter
+    public sealed class ReduceFunctionProcessor : CSharpSyntaxRewriter
     {
         private readonly ResultsVariableNameRewriter _setResultsVariable;
         private readonly GroupByFieldsRetriever _getGroupByFields;

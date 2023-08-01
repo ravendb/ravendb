@@ -6,7 +6,7 @@ using Jint.Native.Function;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public class RecursiveJsFunction
+    public sealed class RecursiveJsFunction
     {
         private readonly List<JsValue> _result = new List<JsValue>();
         private readonly Engine _engine;

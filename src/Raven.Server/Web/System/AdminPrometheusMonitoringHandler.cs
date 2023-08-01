@@ -21,7 +21,7 @@ namespace Raven.Server.Web.System
         public const string PrometheusContentType = "text/plain; version=0.0.4; charset=utf-8";
         public const string MetricsPrefix = "ravendb_";
 
-        public class EnumHelp
+        public sealed class EnumHelp
         {
             private EnumHelp()
             {

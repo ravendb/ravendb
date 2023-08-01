@@ -21,7 +21,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class TimeSeriesHandler : DatabaseRequestHandler
+    public sealed class TimeSeriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stats()
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        public class ExecuteTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public sealed class ExecuteTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly DocumentDatabase _database;
             private readonly string _documentId;
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Handlers
             FromSmuggler = true
         };
 
-        public class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+        public sealed class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly DocumentDatabase _database;
 

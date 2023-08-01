@@ -13,7 +13,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutDatabaseClientConfigurationCommand : UpdateDatabaseCommand
+    public sealed class PutDatabaseClientConfigurationCommand : UpdateDatabaseCommand
     {
 
         public ClientConfiguration Configuration;

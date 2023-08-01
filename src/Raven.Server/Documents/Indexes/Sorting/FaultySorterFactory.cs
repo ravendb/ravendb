@@ -4,7 +4,7 @@ using Lucene.Net.Search;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
-    public class FaultySorterFactory : SorterFactory
+    public sealed class FaultySorterFactory : SorterFactory
     {
         private readonly string _name;
         private readonly Exception _e;

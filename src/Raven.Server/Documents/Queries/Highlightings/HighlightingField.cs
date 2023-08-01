@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Highlightings
 {
-    public class HighlightingField
+    public sealed class HighlightingField
     {
         private string _optionsAsStringOrParameterName;
 

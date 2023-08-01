@@ -10,7 +10,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 {
-    public class HandleCompareExchangeTimeSeriesReferences : HandleCompareExchangeReferences
+    public sealed class HandleCompareExchangeTimeSeriesReferences : HandleCompareExchangeReferences
     {
         private readonly HashSet<string> _collectionsWithCompareExchangeReferences;
         private readonly TimeSeriesStorage _timeSeriesStorage;

@@ -5243,7 +5243,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal class ExitWriteLock : IDisposable
+        internal sealed class ExitWriteLock : IDisposable
         {
             private readonly IDisposable _writeLock;
             private readonly Index _parent;
@@ -5340,7 +5340,7 @@ namespace Raven.Server.Documents.Indexes
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 

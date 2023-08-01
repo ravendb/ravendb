@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.MsSQL
 {
-    public class SqlStatementProvider<T> : IDataProvider<T> where T : class
+    public sealed class SqlStatementProvider<T> : IDataProvider<T> where T : class
     {
         private readonly DbCommand _command;
         private readonly Func<DynamicJsonValue, object[]> _parametersProvider;

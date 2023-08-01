@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Rachis.Commands;
 
-public class DeleteTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class DeleteTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
 

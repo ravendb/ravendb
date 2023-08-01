@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
+        internal sealed class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
         {
             public string ChangeVector;
             public long LastDocumentEtag;
@@ -767,7 +767,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
     }
 
-    internal class MergedDocumentReplicationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, IncomingReplicationHandler.MergedDocumentReplicationCommand>
+    internal sealed class MergedDocumentReplicationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, IncomingReplicationHandler.MergedDocumentReplicationCommand>
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;

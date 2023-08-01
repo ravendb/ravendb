@@ -18,7 +18,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public class MergedBatchCommand : TransactionMergedCommand
+public sealed class MergedBatchCommand : TransactionMergedCommand
 {
     public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
 

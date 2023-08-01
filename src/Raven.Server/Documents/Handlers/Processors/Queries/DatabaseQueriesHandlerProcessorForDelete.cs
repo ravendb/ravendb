@@ -5,7 +5,7 @@ using Raven.Server.Documents.Queries;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
-internal class DatabaseQueriesHandlerProcessorForDelete : AbstractDatabaseOperationQueriesHandlerProcessor
+internal sealed class DatabaseQueriesHandlerProcessorForDelete : AbstractDatabaseOperationQueriesHandlerProcessor
 {
     public DatabaseQueriesHandlerProcessorForDelete([NotNull] QueriesHandler requestHandler) : base(requestHandler)
     {

@@ -4,7 +4,7 @@ using Raven.Server.NotificationCenter;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class OngoingTasksNotificationSender : AbstractClusterDashboardNotificationSender
+    public sealed class OngoingTasksNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly DatabasesInfoRetriever _databasesInfoRetriever;
 

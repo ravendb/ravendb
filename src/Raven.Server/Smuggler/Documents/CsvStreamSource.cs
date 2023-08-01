@@ -22,7 +22,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class CsvImportOptions
+    public sealed class CsvImportOptions
     {
         public string Delimiter { get; set; }
         public char Quote { get; set; }
@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents
         }
     }
 
-    public class CsvStreamSource : ISmugglerSource, IDisposable
+    public sealed class CsvStreamSource : ISmugglerSource, IDisposable
     {
         private readonly DocumentDatabase _database;
         private readonly Stream _stream;

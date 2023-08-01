@@ -4,7 +4,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
     // RavenDB-16309
 
-    public class OlapEtlMetricsCountersManager : EtlMetricsCountersManager
+    public sealed class OlapEtlMetricsCountersManager : EtlMetricsCountersManager
     {
     }
 }

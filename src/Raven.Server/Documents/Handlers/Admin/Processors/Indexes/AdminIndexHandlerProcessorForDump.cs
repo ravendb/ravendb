@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
 {
-    internal class AdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AdminIndexHandlerProcessorForDump([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler)

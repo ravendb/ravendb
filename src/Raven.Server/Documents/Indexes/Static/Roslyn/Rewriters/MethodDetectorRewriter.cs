@@ -6,7 +6,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class MethodDetectorRewriter : CSharpSyntaxRewriter
+    public sealed class MethodDetectorRewriter : CSharpSyntaxRewriter
     {
         public readonly IndexCompiler.IndexMethods Methods = new IndexCompiler.IndexMethods();
 

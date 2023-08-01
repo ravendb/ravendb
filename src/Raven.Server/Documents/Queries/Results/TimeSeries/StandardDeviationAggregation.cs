@@ -6,7 +6,7 @@ using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
-    public class StandardDeviationAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
+    public sealed class StandardDeviationAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
     {
         private readonly List<List<double>> _allValues;
 

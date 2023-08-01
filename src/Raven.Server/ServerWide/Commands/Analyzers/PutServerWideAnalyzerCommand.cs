@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
 {
-    internal class PutServerWideAnalyzerCommand : PutValueCommand<AnalyzerDefinition>
+    internal sealed class PutServerWideAnalyzerCommand : PutValueCommand<AnalyzerDefinition>
     {
         public const string Prefix = "analyzer/";
 

@@ -9,11 +9,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Attachments
 {
-    internal class GetAttachmentMetadataWithCountsCommand : RavenCommand<GetAttachmentMetadataWithCountsCommand.Response>
+    internal sealed class GetAttachmentMetadataWithCountsCommand : RavenCommand<GetAttachmentMetadataWithCountsCommand.Response>
     {
         private readonly string _documentId;
 
-        public class Response
+        public sealed class Response
         {
             public string Id { get; set; }
 

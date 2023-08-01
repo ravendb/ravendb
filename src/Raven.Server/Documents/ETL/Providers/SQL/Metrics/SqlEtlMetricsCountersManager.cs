@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
 {
-    public class SqlEtlMetricsCountersManager : EtlMetricsCountersManager
+    public sealed class SqlEtlMetricsCountersManager : EtlMetricsCountersManager
     {
         public ConcurrentDictionary<string, SqlEtlTableMetrics> TablesMetrics { get; set; }
 

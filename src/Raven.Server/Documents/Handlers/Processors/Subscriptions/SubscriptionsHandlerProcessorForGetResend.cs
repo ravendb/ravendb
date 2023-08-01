@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<DatabaseRequestHandler, DocumentsOperationContext, SubscriptionConnectionsState>
+    internal sealed class SubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<DatabaseRequestHandler, DocumentsOperationContext, SubscriptionConnectionsState>
     {
         public SubscriptionsHandlerProcessorForGetResend([NotNull] DatabaseRequestHandler requestHandler) 
             : base(requestHandler, requestHandler.Database.SubscriptionStorage)

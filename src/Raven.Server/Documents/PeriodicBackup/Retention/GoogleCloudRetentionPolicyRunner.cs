@@ -4,7 +4,7 @@ using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class GoogleCloudRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public sealed class GoogleCloudRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
         private readonly RavenGoogleCloudClient _client;
 

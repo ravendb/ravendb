@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations.BulkInsert;
 
-internal class ShardedBulkInsertWriter : BulkInsertWriterBase
+internal sealed class ShardedBulkInsertWriter : BulkInsertWriterBase
 {
     private bool _first = true;
     private MemoryStream _currentWriter;

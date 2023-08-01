@@ -18,7 +18,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class RecordBatchSubscriptionDocumentsCommand :  UpdateValueForDatabaseCommand
+    public sealed class RecordBatchSubscriptionDocumentsCommand :  UpdateValueForDatabaseCommand
     {
         public long SubscriptionId;
         public string SubscriptionName;
@@ -373,7 +373,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
     }
 
-    public class DocumentRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public sealed class DocumentRecord : SubscriptionRecord, IDynamicJsonValueConvertible
     {
         public string DocumentId;
         public string ChangeVector;
@@ -388,7 +388,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
     }
 
-    public class RevisionRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public sealed class RevisionRecord : SubscriptionRecord, IDynamicJsonValueConvertible
     {
         public string DocumentId;
         public string Previous;

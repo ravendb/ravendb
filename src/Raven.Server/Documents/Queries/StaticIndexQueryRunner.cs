@@ -15,7 +15,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StaticIndexQueryRunner : AbstractDatabaseQueryRunner
+    public sealed class StaticIndexQueryRunner : AbstractDatabaseQueryRunner
     {
         public StaticIndexQueryRunner(DocumentDatabase database) : base(database)
         {

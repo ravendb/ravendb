@@ -16,7 +16,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessorForGetNextHiLo<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessorForGetNextHiLo<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public HiLoHandlerProcessorForGetNextHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
@@ -85,7 +85,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         return Math.Max(32, lastSize);
     }
 
-    internal class MergedNextHiLoCommand : DocumentMergedTransactionCommand
+    internal sealed class MergedNextHiLoCommand : DocumentMergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -165,7 +165,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         }
     }
 
-    internal class MergedNextHiLoCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedNextHiLoCommand>
+    internal sealed class MergedNextHiLoCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedNextHiLoCommand>
     {
         public string Key;
         public long Capacity;

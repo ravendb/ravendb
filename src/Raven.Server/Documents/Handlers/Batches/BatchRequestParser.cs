@@ -28,11 +28,11 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers.Batches
 {
-    public class BatchRequestParser
+    public sealed class BatchRequestParser
     {
         internal static BatchRequestParser Instance = new BatchRequestParser();
 
-        public class CommandData : IBatchCommandData
+        public sealed class CommandData : IBatchCommandData
         {
             public CommandType Type { get; set; }
             public string Id { get; set; }

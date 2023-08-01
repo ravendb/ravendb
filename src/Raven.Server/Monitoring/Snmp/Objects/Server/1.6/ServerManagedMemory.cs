@@ -4,7 +4,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerManagedMemory : ScalarObjectBase<Gauge32>
+    public sealed class ServerManagedMemory : ScalarObjectBase<Gauge32>
     {
         public ServerManagedMemory() : base(SnmpOids.Server.ManagedMemory)
         {

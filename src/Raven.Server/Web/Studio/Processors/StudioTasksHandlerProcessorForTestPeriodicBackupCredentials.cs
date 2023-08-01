@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal class StudioTasksHandlerProcessorForTestPeriodicBackupCredentials : AbstractHandlerProcessor<RequestHandler>
+    internal sealed class StudioTasksHandlerProcessorForTestPeriodicBackupCredentials : AbstractHandlerProcessor<RequestHandler>
     {
         public StudioTasksHandlerProcessorForTestPeriodicBackupCredentials([NotNull] RequestHandler requestHandler) : base(requestHandler)
         {

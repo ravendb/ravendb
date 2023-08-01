@@ -33,7 +33,7 @@ using Voron.Util.Settings;
 
 namespace Raven.Server.Documents
 {
-    public class DatabasesLandlord : IDisposable
+    public sealed class DatabasesLandlord : IDisposable
     {
         public const string DoNotRemove = "DoNotRemove";
         private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
             internal Action<string> InsideHandleClusterDatabaseChanged;
@@ -1587,7 +1587,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public class StateChange
+        public sealed class StateChange
         {
             public readonly object Locker = new object();
             public readonly ServerStore ServerStore;
@@ -1610,7 +1610,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public class IdleDatabaseActivity
+    public sealed class IdleDatabaseActivity
     {
         public long LastEtag { get; }
         public IdleDatabaseActivityType Type { get; }

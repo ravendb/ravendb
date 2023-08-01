@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal class StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForOperator : StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin
+internal sealed class StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForOperator : StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin
 {
     public StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForOperator([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {

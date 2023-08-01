@@ -6,7 +6,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
-    internal class FieldNamesValidator
+    internal sealed class FieldNamesValidator
     {
         private readonly CaptureSelectNewFieldNamesVisitor _visitor = new CaptureSelectNewFieldNamesVisitor();
 

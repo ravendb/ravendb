@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Studio.Processors
         }
     }
 
-    public class GetBucketInfoCommand : RavenCommand<BucketInfo>
+    public sealed class GetBucketInfoCommand : RavenCommand<BucketInfo>
     {
         private readonly int _bucket;
         
@@ -75,7 +75,7 @@ namespace Raven.Server.Web.Studio.Processors
         }
     }
 
-    public class BucketInfo : BucketStats
+    public sealed class BucketInfo : BucketStats
     {
         public List<string> Items;
 

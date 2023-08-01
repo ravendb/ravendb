@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class QueriesHandler : DatabaseRequestHandler
+    public sealed class QueriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Post()

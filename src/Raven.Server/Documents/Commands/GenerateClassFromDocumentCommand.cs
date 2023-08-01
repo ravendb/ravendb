@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands;
 
-public class GenerateClassFromDocumentCommand : RavenCommand<string>
+public sealed class GenerateClassFromDocumentCommand : RavenCommand<string>
 {
     private readonly string _id;
     private readonly string _lang;

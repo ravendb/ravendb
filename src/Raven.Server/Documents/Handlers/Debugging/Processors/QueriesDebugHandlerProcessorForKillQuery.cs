@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging.Processors;
 
-internal class QueriesDebugHandlerProcessorForKillQuery : AbstractQueriesDebugHandlerProcessorForKillQuery<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class QueriesDebugHandlerProcessorForKillQuery : AbstractQueriesDebugHandlerProcessorForKillQuery<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public QueriesDebugHandlerProcessorForKillQuery([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

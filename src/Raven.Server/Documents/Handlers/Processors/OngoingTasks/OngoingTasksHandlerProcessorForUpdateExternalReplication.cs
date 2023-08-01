@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForUpdateExternalReplication : AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForUpdateExternalReplication : AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForUpdateExternalReplication([NotNull] DatabaseRequestHandler requestHandler) 
             : base(requestHandler)

@@ -3,7 +3,7 @@ using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Configuration;
-internal class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedConfigurationHandlerProcessorForGetStudioConfiguration(ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

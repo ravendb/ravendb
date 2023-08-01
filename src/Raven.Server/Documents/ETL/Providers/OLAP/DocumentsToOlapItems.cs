@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class DocumentsToOlapItems : IEnumerator<ToOlapItem>
+    public sealed class DocumentsToOlapItems : IEnumerator<ToOlapItem>
     {
         private readonly IEnumerator<Document> _docs;
         private readonly string _collection;

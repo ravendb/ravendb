@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public class ClusterTransactionMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ClusterTransactionMergedCommand>
+public sealed class ClusterTransactionMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ClusterTransactionMergedCommand>
 {
     public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
 

@@ -5,7 +5,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public class DatabaseStorageDiskWriteThroughput : DatabaseScalarObjectBase<Gauge32>
+public sealed class DatabaseStorageDiskWriteThroughput : DatabaseScalarObjectBase<Gauge32>
 {
     public DatabaseStorageDiskWriteThroughput(string databaseName, DatabasesLandlord landlord, int index)
         : base(databaseName, landlord, SnmpOids.Databases.StorageDiskWriteThroughput, index)

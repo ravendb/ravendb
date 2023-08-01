@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Server.Config
 {
-    public class LowMemoryHandlerStatistics
+    public sealed class LowMemoryHandlerStatistics
     {
         public string Name { get; set; }
         public long EstimatedUsedMemory { get; set; }

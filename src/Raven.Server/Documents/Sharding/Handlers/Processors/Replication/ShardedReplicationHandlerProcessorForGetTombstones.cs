@@ -16,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal class ShardedReplicationHandlerProcessorForGetTombstones : AbstractReplicationHandlerProcessorForGetTombstones<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetTombstones : AbstractReplicationHandlerProcessorForGetTombstones<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         private ShardedPagingContinuation _continuationToken;
 
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             public RavenCommand<GetTombstonesPreviewResult> CreateCommandForShard(int shardNumber) => new GetReplicationTombstonesCommand(_token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        internal class GetReplicationTombstonesCommand : RavenCommand<GetTombstonesPreviewResult>
+        internal sealed class GetReplicationTombstonesCommand : RavenCommand<GetTombstonesPreviewResult>
         {
             private readonly long _start;
             private readonly int? _pageSize;
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             }
         }
 
-        public class TombstonesLastModifiedComparer : Comparer<ShardStreamItem<Tombstone>>
+        public sealed class TombstonesLastModifiedComparer : Comparer<ShardStreamItem<Tombstone>>
         {
             public override int Compare(ShardStreamItem<Tombstone> x,
                 ShardStreamItem<Tombstone> y)
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             public static TombstonesLastModifiedComparer Instance = new();
         }
 
-        public class TombstonesPreviewComparer : Comparer<Tombstone>
+        public sealed class TombstonesPreviewComparer : Comparer<Tombstone>
         {
             public override int Compare(Tombstone x, Tombstone y)
             {

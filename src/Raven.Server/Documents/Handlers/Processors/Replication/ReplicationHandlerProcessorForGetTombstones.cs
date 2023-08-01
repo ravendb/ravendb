@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetTombstones : AbstractReplicationHandlerProcessorForGetTombstones<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetTombstones : AbstractReplicationHandlerProcessorForGetTombstones<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetTombstones([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

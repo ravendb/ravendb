@@ -31,7 +31,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public class LegacyRavenAzureClient : RavenStorageClient, IRavenAzureClient
+    public sealed class LegacyRavenAzureClient : RavenStorageClient, IRavenAzureClient
     {
         private readonly bool _hasSasToken;
         private readonly string _accountName;

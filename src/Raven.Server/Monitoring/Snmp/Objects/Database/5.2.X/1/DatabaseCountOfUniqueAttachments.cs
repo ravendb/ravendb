@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseCountOfUniqueAttachments : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseCountOfUniqueAttachments : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfUniqueAttachments(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfUniqueAttachments, index)

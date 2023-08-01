@@ -1,6 +1,6 @@
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class DatabaseSummary
+    public sealed class DatabaseSummary
     {
         public long DocumentsCount { get; set; }
 

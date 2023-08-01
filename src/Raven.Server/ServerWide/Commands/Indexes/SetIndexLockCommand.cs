@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
-    public class SetIndexLockCommand : UpdateDatabaseCommand
+    public sealed class SetIndexLockCommand : UpdateDatabaseCommand
     {
         public string IndexName;
 

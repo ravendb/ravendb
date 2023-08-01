@@ -24,7 +24,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class LuceneIndexFacetedReadOperation : IndexFacetReadOperationBase
+    public sealed class LuceneIndexFacetedReadOperation : IndexFacetReadOperationBase
     {
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;

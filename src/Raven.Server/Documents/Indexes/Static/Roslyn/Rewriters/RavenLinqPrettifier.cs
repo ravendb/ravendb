@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class RavenLinqPrettifier : CSharpSyntaxRewriter
+    public sealed class RavenLinqPrettifier : CSharpSyntaxRewriter
     {
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {

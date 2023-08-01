@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 
-internal class ShardedReplicationHandlerProcessorForGetConflictSolver : AbstractReplicationHandlerProcessorForGetConflictSolver<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedReplicationHandlerProcessorForGetConflictSolver : AbstractReplicationHandlerProcessorForGetConflictSolver<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedReplicationHandlerProcessorForGetConflictSolver([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

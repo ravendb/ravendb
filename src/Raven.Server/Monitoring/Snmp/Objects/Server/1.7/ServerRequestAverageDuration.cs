@@ -3,7 +3,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerRequestAverageDuration : ScalarObjectBase<Gauge32>
+    public sealed class ServerRequestAverageDuration : ScalarObjectBase<Gauge32>
     {
         private readonly MetricCounters _metrics;
 

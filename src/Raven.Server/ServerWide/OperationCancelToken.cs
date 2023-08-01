@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Raven.Server.ServerWide
 {
-    public class OperationCancelToken : IDisposable
+    public sealed class OperationCancelToken : IDisposable
     {
         public static readonly OperationCancelToken None = new(CancellationToken.None);
 

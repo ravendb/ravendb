@@ -5,7 +5,7 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class ClusterContextPool : JsonContextPoolBase<ClusterOperationContext>, ITransactionContextPool<ClusterOperationContext>
+    public sealed class ClusterContextPool : JsonContextPoolBase<ClusterOperationContext>, ITransactionContextPool<ClusterOperationContext>
     {
         private ClusterChanges _changes;
         private StorageEnvironment _storageEnvironment;

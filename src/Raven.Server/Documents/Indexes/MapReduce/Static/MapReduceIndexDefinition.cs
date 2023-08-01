@@ -4,7 +4,7 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
-    public class MapReduceIndexDefinition : MapIndexDefinition
+    public sealed class MapReduceIndexDefinition : MapIndexDefinition
     {
         public MapReduceIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, CompiledIndexField[] groupByFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
             : base(definition, collections, outputFields, hasDynamicFields, hasCompareExchange, indexVersion)

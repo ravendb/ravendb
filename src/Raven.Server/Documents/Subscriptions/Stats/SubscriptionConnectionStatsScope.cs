@@ -11,7 +11,7 @@ using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
-    public class SubscriptionConnectionStatsScope : StatsScope<SubscriptionConnectionRunStats, SubscriptionConnectionStatsScope>
+    public sealed class SubscriptionConnectionStatsScope : StatsScope<SubscriptionConnectionRunStats, SubscriptionConnectionStatsScope>
     {
         private readonly SubscriptionConnectionRunStats _stats;
 

@@ -19,7 +19,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations.BulkInsert;
 
-internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatchCommandData>, IShardedOperation<HttpResponseMessage>, IAsyncDisposable
+internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatchCommandData>, IShardedOperation<HttpResponseMessage>, IAsyncDisposable
 {
     private readonly bool _skipOverwriteIfUnchanged;
     private readonly ShardedBulkInsertHandler _requestHandler;

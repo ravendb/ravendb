@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Refresh;
 
-internal class RefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class RefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public RefreshHandlerProcessorForGetRefreshConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class ConditionalAccessExpressionRewriter : CSharpSyntaxRewriter
+    public sealed class ConditionalAccessExpressionRewriter : CSharpSyntaxRewriter
     {
         public static readonly ConditionalAccessExpressionRewriter Instance = new ConditionalAccessExpressionRewriter();
 

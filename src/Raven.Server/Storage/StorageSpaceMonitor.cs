@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.Storage
 {
-    public class StorageSpaceMonitor : IDisposable
+    public sealed class StorageSpaceMonitor : IDisposable
     {
         private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(10);
 

@@ -5,7 +5,7 @@ using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Handlers.Processors.MultiGet;
 
-internal class MultiGetHandlerProcessorForPost : AbstractMultiGetHandlerProcessorForPost<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class MultiGetHandlerProcessorForPost : AbstractMultiGetHandlerProcessorForPost<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public MultiGetHandlerProcessorForPost([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

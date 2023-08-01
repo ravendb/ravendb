@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Server.Documents.Studio
 {
-    public class FooterStatistics
+    public sealed class FooterStatistics
     {
         public long CountOfDocuments { get; set; }
 

@@ -3,7 +3,7 @@ using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public class DummySubscriptionConnectionsState : SubscriptionConnectionsState
+public sealed class DummySubscriptionConnectionsState : SubscriptionConnectionsState
 {
     // for subscription test only
     public DummySubscriptionConnectionsState(string name, DocumentsStorage storage, SubscriptionState state) : base(name, -0x42, storage.DocumentDatabase.SubscriptionStorage)

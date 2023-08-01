@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtlPerformanceStats
+    public sealed class SqlEtlPerformanceStats
     {
         public int BatchSize { get; set; }
         public TimeSpan Duration { get; set; }

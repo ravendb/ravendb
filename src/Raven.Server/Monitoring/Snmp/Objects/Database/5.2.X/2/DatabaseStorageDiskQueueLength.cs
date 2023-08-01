@@ -3,7 +3,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public class DatabaseStorageDiskQueueLength : DatabaseScalarObjectBase<Gauge32>
+public sealed class DatabaseStorageDiskQueueLength : DatabaseScalarObjectBase<Gauge32>
 {
     public DatabaseStorageDiskQueueLength(string databaseName, DatabasesLandlord landlord, int index)
         : base(databaseName, landlord, SnmpOids.Databases.StorageDiskQueueLength, index)

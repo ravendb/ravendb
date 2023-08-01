@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Changes;
 
-internal class ChangesHandlerProcessorForGetConnectionsDebugInfo : AbstractChangesHandlerProcessorForGetConnectionsDebugInfo<DatabaseRequestHandler, DocumentsOperationContext, ChangesClientConnection>
+internal sealed class ChangesHandlerProcessorForGetConnectionsDebugInfo : AbstractChangesHandlerProcessorForGetConnectionsDebugInfo<DatabaseRequestHandler, DocumentsOperationContext, ChangesClientConnection>
 {
     public ChangesHandlerProcessorForGetConnectionsDebugInfo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

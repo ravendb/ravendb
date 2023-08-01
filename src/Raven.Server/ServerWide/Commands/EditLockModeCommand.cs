@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditLockModeCommand : UpdateDatabaseCommand
+    public sealed class EditLockModeCommand : UpdateDatabaseCommand
     {
         public DatabaseLockMode LockMode;
 

@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 {
-    public class QueueEtlHandler : DatabaseRequestHandler
+    public sealed class QueueEtlHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/etl/queue/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()

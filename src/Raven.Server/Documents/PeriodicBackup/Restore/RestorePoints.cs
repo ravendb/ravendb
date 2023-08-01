@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestorePoints
+    public sealed class RestorePoints
     {
         public RestorePoints()
         {
@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public List<RestorePoint> List { get; set; }
     }
 
-    public class RestorePoint
+    public sealed class RestorePoint
     {
         public DateTime DateTime { get; set; }
 

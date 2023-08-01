@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Queries.IndexEntries;
 
-public class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQueryResultsMerger
+public sealed class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQueryResultsMerger
 {
     private static readonly ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries Aggregator = new();
 

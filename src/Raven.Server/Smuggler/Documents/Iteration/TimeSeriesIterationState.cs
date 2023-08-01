@@ -3,7 +3,7 @@ using Sparrow;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
-    public class TimeSeriesIterationState : CollectionAwareIterationState<TimeSeriesItem>
+    public sealed class TimeSeriesIterationState : CollectionAwareIterationState<TimeSeriesItem>
     {
         public TimeSeriesIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {

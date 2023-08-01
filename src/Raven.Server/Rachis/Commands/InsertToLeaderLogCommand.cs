@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Rachis.Commands;
 
-public class InsertToLeaderLogCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class InsertToLeaderLogCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
     private long _term;

@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForDelete : AbstractIndexHandlerProcessorForDelete<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForDelete : AbstractIndexHandlerProcessorForDelete<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForDelete([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

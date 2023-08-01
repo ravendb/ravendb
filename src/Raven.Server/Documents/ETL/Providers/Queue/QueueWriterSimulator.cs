@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class QueueWriterSimulator
+public sealed class QueueWriterSimulator
 {
     public List<MessageSummary> SimulateExecuteMessages<T>(QueueWithItems<T> queueMessages, DocumentsOperationContext context)
         where T : QueueItem

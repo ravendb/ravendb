@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public class ReplicationOutgoingsFailurePreview
+    public sealed class ReplicationOutgoingsFailurePreview
     {
         public IDictionary<ReplicationNode, ConnectionShutdownInfo> Stats;
 

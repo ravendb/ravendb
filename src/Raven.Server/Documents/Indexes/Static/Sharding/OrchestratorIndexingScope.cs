@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.Sharding;
 
-public class OrchestratorIndexingScope : CurrentIndexingScope
+public sealed class OrchestratorIndexingScope : CurrentIndexingScope
 {
     public OrchestratorIndexingScope(TransactionOperationContext context, UnmanagedBuffersPoolWithLowMemoryHandling unmanagedBuffersPool) 
         : base(null, null, null, null, context, null, unmanagedBuffersPool)

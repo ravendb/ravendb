@@ -3,7 +3,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerLicenseUtilizedCpuCores : ScalarObjectBase<Integer32>
+    public sealed class ServerLicenseUtilizedCpuCores : ScalarObjectBase<Integer32>
     {
         private readonly ServerStore _store;
 

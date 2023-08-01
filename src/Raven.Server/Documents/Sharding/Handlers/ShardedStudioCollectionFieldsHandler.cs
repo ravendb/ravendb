@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedStudioCollectionFieldsHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedStudioCollectionFieldsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/studio/collections/fields", "GET")]
         public async Task GetCollectionFields()

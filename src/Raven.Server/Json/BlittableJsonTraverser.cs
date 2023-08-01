@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonTraverser
+    public sealed class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
         public readonly static char[] DefaultFlatMapReduceSeparators = new char[] { } ;

@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class PullReplicationHandlerProcessorForGetListHubAccess : AbstractPullReplicationHandlerProcessorForGetListHubAccess<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class PullReplicationHandlerProcessorForGetListHubAccess : AbstractPullReplicationHandlerProcessorForGetListHubAccess<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public PullReplicationHandlerProcessorForGetListHubAccess([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler, requestHandler.ContextPool)

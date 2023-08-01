@@ -11,7 +11,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackup : IDisposable
+    public sealed class PeriodicBackup : IDisposable
     {
         private readonly SemaphoreSlim _updateBackupTaskSemaphore = new SemaphoreSlim(1);
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
@@ -154,14 +154,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             _disposeOnce.Dispose();
         }
 
-        public class RunningBackupTask
+        public sealed class RunningBackupTask
         {
             public Task Task { get; set; }
 
             public long Id { get; set; }
         }
 
-        public class BackupTimer : IDisposable
+        public sealed class BackupTimer : IDisposable
         {
             public Timer Timer { get; set; }
 

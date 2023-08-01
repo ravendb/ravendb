@@ -9,7 +9,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
-    public class BlittableObjectReader : IDisposable
+    public sealed class BlittableObjectReader : IDisposable
     {
         private readonly NonDisposableStreamReader _reader;
         private readonly MemoryStream _ms;

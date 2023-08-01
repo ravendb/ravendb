@@ -7,7 +7,7 @@ using Raven.Server.Web.Studio.Sharding.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding;
 
-public class ShardedStudioIndexHandler : ShardedDatabaseRequestHandler
+public sealed class ShardedStudioIndexHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/studio/indexes/errors-count", "GET")]
     public async Task PreviewCollection()

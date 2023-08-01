@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForUpdatePeriodicBackup : AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedOngoingTasksHandlerProcessorForUpdatePeriodicBackup : AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedOngoingTasksHandlerProcessorForUpdatePeriodicBackup([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

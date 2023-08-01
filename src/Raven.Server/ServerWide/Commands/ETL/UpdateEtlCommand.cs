@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateRavenEtlCommand : UpdateEtlCommand<RavenEtlConfiguration, RavenConnectionString>
+    public sealed class UpdateRavenEtlCommand : UpdateEtlCommand<RavenEtlConfiguration, RavenConnectionString>
     {
         public UpdateRavenEtlCommand()
         {
@@ -59,7 +59,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateSqlEtlCommand : UpdateEtlCommand<SqlEtlConfiguration, SqlConnectionString>
+    public sealed class UpdateSqlEtlCommand : UpdateEtlCommand<SqlEtlConfiguration, SqlConnectionString>
     {
         public UpdateSqlEtlCommand()
         {
@@ -79,7 +79,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapConnectionString>
+    public sealed class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapConnectionString>
     {
         public UpdateOlapEtlCommand()
         {
@@ -98,7 +98,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
     
-    public class UpdateElasticSearchEtlCommand : UpdateEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
+    public sealed class UpdateElasticSearchEtlCommand : UpdateEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
     {
         public UpdateElasticSearchEtlCommand()
         {
@@ -117,7 +117,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateQueueEtlCommand : UpdateEtlCommand<QueueEtlConfiguration, QueueConnectionString>
+    public sealed class UpdateQueueEtlCommand : UpdateEtlCommand<QueueEtlConfiguration, QueueConnectionString>
     {
         public UpdateQueueEtlCommand()
         {

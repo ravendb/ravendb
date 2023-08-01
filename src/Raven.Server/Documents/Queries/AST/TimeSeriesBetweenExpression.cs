@@ -1,6 +1,6 @@
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class TimeSeriesBetweenExpression : BetweenExpression
+    public sealed class TimeSeriesBetweenExpression : BetweenExpression
     {
         public QueryExpression MinExpression { get; }
 

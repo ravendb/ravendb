@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseExpiredException : Exception
+    public sealed class LicenseExpiredException : Exception
     {
         public LicenseExpiredException()
         {

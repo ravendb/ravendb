@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class ReplicationHandlerProcessorForGetIncomingActivityTimes : AbstractReplicationHandlerProcessorForGetIncomingActivityTimes<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class ReplicationHandlerProcessorForGetIncomingActivityTimes : AbstractReplicationHandlerProcessorForGetIncomingActivityTimes<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public ReplicationHandlerProcessorForGetIncomingActivityTimes([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

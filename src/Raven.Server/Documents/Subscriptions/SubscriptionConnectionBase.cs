@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Subscriptions
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public AsyncManualResetEvent PauseConnection;
         }
@@ -792,7 +792,7 @@ namespace Raven.Server.Documents.Subscriptions
             Info
         }
 
-        public class StatusMessageDetails
+        public sealed class StatusMessageDetails
         {
             public string DatabaseName;
             public string ClientType;
@@ -1096,7 +1096,7 @@ namespace Raven.Server.Documents.Subscriptions
             _disposeOnce.Dispose();
         }
 
-        public class SubscriptionConnectionInUse : IDisposable
+        public sealed class SubscriptionConnectionInUse : IDisposable
         {
             private readonly IDisposable _release;
             private bool _disposed;

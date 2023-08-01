@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
 {
-    internal class IndexVisitor : CSharpSyntaxRewriter
+    internal sealed class IndexVisitor : CSharpSyntaxRewriter
     {
         private readonly IndexData _indexData;
 

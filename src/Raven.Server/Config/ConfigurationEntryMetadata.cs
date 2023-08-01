@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Config
 {
-    public class ConfigurationEntryMetadata : IDynamicJson
+    public sealed class ConfigurationEntryMetadata : IDynamicJson
     {
         public readonly string Category;
 

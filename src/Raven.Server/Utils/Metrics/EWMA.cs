@@ -10,7 +10,7 @@ namespace Raven.Server.Utils.Metrics
     ///     <a href="http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf">UNIX Load Average Part 2: Not Your Average Average</a>
     ///     <a href="http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average">EMA</a>
     /// </summary>
-    public class Ewma
+    public sealed class Ewma
     {
         private const int Interval = 5;
         private const double SecondsPerMinute = 60.0;

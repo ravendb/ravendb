@@ -6,7 +6,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForDeleteSubscriptionTasks : AbstractOngoingTasksHandlerProcessorForDeleteSubscriptionTasks<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedOngoingTasksHandlerProcessorForDeleteSubscriptionTasks : AbstractOngoingTasksHandlerProcessorForDeleteSubscriptionTasks<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedOngoingTasksHandlerProcessorForDeleteSubscriptionTasks([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

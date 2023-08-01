@@ -6,7 +6,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioStatsHandler : DatabaseRequestHandler
+    public sealed class StudioStatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetFooterStats()

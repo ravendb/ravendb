@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeTimeSeriesCommand : AbstractIncludeTimeSeriesCommand
+    public sealed class IncludeTimeSeriesCommand : AbstractIncludeTimeSeriesCommand
     {
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;

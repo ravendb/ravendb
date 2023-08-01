@@ -5,7 +5,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL.Types
 {
-    public class PgInterval : PgType
+    public sealed class PgInterval : PgType
     {
         public static readonly PgInterval Default = new();
         public override int Oid => PgTypeOIDs.Interval;

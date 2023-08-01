@@ -11,7 +11,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentsCompressionHandler : DatabaseRequestHandler
+    public sealed class DocumentsCompressionHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDocumentsCompressionConfig()

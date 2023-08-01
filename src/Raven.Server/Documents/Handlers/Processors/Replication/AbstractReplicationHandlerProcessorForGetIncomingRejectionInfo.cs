@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public class ReplicationIncomingRejectionInfoPreview
+    public sealed class ReplicationIncomingRejectionInfoPreview
     {
         public IDictionary<IncomingConnectionInfo, ConcurrentQueue<ReplicationLoader.IncomingConnectionRejectionInfo>> Stats;
 

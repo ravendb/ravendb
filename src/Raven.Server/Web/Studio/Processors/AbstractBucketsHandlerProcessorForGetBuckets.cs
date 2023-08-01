@@ -50,7 +50,7 @@ namespace Raven.Server.Web.Studio.Processors
         protected abstract ValueTask<BucketsResults> GetBucketsResults(TOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token);
     }
 
-    public class GetBucketsCommand : RavenCommand<BucketsResults>
+    public sealed class GetBucketsCommand : RavenCommand<BucketsResults>
     {
         private readonly int _fromBucket;
         private readonly int _toBucket;

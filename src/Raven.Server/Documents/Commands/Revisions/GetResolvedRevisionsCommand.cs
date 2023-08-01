@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Revisions
 {
-    public class GetResolvedRevisionsCommand : RavenCommand<ResolvedRevisions>
+    public sealed class GetResolvedRevisionsCommand : RavenCommand<ResolvedRevisions>
     {
         private readonly DateTime? _since;
         private readonly int? _take;
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Commands.Revisions
         public override bool IsReadRequest => true;
     }
 
-    public class ResolvedRevisions
+    public sealed class ResolvedRevisions
     {
         public BlittableJsonReaderArray Results { get; set; }
     }

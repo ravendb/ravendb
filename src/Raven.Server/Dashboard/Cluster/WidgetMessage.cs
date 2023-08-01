@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster
 {
-    public class WidgetMessage
+    public sealed class WidgetMessage
     {
         public int Id { get; set; }
         public DynamicJsonValue Data { get; set; }

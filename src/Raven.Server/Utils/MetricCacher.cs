@@ -9,13 +9,13 @@ namespace Raven.Server.Utils
 {
     public class MetricCacher
     {
-        public class Keys
+        public sealed class Keys
         {
             private Keys()
             {
             }
 
-            public class Server
+            public sealed class Server
             {
                 private Server()
                 {
@@ -26,7 +26,7 @@ namespace Raven.Server.Utils
 
                 public const string MemoryInfo = "MemoryInfo";
 
-                public class MemoryInfoExtended
+                public sealed class MemoryInfoExtended
                 {
                     public const string RefreshRate15Seconds = "MemoryInfoExtended/RefreshRate15Seconds";
 
@@ -46,7 +46,7 @@ namespace Raven.Server.Utils
                 public const string GcBackground = "GC/Background";
             }
 
-            public class Database
+            public sealed class Database
             {
                 private Database()
                 {

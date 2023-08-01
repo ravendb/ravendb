@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedRevisionsHandlerProcessorForGetRevisionsCount : AbstractRevisionsHandlerProcessorForGetRevisionsCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedRevisionsHandlerProcessorForGetRevisionsCount : AbstractRevisionsHandlerProcessorForGetRevisionsCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedRevisionsHandlerProcessorForGetRevisionsCount([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

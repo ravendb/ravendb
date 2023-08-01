@@ -3,7 +3,7 @@ using Raven.Server.Config;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerTcpUrl : ScalarObjectBase<OctetString>
+    public sealed class ServerTcpUrl : ScalarObjectBase<OctetString>
     {
         private readonly OctetString _url;
 

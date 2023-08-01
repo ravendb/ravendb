@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class InstallUpdatedServerCertificateCommand : CommandBase
+    public sealed class InstallUpdatedServerCertificateCommand : CommandBase
     {
         public string Certificate { get; set; }
         public bool ReplaceImmediately { get; set; }
@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
     
-    public class ConfirmReceiptServerCertificateCommand : CommandBase
+    public sealed class ConfirmReceiptServerCertificateCommand : CommandBase
     {
         public string Thumbprint { get; set; }
 
@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
     
-    public class RecheckStatusOfServerCertificateCommand : CommandBase
+    public sealed class RecheckStatusOfServerCertificateCommand : CommandBase
     {
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-    public class ConfirmServerCertificateReplacedCommand : CommandBase
+    public sealed class ConfirmServerCertificateReplacedCommand : CommandBase
     {
         public string Thumbprint { get; set; }
         public string OldThumbprint { get; set; }
@@ -107,7 +107,7 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-    public class RecheckStatusOfServerCertificateReplacementCommand : CommandBase
+    public sealed class RecheckStatusOfServerCertificateReplacementCommand : CommandBase
     {
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {

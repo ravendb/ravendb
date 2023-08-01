@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal class CacheKey : IEquatable<CacheKey>
+        internal sealed class CacheKey : IEquatable<CacheKey>
         {
             public readonly string ResourceName;
             public readonly string Name;

@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
-internal class DatabaseNotificationCenterHandlerProcessorForWatch : AbstractDatabaseNotificationCenterHandlerProcessorForWatch<DatabaseRequestHandler, DocumentsOperationContext, Operation>
+internal sealed class DatabaseNotificationCenterHandlerProcessorForWatch : AbstractDatabaseNotificationCenterHandlerProcessorForWatch<DatabaseRequestHandler, DocumentsOperationContext, Operation>
 {
     public DatabaseNotificationCenterHandlerProcessorForWatch([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler)

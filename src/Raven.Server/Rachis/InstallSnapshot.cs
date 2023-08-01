@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Rachis
 {
-    public class InstallSnapshot
+    public sealed class InstallSnapshot
     {
         public long LastIncludedIndex { get; set; }
 
@@ -11,7 +11,7 @@ namespace Raven.Server.Rachis
         public BlittableJsonReaderObject Topology { get; set; } 
     }
 
-    public class InstallSnapshotResponse
+    public sealed class InstallSnapshotResponse
     {
         public bool Done { get; set; }
         public long CurrentTerm { get; set; }

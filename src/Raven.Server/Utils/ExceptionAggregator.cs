@@ -5,7 +5,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Utils
 {
-    public class ExceptionAggregator
+    public sealed class ExceptionAggregator
     {
         private readonly Logger _logger;
         private readonly string _errorMsg;

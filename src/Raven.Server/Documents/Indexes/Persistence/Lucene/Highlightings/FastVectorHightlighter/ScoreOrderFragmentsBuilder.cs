@@ -24,7 +24,7 @@ namespace Lucene.Net.Search.Vectorhighlight
     /*
  * An implementation of FragmentsBuilder that outputs score-order fragments.
  */
-    public class ScoreOrderFragmentsBuilder : BaseFragmentsBuilder
+    public sealed class ScoreOrderFragmentsBuilder : BaseFragmentsBuilder
     {
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             return src;
         }
 
-        public class ScoreComparator : IComparer<WeightedFragInfo>
+        public sealed class ScoreComparator : IComparer<WeightedFragInfo>
         {  // Comparator<WeightedFragInfo> {
 
             public int Compare(WeightedFragInfo o1, WeightedFragInfo o2)

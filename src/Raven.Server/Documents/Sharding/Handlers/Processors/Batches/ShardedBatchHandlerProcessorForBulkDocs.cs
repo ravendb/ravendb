@@ -17,7 +17,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
-internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<ShardedBatchCommand, ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<ShardedBatchCommand, ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedBatchHandlerProcessorForBulkDocs([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

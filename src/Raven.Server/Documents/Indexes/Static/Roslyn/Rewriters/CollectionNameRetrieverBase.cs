@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return member.Name.Identifier.ValueText;
         }
 
-        public class Collection
+        public sealed class Collection
         {
             public readonly string CollectionName;
 

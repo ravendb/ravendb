@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return true;
         }
 
-        public class ParsedBackupFolderName
+        public sealed class ParsedBackupFolderName
         {
             public string BackupTimeAsString { get; set; }
 
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return path.Substring(0, index + 1);
         }
 
-        public class DescendedDateComparer : IComparer<DateTime>
+        public sealed class DescendedDateComparer : IComparer<DateTime>
         {
             public int Compare(DateTime x, DateTime y)
             {

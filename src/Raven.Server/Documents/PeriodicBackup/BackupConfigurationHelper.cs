@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
 
-        public class ActualPathResult
+        public sealed class ActualPathResult
         {
             public bool HasLocalRootPath { get; set; }
 

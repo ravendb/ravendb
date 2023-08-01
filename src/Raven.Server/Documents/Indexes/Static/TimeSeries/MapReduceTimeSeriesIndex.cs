@@ -16,7 +16,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class MapReduceTimeSeriesIndex : MapReduceIndex
+    public sealed class MapReduceTimeSeriesIndex : MapReduceIndex
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

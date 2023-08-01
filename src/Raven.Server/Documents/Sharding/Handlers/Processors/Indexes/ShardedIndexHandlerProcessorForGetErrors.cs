@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForGetErrors : AbstractIndexHandlerProcessorForGetErrors<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedIndexHandlerProcessorForGetErrors : AbstractIndexHandlerProcessorForGetErrors<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedIndexHandlerProcessorForGetErrors([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

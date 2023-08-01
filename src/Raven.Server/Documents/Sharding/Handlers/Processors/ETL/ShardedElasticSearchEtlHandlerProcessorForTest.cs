@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL;
 
-internal class ShardedElasticSearchEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestElasticSearchEtlScript, ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
+internal sealed class ShardedElasticSearchEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestElasticSearchEtlScript, ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
 {
     public ShardedElasticSearchEtlHandlerProcessorForTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

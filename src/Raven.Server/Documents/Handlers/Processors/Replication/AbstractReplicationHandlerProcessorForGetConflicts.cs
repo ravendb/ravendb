@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    internal class ConflictsPreviewComparer : Comparer<GetConflictsPreviewResult.ConflictPreview>
+    internal sealed class ConflictsPreviewComparer : Comparer<GetConflictsPreviewResult.ConflictPreview>
     {
         public override int Compare(GetConflictsPreviewResult.ConflictPreview x, GetConflictsPreviewResult.ConflictPreview y)
         {

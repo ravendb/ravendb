@@ -17,7 +17,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForBackupDatabaseOnce : AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class OngoingTasksHandlerProcessorForBackupDatabaseOnce : AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForBackupDatabaseOnce([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

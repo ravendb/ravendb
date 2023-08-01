@@ -11,7 +11,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminRevisionsHandler : DatabaseRequestHandler
+    public sealed class AdminRevisionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteRevisionsFor()

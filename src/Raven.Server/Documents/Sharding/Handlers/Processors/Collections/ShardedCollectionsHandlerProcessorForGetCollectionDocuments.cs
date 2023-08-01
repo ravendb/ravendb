@@ -18,7 +18,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 {
-    internal class ShardedCollectionsHandlerProcessorForGetCollectionDocuments : AbstractCollectionsHandlerProcessorForGetCollectionDocuments<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedCollectionsHandlerProcessorForGetCollectionDocuments : AbstractCollectionsHandlerProcessorForGetCollectionDocuments<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedCollectionsHandlerProcessorForGetCollectionDocuments([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         }
     }
 
-    public class CollectionResult
+    public sealed class CollectionResult
     {
         public BlittableJsonReaderArray Results;
         public string ContinuationToken;

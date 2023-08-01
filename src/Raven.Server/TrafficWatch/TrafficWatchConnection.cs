@@ -13,7 +13,7 @@ using Sparrow.Server;
 namespace Raven.Server.TrafficWatch
 {
 
-    internal class TrafficWatchConnection
+    internal sealed class TrafficWatchConnection
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
 

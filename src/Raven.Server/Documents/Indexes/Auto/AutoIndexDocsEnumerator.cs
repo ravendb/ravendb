@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexDocsEnumerator : IIndexedItemEnumerator
+    public sealed class AutoIndexDocsEnumerator : IIndexedItemEnumerator
     {
         private readonly IndexingStatsScope _documentReadStats;
         private readonly IEnumerator<IndexItem> _itemsEnumerator;

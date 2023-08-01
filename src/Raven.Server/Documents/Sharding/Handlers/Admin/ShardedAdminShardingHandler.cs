@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    public class ShardedAdminShardingHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedAdminShardingHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/sharding/resharding/cleanup", "POST")]
         public async Task ExecuteMoveDocuments()

@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Subscriptions
         public FetchingOrigin FetchingFrom;
     }
 
-    public class RevisionSubscriptionFetcher : SubscriptionFetcher<(Document Previous, Document Current)>
+    public sealed class RevisionSubscriptionFetcher : SubscriptionFetcher<(Document Previous, Document Current)>
     {
         public RevisionSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {

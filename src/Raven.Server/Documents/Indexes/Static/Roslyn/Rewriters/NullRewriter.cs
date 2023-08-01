@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class NullRewriter : CSharpSyntaxRewriter
+    public sealed class NullRewriter : CSharpSyntaxRewriter
     {
         public static readonly NullRewriter Instance = new NullRewriter();
 

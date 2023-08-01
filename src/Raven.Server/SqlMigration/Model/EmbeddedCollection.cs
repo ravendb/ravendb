@@ -2,7 +2,7 @@
 
 namespace Raven.Server.SqlMigration.Model
 {
-    public class EmbeddedCollection : CollectionWithReferences, ICollectionReference
+    public sealed class EmbeddedCollection : CollectionWithReferences, ICollectionReference
     {
         public List<string> JoinColumns { get; set; }
         public RelationType Type { get; set; }

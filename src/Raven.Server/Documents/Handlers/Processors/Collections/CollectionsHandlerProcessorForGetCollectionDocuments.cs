@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Collections
 {
-    internal class CollectionsHandlerProcessorForGetCollectionDocuments : AbstractCollectionsHandlerProcessorForGetCollectionDocuments<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class CollectionsHandlerProcessorForGetCollectionDocuments : AbstractCollectionsHandlerProcessorForGetCollectionDocuments<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public CollectionsHandlerProcessorForGetCollectionDocuments([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

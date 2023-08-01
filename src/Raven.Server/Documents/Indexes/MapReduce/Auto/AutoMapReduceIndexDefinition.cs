@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    internal class AutoMapReduceIndexDefinition : AutoIndexDefinitionBaseServerSide
+    internal sealed class AutoMapReduceIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public readonly Dictionary<string, AutoIndexField> GroupByFields;
 

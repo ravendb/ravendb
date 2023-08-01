@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis.Commands
 {
-    public class SwitchToSingleLeaderCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+    public sealed class SwitchToSingleLeaderCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
     {
         private readonly RachisConsensus _engine;
 

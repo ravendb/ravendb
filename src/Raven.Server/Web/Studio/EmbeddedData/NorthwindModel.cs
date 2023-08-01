@@ -4,7 +4,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Orders
 {
-    public class Company
+    public sealed class Company
     {
         public string Id { get; set; }
         public string ExternalId { get; set; }
@@ -14,7 +14,7 @@ namespace Orders
         public string Phone { get; set; }
         public string Fax { get; set; }
 
-        public class StockPrice
+        public sealed class StockPrice
         {
             [TimeSeriesValue(0)] public double Open { get; set; }
             [TimeSeriesValue(1)] public double Close { get; set; }
@@ -24,7 +24,7 @@ namespace Orders
         }
     }
 
-    public class Address
+    public sealed class Address
     {
         public string Line1 { get; set; }
         public string Line2 { get; set; }
@@ -35,26 +35,26 @@ namespace Orders
         public Location Location { get; set; }
     }
 
-    public class Location
+    public sealed class Location
     {
         public double Latitude { get; set; }
         public double Longitude { get; set; }
     }
 
-    public class Contact
+    public sealed class Contact
     {
         public string Name { get; set; }
         public string Title { get; set; }
     }
 
-    public class Category
+    public sealed class Category
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
     }
 
-    public class Order
+    public sealed class Order
     {
         public string Id { get; set; }
         public string Company { get; set; }
@@ -68,7 +68,7 @@ namespace Orders
         public List<OrderLine> Lines { get; set; }
     }
 
-    public class OrderLine
+    public sealed class OrderLine
     {
         public string Product { get; set; }
         public string ProductName { get; set; }
@@ -77,7 +77,7 @@ namespace Orders
         public decimal Discount { get; set; }
     }
 
-    public class Product
+    public sealed class Product
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -91,7 +91,7 @@ namespace Orders
         public int ReorderLevel { get; set; }
     }
 
-    public class Supplier
+    public sealed class Supplier
     {
         public string Id { get; set; }
         public Contact Contact { get; set; }
@@ -102,7 +102,7 @@ namespace Orders
         public string HomePage { get; set; }
     }
 
-    public class Employee
+    public sealed class Employee
     {
         public string Id { get; set; }
         public string LastName { get; set; }
@@ -117,27 +117,27 @@ namespace Orders
         public List<string> Notes { get; set; }
         public List<string> Territories { get; set; }
 
-        public class HeartRate
+        public sealed class HeartRate
         {
             [TimeSeriesValue(0)] public double BPM { get; set; }
         }
     }
 
-    public class Region
+    public sealed class Region
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public List<Territory> Territories { get; set; }
     }
 
-    public class Territory
+    public sealed class Territory
     {
         public string Code { get; set; }
         public string Name { get; set; }
         public string Area { get; set; }
     }
 
-    public class Shipper
+    public sealed class Shipper
     {
         public string Id { get; set; }
         public string Name { get; set; }

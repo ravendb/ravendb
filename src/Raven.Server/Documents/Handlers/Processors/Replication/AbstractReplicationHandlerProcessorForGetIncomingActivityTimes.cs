@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public class ReplicationIncomingLastActivityTimePreview
+    public sealed class ReplicationIncomingLastActivityTimePreview
     {
         public IDictionary<IncomingConnectionInfo, DateTime> Stats;
 

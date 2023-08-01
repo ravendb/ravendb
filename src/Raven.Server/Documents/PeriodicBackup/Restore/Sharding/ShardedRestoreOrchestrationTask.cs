@@ -18,7 +18,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
-    public class ShardedRestoreOrchestrationTask : AbstractRestoreBackupTask
+    public sealed class ShardedRestoreOrchestrationTask : AbstractRestoreBackupTask
     {
         private readonly long _operationId;
         private IOperationResult _result;

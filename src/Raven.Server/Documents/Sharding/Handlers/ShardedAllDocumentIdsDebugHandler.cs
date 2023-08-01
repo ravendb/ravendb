@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedAllDocumentIdsDebugHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedAllDocumentIdsDebugHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/debug/documents/export-all-ids", "GET")]
         public async Task ExportAllDocIds()

@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForTrySubscription : AbstractSubscriptionsHandlerProcessorForTrySubscription<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForTrySubscription : AbstractSubscriptionsHandlerProcessorForTrySubscription<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedSubscriptionsHandlerProcessorForTrySubscription([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {

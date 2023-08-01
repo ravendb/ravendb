@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _metadataOnly);
     }
 
-    public class GetShardedDocumentsResult
+    public sealed class GetShardedDocumentsResult
     {
         public List<BlittableJsonReaderObject> Includes;
         public Dictionary<string, BlittableJsonReaderObject> Documents;

@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Collections
 {
-    internal class CollectionsHandlerProcessorForGetLastChangeVector : AbstractCollectionsHandlerProcessorForGetLastChangeVector<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class CollectionsHandlerProcessorForGetLastChangeVector : AbstractCollectionsHandlerProcessorForGetLastChangeVector<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public CollectionsHandlerProcessorForGetLastChangeVector([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

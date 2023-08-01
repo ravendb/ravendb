@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Changes;
 
-internal class ChangesHandlerProcessorForDeleteConnections : AbstractChangesHandlerProcessorForDeleteConnections<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class ChangesHandlerProcessorForDeleteConnections : AbstractChangesHandlerProcessorForDeleteConnections<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public ChangesHandlerProcessorForDeleteConnections([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

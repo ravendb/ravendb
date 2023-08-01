@@ -5,7 +5,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerLicenseExpirationLeft : ScalarObjectBase<TimeTicks>
+    public sealed class ServerLicenseExpirationLeft : ScalarObjectBase<TimeTicks>
     {
         private readonly ServerStore _store;
 

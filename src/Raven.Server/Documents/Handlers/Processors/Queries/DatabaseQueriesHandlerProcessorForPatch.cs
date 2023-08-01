@@ -7,7 +7,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
-internal class DatabaseQueriesHandlerProcessorForPatch : AbstractDatabaseOperationQueriesHandlerProcessor
+internal sealed class DatabaseQueriesHandlerProcessorForPatch : AbstractDatabaseOperationQueriesHandlerProcessor
 {
 
     public DatabaseQueriesHandlerProcessorForPatch([NotNull] QueriesHandler requestHandler) : base(requestHandler)

@@ -6,7 +6,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-public class MergedInsertBulkCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedInsertBulkCommand>
+public sealed class MergedInsertBulkCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedInsertBulkCommand>
 {
     public BatchRequestParser.CommandData[] Commands { get; set; }
 

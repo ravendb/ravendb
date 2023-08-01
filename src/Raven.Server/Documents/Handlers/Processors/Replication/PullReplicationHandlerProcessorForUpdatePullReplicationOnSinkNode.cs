@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class PullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode : AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class PullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode : AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public PullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

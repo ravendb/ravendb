@@ -18,7 +18,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
-    internal class ShardedTimeSeriesHandlerProcessorForGetTimeSeriesRanges : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedTimeSeriesHandlerProcessorForGetTimeSeriesRanges : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedTimeSeriesHandlerProcessorForGetTimeSeriesRanges([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             await WriteTimeSeriesDetails(writeContext: context, docsContext: null, documentId: null, rangesResult, calcTotalCount: false, token);
         }
 
-        internal class ShardedGetMultipleTimeSeriesCommand : GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand
+        internal sealed class ShardedGetMultipleTimeSeriesCommand : GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand
         {
             public ShardedGetMultipleTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes = null, bool returnFullResults = false) : base(docId, ranges, start, pageSize, includes, returnFullResults)
             {

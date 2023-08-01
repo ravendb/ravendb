@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AttachmentHandlerProcessorForHeadAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

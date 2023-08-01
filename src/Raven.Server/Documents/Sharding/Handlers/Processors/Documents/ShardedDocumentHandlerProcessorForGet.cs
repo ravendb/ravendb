@@ -23,7 +23,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessorForGet<ShardedDocumentHandler, TransactionOperationContext, BlittableJsonReaderObject>
+internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessorForGet<ShardedDocumentHandler, TransactionOperationContext, BlittableJsonReaderObject>
 {
     private readonly OperationCancelToken _operationCancelToken;
 

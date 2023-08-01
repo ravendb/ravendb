@@ -22,7 +22,7 @@ using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents
 {
-    public class CompactDatabaseTask
+    public sealed class CompactDatabaseTask
     {
         private const string ResourceName = nameof(CompactDatabaseTask);
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<CompactDatabaseTask>(ResourceName);

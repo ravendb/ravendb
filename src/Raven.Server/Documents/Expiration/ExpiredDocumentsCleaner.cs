@@ -22,7 +22,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Expiration
 {
-    public class ExpiredDocumentsCleaner : BackgroundWorkBase
+    public sealed class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
         internal static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        internal class DeleteExpiredDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class DeleteExpiredDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
             private readonly DocumentDatabase _database;
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Expiration
         }
     }
 
-    internal class DeleteExpiredDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand>
+    internal sealed class DeleteExpiredDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand>
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

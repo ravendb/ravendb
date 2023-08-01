@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 {
-    internal class ShardedAttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAttachmentHandlerProcessorForGetAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
         {

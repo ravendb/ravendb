@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+internal sealed class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
     public StudioIndexHandlerForPostIndexType([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)
@@ -41,7 +41,7 @@ internal class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractD
     }
 }
 
-public class IndexTypeInfo
+public sealed class IndexTypeInfo
 {
     public IndexType IndexType { get; set; }
     public IndexSourceType IndexSourceType { get; set; }

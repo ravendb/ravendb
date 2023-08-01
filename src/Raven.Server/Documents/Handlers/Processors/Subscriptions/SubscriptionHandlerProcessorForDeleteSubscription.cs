@@ -3,7 +3,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal class SubscriptionHandlerProcessorForDeleteSubscription : AbstractSubscriptionHandlerProcessorForDeleteSubscription<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class SubscriptionHandlerProcessorForDeleteSubscription : AbstractSubscriptionHandlerProcessorForDeleteSubscription<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public SubscriptionHandlerProcessorForDeleteSubscription([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

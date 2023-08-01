@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Changes
 {
-    public class DocumentsChanges : DocumentsChangesBase<ChangesClientConnection, DocumentsOperationContext>
+    public sealed class DocumentsChanges : DocumentsChangesBase<ChangesClientConnection, DocumentsOperationContext>
     {
         public event Action<DocumentChange> OnDocumentChange;
 

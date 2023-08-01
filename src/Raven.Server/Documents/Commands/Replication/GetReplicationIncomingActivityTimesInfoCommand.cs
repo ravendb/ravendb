@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetReplicationIncomingActivityTimesInfoCommand : RavenCommand<ReplicationIncomingLastActivityTimePreview>
+    internal sealed class GetReplicationIncomingActivityTimesInfoCommand : RavenCommand<ReplicationIncomingLastActivityTimePreview>
     {
         public GetReplicationIncomingActivityTimesInfoCommand()
         {

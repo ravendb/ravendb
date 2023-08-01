@@ -13,7 +13,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class InvalidQueryRunner : AbstractDatabaseQueryRunner
+    public sealed class InvalidQueryRunner : AbstractDatabaseQueryRunner
     {
         internal const string ErrorMessage = "Dynamic queries are not supported by this database because the configuration '" + nameof(IndexingConfiguration.DisableQueryOptimizerGeneratedIndexes) + "' is set to true and the query optimizer needs an index for this query";
 

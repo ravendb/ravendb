@@ -14,7 +14,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class RavenDnsRecordHelper
+public sealed class RavenDnsRecordHelper
 {
     private const string GoogleDnsApi = "https://dns.google.com";
 

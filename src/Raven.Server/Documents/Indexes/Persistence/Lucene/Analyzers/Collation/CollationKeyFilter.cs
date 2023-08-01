@@ -10,7 +10,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
 {
-    public class CollationKeyFilter : TokenFilter
+    public sealed class CollationKeyFilter : TokenFilter
     {
         private readonly TermAttribute _termAtt;
         private readonly CultureInfo _cultureInfo;

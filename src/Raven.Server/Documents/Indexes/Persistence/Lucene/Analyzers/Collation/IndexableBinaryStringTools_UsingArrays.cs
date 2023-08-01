@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
     /// Note that the reason we have this code here is that we don't want to convert to/from List / array
     /// which is the case of the same class in the Lucene code.
     /// </remarks>
-    public class IndexableBinaryStringTools_UsingArrays
+    public sealed class IndexableBinaryStringTools_UsingArrays
     {
 
         private static readonly CodingCase[] CODING_CASES = { new CodingCase(7, 1), new CodingCase(14, 6, 2), new CodingCase(13, 5, 3), new CodingCase(12, 4, 4), new CodingCase(11, 3, 5), new CodingCase(10, 2, 6), new CodingCase(9, 1, 7), new CodingCase(8, 0) };
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
             return c;
         }
 
-        internal class CodingCase
+        internal sealed class CodingCase
         {
             internal int numBytes, initialShift, middleShift, finalShift, advanceBytes = 2;
             internal short middleMask, finalMask;

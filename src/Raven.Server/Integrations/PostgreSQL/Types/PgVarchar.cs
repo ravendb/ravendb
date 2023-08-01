@@ -4,7 +4,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL.Types
 {
-    public class PgVarchar : PgType
+    public sealed class PgVarchar : PgType
     {
         public static readonly PgVarchar Default = new();
         public override int Oid => PgTypeOIDs.Varchar;

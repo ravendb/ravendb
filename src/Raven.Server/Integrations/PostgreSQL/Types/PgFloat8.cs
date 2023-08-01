@@ -4,7 +4,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL.Types
 {
-    public class PgFloat8 : PgType
+    public sealed class PgFloat8 : PgType
     {
         public static readonly PgFloat8 Default = new();
         public override int Oid => PgTypeOIDs.Float8;

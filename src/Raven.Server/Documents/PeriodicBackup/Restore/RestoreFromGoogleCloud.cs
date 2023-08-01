@@ -11,7 +11,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromGoogleCloud : IRestoreSource
+    public sealed class RestoreFromGoogleCloud : IRestoreSource
     {
         private readonly ServerStore _serverStore;
         private readonly RavenGoogleCloudClient _client;

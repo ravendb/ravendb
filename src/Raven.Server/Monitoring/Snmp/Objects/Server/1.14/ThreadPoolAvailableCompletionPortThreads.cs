@@ -3,7 +3,7 @@ using Lextm.SharpSnmpLib;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ThreadPoolAvailableCompletionPortThreads : ScalarObjectBase<Gauge32>
+    public sealed class ThreadPoolAvailableCompletionPortThreads : ScalarObjectBase<Gauge32>
     {
         public ThreadPoolAvailableCompletionPortThreads()
             : base(SnmpOids.Server.ThreadPoolAvailableCompletionPortThreads)

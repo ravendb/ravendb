@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Tombstones;
 
-internal class AdminTombstoneHandlerProcessorForCleanup : AbstractAdminTombstoneHandlerProcessorForCleanup<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AdminTombstoneHandlerProcessorForCleanup : AbstractAdminTombstoneHandlerProcessorForCleanup<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminTombstoneHandlerProcessorForCleanup([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

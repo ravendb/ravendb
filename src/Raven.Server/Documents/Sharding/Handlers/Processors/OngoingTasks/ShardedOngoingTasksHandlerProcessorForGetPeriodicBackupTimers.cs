@@ -9,7 +9,7 @@ using Raven.Server.Web.System.Processors.OngoingTasks;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 
-internal class ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

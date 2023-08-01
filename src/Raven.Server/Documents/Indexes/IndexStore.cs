@@ -2150,7 +2150,7 @@ namespace Raven.Server.Documents.Indexes
             return ForTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             private readonly IndexStore _parent;
             internal Action DuringIndexReplacement_AfterUpdatingCollectionOfIndexes;

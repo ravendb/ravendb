@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Raven.Server.Web.ResponseCompression
 {
-    public class DeflateCompressionProvider : ICompressionProvider
+    public sealed class DeflateCompressionProvider : ICompressionProvider
     {
         public DeflateCompressionProvider(IOptions<DeflateCompressionProviderOptions> options)
         {

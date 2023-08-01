@@ -16,7 +16,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
 {
-    public class NodeInfo
+    public sealed class NodeInfo
     {
         public string PublicServerUrl { get; set; }
         public string PublicTcpServerUrl { get; set; }
@@ -43,7 +43,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class SetupInfo : SetupInfoBase
+    public sealed class SetupInfo : SetupInfoBase
     {
         public bool RegisterClientCert { get; set; }
         public DateTime? ClientCertNotAfter { get; set; }
@@ -158,7 +158,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class UnsecuredSetupInfo : SetupInfoBase
+    public sealed class UnsecuredSetupInfo : SetupInfoBase
     {
         public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
@@ -219,7 +219,7 @@ namespace Raven.Server.Commercial
 
     }
 
-    public class ContinueSetupInfo
+    public sealed class ContinueSetupInfo
     {
         public string NodeTag { get; set; }
         public bool RegisterClientCert { get; set; }
@@ -236,7 +236,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class ListDomainsInfo
+    public sealed class ListDomainsInfo
     {
         public License License { get; set; }
 
@@ -249,7 +249,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class ClaimDomainInfo
+    public sealed class ClaimDomainInfo
     {
         public License License { get; set; }
         public string Domain { get; set; }
@@ -264,7 +264,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class RegistrationInfo
+    public sealed class RegistrationInfo
     {
         public License License { get; set; }
         public string Domain { get; set; }
@@ -285,7 +285,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class RegistrationNodeInfo
+    public sealed class RegistrationNodeInfo
     {
         public List<string> Ips { get; set; }
         public string SubDomain { get; set; }
@@ -300,7 +300,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class SubDomainAndIps
+    public sealed class SubDomainAndIps
     {
         public string SubDomain { get; set; }
         public List<string> Ips { get; set; }
@@ -320,7 +320,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class UserDomainsAndLicenseInfo
+    public sealed class UserDomainsAndLicenseInfo
     {
         public UserDomainsWithIps UserDomainsWithIps { get; set; }
         public int MaxClusterSize { get; set; }
@@ -337,7 +337,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class UserDomainsWithIps
+    public sealed class UserDomainsWithIps
     {
         public string[] Emails { get; set; }
         public string[] RootDomains { get; set; }
@@ -354,7 +354,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class UserDomainsResult
+    public sealed class UserDomainsResult
     {
         public string[] Emails { get; set; }
         public string[] RootDomains { get; set; }
@@ -371,7 +371,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class RegistrationResult
+    public sealed class RegistrationResult
     {
         public string Status { get; set; }
 
@@ -394,7 +394,7 @@ namespace Raven.Server.Commercial
         Finish
     }
 
-    public class SetupProgressAndResult : IOperationResult, IOperationProgress
+    public sealed class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
         private readonly Action<(string Message, Exception Exception)> _onMessage;
 
@@ -474,7 +474,7 @@ namespace Raven.Server.Commercial
         public bool ShouldPersist => false;
     }
 
-    public class SetupSettings
+    public sealed class SetupSettings
     {
         public Node[] Nodes;
 
@@ -488,7 +488,7 @@ namespace Raven.Server.Commercial
             };
         }
 
-        public class Node
+        public sealed class Node
         {
             public string Tag { get; set; }
 

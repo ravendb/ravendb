@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
-    public class ShardedRestoreResult : IShardedOperationResult<ShardNodeRestoreResult>
+    public sealed class ShardedRestoreResult : IShardedOperationResult<ShardNodeRestoreResult>
     {
         public ShardedRestoreResult()
         {
@@ -51,12 +51,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         }
     }
 
-    public class ShardNodeRestoreResult : ShardNodeOperationResult<RestoreResult>
+    public sealed class ShardNodeRestoreResult : ShardNodeOperationResult<RestoreResult>
     {
         public override bool ShouldPersist => true;
     }
 
-    public class ShardedRestoreProgress : RestoreProgress, IShardedOperationProgress
+    public sealed class ShardedRestoreProgress : RestoreProgress, IShardedOperationProgress
     {
         public int ShardNumber { get; set; }
 

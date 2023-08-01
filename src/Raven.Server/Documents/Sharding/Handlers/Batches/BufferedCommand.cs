@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
 
-public class BufferedCommand
+public sealed class BufferedCommand
 {
     public MemoryStream CommandStream;
     public bool IsIdentity;
@@ -58,7 +58,7 @@ public class BufferedCommand
         public byte[] NewValue();
     }
 
-    public class PatchModifier : IItemModifier
+    public sealed class PatchModifier : IItemModifier
     {
         public List<(string Id, string ChangeVector)> List;
         public int IdsStartPosition;
@@ -110,7 +110,7 @@ public class BufferedCommand
         }
     }
 
-    public class ChangeVectorModifier : IItemModifier
+    public sealed class ChangeVectorModifier : IItemModifier
     {
         public int ChangeVectorPosition;
 
@@ -127,7 +127,7 @@ public class BufferedCommand
         private static readonly byte[] Empty = Encoding.UTF8.GetBytes("\"\"");
     }
 
-    public class IdModifier : IItemModifier
+    public sealed class IdModifier : IItemModifier
     {
         public int IdStartPosition;
         public int IdLength;
@@ -148,7 +148,7 @@ public class BufferedCommand
         public byte[] NewValue() => Encoding.UTF8.GetBytes(NewId);
     }
 
-    public class PatchCommandModifier : BufferedCommandModifier
+    public sealed class PatchCommandModifier : BufferedCommandModifier
     {
         public PatchCommandModifier(int idsStartPosition, int idsLength, List<(string Id, string ChangeVector)> list)
         {
@@ -162,7 +162,7 @@ public class BufferedCommand
         }
     }
 
-    public class IdentityCommandModifier : BufferedCommandModifier
+    public sealed class IdentityCommandModifier : BufferedCommandModifier
     {
         public static IdentityCommandModifier Create(int idStartPosition, int idLength, int changeVectorPosition, string newId)
         {

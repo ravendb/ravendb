@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public class JsonClassGenerator
+    public sealed class JsonClassGenerator
     {
         private readonly Lazy<IDictionary<Type, FieldType>> _knownTypes = new Lazy<IDictionary<Type, FieldType>>(InitializeKnownTypes, true);
 
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal class ClassType : FieldType
+        internal sealed class ClassType : FieldType
         {
             public readonly IDictionary<string, FieldType> Properties;
 

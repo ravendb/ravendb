@@ -2,14 +2,14 @@
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.Test
 {
-    public class QueueSummary
+    public sealed class QueueSummary
     {
         public string QueueName { get; set; }
 
         public List<MessageSummary> Messages { get; set; }
     }
 
-    public class MessageSummary
+    public sealed class MessageSummary
     {
         public string Body { get; set; }
 

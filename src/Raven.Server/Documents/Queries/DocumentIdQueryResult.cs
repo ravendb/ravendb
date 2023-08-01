@@ -8,7 +8,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class DocumentIdQueryResult : DocumentQueryResult
+    public sealed class DocumentIdQueryResult : DocumentQueryResult
     {
         private readonly DeterminateProgress _progress;
         private readonly Action<DeterminateProgress> _onProgress;

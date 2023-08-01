@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Suggestions
 {
-    public class SuggestionField : SelectField
+    public sealed class SuggestionField : SelectField
     {
         private string _termAsStringOrParameterName;
 

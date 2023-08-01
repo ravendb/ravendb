@@ -24,7 +24,7 @@ namespace Lucene.Net.Search.Vectorhighlight
     /// <summary>
     /// A simple implementation of FragListBuilder.
     /// </summary>
-    public class SimpleFragListBuilder : FragListBuilder
+    public sealed class SimpleFragListBuilder : FragListBuilder
     {
 
         public static int MARGIN = 6;

@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class CpuCreditsMax : ScalarObjectBase<Integer32>
+    public sealed class CpuCreditsMax : ScalarObjectBase<Integer32>
     {
         private readonly RavenServer.CpuCreditsState _state;
 

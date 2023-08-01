@@ -4,7 +4,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class OperationsStorage
+    public sealed class OperationsStorage
     {
         private StorageEnvironment _environment;
         private TransactionContextPool _contextPool;

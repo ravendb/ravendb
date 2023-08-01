@@ -7,7 +7,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    public class ShardedAdminIndexHandler : ShardedDatabaseRequestHandler
+    public sealed class ShardedAdminIndexHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/indexes", "PUT")]
         public async Task Put()

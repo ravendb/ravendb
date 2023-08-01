@@ -136,7 +136,7 @@ public class AutoMapReduceIndexResultsAggregator
         return aggregate;
     }
 
-    internal class PropertyResult
+    internal sealed class PropertyResult
     {
         private NumberParseResult? _numberType;
 

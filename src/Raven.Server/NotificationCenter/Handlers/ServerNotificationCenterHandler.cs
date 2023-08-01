@@ -18,7 +18,7 @@ using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ServerNotificationCenterHandler : ServerNotificationHandlerBase
+    public sealed class ServerNotificationCenterHandler : ServerNotificationHandlerBase
     {
         [RavenAction("/server/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()

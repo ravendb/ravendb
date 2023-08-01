@@ -136,7 +136,7 @@ namespace Raven.Server.Utils
             Compaction
         }
 
-        public class DirectoryParameters
+        public sealed class DirectoryParameters
         {
             public string OnDirectoryInitializeExec { get; set; }
             public string OnDirectoryInitializeExecArguments { get; set; }

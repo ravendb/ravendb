@@ -3,7 +3,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class ServerBackupsCurrent : ScalarObjectBase<Integer32>
+    public sealed class ServerBackupsCurrent : ScalarObjectBase<Integer32>
     {
         private readonly ServerStore _serverStore;
 

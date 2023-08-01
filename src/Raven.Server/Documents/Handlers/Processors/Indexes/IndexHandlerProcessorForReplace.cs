@@ -9,7 +9,7 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForReplace : AbstractIndexHandlerProcessorForReplace<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class IndexHandlerProcessorForReplace : AbstractIndexHandlerProcessorForReplace<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public IndexHandlerProcessorForReplace([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

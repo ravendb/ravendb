@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedCounterIncludes : AbstractIncludeCountersCommand
+public sealed class ShardedCounterIncludes : AbstractIncludeCountersCommand
 {
     private readonly CancellationToken _token;
     private Dictionary<string, List<BlittableJsonReaderObject>> _countersByDocumentId;

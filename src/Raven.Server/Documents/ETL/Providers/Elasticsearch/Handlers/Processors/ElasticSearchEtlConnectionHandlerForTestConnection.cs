@@ -13,7 +13,7 @@ using Authentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.Authe
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers.Processors;
 
-internal class ElasticSearchEtlConnectionHandlerForTestConnection<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+internal sealed class ElasticSearchEtlConnectionHandlerForTestConnection<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
     public ElasticSearchEtlConnectionHandlerForTestConnection([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)

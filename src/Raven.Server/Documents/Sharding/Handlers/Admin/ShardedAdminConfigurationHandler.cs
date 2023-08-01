@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    internal class ShardedAdminConfigurationHandler : ShardedDatabaseRequestHandler
+    internal sealed class ShardedAdminConfigurationHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/configuration/settings", "GET")]
         public async Task GetSettings()

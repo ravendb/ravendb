@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class StatsHandler : DatabaseRequestHandler
+    public sealed class StatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/stats/essential", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task EssentialStats()

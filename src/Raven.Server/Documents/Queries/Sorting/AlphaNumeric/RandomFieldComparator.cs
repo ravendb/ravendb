@@ -5,7 +5,7 @@ using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
-    public class RandomFieldComparator : FieldComparator
+    public sealed class RandomFieldComparator : FieldComparator
     {
         private readonly Random _random;
         private readonly int[] _values;

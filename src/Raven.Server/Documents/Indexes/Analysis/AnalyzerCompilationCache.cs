@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Analysis
 {
-    public class AnalyzerCompilationCache : AbstractCompilationCache<AnalyzerFactory>
+    public sealed class AnalyzerCompilationCache : AbstractCompilationCache<AnalyzerFactory>
     {
         public static readonly AnalyzerCompilationCache Instance = new();
 

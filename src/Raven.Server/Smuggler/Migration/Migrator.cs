@@ -23,7 +23,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class Migrator
+    public sealed class Migrator
     {
         public const string MigrationStateKeyBase = "Raven/Migration/Status/";
 

@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
-internal class EtlHandlerProcessorForPerformanceLive : AbstractEtlHandlerProcessorForPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class EtlHandlerProcessorForPerformanceLive : AbstractEtlHandlerProcessorForPerformanceLive<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public EtlHandlerProcessorForPerformanceLive([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

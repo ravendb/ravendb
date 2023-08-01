@@ -6,19 +6,19 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
     {
     }
 
-    public class StartupMessage : IInitialMessage
+    public sealed class StartupMessage : IInitialMessage
     {
         public ProtocolVersion ProtocolVersion;
         public Dictionary<string, string> ClientOptions;
     }
 
-    public class Cancel : IInitialMessage
+    public sealed class Cancel : IInitialMessage
     {
         public int ProcessId;
         public int SessionId;
     }
 
-    public class SSLRequest : IInitialMessage
+    public sealed class SSLRequest : IInitialMessage
     {
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.ServerWide
 {
-    public class CertificateReplacement
+    public sealed class CertificateReplacement
     {
         public string Certificate;
         public string Thumbprint;

@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.Model
 {
-    public class MigrationResult : IOperationResult
+    public sealed class MigrationResult : IOperationResult
     {
         private readonly List<string> _messages;
         protected MigrationProgress _progress;
@@ -86,7 +86,7 @@ namespace Raven.Server.SqlMigration.Model
         }
     }
 
-    public class MigrationProgress : IOperationProgress
+    public sealed class MigrationProgress : IOperationProgress
     {
         protected readonly MigrationResult _result;
 
@@ -119,7 +119,7 @@ namespace Raven.Server.SqlMigration.Model
         }
     }
 
-    public class Counts : IDynamicJson
+    public sealed class Counts : IDynamicJson
     {
         public bool Processed { get; set; }
 
@@ -129,7 +129,7 @@ namespace Raven.Server.SqlMigration.Model
 
         public long SkippedCount { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {

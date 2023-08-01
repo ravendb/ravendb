@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
 
-public class MicrosoftLoggerFactory : ILoggerFactory
+public sealed class MicrosoftLoggerFactory : ILoggerFactory
 {
     private readonly MicrosoftLoggingProvider _provider;
 
