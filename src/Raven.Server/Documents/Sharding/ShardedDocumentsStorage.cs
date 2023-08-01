@@ -359,7 +359,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             Delete(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
 
             // delete revisions for document
-            RevisionsStorage.DeleteRevisionsFor(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
+            RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id);
             deleted++;
         }
 

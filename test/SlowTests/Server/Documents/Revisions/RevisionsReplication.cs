@@ -287,7 +287,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Disabled = false,
                     MinimumRevisionsToKeep = 0
                 };
-                await RevisionsHelper.SetupConflictedRevisionsAsync(store1, Server.ServerStore, configuration: config2);
+                await RevisionsHelper.SetupConflictedRevisionsAsync(store1, configuration: config2);
 
                 await PutDocument(store1);
                 await PutDocument(store2);

@@ -575,7 +575,7 @@ namespace Raven.Server.Documents.Revisions
                     configuration, result.PreviousCount, result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete);
+            var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, tombstoneFlags: DocumentFlags.None);
 
             IncrementCountOfRevisions(context, prefixSlice, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -606,7 +606,7 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var result = new DeleteOldRevisionsResult();
                 var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, skipForceCreated, result);
-                var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete);
+                var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, tombstoneFlags: DocumentFlags.None);
                 moreWork |= result.HasMore;
                 IncrementCountOfRevisions(context, prefixSlice, -deleted);
             }
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.Revisions
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, CollectionName collectionName,
             ChangeVector changeVector, long lastModifiedTicks, 
-            IEnumerable<Document> revisionsToRemove)
+            IEnumerable<Document> revisionsToRemove, DocumentFlags tombstoneFlags)
         {
             var writeTables = new Dictionary<string, Table>();
             long maxEtagDeleted = 0;
@@ -789,16 +789,16 @@ namespace Raven.Server.Documents.Revisions
                 using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var prefixSlice))
                 using (CreateRevisionTombstoneKeySlice(context, prefixSlice, revision.ChangeVector, out var changeVectorSlice, out var keySlice))
                 {
-                    CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                    CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
 
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if (revision.Flags.Contain(DocumentFlags.HasAttachments))
                     {
-                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks, tombstoneFlags);
                     }
 
                     Table writeTable = null;
-                    if (table.ReadByKey(keySlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
+                    if (table.ReadByKey(changeVectorSlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
                     {
                         writeTable = table;
                     }
@@ -1107,13 +1107,13 @@ namespace Raven.Server.Documents.Revisions
             var toDispose = new List<IDisposable>
             {
                 Slice.From(context.Allocator, changeVector, out changeVectorSlice),
-                context.Allocator.Allocate(documentIdSlice.Size + changeVectorSlice.Size, out var keyBuffer),
+                context.Allocator.Allocate(documentIdSlice.Size + changeVectorSlice.Size + 1, out var keyBuffer),
                 Slice.External(context.Allocator, keyBuffer.Ptr, keyBuffer.Length, out keySlice)
             };
 
             documentIdSlice.CopyTo(keyBuffer.Ptr);
             int pos = documentIdSlice.Size;
-            keyBuffer.Ptr[pos - 1] = SpecialChars.RecordSeparator;
+            keyBuffer.Ptr[pos++] = SpecialChars.RecordSeparator;
             changeVectorSlice.CopyTo(keyBuffer.Ptr + pos);
 
             return new DisposableAction(() =>

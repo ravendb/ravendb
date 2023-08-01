@@ -12,7 +12,11 @@ namespace Raven.Client.Documents.Operations.Revisions
         private readonly long? _operationId;
         private readonly bool _includeForceCreated;
 
-        public EnforceRevisionsConfigurationOperation(bool includeForceCreated = false)
+        public EnforceRevisionsConfigurationOperation()
+        {
+        }
+
+        public EnforceRevisionsConfigurationOperation(bool includeForceCreated)
         {
             _includeForceCreated = includeForceCreated;
         }

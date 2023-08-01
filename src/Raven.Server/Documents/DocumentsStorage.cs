@@ -1763,8 +1763,8 @@ namespace Raven.Server.Documents
                                 localChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
                         }
                         flags |= DocumentFlags.HasRevisions;
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, newFlags.Contain(DocumentFlags.Reverted) ? newFlags : flags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
+                            modifiedTicks, nonPersistentFlags, newFlags);
                     }
                 }
 
