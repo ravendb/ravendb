@@ -65,7 +65,7 @@ namespace Voron.Impl
 
         Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
 
-        internal class WriteTransactionPool
+        internal sealed class WriteTransactionPool
         {
 #if DEBUG
             public int BuilderUsages;
@@ -1628,7 +1628,7 @@ namespace Voron.Impl
             return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             private readonly LowLevelTransaction _tx;
             internal bool SimulateThrowingOnCommitStage2 = false;

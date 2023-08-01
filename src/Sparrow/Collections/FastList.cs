@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Collections
 {
-    public class FastList<T> : IList<T>
+    public sealed class FastList<T> : IList<T>
     {
         private uint _version = 0;
         private uint _size = 0;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Voron.Debugging
 {
-    public class InMemoryStorageState
+    public sealed class InMemoryStorageState
     {
         public long CurrentReadTransactionId { get; set; }
 
@@ -18,7 +18,7 @@ namespace Voron.Debugging
         public SyncStateDetails SyncState { get; set; }
 
 
-        public class FlushStateDetails
+        public sealed class FlushStateDetails
         {
             public DateTime LastFlushTime { get; set; }
 
@@ -33,7 +33,7 @@ namespace Voron.Debugging
             public List<long> JournalsToDelete { get; set; }
         }
 
-        public class SyncStateDetails
+        public sealed class SyncStateDetails
         {
             public DateTime LastSyncTime { get; set; }
 

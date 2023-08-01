@@ -8,7 +8,7 @@ using static Sparrow.Json.CachedProperties;
 
 namespace Sparrow.Json
 {
-    public class JsonDeserializationBase
+    internal class JsonDeserializationBase
     {
         private static readonly Type[] EmptyTypes = new Type[0];
         private static readonly Dictionary<Type, object> DeserializedTypes = new Dictionary<Type, object>();

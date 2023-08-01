@@ -75,7 +75,7 @@ namespace Sparrow.Logging
         private static readonly byte[] _headerRow =
             Encodings.Utf8.GetBytes($"Time, Thread, Level, Source, Logger, Message, Exception{Environment.NewLine}");
 
-        public class WebSocketContext
+        public sealed class WebSocketContext
         {
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
@@ -346,7 +346,7 @@ namespace Sparrow.Logging
             }
         }
 
-        internal class LogInfo
+        internal sealed class LogInfo
         {
             public const string LogExtension = ".log"; 
             public const string AdditionalCompressExtension = ".gz"; 

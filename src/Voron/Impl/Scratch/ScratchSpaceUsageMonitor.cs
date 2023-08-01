@@ -4,7 +4,7 @@ namespace Voron.Impl.Scratch
 {
     public delegate void ScratchSpaceChangedDelegate(long scratchSpaceChangeInBytes);
 
-    public class ScratchSpaceUsageMonitor : IScratchSpaceMonitor, IDisposable
+    public sealed class ScratchSpaceUsageMonitor : IScratchSpaceMonitor, IDisposable
     {
         private ScratchSpaceChangedDelegate _increase;
         private ScratchSpaceChangedDelegate _decrease;

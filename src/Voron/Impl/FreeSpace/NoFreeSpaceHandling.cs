@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Voron.Impl.FreeSpace
 {
-    public class NoFreeSpaceHandling : IFreeSpaceHandling
+    public sealed class NoFreeSpaceHandling : IFreeSpaceHandling
     {
         public long? TryAllocateFromFreeSpace(LowLevelTransaction tx, int num)
         {

@@ -10,7 +10,7 @@ using Voron.Impl.Journal;
 
 namespace Voron
 {
-    public class GlobalFlushingBehavior
+    public sealed class GlobalFlushingBehavior
     {
         private const string FlushingThreadName = "Voron Flushing Thread";
 
@@ -309,7 +309,7 @@ namespace Voron
             return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal readonly List<StorageEnvironment> AllowToFlushEvenIfManualFlushingSet = new List<StorageEnvironment>();
 

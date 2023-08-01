@@ -26,7 +26,7 @@ namespace Voron.Impl.Backup
 {
     public unsafe class FullBackup
     {
-        public class StorageEnvironmentInformation
+        public sealed class StorageEnvironmentInformation
         {
             public string Folder { set; get; }
             public string Name { get; set; }

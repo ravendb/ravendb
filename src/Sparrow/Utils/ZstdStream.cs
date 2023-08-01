@@ -8,7 +8,7 @@ using Sparrow.Threading;
 namespace Sparrow.Utils
 {
 #if NETCOREAPP3_1_OR_GREATER
-    internal class ZstdStream : Stream
+    internal sealed class ZstdStream : Stream
     {
         private readonly Stream _inner;
         private readonly bool _compression;

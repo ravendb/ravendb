@@ -1,6 +1,6 @@
 ﻿namespace Sparrow.Server.Utils
 {
-    internal class StrongReference<T>
+    internal sealed class StrongReference<T>
     {
         public T Value { get; set; }
     }

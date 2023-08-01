@@ -25,7 +25,7 @@ namespace Sparrow.Server.Collections.LockFree
     /// All public and protected members of <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> are thread-safe and may be used
     /// concurrently from multiple threads.
     /// </remarks>
-    public class LockFreeConcurrentDictionary<TKey, TValue> :
+    public sealed class LockFreeConcurrentDictionary<TKey, TValue> :
         IDictionary<TKey, TValue>,
         IReadOnlyDictionary<TKey, TValue>,
         IDictionary,

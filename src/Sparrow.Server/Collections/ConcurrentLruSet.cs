@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Sparrow.Server.Collections
 {
-    public class ConcurrentLruSet<T>
+    public sealed class ConcurrentLruSet<T>
     {
         private readonly int maxCapacity;
         private readonly Action<T> onDrop;

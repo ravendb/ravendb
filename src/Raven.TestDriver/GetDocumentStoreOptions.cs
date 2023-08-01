@@ -2,7 +2,7 @@
 
 namespace Raven.TestDriver
 {
-    public class GetDocumentStoreOptions
+    public sealed class GetDocumentStoreOptions
     {
         internal static GetDocumentStoreOptions Default => DefaultLazy.Value;
         private static readonly Lazy<GetDocumentStoreOptions> DefaultLazy = new Lazy<GetDocumentStoreOptions>(() => new GetDocumentStoreOptions());

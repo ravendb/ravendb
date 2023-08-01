@@ -4,7 +4,7 @@
     /// It's meant to be used only on list of pages that are sorted descending by page number.
     /// We need to iterate from the end in order to filter out pages that was overwritten by later transaction.
     /// </summary>
-    public class RecoveryOverflowDetector
+    public sealed class RecoveryOverflowDetector
     {
         private long _minPageChecked = -1;
         private long _minPageOverlappedByAnotherPage = -1;

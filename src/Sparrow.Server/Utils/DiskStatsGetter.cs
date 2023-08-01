@@ -15,7 +15,7 @@ namespace Sparrow.Server.Utils
         Task<DiskStatsResult> GetAsync(string drive);
     }
 
-    internal class DiskStatsGetter : IDiskStatsGetter
+    internal sealed class DiskStatsGetter : IDiskStatsGetter
     {
         private readonly TimeSpan _minInterval;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskStatsGetter).FullName);
@@ -260,7 +260,7 @@ namespace Sparrow.Server.Utils
         public long? QueueLength { get; set; }
     }
 
-    internal class NotImplementedDiskStatsGetter : IDiskStatsGetter
+    internal sealed class NotImplementedDiskStatsGetter : IDiskStatsGetter
     {
         public DiskStatsResult Get(string drive) => null;
         public Task<DiskStatsResult> GetAsync(string drive) => null;

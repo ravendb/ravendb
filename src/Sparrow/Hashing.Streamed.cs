@@ -369,7 +369,7 @@ namespace Sparrow
             #region Metro128
 
 
-            public class Metro128Context
+            public sealed class Metro128Context
             {
                 internal uint Seed = 0;
                 internal Metro128Values Current;

@@ -3,7 +3,7 @@ using Raven.Embedded;
 
 namespace Raven.TestDriver
 {
-    public class TestServerOptions : ServerOptions
+    public sealed class TestServerOptions : ServerOptions
     {
         public static TestServerOptions UseFiddler()
         {

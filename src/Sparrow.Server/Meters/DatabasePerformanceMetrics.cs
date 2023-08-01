@@ -2,7 +2,7 @@
 
 namespace Sparrow.Server.Meters
 {
-    public class DatabasePerformanceMetrics
+    public sealed class DatabasePerformanceMetrics
     {
         public enum MetricType
         {

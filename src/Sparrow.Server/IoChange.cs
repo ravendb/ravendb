@@ -3,7 +3,7 @@ using Sparrow.Server.Meters;
 
 namespace Sparrow.Server
 {
-    public class IoChange
+    public sealed class IoChange
     {
         public string Key => $"{MeterItem.Type}/{FileName}";
 
@@ -12,7 +12,7 @@ namespace Sparrow.Server
         public IoMeterBuffer.MeterItem MeterItem { get; set; }
     }
 
-    public class IoChangesNotifications
+    public sealed class IoChangesNotifications
     {
         public event Action<IoChange> OnIoChange;
         public bool DisableIoMetrics;

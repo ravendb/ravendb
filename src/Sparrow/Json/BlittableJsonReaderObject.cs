@@ -1011,7 +1011,7 @@ namespace Sparrow.Json
             throw new ArgumentOutOfRangeException(nameof(type), type.ToString(), "Unexpected type: " + type);
         }
 
-        public class RawBlob
+        public sealed class RawBlob
         {
             public RawBlob()
             {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Voron.Impl.Scratch
 {
-    public class ScratchBufferPoolInfo
+    public sealed class ScratchBufferPoolInfo
     {
         public ScratchBufferPoolInfo()
         {
@@ -25,13 +25,13 @@ namespace Voron.Impl.Scratch
         public DateTime CurrentUtcTime { get; set; }
     }
 
-    public class MostAvailableFreePagesBySize
+    public sealed class MostAvailableFreePagesBySize
     {
         public long Size { get; set; }
         public long ValidAfterTransactionId { get; set; }
     }
 
-    public class AllocatedPageInScratchBuffer
+    public sealed class AllocatedPageInScratchBuffer
     {
         public int ScratchFileNumber { get; set; }
         public long PositionInScratchBuffer { get; set; }
@@ -40,7 +40,7 @@ namespace Voron.Impl.Scratch
         public long ScratchPageNumber { get; set; }
     }
 
-    public class ScratchFileUsage
+    public sealed class ScratchFileUsage
     {
         public ScratchFileUsage()
         {

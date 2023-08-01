@@ -272,7 +272,7 @@ namespace Sparrow.Server.Utils
             uint dwFlags);
     }
 
-    public class DiskSpaceResult : DriveInfoBase
+    public sealed class DiskSpaceResult : DriveInfoBase
     {
         public string VolumeLabel { get; set; }
 

@@ -2,7 +2,7 @@
 
 namespace Voron.Exceptions
 {
-    public class PageCompressedException : Exception
+    public sealed class PageCompressedException : Exception
     {
 
         public PageCompressedException()

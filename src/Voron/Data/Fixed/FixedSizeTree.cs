@@ -23,7 +23,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Fixed
 {
-    public class FixedSizeTree : FixedSizeTree<long>
+    public sealed class FixedSizeTree : FixedSizeTree<long>
     {
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, bool isIndexTree = false, NewPageAllocator newPageAllocator = null) : base(tx, parent, treeName, valSize, clone, isIndexTree, newPageAllocator)
         {

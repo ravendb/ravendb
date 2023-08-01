@@ -24,7 +24,7 @@ namespace Voron.Impl.Backup
 {
     public unsafe class IncrementalBackup
     {
-        public class IncrementalRestorePaths
+        public sealed class IncrementalRestorePaths
         {
             private string _journalLocation;
             public string DatabaseLocation { get; set; }

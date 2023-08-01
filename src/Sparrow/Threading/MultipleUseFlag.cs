@@ -21,7 +21,7 @@ namespace Sparrow.Threading
     /// verify that it won't be copied, and we don't trust our users not to
     /// copy it. It is kept so that we can move all usages back at once into
     /// structs should this be a perf issue in the future.
-    public class MultipleUseFlag
+    public sealed class MultipleUseFlag
     {
         private int _state;
 

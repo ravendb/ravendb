@@ -20,7 +20,7 @@ namespace Sparrow.Json
     /// This is done so we'll not write properties that don't belong to that document, but to 
     /// previous documents handled in the same batch
     /// </summary>
-    public class CachedProperties
+    public sealed class CachedProperties
     {
         private readonly JsonOperationContext _context;
 

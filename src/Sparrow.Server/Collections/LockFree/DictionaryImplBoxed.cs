@@ -72,7 +72,7 @@ namespace Sparrow.Server.Collections.LockFree
         }
     }
 
-    internal class Boxed<T>
+    internal sealed class Boxed<T>
     {
         public readonly T Value;
 

@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Utils
 {
-    internal class ConcatStream : Stream
+    internal sealed class ConcatStream : Stream
     {
         private readonly RentedBuffer _prefix;
         private readonly Stream _remaining;
         private bool _disposed;
 
-        public class RentedBuffer
+        public sealed class RentedBuffer
         {
             public byte[] Buffer;
             public int Offset;

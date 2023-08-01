@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
+    public sealed class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
     {
         public static readonly LazyStringValueComparer Instance = new LazyStringValueComparer();
 

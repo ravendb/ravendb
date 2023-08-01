@@ -2,7 +2,7 @@
 
 namespace Voron.Impl
 {
-    public class StorageEnvironmentState
+    public sealed class StorageEnvironmentState
     {
         public TreeMutableState Root { get; set; }
         public StorageEnvironmentOptions Options { get; set; }

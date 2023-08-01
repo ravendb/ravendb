@@ -838,7 +838,7 @@ namespace Sparrow.LowMemory
         }
     }
 
-    public class EarlyOutOfMemoryException : SystemException
+    public sealed class EarlyOutOfMemoryException : SystemException
     {
         public EarlyOutOfMemoryException()
         {

@@ -2,7 +2,7 @@
 
 namespace Voron
 {
-    public class RecoverableFailureEventArgs : EventArgs
+    public sealed class RecoverableFailureEventArgs : EventArgs
     {
         internal RecoverableFailureEventArgs(string failureMessage, Guid environmentId, string environmentPath, Exception exception)
         {

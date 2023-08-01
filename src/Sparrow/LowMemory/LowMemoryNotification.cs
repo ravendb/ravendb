@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public class LowMemoryNotification
+    public sealed class LowMemoryNotification
     {
         private const string NotificationThreadName = "Low memory notification thread";
 
@@ -28,7 +28,7 @@ namespace Sparrow.LowMemory
             LowMemHandler
         }
 
-        internal class LowMemEventDetails
+        internal sealed class LowMemEventDetails
         {
             public LowMemReason Reason;
             public long FreeMem;

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Logging
 {
-    public class Logger
+    public sealed class Logger
     {
         private readonly LoggingSource _parent;
         private readonly string _source;

@@ -19,7 +19,7 @@ namespace Voron.Impl
 
         public bool DisposeFileOnDispose = true;
 
-        public class AllocationInfo
+        public sealed class AllocationInfo
         {
             public MemoryMappedFile MappedFile;
             public byte* BaseAddress;

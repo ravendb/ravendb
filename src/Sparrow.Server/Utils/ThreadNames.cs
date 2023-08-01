@@ -200,14 +200,14 @@ public static class ThreadNames
         };
     }
 
-    public class ThreadDetails
+    public sealed class ThreadDetails
     {
         public interface IThreadDetails
         {
             public string GetShortName();
         }
 
-        public class Elector : IThreadDetails
+        public sealed class Elector : IThreadDetails
         {
             private readonly string _source;
 
@@ -222,7 +222,7 @@ public static class ThreadNames
             }
         }
 
-        public class EtlProcess : IThreadDetails
+        public sealed class EtlProcess : IThreadDetails
         {
             private readonly string _tag;
             private readonly string _name;
@@ -239,7 +239,7 @@ public static class ThreadNames
             }
         }
 
-        public class Index : IThreadDetails
+        public sealed class Index : IThreadDetails
         {
             private readonly string _idxName;
             private readonly string _dbName;
@@ -256,7 +256,7 @@ public static class ThreadNames
             }
         }
 
-        public class UploadBackupFile : IThreadDetails
+        public sealed class UploadBackupFile : IThreadDetails
         {
             private readonly string _dbName;
             private readonly string _targetName;
@@ -275,7 +275,7 @@ public static class ThreadNames
             }
         }
 
-        public class DeleteBackupFile : IThreadDetails
+        public sealed class DeleteBackupFile : IThreadDetails
         {
             private readonly string _dbName;
             private readonly string _targetName;
@@ -294,7 +294,7 @@ public static class ThreadNames
             }
         }
 
-        public class BackupTask : IThreadDetails
+        public sealed class BackupTask : IThreadDetails
         {
             private readonly string _dbName;
             private readonly string _taskName;
@@ -311,7 +311,7 @@ public static class ThreadNames
             }
         }
 
-        public class IncomingReplication : IThreadDetails
+        public sealed class IncomingReplication : IThreadDetails
         {
             private readonly string _dbName;
             private readonly string _sourceDbName;
@@ -328,7 +328,7 @@ public static class ThreadNames
             }
         }
 
-        public class OutgoingReplication : IThreadDetails
+        public sealed class OutgoingReplication : IThreadDetails
         {
             private readonly string _databaseName;
             private readonly string _destination;
@@ -352,7 +352,7 @@ public static class ThreadNames
             }
         }
 
-        public class TransactionMerging : IThreadDetails
+        public sealed class TransactionMerging : IThreadDetails
         {
             private readonly string _name;
 
@@ -367,7 +367,7 @@ public static class ThreadNames
             }
         }
 
-        public class Candidate : IThreadDetails
+        public sealed class Candidate : IThreadDetails
         {
             private readonly string _engineTag;
 
@@ -382,7 +382,7 @@ public static class ThreadNames
             }
         }
 
-        public class CandidateAmbassador : IThreadDetails
+        public sealed class CandidateAmbassador : IThreadDetails
         {
             private readonly string _engineTag;
             private readonly string _tag;
@@ -399,7 +399,7 @@ public static class ThreadNames
             }
         }
 
-        public class Follower : IThreadDetails
+        public sealed class Follower : IThreadDetails
         {
             private readonly string _connection;
             private readonly long _term;
@@ -416,7 +416,7 @@ public static class ThreadNames
             }
         }
 
-        public class FollowerAmbassador : IThreadDetails
+        public sealed class FollowerAmbassador : IThreadDetails
         {
             private readonly string _tag;
             private readonly string _term;
@@ -433,7 +433,7 @@ public static class ThreadNames
             }
         }
 
-        public class ConsensusLeader : IThreadDetails
+        public sealed class ConsensusLeader : IThreadDetails
         {
             private readonly string _engineTag;
             private readonly long _term;
@@ -450,7 +450,7 @@ public static class ThreadNames
             }
         }
 
-        public class HeartbeatsSupervisor : IThreadDetails
+        public sealed class HeartbeatsSupervisor : IThreadDetails
         {
             private readonly string _serverNodeTag;
             private readonly string _clusterTag;
@@ -469,7 +469,7 @@ public static class ThreadNames
             }
         }
 
-        public class HeartbeatsWorker : IThreadDetails
+        public sealed class HeartbeatsWorker : IThreadDetails
         {
             private readonly string _leader;
             private readonly long _term;
@@ -486,7 +486,7 @@ public static class ThreadNames
             }
         }
 
-        public class ClusterObserver : IThreadDetails
+        public sealed class ClusterObserver : IThreadDetails
         {
             private readonly long _term;
 
@@ -501,7 +501,7 @@ public static class ThreadNames
             }
         }
 
-        public class ClusterMaintenanceSetupTask : IThreadDetails
+        public sealed class ClusterMaintenanceSetupTask : IThreadDetails
         {
             public ClusterMaintenanceSetupTask()
             {
@@ -513,7 +513,7 @@ public static class ThreadNames
             }
         }
 
-        public class UpdateTopologyChangeNotificationTask : IThreadDetails
+        public sealed class UpdateTopologyChangeNotificationTask : IThreadDetails
         {
             public UpdateTopologyChangeNotificationTask()
             {
@@ -525,7 +525,7 @@ public static class ThreadNames
             }
         }
 
-        public class Backup : IThreadDetails
+        public sealed class Backup : IThreadDetails
         {
             private readonly string _backupName;
             private readonly string _databaseName;
@@ -542,7 +542,7 @@ public static class ThreadNames
             }
         }
 
-        public class CpuCreditsMonitoring : IThreadDetails
+        public sealed class CpuCreditsMonitoring : IThreadDetails
         {
             public CpuCreditsMonitoring()
             {
@@ -554,7 +554,7 @@ public static class ThreadNames
             }
         }
 
-        public class PullReplicationAsSink : IThreadDetails
+        public sealed class PullReplicationAsSink : IThreadDetails
         {
             private readonly string _destinationDatabase;
             private readonly string _destinationUrl;
@@ -572,7 +572,7 @@ public static class ThreadNames
         }
     }
 
-    public class ThreadInfo
+    public sealed class ThreadInfo
     {
         public ThreadInfo(string threadName)
         {

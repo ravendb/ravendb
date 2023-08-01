@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 namespace Voron.Impl
 {
 
-    public class PagePositionEqualityComparer : IEqualityComparer<PagePosition>
+    public sealed class PagePositionEqualityComparer : IEqualityComparer<PagePosition>
     {
         public static readonly PagePositionEqualityComparer Instance = new PagePositionEqualityComparer();
 
@@ -32,7 +32,7 @@ namespace Voron.Impl
         }
     }
 
-    public class PagePosition
+    public sealed class PagePosition
     {
         public readonly long TransactionId;
         public readonly long JournalNumber;

@@ -26,7 +26,7 @@ namespace Sparrow.Collections
     // A simple stack of objects.  Internally it is implemented as an array,
     // so Push can be O(n).  Pop is O(1).
     [DebuggerDisplay("Count = {Count}")]
-    public class FastStack<T> : IEnumerable<T>       
+    public sealed class FastStack<T> : IEnumerable<T>       
     {
         private T[] _array;     // Storage for stack elements
         private int _size;           // Number of items in the stack.

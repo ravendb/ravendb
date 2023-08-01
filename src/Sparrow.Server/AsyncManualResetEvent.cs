@@ -6,7 +6,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Server
 {
-    public class AsyncManualResetEvent : IDisposable
+    public sealed class AsyncManualResetEvent : IDisposable
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();

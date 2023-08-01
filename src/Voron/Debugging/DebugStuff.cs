@@ -22,7 +22,7 @@ using Container = Voron.Data.Containers.Container;
 
 namespace Voron.Debugging
 {
-    public class DebugStuff
+    public sealed class DebugStuff
     {
 
         private const string css = @".css-treeview ul,
@@ -616,7 +616,7 @@ namespace Voron.Debugging
                 return new TreeNodeHeaderSafe(_tree, _page.GetNode(n));
             }
 
-            public class TreeNodeHeaderSafe
+            public sealed class TreeNodeHeaderSafe
             {
                 private readonly Tree _tree;
                 private readonly TreeNodeHeader* _nodeHeader;

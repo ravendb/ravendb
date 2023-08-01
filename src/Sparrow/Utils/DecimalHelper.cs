@@ -7,7 +7,7 @@ namespace Sparrow.Utils
 
     public delegate bool IsDoubleDelegate(ref decimal value);
 
-    public class DecimalHelper
+    public sealed class DecimalHelper
     {
         public static readonly DecimalHelper Instance = new DecimalHelper();
 

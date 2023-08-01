@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json
 {
-    public class PathCache
+    public sealed class PathCache
     {
         private int _used = -1;
         private readonly PathCacheHolder[] _items = new PathCacheHolder[512];

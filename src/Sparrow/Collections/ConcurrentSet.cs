@@ -9,9 +9,9 @@ using System.Threading;
 namespace Sparrow.Collections
 {
     [DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
-    public class ConcurrentSet<T> : IEnumerable<T>
+    public sealed class ConcurrentSet<T> : IEnumerable<T>
     {
-        public class DebugProxy
+        public sealed class DebugProxy
         {
             private readonly ConcurrentSet<T> _parent;
 

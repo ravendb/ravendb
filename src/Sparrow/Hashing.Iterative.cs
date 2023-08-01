@@ -10,7 +10,7 @@ namespace Sparrow
     {
         public static class Iterative
         {
-            public class XXHash32Block
+            public sealed class XXHash32Block
             {
                 private static readonly XXHash32Values[] Empty = new XXHash32Values[0];
 

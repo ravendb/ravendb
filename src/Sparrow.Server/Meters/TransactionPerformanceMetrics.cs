@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Server.Meters
 {
-    internal class TransactionPerformanceMetrics : PerformanceMetrics
+    internal sealed class TransactionPerformanceMetrics : PerformanceMetrics
     {
         protected class TransactionMeterItem : MeterItem
         {
@@ -18,7 +18,7 @@ namespace Sparrow.Server.Meters
 
         private InternalWindowDuration _lastState;
 
-        public class InternalWindowDuration
+        public sealed class InternalWindowDuration
         {
             public DateTime Start;
             public DateTime End;

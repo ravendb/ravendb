@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Server.Utils
 {
-    public class Base64
+    public sealed class Base64
     {
         // This code was taken from: https://github.com/dotnet/coreclr/blob/master/src/mscorlib/shared/System/Convert.cs
 

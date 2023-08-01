@@ -378,7 +378,7 @@ namespace Voron.Impl.Scratch
             throw new InvalidOperationException($"Attempt to shrink a page that wasn't currently allocated: {value.PositionInScratchBuffer}");
         }
 
-        public class ScratchFileDebugInfo
+        public sealed class ScratchFileDebugInfo
         {
             private readonly ScratchBufferFile _parent;
 

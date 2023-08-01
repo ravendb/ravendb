@@ -2,7 +2,7 @@ namespace Voron
 {
     using System;
 
-    public class RecoveryErrorEventArgs : EventArgs
+    public sealed class RecoveryErrorEventArgs : EventArgs
     {
         internal RecoveryErrorEventArgs(string message, Exception exception)
         {

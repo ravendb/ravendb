@@ -425,7 +425,7 @@ namespace Sparrow.Json
 #endif
         }
 
-        public class IntPtrComarer : IComparer<IntPtr>
+        public sealed class IntPtrComarer : IComparer<IntPtr>
         {
             public static IntPtrComarer Instance = new IntPtrComarer();
 

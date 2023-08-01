@@ -14,7 +14,7 @@ namespace Voron.Util
     /// <summary>
     /// This class assumes a single writer and many readers
     /// </summary>
-    public class PageTable
+    public sealed class PageTable
     {
         private readonly LockFreeConcurrentDictionary<long, PagesBuffer> _values = new LockFreeConcurrentDictionary<long, PagesBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
         private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new SortedList<long, Dictionary<long, PagePosition>>(NumericComparer.BoxedInstanceInt64);

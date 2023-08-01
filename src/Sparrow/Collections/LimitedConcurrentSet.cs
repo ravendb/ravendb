@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Sparrow.Collections
 {
-    internal class LimitedConcurrentSet<T>
+    internal sealed class LimitedConcurrentSet<T>
     {
         private readonly int _max;
         private int _count;

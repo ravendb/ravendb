@@ -227,7 +227,7 @@ public abstract class CGroup
     #endregion
 }
 
-public class CGroupV1 : CGroup
+public sealed class CGroupV1 : CGroup
 {
     protected override string MemoryLimitFileName => "memory.limit_in_bytes";
     protected override string MemoryUsageFileName => "memory.usage_in_bytes";
@@ -280,7 +280,7 @@ public class CGroupV1 : CGroup
     }
 }
 
-public class CGroupV2 : CGroup
+public sealed class CGroupV2 : CGroup
 {
     private bool _hasMemoryPeakFile = true;
 
@@ -343,7 +343,7 @@ public class CGroupV2 : CGroup
     }
 }
 
-public class UnidentifiedCGroup : CGroup
+public sealed class UnidentifiedCGroup : CGroup
 {
     private readonly string _errorMessage;
     private DateTime _lastLog = DateTime.MinValue;
@@ -391,7 +391,7 @@ public static class CGroupHelper
     }
 }
 
-public class CGroupException : Exception
+public sealed class CGroupException : Exception
 {
     public CGroupException(string message)
         :base(message)

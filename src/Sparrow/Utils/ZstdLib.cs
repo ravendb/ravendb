@@ -189,7 +189,7 @@ namespace Sparrow.Utils
             throw CreateDictionaryException(ptrToStringAnsi);
         }
 
-        public class CompressContext : IDisposable
+        public sealed class CompressContext : IDisposable
         {
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
@@ -300,7 +300,7 @@ namespace Sparrow.Utils
             return (int)result;
         }
 
-        public class CompressionDictionary : IDisposable
+        public sealed class CompressionDictionary : IDisposable
         {
             public void* Compression;
             public void* Decompression;

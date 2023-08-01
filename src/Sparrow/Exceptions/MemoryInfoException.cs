@@ -2,7 +2,7 @@
 
 namespace Sparrow.Exceptions
 {
-    public class MemoryInfoException : Exception
+    public sealed class MemoryInfoException : Exception
     {
 
         public MemoryInfoException()

@@ -9,7 +9,7 @@ using Voron.Impl;
 
 namespace Voron.Util
 {
-    public class ActiveTransactions
+    public sealed class ActiveTransactions
     {
         private RacyConcurrentBag _activeTxs = new RacyConcurrentBag(growthFactor: 64);
 
@@ -83,9 +83,9 @@ namespace Voron.Util
         }
     }
 
-    public class RacyConcurrentBag
+    public sealed class RacyConcurrentBag
     {
-        public class Node
+        public sealed class Node
         {
             public LowLevelTransaction Value;
         }

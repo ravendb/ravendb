@@ -1964,7 +1964,7 @@ namespace Sparrow.Server
         }
     }
 
-    public class ByteStringValidationException : Exception
+    public sealed class ByteStringValidationException : Exception
     {
         public ByteStringValidationException()
         {

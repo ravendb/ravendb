@@ -20,7 +20,7 @@ namespace Voron.Util.Settings
         }
     }
 
-    public class MemoryVoronPathSetting : VoronPathSetting
+    public sealed class MemoryVoronPathSetting : VoronPathSetting
     {
         public MemoryVoronPathSetting() : base(":memory:")
         {

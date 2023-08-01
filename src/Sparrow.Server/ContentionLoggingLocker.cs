@@ -6,7 +6,7 @@ using Sparrow.Logging;
 
 namespace Sparrow.Server
 {
-    public class ContentionLoggingLocker
+    public sealed class ContentionLoggingLocker
     {
         private readonly Logger _logger;
         private readonly string _name;

@@ -8,7 +8,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Platform.Posix
 {
-    internal class SmapsReaderResults
+    internal sealed class SmapsReaderResults
     {
         public string ResultString;
         public long Size;
@@ -66,7 +66,7 @@ namespace Sparrow.Platform.Posix
         }
     }
     
-    internal class SmapsReader
+    internal sealed class SmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word

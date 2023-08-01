@@ -405,7 +405,7 @@ namespace Voron.Impl
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public bool CanAddToPerCorePool = true;
 
@@ -417,7 +417,7 @@ namespace Voron.Impl
         }
     }
 
-    public class EncryptionBufferStats : IDynamicJson
+    public sealed class EncryptionBufferStats : IDynamicJson
     {
         public EncryptionBufferStats()
         {
@@ -438,7 +438,7 @@ namespace Voron.Impl
 
         public long TotalNumberOfItems { get; set; }
 
-        public class AllocationInfo : IDynamicJson
+        public sealed class AllocationInfo : IDynamicJson
         {
             public AllocationType AllocationType { get; set; }
 

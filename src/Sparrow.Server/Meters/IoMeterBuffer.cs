@@ -4,9 +4,9 @@ using System.Threading;
 
 namespace Sparrow.Server.Meters
 {
-    public class IoMeterBuffer
+    public sealed class IoMeterBuffer
     {
-        public class MeterItem
+        public sealed class MeterItem
         {
             public long Size;
             public long FileSize;
@@ -20,7 +20,7 @@ namespace Sparrow.Server.Meters
             public double RateOfWritesInMbPerSec => SizeInMb / Duration.TotalSeconds;
         }
 
-        public class SummerizedItem
+        public sealed class SummerizedItem
         {
             public long TotalSize;
             public TimeSpan TotalTime;

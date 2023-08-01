@@ -2,7 +2,7 @@
 
 namespace Voron.Exceptions
 {
-    public class InvalidFixedSizeTree : Exception
+    public sealed class InvalidFixedSizeTree : Exception
     {
         public InvalidFixedSizeTree()
         {

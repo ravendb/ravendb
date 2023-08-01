@@ -431,7 +431,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Orders
 {
-    public class Company
+    public sealed class Company
     {
         public string Id { get; set; }
         public string ExternalId { get; set; }
@@ -441,7 +441,7 @@ namespace Orders
         public string Phone { get; set; }
         public string Fax { get; set; }
 
-        public class StockPrice
+        public sealed class StockPrice
         {
             [TimeSeriesValue(0)] public double Open { get; set; }
             [TimeSeriesValue(1)] public double Close { get; set; }

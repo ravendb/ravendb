@@ -3,9 +3,9 @@ using Sparrow.Platform;
 
 namespace Sparrow.Server.Platform.Posix
 {
-    public class PerPlatformValues
+    public sealed class PerPlatformValues
     {
-        public class SyscallNumbers
+        public sealed class SyscallNumbers
         {
             public static long SYS_gettid =
             (RuntimeInformation.OSArchitecture == Architecture.Arm)
@@ -15,7 +15,7 @@ namespace Sparrow.Server.Platform.Posix
                     : 186;
         }
 
-        public class OpenFlags
+        public sealed class OpenFlags
         {
             public static Posix.OpenFlags O_DIRECT = (Posix.OpenFlags) (
                 PlatformDetails.RunningOnMacOsx ? 0 : // O_DIRECT is not supported in MacOsx, we use fncnlt(F_NOCACHE) instead
@@ -58,7 +58,7 @@ namespace Sparrow.Server.Platform.Posix
                     : 4096);            
         }
 
-        public class SysconfNames
+        public sealed class SysconfNames
         {
             public static int _SC_PAGESIZE =
                 PlatformDetails.RunningOnMacOsx

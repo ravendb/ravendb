@@ -29,7 +29,7 @@ namespace Voron.Data.Tables
             public Slice Name;
         }
 
-        public class IndexDef : AbstractTreeIndexDef
+        public sealed class IndexDef : AbstractTreeIndexDef
         {
             public override TreeIndexType Type => TreeIndexType.Default;
 
@@ -197,7 +197,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public class DynamicKeyIndexDef : AbstractTreeIndexDef
+        public sealed class DynamicKeyIndexDef : AbstractTreeIndexDef
         {
             public override TreeIndexType Type => TreeIndexType.DynamicKeyValues;
 
@@ -463,7 +463,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public class FixedSizeKeyIndexDef
+        public sealed class FixedSizeKeyIndexDef
         {
             public bool IsGlobal;
 

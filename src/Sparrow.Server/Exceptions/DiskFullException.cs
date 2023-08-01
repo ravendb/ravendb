@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Server.Exceptions
 {
-    public class DiskFullException : IOException
+    public sealed class DiskFullException : IOException
     {
         public DiskFullException()
         {

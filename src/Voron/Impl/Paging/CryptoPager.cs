@@ -11,7 +11,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging
 {
-    public class CryptoTransactionState : IEnumerable<KeyValuePair<long, EncryptionBuffer>>
+    public sealed class CryptoTransactionState : IEnumerable<KeyValuePair<long, EncryptionBuffer>>
     {
         private Dictionary<long, EncryptionBuffer> _loadedBuffers = new Dictionary<long, EncryptionBuffer>();
         private long _totalCryptoBufferSize;
