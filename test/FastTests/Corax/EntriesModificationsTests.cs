@@ -20,11 +20,11 @@ public class EntriesModificationsTests : NoDisposalNeeded
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var entries = new IndexWriter.EntriesModifications(bsc, 0);
         
-        entries.Addition(2);
-        entries.Removal(1);
-        entries.Addition(3);
-        entries.Removal(2);
-        entries.Prepare();
+        entries.Addition(bsc, 2);
+        entries.Removal(bsc, 1);
+        entries.Addition(bsc, 3);
+        entries.Removal(bsc, 2);
+        entries.Prepare(bsc);
 
         AssertEntriesCase(ref entries);
         Assert.Equal(1, entries.Updates.Count);
