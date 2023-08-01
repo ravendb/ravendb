@@ -17,7 +17,7 @@ namespace Sparrow.Server.Meters
             public TimeSpan Duration => End - Start;
         }
 
-        protected class SummerizedItem
+        protected sealed class SummerizedItem
         {
             public long TotalCounter;
             public TimeSpan TotalTime;
@@ -93,7 +93,7 @@ namespace Sparrow.Server.Meters
             }
         }
 
-        protected class PerformanceMetricsHistoryStats
+        protected sealed class PerformanceMetricsHistoryStats
         {
             public string Start { get; set; }
             public string End { get; set; }
@@ -120,7 +120,7 @@ namespace Sparrow.Server.Meters
             }
         }
 
-        protected class PerformanceMetricsStats
+        protected sealed class PerformanceMetricsStats
         {
             public PerformanceMetricsStats(DatabasePerformanceMetrics.MetricType meterType)
             {

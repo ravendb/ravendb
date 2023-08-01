@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected virtual TimeSpan GetDelayReplication() => TimeSpan.Zero;
 
-        protected class SkippedReplicationItemsInfo
+        protected sealed class SkippedReplicationItemsInfo
         {
             public long SkippedItems { get; private set; }
 

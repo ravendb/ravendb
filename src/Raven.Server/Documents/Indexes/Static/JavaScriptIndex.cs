@@ -602,7 +602,7 @@ function boost(value, boost) {
             ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
         }
 
-        protected class MapMetadata
+        protected sealed class MapMetadata
         {
             public HashSet<CollectionName> ReferencedCollections;
 

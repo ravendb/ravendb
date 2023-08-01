@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Identity
         }
 
         [DebuggerDisplay("[{Min}-{Max}]: {Current}")]
-        protected class RangeValue
+        protected sealed class RangeValue
         {
             public readonly long Min;
             public readonly long Max;

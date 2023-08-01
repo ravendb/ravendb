@@ -62,7 +62,7 @@ namespace Raven.Server.Utils.Cli
             });
         }
 
-        protected class ConsoleText
+        protected sealed class ConsoleText
         {
             public ConsoleText()
             {

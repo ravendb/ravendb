@@ -339,7 +339,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Dictionary
         }
 
-        protected class ConversionScope : IDisposable
+        protected sealed class ConversionScope : IDisposable
         {
             private readonly LinkedList<IDisposable> _toDispose = new LinkedList<IDisposable>();
             private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();

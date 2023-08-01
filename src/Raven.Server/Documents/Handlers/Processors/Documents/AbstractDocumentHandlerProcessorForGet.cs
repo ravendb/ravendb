@@ -428,7 +428,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         }
     }
 
-    protected class DocumentsByIdResult<T>
+    protected sealed class DocumentsByIdResult<T>
     {
         public List<T> Documents { get; set; }
 
@@ -449,7 +449,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
     }
 
-    protected class DocumentsResult
+    protected sealed class DocumentsResult
     {
         public IAsyncEnumerable<Document> DocumentsAsync { get; set; }
 
@@ -460,7 +460,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public string Etag { get; set; }
     }
 
-    protected class StartsWithParams
+    protected sealed class StartsWithParams
     {
         public string IdPrefix { get; set; }
 
