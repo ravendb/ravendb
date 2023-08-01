@@ -934,6 +934,9 @@ namespace Raven.Server.Documents
 
         public DateTime LastWork(DocumentDatabase resource)
         {
+            if (ForTestingPurposes is { ShouldFetchIdleStateImmediately: true })
+                return resource.LastAccessTime;
+            
             // This allows us to increase the time large databases will be held in memory
             // Using this method, we'll add 0.5 ms per KB, or roughly half a second of idle time per MB.
 
@@ -949,9 +952,6 @@ namespace Raven.Server.Documents
                 if (env.Environment.LastWorkTime > maxLastWork)
                     maxLastWork = env.Environment.LastWorkTime;
             }
-
-            if (ForTestingPurposes is { ShouldFetchIdleStateImmediately: true })
-                return resource.LastAccessTime;
 
             return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
@@ -1148,9 +1148,12 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-            catch
+            catch(Exception e)
             {
                 // we have to swallow any exception here.
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
             }
         }
 
