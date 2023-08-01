@@ -527,7 +527,7 @@ namespace Raven.Client.Http
 
                 if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                 {
-                	ForTestingPurposes?.OnBeforeScheduleSpeedTest?.Invoke(_nodeSelector);
+                    ForTestingPurposes?.OnBeforeScheduleSpeedTest?.Invoke(_nodeSelector);
                     _nodeSelector.ScheduleSpeedTest();
                 }
             }
