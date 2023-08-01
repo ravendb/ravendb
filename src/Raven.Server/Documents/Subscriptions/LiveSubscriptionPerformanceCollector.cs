@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
         
-        private class SubscriptionAndPerformanceConnectionStatsList
+        private sealed class SubscriptionAndPerformanceConnectionStatsList
             : HandlerAndPerformanceStatsList<SubscriptionStorage.SubscriptionGeneralDataAndStats, SubscriptionConnectionStatsAggregator>
         {
             public SubscriptionAndPerformanceConnectionStatsList(SubscriptionStorage.SubscriptionGeneralDataAndStats subscription) : base(subscription)
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
         
-        private class SubscriptionAndPerformanceBatchStatsList
+        private sealed class SubscriptionAndPerformanceBatchStatsList
             : HandlerAndPerformanceStatsList<SubscriptionStorage.SubscriptionGeneralDataAndStats, SubscriptionBatchStatsAggregator>
         {
             public SubscriptionAndPerformanceBatchStatsList(SubscriptionStorage.SubscriptionGeneralDataAndStats subscription) : base(subscription)

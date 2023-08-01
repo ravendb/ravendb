@@ -102,7 +102,7 @@ namespace Sparrow.Server.Utils
             return new PrevInfo { Raw = currentInfo, Calculated = diskSpaceResult };
         }
 
-        private class State
+        private sealed class State
         {
             public string Drive;
             public PrevInfo Prev;
@@ -243,7 +243,7 @@ namespace Sparrow.Server.Utils
             public DateTime Time { get; init;}
         }
 
-        private class PrevInfo
+        private sealed class PrevInfo
         {
             public static PrevInfo Empty = new PrevInfo();
             public DiskStatsResult Calculated { get; set; }

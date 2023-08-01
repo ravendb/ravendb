@@ -135,7 +135,7 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
 
-        private class Segment
+        private sealed class Segment
         {
             /// <summary>
             /// This points to the previous Segment in the stream. May be null

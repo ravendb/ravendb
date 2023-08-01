@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From50000 : ISchemaUpdate
+    public sealed unsafe class From50000 : ISchemaUpdate
     {
         public int From => 50_000;
         public int To => 50_001;

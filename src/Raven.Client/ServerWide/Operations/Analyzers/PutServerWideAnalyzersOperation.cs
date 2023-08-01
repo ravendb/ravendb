@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Analyzers
             return new PutServerWideAnalyzersCommand(conventions, context, _analyzersToAdd);
         }
 
-        private class PutServerWideAnalyzersCommand : RavenCommand, IRaftCommand
+        private sealed class PutServerWideAnalyzersCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _analyzersToAdd;

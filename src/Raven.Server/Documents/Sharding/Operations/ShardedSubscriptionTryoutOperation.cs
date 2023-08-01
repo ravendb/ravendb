@@ -67,7 +67,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
         return new SubscriptionTryoutCommand(_tryout, _pageSize, _timeLimitInSec);
     }
 
-    private class SubscriptionTryoutCommand : RavenCommand<GetDocumentsResult>
+    private sealed class SubscriptionTryoutCommand : RavenCommand<GetDocumentsResult>
     {
         private readonly SubscriptionTryout _tryout;
         private readonly int _pageSize;

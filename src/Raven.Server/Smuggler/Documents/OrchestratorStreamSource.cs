@@ -87,7 +87,7 @@ public sealed class OrchestratorStreamSource : StreamSource
         base.Dispose();
     }
 
-    private class UniqueStreamValue : IDisposable
+    private sealed class UniqueStreamValue : IDisposable
     {
         public StreamsTempFile.InnerStream Stream;
         public int Usages;

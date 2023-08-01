@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Indexes
                 indexAndPerformanceStats.Performance.Add(latestStat);
         }
 
-        private class IndexAndPerformanceStatsList : HandlerAndPerformanceStatsList<string, IndexingStatsAggregator>
+        private sealed class IndexAndPerformanceStatsList : HandlerAndPerformanceStatsList<string, IndexingStatsAggregator>
         {
             public IndexAndPerformanceStatsList(string indexName) : base(indexName)
             {

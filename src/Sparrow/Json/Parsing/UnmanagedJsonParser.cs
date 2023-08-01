@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Sparrow.Json.Parsing
 {
-    public unsafe class UnmanagedJsonParser : IJsonParser
+    public sealed unsafe class UnmanagedJsonParser : IJsonParser
     {
         private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
 

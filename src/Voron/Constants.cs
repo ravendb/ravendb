@@ -7,7 +7,7 @@ using Voron.Data.Fixed;
 
 namespace Voron.Global
 {
-    public unsafe class Constants
+    public sealed unsafe class Constants
     {
         public const int CurrentVersion = 23;
 

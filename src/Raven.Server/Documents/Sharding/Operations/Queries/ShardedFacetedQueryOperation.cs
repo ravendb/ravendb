@@ -77,7 +77,7 @@ public sealed class ShardedFacetedQueryOperation : AbstractShardedQueryOperation
         return result;
     }
 
-    private class CombinedFacet
+    private sealed class CombinedFacet
     {
         private readonly FacetOptions _options;
         private FacetResult _combined;

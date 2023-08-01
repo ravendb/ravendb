@@ -10,7 +10,7 @@ using Voron;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public unsafe class TimeSeriesSliceHolder : IDisposable
+    public sealed unsafe class TimeSeriesSliceHolder : IDisposable
     {
         private readonly DocumentsOperationContext _context;
         public readonly string DocId;

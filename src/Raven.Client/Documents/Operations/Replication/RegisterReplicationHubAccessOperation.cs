@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new RegisterReplicationHubAccessCommand(conventions, _hubName, _access);
         }
 
-        private class RegisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
+        private sealed class RegisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _hubName;

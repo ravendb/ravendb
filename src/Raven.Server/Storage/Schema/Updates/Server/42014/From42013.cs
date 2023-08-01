@@ -7,7 +7,7 @@ using static Raven.Server.ServerWide.Commands.CompareExchangeCommandBase;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From42013 : ISchemaUpdate
+    public sealed unsafe class From42013 : ISchemaUpdate
     {
         public int From => 42_013;
 

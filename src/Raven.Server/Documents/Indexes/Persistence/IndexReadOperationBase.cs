@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             public ExplanationResult Explanation;
         }
 
-        private class MemoryInfo
+        private sealed class MemoryInfo
         {
             public long AllocatedManagedBefore { get; init; }
             public long AllocatedUnmanagedBefore { get; init; }

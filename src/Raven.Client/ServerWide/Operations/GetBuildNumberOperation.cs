@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide.Operations
             return new GetBuildNumberCommand();
         }
 
-        private class GetBuildNumberCommand : RavenCommand<BuildNumber>
+        private sealed class GetBuildNumberCommand : RavenCommand<BuildNumber>
         {
             public override bool IsReadRequest => true;
 

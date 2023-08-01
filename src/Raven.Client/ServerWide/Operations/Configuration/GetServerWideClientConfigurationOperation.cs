@@ -14,7 +14,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new GetServerWideClientConfigurationCommand();
         }
 
-        private class GetServerWideClientConfigurationCommand : RavenCommand<ClientConfiguration>
+        private sealed class GetServerWideClientConfigurationCommand : RavenCommand<ClientConfiguration>
         {
             public override bool IsReadRequest => false;
 

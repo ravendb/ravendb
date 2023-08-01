@@ -548,7 +548,7 @@ namespace Corax
             _funcUtf16(this, source, ref output, ref tokens);
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected void Dispose(bool disposing)
         {
             if (!_disposedValue)
             {

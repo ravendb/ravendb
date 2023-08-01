@@ -97,7 +97,7 @@ namespace Sparrow
 #if DETECT_LEAKS
     private static readonly ConditionalWeakTable<T, LeakTracker> LeakTrackers = new ConditionalWeakTable<T, LeakTracker>();
 
-    private class LeakTracker : IDisposable
+    private sealed class LeakTracker : IDisposable
     {
         private SingleUseFlag _disposed = new SingleUseFlag();
 

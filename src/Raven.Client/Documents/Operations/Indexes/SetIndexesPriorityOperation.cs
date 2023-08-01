@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexPriorityCommand(conventions, context, _parameters);
         }
 
-        private class SetIndexPriorityCommand : RavenCommand, IRaftCommand
+        private sealed class SetIndexPriorityCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;

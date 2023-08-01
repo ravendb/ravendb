@@ -15,7 +15,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Util
 {
-    public unsafe class DataCopier
+    public sealed unsafe class DataCopier
     {
         private readonly byte[] _buffer;
 

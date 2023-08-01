@@ -24,7 +24,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Impl.Backup
 {
-    public unsafe class FullBackup
+    public sealed unsafe class FullBackup
     {
         public sealed class StorageEnvironmentInformation
         {

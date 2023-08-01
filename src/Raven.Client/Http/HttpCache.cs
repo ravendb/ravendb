@@ -44,7 +44,7 @@ namespace Raven.Client.Http
             AggressivelyCached = 16
         }
 
-        public unsafe class HttpCacheItem : IDisposable
+        public sealed unsafe class HttpCacheItem : IDisposable
         {
             public string ChangeVector;
             public byte* Ptr;

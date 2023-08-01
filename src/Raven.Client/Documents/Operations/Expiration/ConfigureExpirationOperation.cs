@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             return new ConfigureExpirationCommand(conventions, _configuration);
         }
 
-        private class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>, IRaftCommand
+        private sealed class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly ExpirationConfiguration _configuration;

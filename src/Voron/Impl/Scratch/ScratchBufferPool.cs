@@ -27,7 +27,7 @@ namespace Voron.Impl.Scratch
     /// This class relies on external synchronization and is not meant to be used in multiple
     /// threads at the same time
     /// </summary>
-    public unsafe class ScratchBufferPool : ILowMemoryHandler, IDisposable
+    public sealed unsafe class ScratchBufferPool : ILowMemoryHandler, IDisposable
     {
         private readonly StorageEnvironment _env;
         // Immutable state. 
@@ -370,7 +370,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual int CopyPage(I4KbBatchWrites destI4KbBatchWrites, int scratchNumber, long p, PagerState pagerState)
+        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, int scratchNumber, long p, PagerState pagerState)
         {
             var item = GetScratchBufferFile(scratchNumber);
 

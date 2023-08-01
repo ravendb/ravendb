@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
             }
         }
 
-        private class TermsComparer : Comparer<ShardStreamItem<string>>
+        private sealed class TermsComparer : Comparer<ShardStreamItem<string>>
         {
             public override int Compare(ShardStreamItem<string> x,
                 ShardStreamItem<string> y)

@@ -22,7 +22,7 @@ public sealed class DelayBackupOperation : IMaintenanceOperation<OperationState>
         return new DelayBackupCommand(_runningBackupTaskId, _duration);
     }
 
-    private class DelayBackupCommand : RavenCommand<OperationState>
+    private sealed class DelayBackupCommand : RavenCommand<OperationState>
     {
         private readonly long _taskId;
         private readonly TimeSpan? _duration;

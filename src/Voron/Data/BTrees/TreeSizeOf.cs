@@ -4,7 +4,7 @@ using Voron.Global;
 
 namespace Voron.Impl
 {
-    internal unsafe class TreeSizeOf
+    internal sealed unsafe class TreeSizeOf
     {
         /// <summary>
         /// Calculate the size of a leaf node.

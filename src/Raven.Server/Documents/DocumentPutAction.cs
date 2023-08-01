@@ -530,7 +530,7 @@ namespace Raven.Server.Documents
             Action<string, BlittableJsonReaderObject, DocumentFlags> Assert { get; }
         }
 
-        private class RecreateAttachments : IRecreationType
+        private sealed class RecreateAttachments : IRecreationType
         {
             private readonly DocumentsStorage _storage;
 
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
         }
 
-        private class RecreateTimeSeries : IRecreationType
+        private sealed class RecreateTimeSeries : IRecreationType
         {
             private readonly DocumentsStorage _storage;
 

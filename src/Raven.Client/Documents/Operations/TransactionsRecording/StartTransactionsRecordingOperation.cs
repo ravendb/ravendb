@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             return new StartTransactionsRecordingCommand(conventions, _filePath);
         }
 
-        private class StartTransactionsRecordingCommand : RavenCommand
+        private sealed class StartTransactionsRecordingCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _filePath;

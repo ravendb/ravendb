@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ReorderDatabaseMembersCommand(conventions, _database, order);
         }
 
-        private class ReorderDatabaseMembersCommand : RavenCommand, IRaftCommand
+        private sealed class ReorderDatabaseMembersCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;

@@ -481,7 +481,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private class RegistrationCache
+        private sealed class RegistrationCache
         {
             public readonly Dictionary<string, CertificateCache> CachedCerts = new Dictionary<string, CertificateCache>(StringComparer.OrdinalIgnoreCase);
             public byte[] AccountKey;
@@ -490,13 +490,13 @@ namespace Raven.Server.Commercial
             public Uri Location;
         }
 
-        private class CertificateCache
+        private sealed class CertificateCache
         {
             public string Cert;
             public byte[] Private;
         }
 
-        private class AuthorizationChallengeResponse
+        private sealed class AuthorizationChallengeResponse
         {
             [JsonProperty("identifier")]
             public OrderIdentifier Identifier { get; set; }
@@ -517,13 +517,13 @@ namespace Raven.Server.Commercial
             public Problem Error { get; set; }
         }
 
-        private class AuthorizeChallenge
+        private sealed class AuthorizeChallenge
         {
             [JsonProperty("keyAuthorization")]
             public string KeyAuthorization { get; set; }
         }
 
-        private class AuthorizationChallenge
+        private sealed class AuthorizationChallenge
         {
             [JsonProperty("type")]
             public string Type { get; set; }
@@ -541,7 +541,7 @@ namespace Raven.Server.Commercial
             public Problem Error { get; set; }
         }
 
-        private class Jwk
+        private sealed class Jwk
         {
             [JsonProperty("kty")]
             public string KeyType { get; set; }
@@ -580,7 +580,7 @@ namespace Raven.Server.Commercial
             public string Algorithm { get; set; }
         }
 
-        private class Directory
+        private sealed class Directory
         {
             [JsonProperty("keyChange")]
             public Uri KeyChange { get; set; }
@@ -601,7 +601,7 @@ namespace Raven.Server.Commercial
             public DirectoryMeta Meta { get; set; }
         }
 
-        private class DirectoryMeta
+        private sealed class DirectoryMeta
         {
             [JsonProperty("termsOfService")]
             public string TermsOfService { get; set; }
@@ -644,7 +644,7 @@ namespace Raven.Server.Commercial
             public HttpResponseMessage Response { get; }
         }
 
-        private class JwsMessage
+        private sealed class JwsMessage
         {
             [JsonProperty("header")]
             public JwsHeader Header { get; set; }
@@ -659,7 +659,7 @@ namespace Raven.Server.Commercial
             public string Signature { get; set; }
         }
 
-        private class JwsHeader
+        private sealed class JwsHeader
         {
             public JwsHeader()
             {
@@ -692,7 +692,7 @@ namespace Raven.Server.Commercial
             Uri Location { get; set; }
         }
 
-        private class Order : IHasLocation
+        private sealed class Order : IHasLocation
         {
             public Uri Location { get; set; }
 
@@ -724,7 +724,7 @@ namespace Raven.Server.Commercial
             public Uri Certificate { get; set; }
         }
 
-        private class OrderIdentifier
+        private sealed class OrderIdentifier
         {
             [JsonProperty("type")]
             public string Type { get; set; }
@@ -733,7 +733,7 @@ namespace Raven.Server.Commercial
             public string Value { get; set; }
         }
 
-        private class Account : IHasLocation
+        private sealed class Account : IHasLocation
         {
             [JsonProperty("termsOfServiceAgreed")]
             public bool TermsOfServiceAgreed { get; set; }
@@ -762,13 +762,13 @@ namespace Raven.Server.Commercial
             public Uri Location { get; set; }
         }
 
-        private class FinalizeRequest
+        private sealed class FinalizeRequest
         {
             [JsonProperty("csr")]
             public string CSR { get; set; }
         }
 
-        private class Jws
+        private sealed class Jws
         {
             private readonly Jwk _jwk;
             private readonly RSA _rsa;

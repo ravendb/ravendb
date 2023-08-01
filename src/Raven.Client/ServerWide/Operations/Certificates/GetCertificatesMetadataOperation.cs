@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new GetCertificatesMetadataCommand(_name);
         }
 
-        private class GetCertificatesMetadataCommand : RavenCommand<CertificateMetadata[]>
+        private sealed class GetCertificatesMetadataCommand : RavenCommand<CertificateMetadata[]>
         {
             private readonly string _name;
 

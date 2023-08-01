@@ -20,7 +20,7 @@ using Voron.Data.Containers;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public unsafe class CoraxIndexedEntriesReader : IDisposable
+public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
 {
     private readonly JsonOperationContext _ctx;
     private readonly IndexSearcher _indexSearcher;

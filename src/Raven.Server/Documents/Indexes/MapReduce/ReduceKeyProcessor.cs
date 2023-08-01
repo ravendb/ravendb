@@ -13,7 +13,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public unsafe class ReduceKeyProcessor
+    public sealed unsafe class ReduceKeyProcessor
     {
         private readonly UnmanagedBuffersPoolWithLowMemoryHandling _buffersPool;
         private readonly long _indexVersion;

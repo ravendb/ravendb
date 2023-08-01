@@ -197,7 +197,7 @@ public class AutoMapReduceIndexResultsAggregator
         }
     }
 
-    private class ReduceKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
+    private sealed class ReduceKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
     {
         public static readonly ReduceKeyComparer Instance = new ReduceKeyComparer();
 

@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             }
         }
 
-        private class MethodSyntaxRetriever : GroupByFieldsRetriever
+        private sealed class MethodSyntaxRetriever : GroupByFieldsRetriever
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {

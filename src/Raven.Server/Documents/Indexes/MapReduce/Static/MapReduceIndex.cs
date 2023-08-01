@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
             }
 
-            private class Enumerator : IEnumerator<MapResult>
+            private sealed class Enumerator : IEnumerator<MapResult>
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;

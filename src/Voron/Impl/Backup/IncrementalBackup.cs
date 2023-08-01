@@ -22,7 +22,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Impl.Backup
 {
-    public unsafe class IncrementalBackup
+    public sealed unsafe class IncrementalBackup
     {
         public sealed class IncrementalRestorePaths
         {

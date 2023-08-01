@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Sorters
             return new DeleteServerWideSorterCommand(_sorterName);
         }
 
-        private class DeleteServerWideSorterCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteServerWideSorterCommand : RavenCommand, IRaftCommand
         {
             private readonly string _sorterName;
 

@@ -4,7 +4,7 @@ using Sparrow.Global;
 
 namespace Sparrow.Server.Platform
 {
-    public unsafe class PalDefinitions
+    public sealed unsafe class PalDefinitions
     {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
 

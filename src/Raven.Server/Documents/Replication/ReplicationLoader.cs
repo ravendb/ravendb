@@ -92,13 +92,13 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public List<ReplicationNode> Destinations => _destinations;
 
-        private class HubInfoForCleaner
+        private sealed class HubInfoForCleaner
         {
             public long LastEtag;
             public DateTime LastCleanup;
         }
 
-        private class LastEtagPerDestination
+        private sealed class LastEtagPerDestination
         {
             public long LastEtag;
         }

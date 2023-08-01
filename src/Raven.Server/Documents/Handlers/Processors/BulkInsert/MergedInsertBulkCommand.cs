@@ -174,7 +174,7 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
         return update;
     }
 
-    private class DocumentUpdates
+    private sealed class DocumentUpdates
     {
         public bool Attachments;
 

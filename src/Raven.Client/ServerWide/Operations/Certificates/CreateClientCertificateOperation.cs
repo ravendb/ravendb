@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new CreateClientCertificateCommand(conventions, _name, _permissions, _clearance, _password);
         }
 
-        private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>, IRaftCommand
+        private sealed class CreateClientCertificateCommand : RavenCommand<CertificateRawData>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _name;

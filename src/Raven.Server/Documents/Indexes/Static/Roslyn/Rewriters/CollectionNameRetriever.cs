@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
-        private class MethodSyntaxRewriter : CollectionNameRetriever
+        private sealed class MethodSyntaxRewriter : CollectionNameRetriever
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
         }
 
-        private class QuerySyntaxRewriter : CollectionNameRetriever
+        private sealed class QuerySyntaxRewriter : CollectionNameRetriever
         {
             public override SyntaxNode VisitFromClause(FromClauseSyntax node)
             {

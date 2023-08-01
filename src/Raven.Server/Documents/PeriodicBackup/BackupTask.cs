@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return fileName;
         }
 
-        private class InternalBackupResult
+        private sealed class InternalBackupResult
         {
             public long LastEtag { get; set; }
             public string LastDatabaseChangeVector { get; set; }

@@ -11,7 +11,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreeRebalancer
+    public sealed unsafe class TreeRebalancer
     {
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;

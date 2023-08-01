@@ -51,7 +51,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private class ServerStoreLiveIoStatsCollector : LiveIoStatsCollector<TransactionOperationContext>
+        private sealed class ServerStoreLiveIoStatsCollector : LiveIoStatsCollector<TransactionOperationContext>
         {
             public ServerStoreLiveIoStatsCollector(ServerStore serverStore) : base(serverStore.IoChanges, GetSystemEnvironment(serverStore), null,
                 serverStore.ContextPool,

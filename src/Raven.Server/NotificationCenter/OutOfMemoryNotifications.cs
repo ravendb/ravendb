@@ -80,7 +80,7 @@ namespace Raven.Server.NotificationCenter
             };
         }
         
-        private class NotificationTime
+        private sealed class NotificationTime
         {
             public int IsInProgress;
             public DateTime Time;

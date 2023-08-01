@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations
             return new SetDatabaseDynamicDistributionCommand(_databaseName, _allowDynamicDistribution);
         }
 
-        private class SetDatabaseDynamicDistributionCommand : RavenCommand, IRaftCommand
+        private sealed class SetDatabaseDynamicDistributionCommand : RavenCommand, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly bool _allowDynamicDistribution;

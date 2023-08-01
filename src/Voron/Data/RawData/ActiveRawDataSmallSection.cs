@@ -20,7 +20,7 @@ namespace Voron.Data.RawData
     ///     All attempts are made to reduce the number of times that we need to move data, even
     ///     at the cost of fragmentation.
     /// </summary>
-    public unsafe class ActiveRawDataSmallSection : RawDataSection
+    public sealed unsafe class ActiveRawDataSmallSection : RawDataSection
     {
         private readonly Transaction _transaction;
 

@@ -23,7 +23,7 @@ namespace Voron.Impl.FileHeaders
 
     public unsafe delegate T GetDataFromHeaderAction<T>(FileHeader* ptr);
 
-    public unsafe class HeaderAccessor : IDisposable
+    public sealed unsafe class HeaderAccessor : IDisposable
     {
         private readonly StorageEnvironment _env;
 

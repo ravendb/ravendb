@@ -14,7 +14,7 @@ namespace Sparrow.Server.Utils
     /// 
     /// If the diff overflow, we'll use the modified value.
     /// </summary>
-    public unsafe class DiffPages
+    public sealed unsafe class DiffPages
     {
         public byte* Output;
         public long OutputSize;
@@ -224,7 +224,7 @@ namespace Sparrow.Server.Utils
     /// Assumptions, Destination and Original size are the same, and the diff will
     /// not refer to values beyond their size
     /// </summary>
-    public unsafe class DiffApplier
+    public sealed unsafe class DiffApplier
     {
         public byte* Diff;
         public byte* Destination;

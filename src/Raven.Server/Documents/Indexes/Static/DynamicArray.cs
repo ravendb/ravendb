@@ -884,7 +884,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private class LazyStringAwareEqualityComparerForDistinct : IEqualityComparer<object>
+        private sealed class LazyStringAwareEqualityComparerForDistinct : IEqualityComparer<object>
         {
             private readonly JsonOperationContext _context;
 

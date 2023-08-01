@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Analyzers
             return new DeleteAnalyzerCommand(_analyzerName);
         }
 
-        private class DeleteAnalyzerCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteAnalyzerCommand : RavenCommand, IRaftCommand
         {
             private readonly string _analyzerName;
 

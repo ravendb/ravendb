@@ -16,7 +16,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Compression
 {
-    public unsafe class DecompressionBuffersPool : IDisposable
+    public sealed unsafe class DecompressionBuffersPool : IDisposable
     {
         private readonly object _expandPoolLock = new object();
         private readonly object _decompressionPagerLock = new object();
@@ -279,7 +279,7 @@ namespace Voron.Data.Compression
             return disposedCount;
         }
 
-        private class DecompressionBuffer : IDisposable
+        private sealed class DecompressionBuffer : IDisposable
         {
             internal readonly PagerInfo PagerInfo;
             private readonly long _position;
@@ -319,7 +319,7 @@ namespace Voron.Data.Compression
             }
         }
 
-        private class PagerInfo
+        private sealed class PagerInfo
         {
             internal readonly AbstractPager Pager;
             private long _numberOfUsages;

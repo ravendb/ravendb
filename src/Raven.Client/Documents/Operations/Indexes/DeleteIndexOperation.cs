@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new DeleteIndexCommand(_indexName);
         }
 
-        private class DeleteIndexCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteIndexCommand : RavenCommand, IRaftCommand
         {
             private readonly string _indexName;
 

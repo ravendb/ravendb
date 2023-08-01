@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations
             return new GetDatabaseNamesCommand(_start, _pageSize);
         }
 
-        private class GetDatabaseNamesCommand : RavenCommand<string[]>
+        private sealed class GetDatabaseNamesCommand : RavenCommand<string[]>
         {
             private readonly int _start;
             private readonly int _pageSize;

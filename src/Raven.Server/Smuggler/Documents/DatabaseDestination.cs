@@ -1169,7 +1169,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class CounterActions : ICounterActions
+        private sealed class CounterActions : ICounterActions
         {
             private readonly DocumentDatabase _database;
             private CountersHandler.SmugglerCounterBatchCommand _cmd;
@@ -1287,7 +1287,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
 
-        private class TimeSeriesActions : ITimeSeriesActions
+        private sealed class TimeSeriesActions : ITimeSeriesActions
         {
             private readonly DocumentDatabase _database;
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _cmd;

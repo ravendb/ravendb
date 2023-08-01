@@ -129,7 +129,7 @@ namespace Sparrow.Json
 
         protected abstract T CreateContext();
 
-        private class ReturnRequestContext : IDisposable
+        private sealed class ReturnRequestContext : IDisposable
         {
             public T Context;
             public JsonContextPoolBase<T> Parent;

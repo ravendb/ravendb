@@ -318,7 +318,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class ExportCommand : RavenCommand
+        private sealed class ExportCommand : RavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
             private readonly DocumentConventions _conventions;
@@ -371,7 +371,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class ImportCommand : RavenCommand
+        private sealed class ImportCommand : RavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
             private readonly DocumentConventions _conventions;
@@ -444,7 +444,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class DisposeStreamOnce : IDisposable
+        private sealed class DisposeStreamOnce : IDisposable
         {
             private readonly Stream _stream;
 

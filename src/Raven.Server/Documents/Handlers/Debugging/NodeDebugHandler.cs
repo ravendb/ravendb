@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private class SetupAliveCommand : RavenCommand
+        private sealed class SetupAliveCommand : RavenCommand
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

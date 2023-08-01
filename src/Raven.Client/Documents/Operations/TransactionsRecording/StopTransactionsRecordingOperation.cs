@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             return new StopTransactionsRecordingCommand();
         }
 
-        private class StopTransactionsRecordingCommand : RavenCommand
+        private sealed class StopTransactionsRecordingCommand : RavenCommand
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

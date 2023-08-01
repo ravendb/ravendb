@@ -874,7 +874,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        private class AttachmentsBulkInsertOperation
+        private sealed class AttachmentsBulkInsertOperation
         {
             private readonly BulkInsertOperation _operation;
             private readonly CancellationToken _token;

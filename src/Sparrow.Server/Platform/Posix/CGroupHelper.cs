@@ -26,7 +26,7 @@ public abstract class CGroup
 
     private Lazy<CachedPath> _groupPathForMemory;
 
-    private class CachedPath
+    private sealed class CachedPath
     {
         public DateTime ExpiryTime { get; private set; }
         public string Path { get;}

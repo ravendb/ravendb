@@ -185,14 +185,14 @@ namespace Raven.Server.Utils.Cli
             Or
         }
 
-        private class ParsedCommand
+        private sealed class ParsedCommand
         {
             public Command Command;
             public ConcatAction PrevConcatAction;
             public List<string> Args;
         }
 
-        private class ParsedLine
+        private sealed class ParsedLine
         {
             public LineState LineState;
             public string ErrorMsg;
@@ -208,7 +208,7 @@ namespace Raven.Server.Utils.Cli
         private const ConsoleColor TextColor = ConsoleColor.White;
         private const ConsoleColor ErrorColor = ConsoleColor.Red;
 
-        private class SingleAction
+        private sealed class SingleAction
         {
             public int NumOfArgs;
             public Func<List<string>, RavenCli, bool> DelegateFunc;

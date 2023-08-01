@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
             return new ToggleServerWideTaskStateCommand(_name, _type, _disable);
         }
 
-        private class ToggleServerWideTaskStateCommand : RavenCommand, IRaftCommand
+        private sealed class ToggleServerWideTaskStateCommand : RavenCommand, IRaftCommand
         {
             private readonly string _name;
             private readonly OngoingTaskType _type;

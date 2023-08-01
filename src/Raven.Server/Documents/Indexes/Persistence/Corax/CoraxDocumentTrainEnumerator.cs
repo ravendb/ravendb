@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 {
-    private class Builder : IndexWriter.IIndexEntryBuilder
+    private sealed class Builder : IndexWriter.IIndexEntryBuilder
     {
         private readonly ByteStringContext _allocator;
         private readonly List<(int FieldId, string FieldName, ByteString Value)> _terms;

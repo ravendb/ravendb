@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             return new DeleteSorterCommand(_sorterName);
         }
 
-        private class DeleteSorterCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteSorterCommand : RavenCommand, IRaftCommand
         {
             private readonly string _sorterName;
 

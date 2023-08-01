@@ -2112,7 +2112,7 @@ function execute(doc, args){
             throw new InvalidQueryException("getMetadata(doc) must be called with a single entity argument", QueryText, parameters);
         }
 
-        private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
+        private sealed class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
             private readonly string _fromAlias;

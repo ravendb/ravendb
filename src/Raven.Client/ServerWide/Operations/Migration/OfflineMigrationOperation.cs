@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.Migration
             return new OfflineMigrationCommand(conventions, _configuration);
         }
 
-        private class OfflineMigrationCommand : RavenCommand<OperationIdResult>
+        private sealed class OfflineMigrationCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly OfflineMigrationConfiguration _configuration;

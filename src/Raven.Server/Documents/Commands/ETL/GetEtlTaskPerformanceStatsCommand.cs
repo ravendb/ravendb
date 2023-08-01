@@ -43,7 +43,7 @@ internal sealed class GetEtlTaskPerformanceStatsCommand : RavenCommand<EtlTaskPe
     }
 
     // ReSharper disable once ClassNeverInstantiated.Local
-    private class EtlTaskPerformanceStatsResponse
+    private sealed class EtlTaskPerformanceStatsResponse
     {
         public EtlTaskPerformanceStats[] Results { get; set; }
     }

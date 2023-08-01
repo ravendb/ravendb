@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations
             return new CompactDatabaseCommand(conventions, context, _compactSettings, _nodeTag);
         }
 
-        private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
+        private sealed class CompactDatabaseCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _compactSettings;

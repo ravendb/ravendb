@@ -237,7 +237,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         return indexesToCheck;
     }
 
-    private class WaitForIndexItem
+    private sealed class WaitForIndexItem
     {
         public Index Index;
         public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;

@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Queries
 {
-    internal unsafe class MergeHelper
+    internal sealed unsafe class MergeHelper
     {
         /// <summary>
         /// dst and left *may* be the same thing, we can assume that dst is at least as large as the smallest of those

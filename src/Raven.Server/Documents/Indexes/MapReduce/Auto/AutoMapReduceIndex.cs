@@ -313,13 +313,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             _stats.CreateBlittableJson = stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
         }
 
-        private class MapPhaseStats
+        private sealed class MapPhaseStats
         {
             public IndexingStatsScope BlittableJsonAggregation;
             public IndexingStatsScope CreateBlittableJson;
         }
 
-        private class MapOutput
+        private sealed class MapOutput
         {
             public MapOutput(bool isFanout)
             {

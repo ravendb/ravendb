@@ -6,7 +6,7 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public unsafe class From40013 : ISchemaUpdate
+    public sealed unsafe class From40013 : ISchemaUpdate
     {
         public int From => 40_013;
         public int To => 40_014;

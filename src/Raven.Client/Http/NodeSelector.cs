@@ -9,7 +9,7 @@ namespace Raven.Client.Http
 {
     public sealed class NodeSelector : IDisposable
     {
-        private class NodeSelectorState
+        private sealed class NodeSelectorState
         {
             public readonly Topology Topology;
             public readonly List<ServerNode> Nodes;

@@ -68,7 +68,7 @@ namespace Raven.Client.ServerWide.Operations
             return new DeleteDatabaseCommand(conventions, context, _parameters);
         }
 
-        private class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>, IRaftCommand
+        private sealed class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;

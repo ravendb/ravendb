@@ -40,7 +40,7 @@ namespace Voron.Impl.Paging
         public int Usages;
     }
 
-    public unsafe class LoadedPage
+    public sealed unsafe class LoadedPage
     {
         public byte* Pointer;
         public int NumberOfPages;
@@ -526,7 +526,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        private class Windows32Bit4KbBatchWrites : I4KbBatchWrites
+        private sealed class Windows32Bit4KbBatchWrites : I4KbBatchWrites
         {
             private readonly Windows32BitsMemoryMapPager _parent;
             private readonly TransactionState _state = new TransactionState();

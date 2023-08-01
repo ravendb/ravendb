@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return await RequestHandler.ServerStore.DeleteOngoingTask(_taskId, TaskName, _type, RequestHandler.DatabaseName, $"{raftRequestId}/delete-ongoing-task");
         }
 
-        private class DeleteOngoingTaskAction
+        private sealed class DeleteOngoingTaskAction
         {
             private readonly ServerStore _serverStore;
             private readonly TransactionOperationContext _context;

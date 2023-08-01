@@ -1451,7 +1451,7 @@ namespace Raven.Server.Documents.ETL
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        private class TestMode
+        private sealed class TestMode
         {
             public readonly List<string> DebugOutput = new List<string>();
         }

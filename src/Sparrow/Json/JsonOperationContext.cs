@@ -183,7 +183,7 @@ namespace Sparrow.Json
             return new MemoryBuffer.ReturnBuffer(rawMemory, buffer, this);
         }
 
-        public unsafe class MemoryBuffer
+        public sealed unsafe class MemoryBuffer
         {
             public const int DefaultSize = 32 * Constants.Size.Kilobyte;
 
@@ -274,7 +274,7 @@ namespace Sparrow.Json
                 }
             }
 
-            private class Disposer : IDisposable
+            private sealed class Disposer : IDisposable
             {
                 private readonly IDisposable[] _toDispose;
 
@@ -1277,14 +1277,14 @@ namespace Sparrow.Json
 
 #if DEBUG || VALIDATE
 
-        private class IntReference
+        private sealed class IntReference
         {
             public long Value;
         }
 
         private readonly IntReference _threadId = new IntReference { Value = 0 };
 
-        private class SingleThreadAccessAssertion : IDisposable
+        private sealed class SingleThreadAccessAssertion : IDisposable
         {
             private readonly IntReference _capturedThreadId;
             private readonly int _currentThreadId;

@@ -40,7 +40,7 @@ namespace Raven.Client.ServerWide.Operations
             return new SetDatabasesLockCommand(conventions, context, _parameters);
         }
 
-        private class SetDatabasesLockCommand : RavenCommand, IRaftCommand
+        private sealed class SetDatabasesLockCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;

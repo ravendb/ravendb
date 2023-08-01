@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new DeleteCompareExchangeValueCommand(_key, _index, conventions);
         }
 
-        private class DeleteCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
+        private sealed class DeleteCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
         {
             private readonly string _key;
             private readonly long _index;

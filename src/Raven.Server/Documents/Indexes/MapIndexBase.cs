@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Indexes
             _stats.BloomStats = stats.For(IndexingOperation.Map.Bloom, start: false);
         }
 
-        private class MapStats
+        private sealed class MapStats
         {
             public IndexingStatsScope BloomStats;
         }

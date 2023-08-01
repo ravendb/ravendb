@@ -558,7 +558,7 @@ namespace Sparrow.Server
 
         public static readonly NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment> Cleaner;
 
-        private class LowMemoryHandler : ILowMemoryHandler
+        private sealed class LowMemoryHandler : ILowMemoryHandler
         {
             public void LowMemory(LowMemorySeverity lowMemorySeverity)
             {
@@ -713,7 +713,7 @@ namespace Sparrow.Server
 
         public event Action AllocationFailed;
 
-        private class SegmentInformation
+        private sealed class SegmentInformation
         {
             public readonly UnmanagedGlobalSegment Memory;
             public readonly byte* Start;
@@ -933,7 +933,7 @@ namespace Sparrow.Server
             return r;
         }
 
-        private class ByteStringMemoryManager<T> : MemoryManager<T> where T : unmanaged
+        private sealed class ByteStringMemoryManager<T> : MemoryManager<T> where T : unmanaged
         {
             private readonly ByteStringContext<TAllocator> _context;
             private ByteString _str;

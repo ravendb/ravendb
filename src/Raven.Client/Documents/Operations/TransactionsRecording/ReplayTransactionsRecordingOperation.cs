@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             return new ReplayTransactionsRecordingCommand(_replayStream, _operationId);
         }
 
-        private class ReplayTransactionsRecordingCommand : RavenCommand<ReplayTxOperationResult>
+        private sealed class ReplayTransactionsRecordingCommand : RavenCommand<ReplayTxOperationResult>
         {
             private readonly Stream _replayStream;
             private readonly long _operationId;

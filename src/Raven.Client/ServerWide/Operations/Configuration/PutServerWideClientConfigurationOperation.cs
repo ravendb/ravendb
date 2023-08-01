@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new PutServerWideClientConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutServerWideClientConfigurationCommand : RavenCommand, IRaftCommand
+        private sealed class PutServerWideClientConfigurationCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;

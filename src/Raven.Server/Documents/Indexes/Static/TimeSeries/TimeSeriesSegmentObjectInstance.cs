@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             throw new NotSupportedException();
         }
 
-        private class TimeSeriesSegmentEntriesPropertyDescriptor : PropertyDescriptor
+        private sealed class TimeSeriesSegmentEntriesPropertyDescriptor : PropertyDescriptor
         {
             private readonly JsArray _value;
 
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
         }
 
-        private class TimeSeriesSegmentEntryPropertyDescriptor : PropertyDescriptor
+        private sealed class TimeSeriesSegmentEntryPropertyDescriptor : PropertyDescriptor
         {
             private readonly ObjectInstance _value;
 

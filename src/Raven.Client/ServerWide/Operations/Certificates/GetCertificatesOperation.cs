@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new GetCertificatesCommand(_start, _pageSize);
         }
 
-        private class GetCertificatesCommand : RavenCommand<CertificateDefinition[]>
+        private sealed class GetCertificatesCommand : RavenCommand<CertificateDefinition[]>
         {
             private readonly int _start;
             private readonly int _pageSize;

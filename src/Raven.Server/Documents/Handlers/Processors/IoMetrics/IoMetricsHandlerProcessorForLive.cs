@@ -40,7 +40,7 @@ internal sealed class IoMetricsHandlerProcessorForLive : AbstractIoMetricsHandle
         }
     }
 
-    private class DatabaseLiveIoStatsCollector : LiveIoStatsCollector<DocumentsOperationContext>
+    private sealed class DatabaseLiveIoStatsCollector : LiveIoStatsCollector<DocumentsOperationContext>
     {
         public DatabaseLiveIoStatsCollector(DocumentDatabase database) : base(database.IoChanges, database.GetAllStoragesEnvironment().ToList(), database.GetAllPerformanceMetrics(), database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {

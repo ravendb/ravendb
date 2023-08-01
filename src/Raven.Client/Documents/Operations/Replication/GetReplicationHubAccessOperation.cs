@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new GetReplicationHubAccessCommand(_hubName, _start, _pageSize);
         }
 
-        private class GetReplicationHubAccessCommand : RavenCommand<DetailedReplicationHubAccess[]>
+        private sealed class GetReplicationHubAccessCommand : RavenCommand<DetailedReplicationHubAccess[]>
         {
             private readonly string _hubName;
             private readonly int _start;

@@ -218,7 +218,7 @@ namespace Raven.Server.Storage
             _timer = null;
         }
 
-        private class LowDiskSpace
+        private sealed class LowDiskSpace
         {
             public LowDiskSpace(DiskSpaceResult diskSpace, string reason)
             {

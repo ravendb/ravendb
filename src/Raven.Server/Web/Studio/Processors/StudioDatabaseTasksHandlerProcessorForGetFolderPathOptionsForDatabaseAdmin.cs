@@ -190,7 +190,7 @@ internal class StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForData
 
     protected override bool SupportsCurrentNode => true;
 
-    private class GetFolderPathOptionsForDatabaseAdminCommand : AbstractGetFolderPathOptionsCommand
+    private sealed class GetFolderPathOptionsForDatabaseAdminCommand : AbstractGetFolderPathOptionsCommand
     {
         public GetFolderPathOptionsForDatabaseAdminCommand(PeriodicBackupConnectionType connectionType, string path, bool isBackupFolder, string nodeTag)
             : base(connectionType, path, isBackupFolder, nodeTag)

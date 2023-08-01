@@ -220,7 +220,7 @@ namespace Sparrow.Json.Parsing
         }
     }
 
-    public unsafe class ObjectJsonParser : IJsonParser
+    public sealed unsafe class ObjectJsonParser : IJsonParser
     {
         private readonly JsonParserState _state;
         private readonly JsonOperationContext _ctx;

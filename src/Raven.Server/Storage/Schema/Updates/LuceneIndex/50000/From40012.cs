@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
 {
-    public unsafe class From40012 : ISchemaUpdate
+    public sealed unsafe class From40012 : ISchemaUpdate
     {
         public int From => 40_012;
 

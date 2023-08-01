@@ -7,7 +7,7 @@ using Voron.Util;
 
 namespace Raven.Server.Utils
 {
-    public unsafe class ChunkedMmapStream : Stream
+    public sealed unsafe class ChunkedMmapStream : Stream
     {
         private readonly PtrSize[] _ptrsSizes;
         private readonly int[] _positions;

@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UpdatePullReplicationDefinitionCommand(conventions, _pullReplicationDefinition);
         }
 
-        private class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private sealed class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly PullReplicationDefinition _pullReplicationDefinition;

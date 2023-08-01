@@ -14,7 +14,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
             return new GetServerWideExternalReplicationsCommand();
         }
 
-        private class GetServerWideExternalReplicationsCommand : RavenCommand<ServerWideExternalReplication[]>
+        private sealed class GetServerWideExternalReplicationsCommand : RavenCommand<ServerWideExternalReplication[]>
         {
             public override bool IsReadRequest => true;
 

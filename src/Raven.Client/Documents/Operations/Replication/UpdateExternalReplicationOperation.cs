@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UpdateExternalReplication(conventions, _newWatcher);
         }
 
-        private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private sealed class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly ExternalReplication _newWatcher;

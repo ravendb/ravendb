@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.ETL
             writer.WriteEtlTaskPerformanceStats(context, stats);
         }
 
-        private class EtlProcessAndPerformanceStatsList : HandlerAndPerformanceStatsList<EtlProcess, IEtlStatsAggregator>
+        private sealed class EtlProcessAndPerformanceStatsList : HandlerAndPerformanceStatsList<EtlProcess, IEtlStatsAggregator>
         {
             public EtlProcessAndPerformanceStatsList(EtlProcess etl) : base(etl)
             {

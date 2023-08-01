@@ -29,7 +29,7 @@ namespace Voron.Util
             }
         }
         
-        private class PagesBuffer
+        private sealed class PagesBuffer
         {
             public readonly PagePosition[] PagePositions;
             public int Start, End;

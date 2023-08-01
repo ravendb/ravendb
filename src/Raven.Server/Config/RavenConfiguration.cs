@@ -499,7 +499,7 @@ namespace Raven.Server.Config
 
         public static string EnvironmentVariableLicenseString { private set; get; }
 
-        private class EnvironmentVariablesConfigurationSource : ConfigurationProvider, IConfigurationSource
+        private sealed class EnvironmentVariablesConfigurationSource : ConfigurationProvider, IConfigurationSource
         {
             private const string Prefix1 = "RAVEN.";
 

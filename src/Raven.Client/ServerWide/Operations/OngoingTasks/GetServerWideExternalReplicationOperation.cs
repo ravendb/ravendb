@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
             return new GetServerWideExternalReplicationCommand(_name);
         }
 
-        private class GetServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplication>
+        private sealed class GetServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplication>
         {
             private readonly string _name;
 

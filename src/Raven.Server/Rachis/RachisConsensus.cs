@@ -123,7 +123,7 @@ namespace Raven.Server.Rachis
             return StateMachine.ConnectToPeerAsync(url, tag, certificate, _serverStore.ServerShutdown);
         }
 
-        private class NullDisposable : IDisposable
+        private sealed class NullDisposable : IDisposable
         {
             public void Dispose()
             {

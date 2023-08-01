@@ -3291,7 +3291,7 @@ namespace Raven.Server.ServerWide
             return requestExecutor;
         }
 
-        private class PutRaftCommand : RavenCommand<PutRaftCommandResult>, IRaftCommand
+        private sealed class PutRaftCommand : RavenCommand<PutRaftCommandResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _command;

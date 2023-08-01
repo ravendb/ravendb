@@ -67,7 +67,7 @@ namespace Voron.Impl.Paging
         }
     }
 
-    public unsafe class EncryptionBuffer
+    public sealed unsafe class EncryptionBuffer
     {
         public EncryptionBuffer(EncryptionBuffersPool pool)
         {

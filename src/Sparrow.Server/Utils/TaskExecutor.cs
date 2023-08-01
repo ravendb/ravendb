@@ -15,7 +15,7 @@ namespace Sparrow.Server.Utils
     {
         private static readonly Runner Instance = new Runner();
 
-        private class Runner
+        private sealed class Runner
         {
             private readonly string TasksExecutorThreadName = "Tasks Executor";
             private readonly ConcurrentQueue<(WaitCallback, object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
@@ -102,7 +102,7 @@ namespace Sparrow.Server.Utils
             task.TrySetResult(null);
         }
 
-        private class RunOnce
+        private sealed class RunOnce
         {
             private WaitCallback _callback;
 

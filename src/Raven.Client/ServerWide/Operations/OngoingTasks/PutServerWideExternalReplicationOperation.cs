@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
             return new PutServerWideExternalReplicationCommand(conventions, context, _configuration);
         }
 
-        private class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplicationResponse>, IRaftCommand
+        private sealed class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplicationResponse>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;

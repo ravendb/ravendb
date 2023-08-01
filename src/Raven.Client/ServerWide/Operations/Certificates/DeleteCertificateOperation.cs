@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new DeleteCertificateCommand(_thumbprint);
         }
 
-        private class DeleteCertificateCommand : RavenCommand, IRaftCommand
+        private sealed class DeleteCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly string _thumbprint;
 

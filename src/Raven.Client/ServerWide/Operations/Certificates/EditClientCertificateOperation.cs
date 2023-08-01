@@ -39,7 +39,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new EditClientCertificateCommand(conventions, _thumbprint, _name, _permissions, _clearance);
         }
 
-        private class EditClientCertificateCommand : RavenCommand, IRaftCommand
+        private sealed class EditClientCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _thumbprint;

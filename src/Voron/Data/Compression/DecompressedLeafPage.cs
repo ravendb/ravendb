@@ -8,7 +8,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Compression
 {
-    public unsafe class DecompressedLeafPage : TreePage, IDisposable
+    public sealed unsafe class DecompressedLeafPage : TreePage, IDisposable
     {
         private bool _disposed;
 

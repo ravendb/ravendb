@@ -28,7 +28,7 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide
 {
-    public unsafe class SecretProtection
+    public sealed unsafe class SecretProtection
     {
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
 
@@ -906,7 +906,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private class PkcsStoreWorkaroundFor30946
+        private sealed class PkcsStoreWorkaroundFor30946
         {
             // Workaround for https://github.com/dotnet/corefx/issues/30946
             // This class is a partial copy of BouncyCastle's Pkcs12Store which doesn't throw the exception: "attempt to add existing attribute with different value".
@@ -1182,7 +1182,7 @@ namespace Raven.Server.ServerWide
                     SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(pubKey));
             }
 
-            private class IgnoresCaseHashtable
+            private sealed class IgnoresCaseHashtable
                 : IEnumerable
             {
                 private readonly IDictionary orig = new Hashtable();
@@ -1253,7 +1253,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            protected virtual void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
+            protected void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
                 char[] password, bool wrongPkcs12Zero)
             {
                 if (password != null)
@@ -1265,7 +1265,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            protected virtual void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
+            protected void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
             {
                 AsymmetricKeyParameter privKey = PrivateKeyFactory.CreateKey(privKeyInfo);
 
@@ -1335,7 +1335,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            private class CertId
+            private sealed class CertId
             {
                 private readonly byte[] _id;
 

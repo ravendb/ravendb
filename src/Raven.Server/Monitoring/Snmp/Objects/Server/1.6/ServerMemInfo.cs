@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                 store.Add(new ServerMemInfoValue(propertyInfo, metricCacher));
         }
 
-        private class ServerMemInfoValue : ScalarObjectBase<Gauge32>
+        private sealed class ServerMemInfoValue : ScalarObjectBase<Gauge32>
         {
             private readonly PropertyInfo _propertyInfo;
             private readonly MetricCacher _metricCacher;

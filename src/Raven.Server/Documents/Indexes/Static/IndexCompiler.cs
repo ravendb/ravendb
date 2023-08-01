@@ -979,7 +979,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return function?.Trim().TrimEnd(';');
         }
 
-        private class CompilationResult
+        private sealed class CompilationResult
         {
             public Type Type { get; set; }
             public string Code { get; set; }
@@ -1000,7 +1000,7 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasBoost { get; set; }
         }
 
-        private class AdditionalAssemblyServerSide
+        private sealed class AdditionalAssemblyServerSide
         {
             public AdditionalAssemblyServerSide(AssemblyName name, Assembly assembly, MetadataReference reference, AdditionalAssemblyType type)
             {

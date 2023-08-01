@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UnregisterReplicationHubAccessCommand(_hubName, _thumbprint);
         }
 
-        private class UnregisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
+        private sealed class UnregisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
         {
             private readonly string _hubName;
             private readonly string _thumbprint;

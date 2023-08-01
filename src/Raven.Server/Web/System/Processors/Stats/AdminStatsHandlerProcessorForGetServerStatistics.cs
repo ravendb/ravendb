@@ -37,7 +37,7 @@ internal sealed class AdminStatsHandlerProcessorForGetServerStatistics : Abstrac
         return ValueTask.FromResult<RavenCommand<ServerStatistics>>(new GetServerStatisticsCommand(nodeTag));
     }
 
-    private class GetServerStatisticsCommand : RavenCommand<ServerStatistics>
+    private sealed class GetServerStatisticsCommand : RavenCommand<ServerStatistics>
     {
         public GetServerStatisticsCommand(string nodeTag)
         {

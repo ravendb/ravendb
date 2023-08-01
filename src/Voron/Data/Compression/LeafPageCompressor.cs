@@ -11,7 +11,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Compression
 {
-    public unsafe class LeafPageCompressor
+    public sealed unsafe class LeafPageCompressor
     {
         public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {

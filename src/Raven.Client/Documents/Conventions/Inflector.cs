@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Conventions
 
         #region Rule inner class
 
-        private class Rule
+        private sealed class Rule
         {
             private readonly Regex regex;
             private readonly string replacement;

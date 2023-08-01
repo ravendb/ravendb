@@ -12,7 +12,7 @@ using Voron.Util;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class TableValueBuilder : IEnumerable
+    public sealed unsafe class TableValueBuilder : IEnumerable
     {
         private readonly FastList<PtrSize> _values = new FastList<PtrSize>();
         private int _elementSize = 1;

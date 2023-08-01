@@ -94,7 +94,7 @@ OrderBy calls modify the indexing output, but doesn't actually impact the order 
 You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.");
         }
 
-        private class ForbiddenMethod
+        private sealed class ForbiddenMethod
         {
             public readonly string[] TypeAliases;
             public readonly string[] Names;

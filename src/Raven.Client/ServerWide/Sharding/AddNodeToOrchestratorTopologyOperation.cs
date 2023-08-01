@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Sharding
             return new AddNodeToOrchestratorTopologyCommand(_databaseName, _node);
         }
 
-        private class AddNodeToOrchestratorTopologyCommand : RavenCommand<ModifyOrchestratorTopologyResult>, IRaftCommand
+        private sealed class AddNodeToOrchestratorTopologyCommand : RavenCommand<ModifyOrchestratorTopologyResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;

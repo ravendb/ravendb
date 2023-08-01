@@ -22,7 +22,7 @@ public sealed class ShardedDatabaseDestination : DatabaseDestination
         return new ShardedDatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
     }
 
-    private class ShardedDatabaseCompareExchangeActions : DatabaseCompareExchangeActions
+    private sealed class ShardedDatabaseCompareExchangeActions : DatabaseCompareExchangeActions
     {
         public ShardedDatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token) 
             : base(databaseName, database, context, backupKind, token)

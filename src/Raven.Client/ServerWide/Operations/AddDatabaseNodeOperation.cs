@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations
             return new AddDatabaseNodeCommand(_databaseName, _node);
         }
 
-        private class AddDatabaseNodeCommand : RavenCommand<DatabasePutResult>, IRaftCommand
+        private sealed class AddDatabaseNodeCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;

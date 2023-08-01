@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
+        private sealed class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
         {
             private readonly Query _query;
             private readonly TransactionOperationContext _serverContext;

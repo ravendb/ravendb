@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             }
         }
 
-        private class GetRevisionsResultCommand : RavenCommand<RevisionsResult<T>>
+        private sealed class GetRevisionsResultCommand : RavenCommand<RevisionsResult<T>>
         {
             public override bool IsReadRequest => true;
 

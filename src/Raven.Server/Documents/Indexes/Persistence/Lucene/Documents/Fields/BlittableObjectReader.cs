@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             _ms?.Dispose();
         }
 
-        private class NonDisposableStreamReader : TextReader
+        private sealed class NonDisposableStreamReader : TextReader
         {
             public readonly StreamReader InnerReader;
 

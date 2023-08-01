@@ -19,9 +19,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Scratch
 {
-    public unsafe class ScratchBufferFile : IDisposable
+    public sealed unsafe class ScratchBufferFile : IDisposable
     {
-        private class PendingPage
+        private sealed class PendingPage
         {
             public long Page;
             public long ValidAfterTransactionId;

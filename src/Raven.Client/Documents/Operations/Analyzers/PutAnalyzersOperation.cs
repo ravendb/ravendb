@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Analyzers
             return new PutAnalyzersCommand(conventions, context, _analyzersToAdd);
         }
 
-        private class PutAnalyzersCommand : RavenCommand, IRaftCommand
+        private sealed class PutAnalyzersCommand : RavenCommand, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _analyzersToAdd;

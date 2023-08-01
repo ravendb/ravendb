@@ -1431,7 +1431,7 @@ namespace Raven.Server.Documents.TimeSeries
             return context.GetLazyString(value);
         }
 
-        private class IncrementalEnumerator : AppendEnumerator
+        private sealed class IncrementalEnumerator : AppendEnumerator
         {
             public IncrementalEnumerator(string documentId, string name, IEnumerable<SingleResult> toAppend, bool fromReplication) : base(documentId, name, toAppend, fromReplication)
             {

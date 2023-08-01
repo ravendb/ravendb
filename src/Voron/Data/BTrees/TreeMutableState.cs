@@ -6,7 +6,7 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreeMutableState
+    public sealed unsafe class TreeMutableState
     {
         private readonly LowLevelTransaction _tx;
 

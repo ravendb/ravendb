@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Test;
 
 public sealed class TestIndexRun
 {
-    private class CollectionIterationStats
+    private sealed class CollectionIterationStats
     {
         public int CountOfReturnedItems;
         public bool Completed;

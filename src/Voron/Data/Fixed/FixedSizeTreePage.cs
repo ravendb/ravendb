@@ -7,7 +7,7 @@ using Voron.Global;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe class FixedSizeTreePage<TVal>
+    public sealed unsafe class FixedSizeTreePage<TVal>
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
         private readonly byte* _ptr;

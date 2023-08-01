@@ -301,7 +301,7 @@ namespace Corax
             }
         }
 
-        private class IndexedField
+        private sealed class IndexedField
         {
             public Dictionary<long, List<(double, double)>> Spatial;
             public readonly Dictionary<Slice, EntriesModifications> Textual;

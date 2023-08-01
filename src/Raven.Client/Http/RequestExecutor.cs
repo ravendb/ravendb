@@ -1647,7 +1647,7 @@ namespace Raven.Client.Http
             return true;
         }
 
-        private class BroadcastState<TResult>
+        private sealed class BroadcastState<TResult>
         {
             public RavenCommand<TResult> Command;
             public int Index;
@@ -2319,12 +2319,12 @@ namespace Raven.Client.Http
             }
         }
 
-        private class RequestContext
+        private sealed class RequestContext
         {
             public bool HttpClientRemoved;
         }
 
-        private class ReturnContext : IDisposable
+        private sealed class ReturnContext : IDisposable
         {
             private readonly AsyncLocal<RequestContext> _contexts;
             private readonly bool _dispose;
@@ -2358,7 +2358,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private class HttpClientCacheItem
+        private sealed class HttpClientCacheItem
         {
             public HttpClient HttpClient { get; set; }
 

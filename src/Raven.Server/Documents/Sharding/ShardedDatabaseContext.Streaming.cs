@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            private class YieldStreamArray<T, TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
+            private sealed class YieldStreamArray<T, TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
             {
                 private readonly Func<BlittableJsonReaderObject, TInner> _converter;
                 private readonly int _shard;

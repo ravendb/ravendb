@@ -25,7 +25,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table : IDisposable
+    public sealed unsafe class Table : IDisposable
     {
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;

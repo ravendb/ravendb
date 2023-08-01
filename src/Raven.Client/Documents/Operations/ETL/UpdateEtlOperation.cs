@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return new UpdateEtlCommand(conventions, _taskId, _configuration);
         }
 
-        private class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>, IRaftCommand
+        private sealed class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly long _taskId;

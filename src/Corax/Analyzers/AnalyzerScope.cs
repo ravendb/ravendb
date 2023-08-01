@@ -13,7 +13,7 @@ using Voron;
 
 namespace Corax.Analyzers
 {
-    internal unsafe class AnalyzerScope : IDisposable
+    internal sealed unsafe class AnalyzerScope : IDisposable
     {
         private readonly IndexSearcher _indexSearcher;
         private readonly Analyzer _analyzer;

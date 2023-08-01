@@ -103,7 +103,7 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
             await base.DisposeAsync();
     }
 
-    private class DocumentContextHolder : IDisposable
+    private sealed class DocumentContextHolder : IDisposable
     {
         private readonly DocumentDatabase _database;
         private IDisposable _returnContext;

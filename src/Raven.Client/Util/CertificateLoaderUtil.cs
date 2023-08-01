@@ -113,7 +113,7 @@ internal static class CertificateLoaderUtil
         }
     }
 
-    private class CertificateCleaner : CriticalFinalizerObject
+    private sealed class CertificateCleaner : CriticalFinalizerObject
     {
         private X509Certificate2 _certificate;
         private static readonly ConditionalWeakTable<X509Certificate2, CertificateCleaner> AssociateLifetimes = new();

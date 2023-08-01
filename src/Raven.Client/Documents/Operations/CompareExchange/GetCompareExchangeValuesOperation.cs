@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new GetCompareExchangeValuesCommand(this, _materializeMetadata, conventions);
         }
 
-        private class GetCompareExchangeValuesCommand : RavenCommand<Dictionary<string, CompareExchangeValue<T>>>
+        private sealed class GetCompareExchangeValuesCommand : RavenCommand<Dictionary<string, CompareExchangeValue<T>>>
         {
             private readonly GetCompareExchangeValuesOperation<T> _operation;
             private readonly bool _materializeMetadata;
