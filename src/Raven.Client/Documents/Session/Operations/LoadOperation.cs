@@ -228,7 +228,6 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var clusterSession = _session.GetClusterSession();
                 clusterSession.RegisterCompareExchangeValues(result.CompareExchangeValueIncludes, includingMissingAtomicGuards);
-                clusterSession.SetClusterTransactionId(result.ClusterTransactionId);
             }
 
             foreach (var document in GetDocumentsFromResult(result))

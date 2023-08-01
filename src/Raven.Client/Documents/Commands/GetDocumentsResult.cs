@@ -17,7 +17,5 @@ namespace Raven.Client.Documents.Commands
         public BlittableJsonReaderObject CompareExchangeValueIncludes { get; set; }
 
         public int NextPageStart { get; set; }
-
-        public string ClusterTransactionId { get; set; }
     }
 }

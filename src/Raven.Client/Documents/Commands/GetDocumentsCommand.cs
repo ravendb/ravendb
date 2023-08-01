@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Commands
                 .Append("/docs?");
 
             if (_loadFromClusterWideTx)
-                pathBuilder.Append("&loadFromClusterWideTx=true");
+                pathBuilder.Append("&txMode=ClusterWide");
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)
@@ -269,7 +269,7 @@ namespace Raven.Client.Documents.Commands
 
         public override bool IsReadRequest => true;
 
-        public void FromClusterWideTx()
+        internal void FromClusterWideTx()
         {
             _loadFromClusterWideTx = true;
         }
