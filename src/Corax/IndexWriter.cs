@@ -188,10 +188,6 @@ namespace Corax
                 Additions.Sort();
                 Removals.Sort();
 
-                // We need to be sure we can update all the cases. 
-                if (Updates.HasCapacityFor(Updates.Count) == false)
-                    Updates.Grow(_context, Additions.Count + Removals.Count, ref UpdatesScope);
-
                 var oldUpdates = Updates.Count;
                 int additionPos = 0, removalPos = 0;
                 var additions = Additions.RawItems;
@@ -206,7 +202,11 @@ namespace Corax
                     //This is made for Set structure.
                     if (currentAdd.EntryId == currentRemoval.EntryId && currentAdd.Frequency == currentRemoval.Frequency)
                     {
-                        Updates.PushUnsafe(currentAdd);
+                        if (Updates.TryPush(currentAdd) == false)
+                        {
+                            Updates.Grow(_context, 1, ref UpdatesScope);
+                            Updates.PushUnsafe(currentAdd);
+                        }
                         rem++;
                         continue;
                     }
