@@ -250,7 +250,7 @@ namespace Sparrow.Platform.Posix
         }
 
 
-        public class BufferedPosixKeyValueOutputValueReader : IDisposable
+        public sealed class BufferedPosixKeyValueOutputValueReader : IDisposable
         {
             private readonly string _path;
             private byte[] _buffer;

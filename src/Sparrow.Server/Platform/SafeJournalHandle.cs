@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Server.Platform
 {
-    public class SafeJournalHandle : SafeHandle
+    public sealed class SafeJournalHandle : SafeHandle
     {
         public PalFlags.FailCodes FailCode; 
         public int ErrorNo;

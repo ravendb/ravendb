@@ -14,7 +14,7 @@ using static Sparrow.Server.Platform.PalFlags;
 
 namespace Voron.Impl
 {
-    public class GlobalPrefetchingBehavior
+    public sealed class GlobalPrefetchingBehavior
     {
         private const string PrefetchingThreadName = "Voron Prefetching Thread";
 

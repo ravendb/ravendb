@@ -2,7 +2,7 @@
 
 namespace Voron
 {
-    public class DataIntegrityErrorEventArgs : EventArgs
+    public sealed class DataIntegrityErrorEventArgs : EventArgs
     {
         internal DataIntegrityErrorEventArgs(string message, Exception exception)
         {

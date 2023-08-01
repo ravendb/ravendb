@@ -2,7 +2,7 @@
 
 namespace Sparrow.LowMemory
 {
-    public class HighDirtyMemoryException : Exception
+    public sealed class HighDirtyMemoryException : Exception
     {
         public HighDirtyMemoryException()
         {

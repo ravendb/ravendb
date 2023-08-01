@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Server.Meters
 {
-    internal class GeneralWaitPerformanceMetrics : PerformanceMetrics
+    internal sealed class GeneralWaitPerformanceMetrics : PerformanceMetrics
     {
         public GeneralWaitPerformanceMetrics(int currentBufferSize, int summaryBufferSize) : base(currentBufferSize, summaryBufferSize)
         {

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Voron.Impl.FreeSpace
 {
-    public class FreeSpaceRecursiveCallGuard : IDisposable
+    public sealed class FreeSpaceRecursiveCallGuard : IDisposable
     {
         private readonly FreeSpaceHandling _freeSpaceHandling;
         public bool IsProcessingFixedSizeTree;

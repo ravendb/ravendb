@@ -28,7 +28,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Debugging
 {
-    public class ReportInput
+    public sealed class ReportInput
     {
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
@@ -48,7 +48,7 @@ namespace Voron.Debugging
         public VoronPathSetting JournalPath { get; set; }
     }
 
-    public class DetailedReportInput
+    public sealed class DetailedReportInput
     {
         public long NumberOfAllocatedPages;
         public long NumberOfFreePages;

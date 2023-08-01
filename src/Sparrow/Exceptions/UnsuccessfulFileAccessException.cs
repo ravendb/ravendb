@@ -6,7 +6,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Exceptions
 {
-    public class UnsuccessfulFileAccessException : Exception
+    public sealed class UnsuccessfulFileAccessException : Exception
     {
         internal static string GetMessage(string filePath, FileAccess accessType, Exception underlyingException)
         {

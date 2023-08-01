@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class JsonDeserializationTest : JsonDeserializationBase
+    internal class JsonDeserializationTest : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, SerializationDeserializationValidation.Values> SerializationDeserializationValidation = GenerateJsonDeserializationRoutine<SerializationDeserializationValidation.Values>();
     }

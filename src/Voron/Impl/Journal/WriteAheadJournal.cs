@@ -635,7 +635,7 @@ namespace Voron.Impl.Journal
             private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
             private readonly LockTaskResponsible _flushLockTaskResponsible;
 
-            public class LastFlushState
+            public sealed class LastFlushState
             {
                 public readonly long TransactionId;
                 public readonly long JournalId;
@@ -1155,7 +1155,7 @@ namespace Voron.Impl.Journal
                 return _forTestingPurposes = new TestingStuff();
             }
 
-            internal class TestingStuff
+            internal sealed class TestingStuff
             {
                 internal Action OnUpdateJournalStateUnderWriteTransactionLock;
 
@@ -1169,7 +1169,7 @@ namespace Voron.Impl.Journal
             // 2) Take a snapshot of the current status of this env flushing status
             // 3) Release the lock & sync the file (take a long time)
             // 4) Re-take the lock, update the sync status in the header with the values we snapshotted
-            public class SyncOperation : IDisposable
+            public sealed class SyncOperation : IDisposable
             {
                 private readonly JournalApplicator _parent;
                 bool _fsyncLockTaken;
@@ -1346,7 +1346,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            internal class LockTaskResponsible
+            internal sealed class LockTaskResponsible
             {
                 private readonly object _lock;
                 private readonly CancellationToken _token;
@@ -2249,7 +2249,7 @@ namespace Voron.Impl.Journal
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
         }

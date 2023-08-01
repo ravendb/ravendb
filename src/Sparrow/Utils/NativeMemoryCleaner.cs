@@ -7,7 +7,7 @@ using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
-    public class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
+    public sealed class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NativeMemoryCleaner<TStack, TPooledItem>>("Memory");
 

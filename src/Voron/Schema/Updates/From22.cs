@@ -4,7 +4,7 @@ using Voron.Impl.Journal;
 
 namespace Voron.Schema.Updates
 {
-    public class From22 : IVoronSchemaUpdate
+    public sealed class From22 : IVoronSchemaUpdate
     {
         public unsafe bool Update(int currentVersion, StorageEnvironmentOptions options, HeaderAccessor headerAccessor, out int versionAfterUpgrade)
         {

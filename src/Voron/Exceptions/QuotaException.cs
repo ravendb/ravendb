@@ -8,7 +8,7 @@ using System;
 
 namespace Voron.Exceptions
 {
-    public class QuotaException : Exception
+    public sealed class QuotaException : Exception
     {
         public QuotaException()
         {

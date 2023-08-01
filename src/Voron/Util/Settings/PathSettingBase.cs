@@ -66,7 +66,7 @@ namespace Voron.Util.Settings
         }
     }
     
-    public class PathUtil
+    public sealed class PathUtil
     {
         public static string ToFullPath(string inputPath, string baseDataDirFullPath = null)
         {

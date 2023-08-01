@@ -2,7 +2,7 @@
 
 namespace Voron.Data.Compression
 {
-    public class DecompressedReadResult : ReadResult, IDisposable
+    public sealed class DecompressedReadResult : ReadResult, IDisposable
     {
         private readonly DecompressedLeafPage _page;
 

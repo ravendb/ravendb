@@ -2,7 +2,7 @@
 
 namespace Sparrow.Json
 {
-    public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
+    public sealed class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {
         private readonly int _maxNumberOfAllocatedStringValuesPerContext;
 

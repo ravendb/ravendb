@@ -9,9 +9,9 @@ using Sparrow.Server;
 
 namespace Voron.Data.BTrees
 {
-    public class RecentlyFoundTreePages
+    public sealed class RecentlyFoundTreePages
     {
-        public class FoundTreePage : IDisposable
+        public sealed class FoundTreePage : IDisposable
         {
             public readonly long Number;
             public readonly Slice FirstKey;

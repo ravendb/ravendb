@@ -397,7 +397,7 @@ namespace Voron
             return tempPath;
         }
 
-        public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public sealed class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
@@ -931,7 +931,7 @@ namespace Voron
             }
         }
 
-        public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public sealed class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _name;
             private static int _counter;
@@ -1383,7 +1383,7 @@ namespace Voron
             return _activeCryptoPagers;
         }
 
-        public class StorageEncryptionOptions : IDisposable
+        public sealed class StorageEncryptionOptions : IDisposable
         {
             private IJournalCompressionBufferCryptoHandler _journalCompressionBufferHandler;
 
@@ -1444,7 +1444,7 @@ namespace Voron
             return ForTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             public int? WriteToJournalCompressionAcceleration = null;
         }

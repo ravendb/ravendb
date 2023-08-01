@@ -7,7 +7,7 @@ using System;
 
 namespace Voron.Exceptions
 {
-    public class InvalidJournalFlushRequestException : Exception
+    public sealed class InvalidJournalFlushRequestException : Exception
     {
 
         public InvalidJournalFlushRequestException()

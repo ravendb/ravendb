@@ -3,7 +3,7 @@ using Voron.Impl.Journal;
 
 namespace Voron.Exceptions
 {
-    public class InvalidJournalException : Exception
+    public sealed class InvalidJournalException : Exception
     {
         public long Number { get; }
 

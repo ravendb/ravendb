@@ -10,7 +10,7 @@ namespace Sparrow.Server.Compression
 {
     internal sealed class HuTuckerCodeAssigner
     {
-        internal class Node
+        internal sealed class Node
         {
             public int LeftIdx;
             public int RightIdx;

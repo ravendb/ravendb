@@ -11,7 +11,7 @@ namespace Voron.Util
     /// <summary>
     /// A helper class that translate between Disposable and Action
     /// </summary>
-    public class DisposableAction : IDisposable
+    public sealed class DisposableAction : IDisposable
     {
         private readonly Action _action;
 

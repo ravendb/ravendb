@@ -3,7 +3,7 @@ using Voron.Impl;
 
 namespace Voron.Schema
 {
-    public class SchemaUpgradeTransactions : IDisposable
+    public sealed class SchemaUpgradeTransactions : IDisposable
     {
         private readonly StorageEnvironment _env;
 

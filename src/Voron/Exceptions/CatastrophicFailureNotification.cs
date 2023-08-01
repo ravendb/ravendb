@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Voron.Exceptions
 {
-    public class CatastrophicFailureNotification
+    public sealed class CatastrophicFailureNotification
     {
         private readonly Action<Guid, string, Exception, string> _catastrophicFailure;
         private bool _raised;

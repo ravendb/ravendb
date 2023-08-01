@@ -42,9 +42,9 @@ namespace Voron
 {
     public delegate bool UpgraderDelegate(SchemaUpgradeTransactions transactions, int currentVersion, out int versionAfterUpgrade);
 
-    public class StorageEnvironment : IDisposable
+    public sealed class StorageEnvironment : IDisposable
     {
-        internal class IndirectReference
+        internal sealed class IndirectReference
         {
             public StorageEnvironment Owner;
 
@@ -1704,7 +1704,7 @@ namespace Voron
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action ActionToCallDuringFullBackupRighAfterCopyHeaders;
         }
@@ -1727,7 +1727,7 @@ namespace Voron
     }
     }
 
-    public class StorageEnvironmentWithType
+    public sealed class StorageEnvironmentWithType
     {
         public string Name { get; set; }
         public StorageEnvironmentType Type { get; set; }

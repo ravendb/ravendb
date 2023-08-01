@@ -2,7 +2,7 @@
 
 namespace Voron
 {
-    internal class NonDurableFileSystemException : Exception
+    internal sealed class NonDurableFileSystemException : Exception
     {
         public NonDurableFileSystemException()
         {

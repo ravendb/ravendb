@@ -2,7 +2,7 @@
 
 namespace Sparrow.Utils
 {
-    public class LazyWithExceptionRetry<T>
+    public sealed class LazyWithExceptionRetry<T>
     {
         private Lazy<T> _inner;
 

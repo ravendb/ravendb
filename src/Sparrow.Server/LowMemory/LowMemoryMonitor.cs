@@ -5,7 +5,7 @@ using Sparrow.Platform.Posix;
 
 namespace Sparrow.Server.LowMemory
 {
-    public class LowMemoryMonitor : AbstractLowMemoryMonitor
+    public sealed class LowMemoryMonitor : AbstractLowMemoryMonitor
     {
         private readonly SmapsReader _smapsReader;
 

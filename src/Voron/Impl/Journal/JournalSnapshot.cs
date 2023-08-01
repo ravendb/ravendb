@@ -3,7 +3,7 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-    public class JournalSnapshot : IComparable<JournalSnapshot>
+    public sealed class JournalSnapshot : IComparable<JournalSnapshot>
     {
         public long Number;
         public PageTable PageTranslationTable;

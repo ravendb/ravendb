@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Voron.Impl.Scratch
 {
-    public class PageFromScratchBufferEqualityComparer : IEqualityComparer<PageFromScratchBuffer>
+    public sealed class PageFromScratchBufferEqualityComparer : IEqualityComparer<PageFromScratchBuffer>
     {
         public static readonly PageFromScratchBufferEqualityComparer Instance = new PageFromScratchBufferEqualityComparer();
 

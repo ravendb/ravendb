@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Data.Fixed
 {
-    public class FixedSizeTreeHeader
+    public sealed class FixedSizeTreeHeader
     {
         /// <summary>
         /// The Embedded Fixed Size Tree Root Header.

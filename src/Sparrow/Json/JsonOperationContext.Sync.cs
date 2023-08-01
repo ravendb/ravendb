@@ -11,7 +11,7 @@ namespace Sparrow.Json
             get => _sync ??= new SyncJsonOperationContext(this);
         }
 
-        internal class SyncJsonOperationContext
+        internal sealed class SyncJsonOperationContext
         {
             internal readonly JsonOperationContext Context;
 

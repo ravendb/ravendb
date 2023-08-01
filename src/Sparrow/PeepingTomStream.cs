@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Sparrow
 {
-    public class PeepingTomStream : IDisposable
+    public sealed class PeepingTomStream : IDisposable
     {
         public const int BufferWindowSize = 4096;
 

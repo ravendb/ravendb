@@ -9,7 +9,7 @@ using Voron.Global;
 
 namespace Voron.Data.Tables
 {
-    public class TableReport
+    public sealed class TableReport
     {
         private StorageReportGenerator _storageGenerator;
 

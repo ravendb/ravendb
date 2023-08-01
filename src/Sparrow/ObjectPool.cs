@@ -42,7 +42,7 @@ namespace Sparrow
     /// Rationale: 
     ///    If there is no intent for reusing the object, do not use pool - just use "new". 
     /// </summary>
-    public class ObjectPool<T> : ObjectPool<T, NoResetSupport<T>>
+    public sealed class ObjectPool<T> : ObjectPool<T, NoResetSupport<T>>
         where T : class
     {
         public ObjectPool(Factory factory) : base(factory) {}

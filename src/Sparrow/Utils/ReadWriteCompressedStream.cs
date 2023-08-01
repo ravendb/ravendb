@@ -9,7 +9,7 @@ using Sparrow.Threading;
 namespace Sparrow.Utils
 {
 #if NETCOREAPP3_1_OR_GREATER
-    internal class ReadWriteCompressedStream : Stream
+    internal sealed class ReadWriteCompressedStream : Stream
     {
         private readonly Stream _inner;
         private readonly ZstdStream _input, _output;
@@ -66,7 +66,7 @@ namespace Sparrow.Utils
             set => _inner.WriteTimeout = value;
         }
 
-        public class TotalBytes
+        public sealed class TotalBytes
         {
             public long Compressed { get; set; }
             public long Uncompressed { get; set; }

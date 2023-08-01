@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Sparrow.Server.Meters
 {
-    public class IoMetrics
+    public sealed class IoMetrics
     {
         public enum MeterType
         {
@@ -85,7 +85,7 @@ namespace Sparrow.Server.Meters
             return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0, OnFileChange);
         }
 
-        public class FileIoMetrics
+        public sealed class FileIoMetrics
         {
             public string FileName;
             public IoMeterBuffer JournalWrite;

@@ -4,7 +4,7 @@ using Voron.Impl.FileHeaders;
 
 namespace Voron.Schema
 {
-    public class VoronSchemaUpdater
+    public sealed class VoronSchemaUpdater
     {
         private readonly HeaderAccessor _headerAccessor;
         private readonly StorageEnvironmentOptions _options;

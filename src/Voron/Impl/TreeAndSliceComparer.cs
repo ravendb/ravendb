@@ -4,7 +4,7 @@ using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {
-    internal class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
+    internal sealed class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
     {
         public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
         {

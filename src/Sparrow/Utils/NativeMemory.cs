@@ -46,7 +46,7 @@ namespace Sparrow.Utils
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
 
-        public class ThreadStats
+        public sealed class ThreadStats
         {
             public int InternalId;
             public ulong UnmanagedThreadId;
@@ -289,7 +289,7 @@ namespace Sparrow.Utils
             GC.KeepAlive(ThreadAllocations.Value); // side affecty
         }
 
-        public class FileMappingInfo
+        public sealed class FileMappingInfo
         {
             public FileMappingInfo()
             {

@@ -355,7 +355,7 @@ namespace Voron.Impl.Scratch
             _disposeOnceRunner.Dispose();
         }
 
-        internal class ScratchBufferItem
+        internal sealed class ScratchBufferItem
         {
             public readonly int Number;
             public readonly ScratchBufferFile File;
@@ -623,7 +623,7 @@ namespace Voron.Impl.Scratch
             return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             private readonly ScratchBufferPool _env;
 

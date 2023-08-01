@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Voron.Debugging
 {
-    public class EnvironmentStats
+    public sealed class EnvironmentStats
     {
         public long FreePagesOverhead;
         public long RootPages;
@@ -12,7 +12,7 @@ namespace Voron.Debugging
         public long NextWriteTransactionId;
     }
 
-    public class ActiveTransaction
+    public sealed class ActiveTransaction
     {
         public long Id;
         public TransactionFlags Flags;

@@ -27,7 +27,7 @@ namespace Sparrow.Utils
     /// this class results in the action performed by the method not occurring.
     /// </para>
     /// </remarks>
-    internal class FifoSemaphore
+    internal sealed class FifoSemaphore
     {
         internal readonly Queue<OneTimeWaiter> _waitQueue;
 
@@ -122,7 +122,7 @@ namespace Sparrow.Utils
             }
         }
 
-        internal class OneTimeWaiter : IDisposable
+        internal sealed class OneTimeWaiter : IDisposable
         {
             private readonly ManualResetEventSlim _mre = new ManualResetEventSlim(false);
             private CancellationToken _token;
@@ -188,7 +188,7 @@ namespace Sparrow.Utils
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        internal sealed class TestingStuff
         {
             internal Action JustBeforeAddingToWaitQueue;
 

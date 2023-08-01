@@ -14,7 +14,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Platform.Win32
 {
-    public class Win32Helper
+    public sealed class Win32Helper
     {
         public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {

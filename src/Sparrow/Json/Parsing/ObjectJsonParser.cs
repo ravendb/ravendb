@@ -17,7 +17,7 @@ namespace Sparrow.Json.Parsing
         DynamicJsonValue ToJson();
     }
 
-    public class DynamicJsonValue
+    public sealed class DynamicJsonValue
     {
         public const string TypeFieldName = "$type";
 
@@ -149,7 +149,7 @@ namespace Sparrow.Json.Parsing
         }
     }
 
-    public class DynamicJsonArray : IEnumerable<object>, IDisposable
+    public sealed class DynamicJsonArray : IEnumerable<object>, IDisposable
     {
         public bool SkipOriginalArray;
         public int SourceIndex = -1;

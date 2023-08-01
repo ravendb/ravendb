@@ -2,7 +2,7 @@
 
 namespace Voron.Exceptions
 {
-    public class IncreasingDataFileInCopyOnWriteModeException : Exception
+    public sealed class IncreasingDataFileInCopyOnWriteModeException : Exception
     {
         public IncreasingDataFileInCopyOnWriteModeException(string dataFilePath, long requestedSize)
         {

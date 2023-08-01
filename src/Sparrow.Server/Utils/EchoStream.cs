@@ -11,7 +11,7 @@ namespace Sparrow.Server.Utils
     /// <summary>
     /// https://stackoverflow.com/questions/1475747/is-there-an-in-memory-stream-that-blocks-like-a-file-stream
     /// </summary>
-    internal class EchoStream : Stream
+    internal sealed class EchoStream : Stream
     {
         public override bool CanTimeout { get; } = true;
         public override int ReadTimeout { get; set; } = Timeout.Infinite;

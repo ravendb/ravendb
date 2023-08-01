@@ -2,7 +2,7 @@
 
 namespace Sparrow.Exceptions
 {
-    public class InvalidStartOfObjectException : Exception
+    public sealed class InvalidStartOfObjectException : Exception
     {
         public InvalidStartOfObjectException()
         {

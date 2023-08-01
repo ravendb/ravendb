@@ -9,7 +9,7 @@ namespace Sparrow.Utils
     /// This class allow us to perform disposal operations without running
     /// into concurrency issues with calling code
     /// </summary>
-    internal class DisposeLock
+    internal sealed class DisposeLock
     {
         private readonly string _name;
         private readonly AsyncReaderWriterLock _lock;
@@ -79,7 +79,7 @@ namespace Sparrow.Utils
         }
     }
 
-    public class LockAlreadyDisposedException : ObjectDisposedException
+    public sealed class LockAlreadyDisposedException : ObjectDisposedException
     {
         public LockAlreadyDisposedException(string message) : base(message)
         {

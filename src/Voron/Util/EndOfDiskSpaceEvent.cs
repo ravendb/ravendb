@@ -10,7 +10,7 @@ using Sparrow.Server.Utils;
 
 namespace Voron.Util
 {
-    public class EndOfDiskSpaceEvent
+    public sealed class EndOfDiskSpaceEvent
     {
         private readonly long _availableSpaceWhenEventOccurred;
         private readonly string _path;

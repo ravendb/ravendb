@@ -3,7 +3,7 @@ using System.Runtime.ExceptionServices;
 
 namespace Voron.Exceptions
 {
-    public class SchemaErrorException : Exception
+    public sealed class SchemaErrorException : Exception
     {
         public SchemaErrorException()
         {

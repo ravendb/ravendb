@@ -23,7 +23,7 @@ using Voron.Impl.Journal;
 
 namespace Voron.Impl.Compaction
 {
-    public class StorageCompactionProgress
+    public sealed class StorageCompactionProgress
     {
         public string TreeName;
         public long TreeProgress;

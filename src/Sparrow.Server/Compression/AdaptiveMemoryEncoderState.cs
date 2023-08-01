@@ -3,7 +3,7 @@ using System.Buffers;
 
 namespace Sparrow.Server.Compression
 {
-    public class AdaptiveMemoryEncoderState : IEncoderState
+    public sealed class AdaptiveMemoryEncoderState : IEncoderState
     {
         private byte[] _encodingBuffer;
         private byte[] _decodingBuffer;

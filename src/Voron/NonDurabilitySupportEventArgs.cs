@@ -2,7 +2,7 @@
 {
     using System;
 
-    public class NonDurabilitySupportEventArgs : EventArgs
+    public sealed class NonDurabilitySupportEventArgs : EventArgs
     {
         internal NonDurabilitySupportEventArgs(string message, Exception exception, string details) 
         {

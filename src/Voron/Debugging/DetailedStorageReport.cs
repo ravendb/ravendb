@@ -11,7 +11,7 @@ using Voron.Impl.Scratch;
 
 namespace Voron.Debugging
 {
-    public class SizeReport
+    public sealed class SizeReport
     {
         public long DataFileInBytes { get; set; }
         public long JournalsInBytes { get; set; }
@@ -19,7 +19,7 @@ namespace Voron.Debugging
         public long TempRecyclableJournalsInBytes { get; set; }
     }
 
-    public class StorageReport
+    public sealed class StorageReport
     {
         public DataFileReport DataFile { get; set; }
         public List<JournalReport> Journals { get; set; }
@@ -28,7 +28,7 @@ namespace Voron.Debugging
         public int CountOfTables { get; set; }
     }
 
-    public class DetailedStorageReport
+    public sealed class DetailedStorageReport
     {
         public InMemoryStorageState InMemoryState { get; set; }
         public DataFileReport DataFile { get; set; }
@@ -41,7 +41,7 @@ namespace Voron.Debugging
         public string TotalEncryptionBufferSize { get; set; }
     }
 
-    public class DataFileReport
+    public sealed class DataFileReport
     {
         public override string ToString()
         {
@@ -53,7 +53,7 @@ namespace Voron.Debugging
         public long FreeSpaceInBytes { get; set; }
     }
 
-    public class JournalsReport
+    public sealed class JournalsReport
     {
         public long LastFlushedJournal { get; set; }
         public long TotalWrittenButUnsyncedBytes { get; set; }
@@ -61,7 +61,7 @@ namespace Voron.Debugging
         public List<JournalReport> Journals { get; set; }
     }
 
-    public class JournalReport
+    public sealed class JournalReport
     {
         public long Number { get; set; }
         public long AllocatedSpaceInBytes { get; set; }
@@ -70,7 +70,7 @@ namespace Voron.Debugging
         public bool Flushed { get; set; }
     }
 
-    public class TempBufferReport
+    public sealed class TempBufferReport
     {
         public string Name { get; set; }
         public long AllocatedSpaceInBytes { get; set; }
@@ -83,7 +83,7 @@ namespace Voron.Debugging
         RecyclableJournal
     }
 
-    public class TreeReport
+    public sealed class TreeReport
     {
         public RootObjectType Type { get; set; }
         public string Name { get; set; }
@@ -104,7 +104,7 @@ namespace Voron.Debugging
         public Dictionary<int, int> BalanceHistogram { get; internal set; }
     }
 
-    public class MultiValuesReport
+    public sealed class MultiValuesReport
     {
         public long NumberOfEntries { get; set; }
         public long PageCount { get; set; }
@@ -113,7 +113,7 @@ namespace Voron.Debugging
         public long OverflowPages { get; set; }
     }
 
-    public class PreAllocatedBuffersReport
+    public sealed class PreAllocatedBuffersReport
     {
         public long AllocatedSpaceInBytes { get; set; }
         public long PreAllocatedBuffersSpaceInBytes { get; set; }
@@ -122,7 +122,7 @@ namespace Voron.Debugging
         public long OriginallyAllocatedSpaceInBytes { get; set; }
     }
 
-    public class StreamsReport
+    public sealed class StreamsReport
     {
         public List<StreamDetails> Streams { get; set; }
 
@@ -133,7 +133,7 @@ namespace Voron.Debugging
         public long AllocatedSpaceInBytes { get; set; }
     }
 
-    public class StreamDetails
+    public sealed class StreamDetails
     {
         public string Name { get; set; }
 

@@ -5,7 +5,7 @@ using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace
 {
-    public class FreeSpaceHandling : IFreeSpaceHandling
+    public sealed class FreeSpaceHandling : IFreeSpaceHandling
     {
         private static readonly Slice FreeSpaceKey;
 

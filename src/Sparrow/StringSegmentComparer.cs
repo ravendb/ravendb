@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Sparrow
 {
-    internal class StringSegmentComparer : IComparer<StringSegment>, IEqualityComparer<StringSegment>
+    internal sealed class StringSegmentComparer : IComparer<StringSegment>, IEqualityComparer<StringSegment>
     {
         public static StringSegmentComparer Ordinal { get; }
             = new StringSegmentComparer(StringComparison.Ordinal, StringComparer.Ordinal);

@@ -35,7 +35,7 @@ namespace Voron.Data.Tables
     /// 
     /// Global indexes have a dedicated global allocator
     /// </summary>
-    public class NewPageAllocator
+    public sealed class NewPageAllocator
     {
         private readonly LowLevelTransaction _llt;
         private readonly Tree _parentTree;
@@ -450,7 +450,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public class Report
+        public sealed class Report
         {
             public long NumberOfFreePages { get; set; }
 

@@ -2,7 +2,7 @@
 
 namespace Sparrow.Utils
 {
-    internal class IncorrectDllException : Exception
+    internal sealed class IncorrectDllException : Exception
     {
         public IncorrectDllException()
         {

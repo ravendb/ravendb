@@ -7,7 +7,7 @@ using Sparrow.Collections;
 
 namespace Voron.Data.BTrees
 {
-    public class TreeCursor : IDisposable
+    public sealed class TreeCursor : IDisposable
     {
         public FastStack<TreePage> Pages = new FastStack<TreePage>();
 
@@ -29,7 +29,7 @@ namespace Voron.Data.BTrees
         }
 
         // The bulk of the clean-up code is implemented in Dispose(bool)
-        protected virtual void Dispose(bool disposing)
+        protected void Dispose(bool disposing)
         {
             if (disposing)
             {

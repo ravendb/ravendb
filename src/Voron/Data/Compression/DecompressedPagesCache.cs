@@ -4,7 +4,7 @@ using Voron.Impl;
 
 namespace Voron.Data.Compression
 {
-    public class DecompressedPagesCache : IDisposable
+    public sealed class DecompressedPagesCache : IDisposable
     {
         public const int Size = 4;
 

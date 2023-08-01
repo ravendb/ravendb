@@ -24,14 +24,14 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging
 {
-    public class TransactionState
+    public sealed class TransactionState
     {
         public Dictionary<long, LoadedPage> LoadedPages = new Dictionary<long, LoadedPage>();
         public List<MappedAddresses> AddressesToUnload = new List<MappedAddresses>();
         public long TotalLoadedSize;
     }
 
-    public class MappedAddresses
+    public sealed class MappedAddresses
     {
         public string File;
         public IntPtr Address;

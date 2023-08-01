@@ -25,7 +25,7 @@ namespace Voron.Data.Fixed
             bool Skip(long count);
         }
 
-        public class NullIterator : IFixedSizeIterator
+        public sealed class NullIterator : IFixedSizeIterator
         {
             public static readonly NullIterator Instance = new ();
             public bool SeekToLast()
@@ -71,7 +71,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public class EmbeddedIterator : IFixedSizeIterator
+        public sealed class EmbeddedIterator : IFixedSizeIterator
         {
             private readonly FixedSizeTree<TVal> _fst;
             private readonly ByteStringContext _allocator;
@@ -176,7 +176,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public class LargeIterator : IFixedSizeIterator
+        public sealed class LargeIterator : IFixedSizeIterator
         {
             private readonly FixedSizeTree<TVal> _parent;
             private readonly ByteStringContext _allocator;

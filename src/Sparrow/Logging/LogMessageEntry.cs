@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Logging
 {
-    internal class LogMessageEntry
+    internal sealed class LogMessageEntry
     {
         public LogMode Type;
         public MemoryStream Data;

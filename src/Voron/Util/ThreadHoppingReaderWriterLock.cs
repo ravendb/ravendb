@@ -14,7 +14,7 @@ namespace Voron.Util
     /// * Entering & exiting the read lock can happen in different threads (no thread affinity)
     /// * Write lock is always on the same thread
     /// </summary>
-    public class ThreadHoppingReaderWriterLock
+    public sealed class ThreadHoppingReaderWriterLock
     {
         private const uint ReaderMask = 0x00FFFFFF;
         private const int WriterMarker = 0x01000000;

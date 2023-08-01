@@ -2,7 +2,7 @@
 
 namespace Voron.Exceptions
 {
-    public class VoronConcurrencyErrorException : VoronErrorException
+    public sealed class VoronConcurrencyErrorException : VoronErrorException
     {
         public VoronConcurrencyErrorException()
         {

@@ -7,7 +7,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public class PerCoreContainer<T> : IEnumerable<(T Item, (int, int) Pos)>
+    public sealed class PerCoreContainer<T> : IEnumerable<(T Item, (int, int) Pos)>
         where T : class
     {
         private readonly T[][] _perCoreArrays;

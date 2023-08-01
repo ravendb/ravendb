@@ -5,7 +5,7 @@ using Voron.Impl;
 
 namespace Voron
 {
-    public class TransactionPersistentContext
+    public sealed class TransactionPersistentContext
     {
         private bool _longLivedTransaction;
         private int _cacheSize;

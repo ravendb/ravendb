@@ -2,7 +2,7 @@
 
 namespace Voron
 {
-    public class DriveInfoByPath
+    public sealed class DriveInfoByPath
     {
         public DriveInfoBase BasePath { get; set; }
 
