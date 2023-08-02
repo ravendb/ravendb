@@ -14,6 +14,7 @@ using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -33,6 +34,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Json;
@@ -2049,6 +2051,53 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.NotNull(user);
                         Assert.Null(await session.TimeSeriesFor("users/1", "Heartrate").GetAsync());
                     }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanAbortOneTimeBackupAndRestore()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "RavenDB-20991" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                try
+                {
+                    database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
+                    var operationId = store.Maintenance.SendAsync(new BackupOperation(config)).Result.Id;
+                    await store.Commands().ExecuteAsync(new KillOperationCommand(operationId));
+                    database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution.SetResult(null);
+
+                    WaitForValue(() => database.Operations.HasActive, false);
+                    Assert.False(database.Operations.HasActive);
+
+                    var operation = database.Operations.GetOperation(operationId);
+                    Assert.True(operation.Description.TaskType is Operations.OperationType.DatabaseBackup);
+                    Assert.True(operation.Description.Description == $"Manual backup for database: {database.Name}");
+                    Assert.True(operation.State.Status is OperationStatus.Canceled);
+                    Assert.Null(operation.State.Progress);
+                    Assert.Null(operation.State.Result);
+                }
+                finally
+                {
+                    database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = null;
                 }
             }
         }
