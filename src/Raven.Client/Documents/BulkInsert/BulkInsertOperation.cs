@@ -319,7 +319,7 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
                 EndPreviousCommandIfNeeded();
-                _options.ForTestingPurposes?.Store?.Invoke();
+                _options.ForTestingPurposes?.OnSendHeartBeat_DoBulkStore?.Invoke();
                 if (CheckServerVersion(_requestExecutor.LastServerVersion) == false)
                     return;
 
@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.BulkInsert
             if (serverVersion != null && Version.TryParse(serverVersion, out var ver))
             {
                 // 5.4.108 or higher
-                if (ver.Major > 5 || (ver.Major == 5 && ver.Minor >= 4 && ver.Build >= 108))
+                if (ver.Major > 5 || (ver.Major == 5 && ver.Minor >= 4 && ver.Build >= 110))
                     return true;
             }
             return false;
