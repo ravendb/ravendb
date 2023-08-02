@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().StreamWriteTimeout = _writeTimeout;
+                db.ForTestingPurposesOnly().BulkInsertStreamWriteTimeout = _writeTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
 
@@ -65,14 +65,14 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().StreamWriteTimeout = _writeTimeout;
+                db.ForTestingPurposesOnly().BulkInsertStreamWriteTimeout = _writeTimeout;
 
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
 
                 var bulk = store.BulkInsert(bulkInsertOptions);
 
-                bulkInsertOptions.ForTestingPurposesOnly().Store = () =>
+                bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
                 {
                     Task.Run(() => bulk.Store(new User { Name = "Daniel" }, "users/1"));
                 };
