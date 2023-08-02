@@ -200,6 +200,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForClusterTransactions(string threadName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ClusterTransaction()
+        };
+    }
+
     public class ThreadDetails
     {
         public interface IThreadDetails
@@ -568,6 +576,18 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"PllRepSnk {_destinationDatabase} at {_destinationUrl}";
+            }
+        }
+
+        public class ClusterTransaction : IThreadDetails
+        {
+            public ClusterTransaction()
+            {
+            }
+
+            public string GetShortName()
+            {
+                return "Cluster Transaction";
             }
         }
     }
