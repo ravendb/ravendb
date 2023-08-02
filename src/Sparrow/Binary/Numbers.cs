@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Binary;
 
-public static class Numbers
+internal static class Numbers
 {
     /// <summary>
     /// Hex string lookup table.

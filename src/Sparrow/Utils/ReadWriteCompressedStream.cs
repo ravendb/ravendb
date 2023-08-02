@@ -66,7 +66,7 @@ namespace Sparrow.Utils
             set => _inner.WriteTimeout = value;
         }
 
-        public sealed class TotalBytes
+        internal sealed class TotalBytes
         {
             public long Compressed { get; set; }
             public long Uncompressed { get; set; }

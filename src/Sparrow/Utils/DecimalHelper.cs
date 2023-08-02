@@ -5,9 +5,9 @@ namespace Sparrow.Utils
 {
     // http://stackoverflow.com/questions/13477689/find-number-of-decimal-places-in-decimal-value-regardless-of-culture
 
-    public delegate bool IsDoubleDelegate(ref decimal value);
+    internal delegate bool IsDoubleDelegate(ref decimal value);
 
-    public sealed class DecimalHelper
+    internal sealed class DecimalHelper
     {
         public static readonly DecimalHelper Instance = new DecimalHelper();
 

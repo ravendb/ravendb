@@ -51,7 +51,7 @@ namespace Voron
             public WeakReference<StorageEnvironment> WeekReference { get; set; }
         }
 
-        public Table.CompressionDictionariesHolder CompressionDictionariesHolder = new Table.CompressionDictionariesHolder();
+        internal Table.CompressionDictionariesHolder CompressionDictionariesHolder = new Table.CompressionDictionariesHolder();
         
         internal IndirectReference SelfReference = new IndirectReference();
 

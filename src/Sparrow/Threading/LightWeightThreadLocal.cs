@@ -6,7 +6,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Threading
 {
-    public sealed class LightWeightThreadLocal<T> : IDisposable
+    internal sealed class LightWeightThreadLocal<T> : IDisposable
     {
         [ThreadStatic]
         private static CurrentThreadState _state;

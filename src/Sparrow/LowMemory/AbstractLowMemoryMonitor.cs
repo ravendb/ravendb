@@ -3,7 +3,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public abstract class AbstractLowMemoryMonitor : IDisposable
+    internal abstract class AbstractLowMemoryMonitor : IDisposable
     {
         public abstract MemoryInfoResult GetMemoryInfoOnce();
 

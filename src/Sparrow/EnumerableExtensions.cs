@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace System
 {
-    public static class EnumerableExtensions
+    internal static class EnumerableExtensions
     {
         /// <summary>
         /// This extensions is based on the C# 9.0 capability to force any <![CDATA[ IEnumerator<T> ]]> into a foreach

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Utils
 {
-    public sealed class ReferenceEqualityComparer : IEqualityComparer, IEqualityComparer<object>
+    internal sealed class ReferenceEqualityComparer : IEqualityComparer, IEqualityComparer<object>
     {
         public static readonly ReferenceEqualityComparer Default = new ReferenceEqualityComparer();
 
@@ -19,7 +19,7 @@ namespace Sparrow.Utils
         }
     }
 
-    public sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
+    internal sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
     {
         public static readonly ReferenceEqualityComparer<T> Default = new ReferenceEqualityComparer<T>();
 

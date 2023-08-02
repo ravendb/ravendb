@@ -17,7 +17,7 @@ namespace Sparrow.Json
         void EnsureSingleChunk(out byte* ptr, out int size);
     }
 
-    public unsafe struct UnmanagedStreamBuffer : IUnmanagedWriteBuffer
+    internal unsafe struct UnmanagedStreamBuffer : IUnmanagedWriteBuffer
     {
         private readonly Stream _stream;
         private int _sizeInBytes;

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Sparrow.Extensions
 {
-    public static class StringExtensions
+    internal static class StringExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetUtf8MaxSize(this string value)

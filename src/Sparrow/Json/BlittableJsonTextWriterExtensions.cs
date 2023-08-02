@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public static class BlittableJsonTextWriterExtensions
+    internal static class BlittableJsonTextWriterExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items,

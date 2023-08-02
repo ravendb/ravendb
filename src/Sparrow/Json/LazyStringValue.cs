@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public sealed class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
+    internal sealed class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
     {
         public static readonly LazyStringValueComparer Instance = new LazyStringValueComparer();
 
@@ -32,7 +32,7 @@ namespace Sparrow.Json
         }
     }
 
-    public struct LazyStringValueStructComparer : IEqualityComparer<LazyStringValue>
+    internal struct LazyStringValueStructComparer : IEqualityComparer<LazyStringValue>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue x, LazyStringValue y)

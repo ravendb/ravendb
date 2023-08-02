@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Binary
 {
-    public static class Bits
+    internal static class Bits
     {
         public const int InByte = 8;
         public const int InShort = 16;

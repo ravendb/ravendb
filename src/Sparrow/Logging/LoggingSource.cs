@@ -75,7 +75,7 @@ namespace Sparrow.Logging
         private static readonly byte[] _headerRow =
             Encodings.Utf8.GetBytes($"Time, Thread, Level, Source, Logger, Message, Exception{Environment.NewLine}");
 
-        public sealed class WebSocketContext
+        internal sealed class WebSocketContext
         {
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
@@ -100,7 +100,7 @@ namespace Sparrow.Logging
             return (info, operation);
         }
         
-        public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
+        internal async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
         {
             await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true, token).ConfigureAwait(false);
 

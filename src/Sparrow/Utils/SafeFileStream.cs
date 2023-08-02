@@ -4,7 +4,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Sparrow.Utils
 {
-    public static class SafeFileStream
+    internal static class SafeFileStream
     {
         private static void AvoidKillingTheProcessWhenOutOfDiskSpace(FileStream file)
         {

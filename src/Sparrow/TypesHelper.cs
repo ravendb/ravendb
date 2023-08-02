@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow
 {
-    public static class TypesHelper
+    internal static class TypesHelper
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

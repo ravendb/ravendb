@@ -7,7 +7,7 @@ using Sparrow.Utils;
 
 namespace Sparrow
 {
-    public struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
+    internal struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
     {
         public static IEqualityComparer<StringSegment> BoxedInstance = new StringSegmentEqualityStructComparer();
 

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Sparrow
 {
-    public struct Metro128Hash
+    internal struct Metro128Hash
     {
         public ulong H1;
         public ulong H2;
@@ -47,11 +47,11 @@ namespace Sparrow
         }
     }
 
-    public static unsafe partial class Hashing
+    internal static unsafe partial class Hashing
     {
         #region XXHash32 & XXHash64
 
-        public struct XXHash32Values
+        internal struct XXHash32Values
         {
             public uint V1;
             public uint V2;
@@ -73,7 +73,7 @@ namespace Sparrow
             char Modify(char ch);
         }
 
-        public struct OrdinalModifier : ICharacterModifier
+        internal struct OrdinalModifier : ICharacterModifier
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public char Modify(char ch)
@@ -82,7 +82,7 @@ namespace Sparrow
             }
         }
 
-        public struct OrdinalIgnoreCaseModifier : ICharacterModifier
+        internal struct OrdinalIgnoreCaseModifier : ICharacterModifier
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public char Modify(char ch)
@@ -97,7 +97,7 @@ namespace Sparrow
         /// A port of the original XXHash algorithm from Google in 32bits 
         /// </summary>
         /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
-        public static class XXHash32
+        internal static class XXHash32
         {
 
             // TODO: Check if it is better to have ReadOnlySpan built on top of pointer or the other way around. 
@@ -379,7 +379,7 @@ namespace Sparrow
             }
         }
 
-        public struct XXHash64Values
+        internal struct XXHash64Values
         {
             public ulong V1;
             public ulong V2;
@@ -396,7 +396,7 @@ namespace Sparrow
             internal const ulong PRIME64_5 = 2870177450012600261UL;
         }
 
-        public static class JumpConsistentHash
+        internal static class JumpConsistentHash
         {
             //A Fast, Minimal Memory, Consistent Hash Algorithm
             //by John Lamping, Eric Veach
@@ -420,7 +420,7 @@ namespace Sparrow
         /// A port of the original XXHash algorithm from Google in 64bits 
         /// </summary>
         /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
-        public static class XXHash64
+        internal static class XXHash64
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static ulong CalculateInline(byte* buffer, ulong len, ulong seed = 0)
@@ -601,7 +601,7 @@ namespace Sparrow
 
         #region Downsampling Hashing
 
-        public static class HashCombiner
+        internal static class HashCombiner
         {
             /// <summary>
             /// The combine function will perform the mixing of 2 hash values into a single one.
@@ -844,7 +844,7 @@ namespace Sparrow
 
         #region Metro128
 
-        public struct Metro128Values
+        internal struct Metro128Values
         {
             public ulong V0;
             public ulong V1;
@@ -860,7 +860,7 @@ namespace Sparrow
             public const ulong K3 = 0x2F5870A5;
         }
 
-        public static class Metro128
+        internal static class Metro128
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static unsafe Metro128Hash CalculateInline(byte* buffer, int length, ulong seed = 0)
@@ -994,7 +994,7 @@ namespace Sparrow
 
         #endregion
 
-        public static class Marvin32
+        internal static class Marvin32
         {
             public static uint Calculate(byte[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
             {

@@ -757,7 +757,7 @@ namespace Voron.Data.Tables
                 $"After changing active sections, failed to allocate {new Size(size, SizeUnit.Bytes)} bytes on {Name}");
         }
 
-        public sealed class CompressionDictionariesHolder : IDisposable
+        internal sealed class CompressionDictionariesHolder : IDisposable
         {
             private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
 

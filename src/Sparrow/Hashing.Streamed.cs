@@ -5,13 +5,13 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow
 {
-    partial class Hashing
+    internal partial class Hashing
     {
-        public static class Streamed
+        internal static class Streamed
         {
             #region XXHash32 & XXHash64
 
-            public unsafe struct XXHash32Context
+            internal unsafe struct XXHash32Context
             {
                 internal uint Seed;
                 internal XXHash32Values Current;
@@ -20,7 +20,7 @@ namespace Sparrow
                 internal int BufferSize;
             }
 
-            public static unsafe class XXHash32
+            internal static unsafe class XXHash32
             {
                 public const int Alignment = 16;
 
@@ -169,7 +169,7 @@ namespace Sparrow
             }
 
 
-            public unsafe struct XXHash64Context
+            internal unsafe struct XXHash64Context
             {
                 public ulong Seed;
                 internal XXHash64Values Current;
@@ -179,7 +179,7 @@ namespace Sparrow
             }
 
 
-            public static unsafe class XXHash64
+            internal static unsafe class XXHash64
             {
                 public const int Alignment = 32;
 
@@ -369,7 +369,7 @@ namespace Sparrow
             #region Metro128
 
 
-            public sealed class Metro128Context
+            internal sealed class Metro128Context
             {
                 internal uint Seed = 0;
                 internal Metro128Values Current;
@@ -380,7 +380,7 @@ namespace Sparrow
 
 
 
-            public static unsafe class Metro128
+            internal static unsafe class Metro128
             {
                 public const int Alignment = 32;
 

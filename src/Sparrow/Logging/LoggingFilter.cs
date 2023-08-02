@@ -5,7 +5,7 @@ using Sparrow.Extensions;
 
 namespace Sparrow.Logging
 {
-    public sealed class LoggingFilter
+    internal sealed class LoggingFilter
     {
         private readonly Dictionary<LogEntryFields, List<Filter>> _rules =
             new Dictionary<LogEntryFields, List<Filter>>();
@@ -185,7 +185,7 @@ namespace Sparrow.Logging
             Exception
         }
 
-        public sealed class Filter
+        internal sealed class Filter
         {
             public bool MatchIsValid;
             public string Value;

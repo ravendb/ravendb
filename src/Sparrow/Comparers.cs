@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow
 {
-    public struct NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
+    internal readonly struct NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
     {
         public static readonly IEqualityComparer<long> BoxedInstanceInt64 = new NumericEqualityComparer();
         public static readonly IEqualityComparer<ulong> BoxedInstanceUInt64 = new NumericEqualityComparer();
@@ -63,7 +63,7 @@ namespace Sparrow
         }
     }
 
-    public struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
+    internal readonly struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
     {
         public static readonly IComparer<long> BoxedInstanceInt64 = new NumericComparer();
 
@@ -94,7 +94,7 @@ namespace Sparrow
         }
     }
 
-    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>, IComparer<float>, IComparer<double>
+    internal readonly struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>, IComparer<float>, IComparer<double>
     {
         public static readonly IComparer<long> BoxedInstanceInt64 = new NumericDescendingComparer();
 

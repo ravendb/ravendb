@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Platform
 {
-    public static class PlatformDetails
+    internal static class PlatformDetails
     {
         public static readonly bool IsWindows8OrNewer;
 

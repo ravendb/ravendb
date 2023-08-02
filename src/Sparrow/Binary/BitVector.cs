@@ -12,7 +12,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Sparrow.Binary
 {
-    public readonly ref struct BitVector
+    internal readonly ref struct BitVector
     {
         public const int BitsPerByte = 8;
         public const int BitsPerWord = sizeof(ulong) * BitsPerByte; // 64

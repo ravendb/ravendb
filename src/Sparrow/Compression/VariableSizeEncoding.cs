@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Compression
 {
-    public static class VariableSizeEncoding
+    internal static class VariableSizeEncoding
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadMany<T>(ReadOnlySpan<byte> buffer, int count, Span<T> output) where T : unmanaged

@@ -280,7 +280,7 @@ namespace Sparrow
         }
     }
 
-    public readonly struct Sorter<T, V, TSorter>
+    internal readonly struct Sorter<T, V, TSorter>
         where TSorter : struct, IComparer<T>
     {
         private readonly TSorter _sorter;

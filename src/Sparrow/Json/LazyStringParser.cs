@@ -8,7 +8,7 @@ namespace Sparrow.Json
     /// <summary>
     /// This class assumes that the data is in UTF8
     /// </summary>
-    public sealed unsafe class LazyStringParser
+    internal sealed unsafe class LazyStringParser
     {
         public enum Result
         {

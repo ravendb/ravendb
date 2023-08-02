@@ -2,14 +2,14 @@
 {
     public struct MemoryInfoResult
     {
-        public sealed class MemoryUsageIntervals
+        internal sealed class MemoryUsageIntervals
         {
             public Size LastOneMinute;
             public Size LastFiveMinutes;
             public Size SinceStartup;
         }
 
-        public sealed class MemoryUsageLowHigh
+        internal sealed class MemoryUsageLowHigh
         {
             public MemoryUsageIntervals High;
             public MemoryUsageIntervals Low;

@@ -12,7 +12,7 @@ namespace Sparrow.Utils
         private readonly Stream _remaining;
         private bool _disposed;
 
-        public sealed class RentedBuffer
+        internal sealed class RentedBuffer
         {
             public byte[] Buffer;
             public int Offset;

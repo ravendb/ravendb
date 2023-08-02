@@ -9,7 +9,7 @@ using Sparrow.Platform;
 
 namespace Sparrow.Utils
 {
-    public static class WhoIsLocking
+    internal static class WhoIsLocking
     {
         private const int RmRebootReasonNone = 0;
         private const int CCH_RM_MAX_APP_NAME = 255;
