@@ -32,7 +32,7 @@ public static class CoraxQueryBuilder
 {
     internal const int TakeAll = -1;
 
-    internal sealed class Parameters
+    public sealed class Parameters
     {
         public readonly IndexSearcher IndexSearcher;
         public readonly TransactionOperationContext ServerContext;

@@ -32,10 +32,6 @@ namespace Corax.Queries.TermProviders
         {            
             _iterator = _tree.Iterate<TLookupIterator>();
             _iterator.Reset();
-
-            //We've to jump to after all keys
-            if (default(TLookupIterator).IsForward == false)
-                _iterator.Seek(Slices.AfterAllKeys);
         }
 
         public bool Next(out TermMatch term)

@@ -20,14 +20,14 @@ namespace Corax.Queries.TermProviders
         private bool _firstRun;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
-        private bool _termModified;
-        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey startsWithLimit)
+
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey seekTerm)
         {
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate<TLookupIterator>();
             _startWith = startWith;
-            _startWithLimit = startsWithLimit;
+            _startWithLimit = seekTerm;
             _tree = tree;
 
             Reset();
