@@ -896,8 +896,6 @@ namespace Raven.Server.Documents.Indexes
 
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
             IndexFieldsPersistence.Initialize();
-
-            IndexPersistence.OnInitializeComplete();
         }
 
         protected virtual void OnInitialization()
@@ -1537,6 +1535,11 @@ namespace Raven.Server.Documents.Indexes
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
                     }
 
+                    {
+                        var onBeforeExecutionStats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
+                        IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats);
+                    }
+                    
                     while (true)
                     {
                         lock (_disablingIndexLock)
