@@ -30,6 +30,43 @@ namespace FastTests.Corax
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
         {
         }
+
+        [Fact]
+        public void CanDeleteDifferentLongAndDoubleInSingleEntry()
+        {
+            var entry1 = new IndexSingleEntry() {Id = "e/1", Content = "2023-08-02T12:01:34.2111452"};
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var knownFields = CreateKnownFields(bsc);
+            using (var indexWriter = new IndexWriter(Env, knownFields))
+            {
+                using (var builder = indexWriter.Index(entry1.Id))
+                {
+                    builder.Write(IdIndex, PrepareString(entry1.Id));
+                    var dateTime = DateTime.Parse(entry1.Content);
+                    builder.Write(ContentIndex, Encodings.Utf8.GetBytes(entry1.Content), dateTime.Ticks, dateTime.Ticks);
+                    double doubleVal = dateTime.Ticks;
+                    Assert.NotEqual(dateTime.Ticks, (long)doubleVal);
+                }
+
+                indexWriter.Commit();
+            }
+
+            using (var indexWriter = new IndexWriter(Env, knownFields))
+            {
+                Assert.True(indexWriter.TryDeleteEntry("e/1"));
+                indexWriter.Commit();
+            }
+
+            using (var indexSearcher = new IndexSearcher(Env, knownFields))
+            {
+                Assert.True(knownFields.TryGetByFieldId(ContentIndex, out var binding));
+                var query = indexSearcher.BetweenQuery(binding.Metadata, double.MinValue, double.MaxValue, UnaryMatchOperation.GreaterThanOrEqual,
+                    UnaryMatchOperation.LessThanOrEqual);
+                Span<long> ids = stackalloc long[64];
+
+                Assert.Equal(0, query.Fill(ids));
+            }            
+        }
         
         [Fact]
         public void GetTermFromEntryIdViaEntriesFields()

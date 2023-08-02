@@ -643,7 +643,6 @@ namespace Corax
 
             public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
             {
-                Debug.Assert(longValue == (long)dblValue);
                 var field = GetField(fieldId, path);
 
                 if (field.ShouldStore)
