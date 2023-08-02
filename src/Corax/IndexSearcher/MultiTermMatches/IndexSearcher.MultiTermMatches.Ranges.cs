@@ -155,7 +155,7 @@ public partial class IndexSearcher
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
-
+        
         return forward == true
             ? MultiTermMatch.Create(
                 new MultiTermMatch<TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>>(this,

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Corax.Mappings;
 using Corax.Queries.Meta;
+using Sparrow.Extensions;
 using Voron.Data.Lookups;
 
 
@@ -19,6 +20,7 @@ namespace Corax.Queries.TermProviders
         private readonly TVal _low, _high;
         private TLookupIterator _iterator;
         private bool _first;
+        private readonly bool _skipRangeCheck;
 
         public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
         {
@@ -28,8 +30,18 @@ namespace Corax.Queries.TermProviders
             _low = low;
             _high = high;
             _first = true;
-        }
 
+            //Unbounded query can skip checking range after first element (since we're taking ALL possible results from starting point)
+            _skipRangeCheck = _iterator.IsForward switch
+            {
+                true when typeof(THigh) == typeof(Range.Inclusive) && typeof(TVal) == typeof(Int64LookupKey) && ((Int64LookupKey)(object)high).Value == long.MaxValue => true,
+                true when typeof(THigh) == typeof(Range.Inclusive) && typeof(TVal) == typeof(DoubleLookupKey) && ((DoubleLookupKey)(object)high).Value.AlmostEquals(double.MaxValue) => true,
+                false when typeof(TLow) == typeof(Range.Inclusive) && typeof(TVal) == typeof(Int64LookupKey) && ((Int64LookupKey)(object)low).Value == long.MinValue => true,
+                false when typeof(TLow) == typeof(Range.Inclusive) && typeof(TVal) == typeof(DoubleLookupKey) && ((DoubleLookupKey)(object)low).Value.AlmostEquals(double.MinValue) => true,
+                _ => false
+            };
+        }
+        
         public void Reset()
         {
             _first = true;
@@ -52,33 +64,36 @@ namespace Corax.Queries.TermProviders
 
             if (wasFirst)
             {
-                if (_iterator.IsForward && typeof(TLow) == typeof(Range.Exclusive) && key.IsEqual(_low))
-                    return Next(out term);
-
-                if (_iterator.IsForward == false && typeof(THigh) == typeof(Range.Exclusive) &&
-                    _high.CompareTo(key) <= 0) // in case of (x, y) we've to skip item up to y-double.Eps
-                    return Next(out term);
-
-                if (_iterator.IsForward == false && typeof(THigh) == typeof(Range.Inclusive) && _high.CompareTo(key) < 0)
-                    return Next(out term);
+                switch (_iterator.IsForward)
+                {
+                    case true when typeof(TLow) == typeof(Range.Exclusive) && key.IsEqual(_low):
+                        return Next(out term);
+                    case false when typeof(THigh) == typeof(Range.Exclusive) && _high.CompareTo(key) <= 0:
+                        return Next(out term);
+                    case false when typeof(THigh) == typeof(Range.Inclusive) && _high.CompareTo(key) < 0:
+                        return Next(out term);
+                }
             }
             
             //In case of going forward we've to compare with the highest (right element). In case of backward we've to compare to the lowest element.
-            if (_iterator.IsForward)
+            if (_skipRangeCheck == false)
             {
-                var cmp = _high.CompareTo(key);
-                if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 ||
-                    typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
+                if (_iterator.IsForward)
                 {
-                    goto Empty;
+                    var cmp = _high.CompareTo(key);
+                    if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 ||
+                        typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
+                    {
+                        goto Empty;
+                    }
                 }
-            }
-            else
-            {
-                var cmp = _low.CompareTo(key);
-                if (typeof(TLow) == typeof(Range.Exclusive) && cmp >= 0 ||
-                    typeof(TLow) == typeof(Range.Inclusive) && cmp > 0)
-                    goto Empty;
+                else
+                {
+                    var cmp = _low.CompareTo(key);
+                    if (typeof(TLow) == typeof(Range.Exclusive) && cmp >= 0 ||
+                        typeof(TLow) == typeof(Range.Inclusive) && cmp > 0)
+                        goto Empty;
+                }
             }
             
             // Ratio will be always 1 (sizeof(T)/sizeof(T))

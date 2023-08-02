@@ -23,9 +23,8 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
     private CompactTree.Iterator<TLookupIterator> _iterator;
 
-    private readonly bool _skipHighCheck;
-    private bool _skipFirstCheck;
-    private readonly bool isForward;
+    private readonly bool _isForward;
+    private readonly bool _skipRangeCheck;
     private bool _isFirst;
 
     public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
@@ -33,91 +32,97 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
         _searcher = searcher;
         _field = field;
         _iterator = tree.Iterate<TLookupIterator>();
-        isForward = default(TLookupIterator).IsForward;
+        _isForward = default(TLookupIterator).IsForward;
+        
+        
         _low = low;
         _high = high;
         _tree = tree;
-        _skipFirstCheck = false;
-        _skipHighCheck = high.Options == SliceOptions.AfterAllKeys;
+
+        // Optimization for unbounded ranges. We seek the proper term (depending on the iterator) and iterate through all left items.
+        _skipRangeCheck = _isForward 
+            ? _high.Options is SliceOptions.AfterAllKeys 
+            : _low.Options is SliceOptions.BeforeAllKeys;
+        
         Reset();
     }
 
     public void Reset()
     {
         _isFirst = true;
-        if (isForward)
+
+        //
+        var shouldSeek = _isForward switch
         {
-            if (_low.Options != SliceOptions.BeforeAllKeys)
-            {
-                _iterator.Seek(_low);
-                _skipFirstCheck = typeof(TLow) == typeof(Range.Exclusive);
-            }
-            else
-            {
-                _iterator.Reset();
-            }
-        }
+            true when _low.Options != SliceOptions.BeforeAllKeys => true,
+            false when _high.Options != SliceOptions.AfterAllKeys => true,
+            _ => false
+        };
+
+        
+        if (shouldSeek)
+            _iterator.Seek(_isForward ? _low : _high);
         else
-        {
-            _skipFirstCheck = typeof(THigh) == typeof(Range.Exclusive);
-            _iterator.Seek(_high);
-        }
+            _iterator.Reset();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Next(out TermMatch term) => Next(out term, out _);
 
-    public bool Next(out TermMatch term, out CompactKey key)
+    private bool Next(out TermMatch term, out CompactKey key)
     {
-        bool wasFirst = false;
-            
         if (_iterator.MoveNext(out key, out var _) == false)
         {
             term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
             return false;
         }
-
-        var termSlice = key.Decoded();
+        
 
         if (_isFirst)
         {
-            wasFirst = true;
             _isFirst = false;
+            var termSlice = key.Decoded();
 
-            //Since we seeked just one item before
-            if (isForward == false)
+            switch (_isForward)
             {
-                    
+                case false when typeof(THigh) == typeof(Range.Exclusive) && termSlice.SequenceCompareTo(_high.AsSpan()) >= 0:
+                    return Next(out term);
+                case false when typeof(THigh) == typeof(Range.Inclusive) && _high.Options != SliceOptions.AfterAllKeys && termSlice.SequenceCompareTo(_high.AsSpan()) > 0:
+                    return Next(out term);
+                case true when typeof(TLow) == typeof(Range.Exclusive) && termSlice.SequenceCompareTo(_low.AsSpan()) <= 0:
+                    return Next(out term);
+                case true when typeof(TLow) == typeof(Range.Inclusive) && _low.Options != SliceOptions.BeforeAllKeys && termSlice.SequenceCompareTo(_low.AsSpan()) < 0:
+                    return Next(out term);
             }
         }
-            
-            
-        if (typeof(TLow) == typeof(Range.Exclusive))
+        
+        if (_skipRangeCheck == false)
         {
-            if (_skipFirstCheck)
+            var termSlice = key.Decoded();
+            if (_isForward)
             {
-                _skipFirstCheck = false;
-                if (_low.AsSpan().SequenceEqual(termSlice))
+                var cmp = _high.AsSpan().SequenceCompareTo(termSlice);
+                if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 ||
+                    typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
                 {
-                    return Next(out term, out key);
+                    goto ReturnEmpty;
                 }
             }
-        }
-
-        if (_skipHighCheck == false)
-        {
-            int cmp = _high.AsSpan().SequenceCompareTo(termSlice);
-            if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
-                typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
+            else
             {
-                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-                return false;
+                var cmp = _low.AsSpan().SequenceCompareTo(termSlice);
+                if (typeof(TLow) == typeof(Range.Exclusive) && cmp >= 0 ||
+                    typeof(TLow) == typeof(Range.Inclusive) && cmp > 0)
+                    goto ReturnEmpty;
             }
-
         }
             
         term = _searcher.TermQuery(_field, key, _tree);
         return true;
+        
+        ReturnEmpty:
+        term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+        return false;
     }
 
     public QueryInspectionNode Inspect()
