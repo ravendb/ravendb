@@ -62,6 +62,7 @@ public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, Queue
             Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
             Details = Scope.ToQueueSinkPerformanceOperation("Queue Sink"),
             NumberOfConsumedMessages = Stats.NumberOfConsumedMessages,
+            NumberOfProcessedMessages = Stats.NumberOfProcessedMessages,
             ScriptErrorCount = Stats.ScriptErrorCount,
             SuccessfullyProcessed = Stats.SuccessfullyProcessed,
             // TODO arek NumberOfCreatedDocuments,

@@ -8,6 +8,8 @@ public class QueueSinkRunStats
 
     public int NumberOfConsumedMessages;
 
+    public int NumberOfProcessedMessages;
+
     public int ScriptErrorCount;
 
     public string BatchStopReason;

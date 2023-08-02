@@ -30,6 +30,8 @@ namespace Raven.Server.Utils.Stats
 
         public T CurrentStats => _stats;
 
+        public bool IsRunning => _sw?.IsRunning == true;
+
         public TStatsScope Start()
         {
             _sw.Start();

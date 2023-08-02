@@ -1,14 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Confluent.Kafka;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Raven.Client.Documents.Operations.QueueSink;
-using Raven.Server.Documents.QueueSink.Stats;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
@@ -16,84 +11,11 @@ namespace Raven.Server.Documents.QueueSink;
 public class KafkaQueueSink : QueueSinkProcess
 {
     public KafkaQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database,
-        string resourceName, CancellationToken shutdown) : base(configuration, script, database, resourceName, shutdown)
+        string tag, CancellationToken shutdown) : base(configuration, script, database, tag, shutdown)
     {
     }
-    
-    private IConsumer<string, byte[]> _consumer;
 
-    protected override async Task<List<BlittableJsonReaderObject>> ConsumeMessages(DocumentsOperationContext context, QueueSinkStatsScope stats)
-    {
-        var messageBatch = new List<BlittableJsonReaderObject>();
-
-        if (_consumer == null)
-        {
-            try
-            {
-                _consumer = CreateKafkaConsumer();
-            }
-            catch (Exception e)
-            {
-                string msg = $"Failed to create kafka consumer for {Name}.";
-
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations(msg, e);
-                }
-
-                EnterFallbackMode();
-
-                return messageBatch;
-            }
-        }
-
-        while (messageBatch.Count < Database.Configuration.QueueSink.MaxNumberOfConsumedMessagesInBatch)
-        {
-            try
-            {
-                var message = messageBatch.Count == 0
-                    ? _consumer.Consume(CancellationToken)
-                    : _consumer.Consume(TimeSpan.Zero);
-                
-                if (message?.Message is null) 
-                    break;
-
-                if (stats.IsRunning == false)
-                    stats.Start();
-
-                var jsonMessage = await context.ReadForMemoryAsync(new MemoryStream(message.Message.Value), "queue-message", CancellationToken);
-
-                messageBatch.Add(jsonMessage);
-
-                stats.RecordConsumedMessage();
-            }
-            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
-            {
-                return messageBatch;
-            }
-            catch (Exception e)
-            {
-                string msg = $"Failed to consume message.";
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations(msg, e);
-                }
-
-                EnterFallbackMode();
-                Statistics.RecordConsumeError(e.Message, 0);
-                return messageBatch;
-            }
-        }
-
-        return messageBatch;
-    }
-
-    protected override void Commit()
-    {
-        _consumer.Commit();
-    }
-
-    private IConsumer<string, byte[]> CreateKafkaConsumer()
+    protected override IQueueSinkConsumer CreateConsumer()
     {
         var consumerConfig = new ConsumerConfig
         {
@@ -126,7 +48,8 @@ public class KafkaQueueSink : QueueSinkProcess
 
         var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
         consumer.Subscribe(Script.Queues);
-        return consumer;
+
+        return new KafkaSinkConsumer(consumer);
     }
     
     private static string ExportAsPem(object @object)
