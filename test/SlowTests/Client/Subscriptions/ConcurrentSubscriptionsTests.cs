@@ -19,6 +19,10 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
+// ReSharper disable ClassNeverInstantiated.Local
+// ReSharper disable CollectionNeverUpdated.Local
+#pragma warning disable CS0649
+#pragma warning disable CS0169
 
 namespace SlowTests.Client.Subscriptions
 {
@@ -934,17 +938,13 @@ namespace SlowTests.Client.Subscriptions
                     var executor = store.GetRequestExecutor();
                     using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
                     var cmd = new GetSubscriptionResendListCommand(store.Database, id);
-                    executor.Execute(cmd, ctx);
-                    var res = cmd.Result;
-
-                    // the last batch may still not be cleared
-                    Assert.True(res.Results.Count is 0 or 40, "res.Results.Count is 0 or 40");
 
                     var finalRes = await WaitForValueAsync(() =>
                     {
                         executor.Execute(cmd, ctx);
-                        var res = cmd.Result;
-                        return res.Results.Count;
+                        var res = cmd.Result.Results.First();
+
+                        return res.ResendList.Count;
                     }, 0);
 
                     Assert.Equal(0, finalRes);
@@ -952,7 +952,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        private class GetSubscriptionResendListCommand : RavenCommand<ResendListResult>
+        private class GetSubscriptionResendListCommand : RavenCommand<ResendListResults>
         {
             private readonly string _database;
             private readonly string _name;
@@ -983,18 +983,24 @@ namespace SlowTests.Client.Subscriptions
                     return;
                 }
 
-                var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<ResendListResult>();
+                var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<ResendListResults>();
                 Result = deserialize.Invoke(response);
             }
 
             public override bool IsReadRequest => true;
         }
 
+        private class ResendListResults
+        {
+            public List<ResendListResult> Results;
+        }
+
         private class ResendListResult
         {
-#pragma warning disable CS0649
-            public List<SubscriptionStorage.ResendItem> Results;
-#pragma warning restore CS0649
+            public string SubscriptionName;
+            public long SubscriptionId;
+            public List<long> Active;
+            public List<SubscriptionStorage.ResendItem> ResendList;
         }
 
         private class User
