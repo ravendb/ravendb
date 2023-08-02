@@ -15,7 +15,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public abstract class CompareExchangeCommandBase : CommandBase
+    public abstract class CompareExchangeCommandBase : CommandBase, IContextResultCommand
     {
         public string Key;
         public string Database;
@@ -27,11 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         public long Index;
 
         [JsonDeserializationIgnore]
-        public JsonOperationContext ContextToWriteResult;
-
-        [JsonDeserializationIgnore]
-        public Leader.ConvertResultAction ConvertResultAction;
-
+        public JsonOperationContext ContextToWriteResult { get; set; }
 
         protected CompareExchangeCommandBase() { }
 
@@ -190,34 +186,18 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static object ConvertResult(JsonOperationContext ctx, object result)
+        object IContextResultCommand.WriteResult(object result)
         {
-            if (result is CompareExchangeResult tuple)
+            var compareExchangeResult =  result switch
             {
-                if (tuple.Value is BlittableJsonReaderObject value)
-                {
-                    return new CompareExchangeResult
-                    {
-                        Index = tuple.Index,
-                        Value = ctx.ReadObject(value, "cmpXchg result clone")
-                    };
-                }
+                CompareExchangeResult obj => obj,
+                BlittableJsonReaderObject blittable => JsonDeserializationCluster.CompareExchangeResult(blittable),
+                _ => throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result)
+            };
+            if (compareExchangeResult.Value is BlittableJsonReaderObject val)
+                compareExchangeResult.Value = ContextToWriteResult.ReadObject(val, "cmpXchg result clone");
 
-                return tuple;
-            }
-
-            if (result is BlittableJsonReaderObject blittable)
-            {
-                var converted = JsonDeserializationCluster.CompareExchangeResult(blittable);
-                if (converted.Value is BlittableJsonReaderObject val)
-                {
-                    converted.Value = ctx.ReadObject(val, "cmpXchg result clone");
-                }
-
-                return converted;
-            }
-
-            throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
+            return compareExchangeResult;
         }
 
         protected bool TryGetExpires(BlittableJsonReaderObject value, out long ticks)
