@@ -821,7 +821,7 @@ namespace RachisTests
                 using (server2.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    Assert.Single(SubscriptionStorage.GetResendItems(context, store.Database, state.SubscriptionId));
+                    Assert.Single(SubscriptionStorage.GetResendItemsForSubscriptionId(context, store.Database, state.SubscriptionId));
                 }
 
                 waitForBatch.Set();
