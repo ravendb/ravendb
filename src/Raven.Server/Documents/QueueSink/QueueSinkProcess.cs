@@ -33,15 +33,17 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
     private readonly ConcurrentQueue<QueueSinkStatsAggregator> _lastQueueSinkStats =
         new ConcurrentQueue<QueueSinkStatsAggregator>();
 
+    private IQueueSinkConsumer _consumer;
+
     protected QueueSinkProcess(QueueSinkConfiguration configuration, QueueSinkScript script,
-        DocumentDatabase database, string resourceName, CancellationToken shutdown)
-        : base(resourceName, shutdown)
+        DocumentDatabase database, string tag, CancellationToken shutdown)
+        : base($"[{tag}] {configuration.Name}/{script.Name}", shutdown)
     {
         Database = database;
         Configuration = configuration;
         Script = script;
+        Tag = tag;
         Name = $"{Configuration.Name}/{Script.Name}";
-        Tag = "Kafka";
         Statistics = new QueueSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
     }
 
@@ -51,9 +53,9 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         switch (configuration.BrokerType)
         {
             case QueueBrokerType.Kafka:
-                return new KafkaQueueSink(configuration, script, database, null, database.DatabaseShutdown);
+                return new KafkaQueueSink(configuration, script, database, "Kafka Sink", database.DatabaseShutdown);
             case QueueBrokerType.RabbitMq:
-                return new RabbitMqQueueSink(configuration, script, database, null, database.DatabaseShutdown);
+                return new RabbitMqQueueSink(configuration, script, database, "RabbitMQ Sink", database.DatabaseShutdown);
             default:
                 throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
         }
@@ -111,31 +113,88 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
     protected override async Task DoWork()
     {
-        ProcessFallback();
-        bool batchStopped = false;
+        if (_consumer == null)
+        {
+            try
+            {
+                _consumer = CreateConsumer();
+            }
+            catch (Exception e)
+            {
+                string msg = $"Failed to create consumer for {Name}.";
+
+                if (Logger.IsOperationsEnabled)
+                {
+                    Logger.Operations(msg, e);
+                }
+
+                EnterFallbackMode();
+
+                return;
+            }
+        }
 
         var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
         _lastStats = statsAggregator;
 
         AddPerformanceStats(statsAggregator);
-
+        
+        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var stats = statsAggregator.CreateScope())
         {
-            List<byte[]> messageBatch;
-
+            var messageBatch = new List<BlittableJsonReaderObject>();
+            
             using (var consumeScope = stats.For(QueueSinkBatchPhases.Consume, start: false))
             {
-                messageBatch = ConsumeMessages(consumeScope);
+                while (messageBatch.Count < Database.Configuration.QueueSink.MaxNumberOfConsumedMessagesInBatch && CancellationToken.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        var message = messageBatch.Count == 0
+                            ? _consumer.Consume(CancellationToken)
+                            : _consumer.Consume(TimeSpan.Zero);
+
+                        if (message is null)
+                            break;
+
+                        if (consumeScope.IsRunning == false)
+                            consumeScope.Start();
+
+                        var jsonMessage = await context.ReadForMemoryAsync(new MemoryStream(message), "queue-message", CancellationToken);
+
+                        messageBatch.Add(jsonMessage);
+
+                        consumeScope.RecordConsumedMessage();
+
+                        // TODO arek - can continue batch
+                    }
+                    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        string msg = "Failed to consume message.";
+
+                        if (Logger.IsOperationsEnabled)
+                        {
+                            Logger.Operations(msg, e);
+                        }
+
+                        EnterFallbackMode();
+                        Statistics.RecordConsumeError(e.Message, 0);
+                    }
+                }
             }
 
             if (messageBatch.Count == 0)
                 return;
 
+            bool batchStopped = false;
+
             try
             {
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(
-                           out DocumentsOperationContext context))
-                {
+                
                     using (var tx = context.OpenWriteTransaction())
                     using (var scriptProcessingScope = stats.For(QueueSinkBatchPhases.ScriptProcessing))
                     {
@@ -146,10 +205,8 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                         {
                             try
                             {
-                                using var o = await context.ReadForMemoryAsync(new MemoryStream(message),
-                                    "queue-message", CancellationToken);
-
-                                using (documentScript.Run(context, context, "execute", new object[] {o}))
+                                using (message)
+                                using (documentScript.Run(context, context, "execute", new object[] {message}))
                                 {
                                 }
 
@@ -181,10 +238,9 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                         if (batchStopped == false)
                         {
                             tx.Commit();
-                            Commit();
+                            _consumer.Commit();
                         }
                     }
-                }
             }
             catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
             {
@@ -213,9 +269,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
             _lastQueueSinkStats.TryDequeue(out _);
     }
 
-    protected abstract List<byte[]> ConsumeMessages(QueueSinkStatsScope stats);
-
-    protected abstract void Commit();
+    protected abstract IQueueSinkConsumer CreateConsumer();
 
     private class TestQueueMessageCommand : PatchDocumentCommand
     {
@@ -317,7 +371,7 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         Stop(message);
     }
 
-    protected void EnterFallbackMode()
+    private void EnterFallbackMode()
     {
         if (Statistics.LastConsumeErrorTime == null)
             FallbackTime = TimeSpan.FromSeconds(5);
@@ -332,17 +386,11 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
                 Math.Max(5, secondsSinceLastError * 2)));
         }
-    }
 
-    private void ProcessFallback()
-    {
-        if (FallbackTime != null)
-        {
-            Thread.Sleep(FallbackTime.Value);
-            FallbackTime = null;
-        }
+        Thread.Sleep(FallbackTime.Value);
+        FallbackTime = null;
     }
-
+    
     public QueueSinkPerformanceStats[] GetPerformanceStats()
     {
         var lastStats = _lastStats;
@@ -355,5 +403,12 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
     public QueueSinkStatsAggregator GetLatestPerformanceStats()
     {
         return _lastStats;
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        _consumer?.Dispose();
     }
 }

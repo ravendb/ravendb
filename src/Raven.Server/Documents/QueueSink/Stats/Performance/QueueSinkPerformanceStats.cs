@@ -22,6 +22,8 @@ public class QueueSinkPerformanceStats
 
     public int NumberOfConsumedMessages{ get; set; }
 
+    public int NumberOfProcessedMessages { get; set; }
+
     public Size CurrentlyAllocated { get; set; }
 
     public Size BatchSize { get; set; }

@@ -4,5 +4,5 @@ public class QueueSinkBatchPhases
 {
     public const string Consume = "Consume";
 
-    public const string ScriptProcess = "ScriptProcessing";
+    public const string ScriptProcessing = "ScriptProcessing";
 }
