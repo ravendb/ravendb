@@ -42,7 +42,7 @@ namespace Sparrow
     /// Rationale: 
     ///    If there is no intent for reusing the object, do not use pool - just use "new". 
     /// </summary>
-    public sealed class ObjectPool<T> : ObjectPool<T, NoResetSupport<T>>
+    internal sealed class ObjectPool<T> : ObjectPool<T, NoResetSupport<T>>
         where T : class
     {
         public ObjectPool(Factory factory) : base(factory) {}
@@ -67,7 +67,7 @@ namespace Sparrow
     /// Rationale: 
     ///    If there is no intent for reusing the object, do not use pool - just use "new". 
     /// </summary>
-    public class ObjectPool<T, TResetBehavior>
+    internal class ObjectPool<T, TResetBehavior>
         where T : class
         where TResetBehavior : struct, IResetSupport<T>
     {
@@ -324,13 +324,13 @@ namespace Sparrow
         void Reset(T value);
     }
 
-    public struct NoResetSupport<T> : IResetSupport<T> where T : class
+    internal struct NoResetSupport<T> : IResetSupport<T> where T : class
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(T value) {}
     }
 
-    public struct DictionaryResetBehavior<T1, T2> : IResetSupport<Dictionary<T1, T2>>
+    internal struct DictionaryResetBehavior<T1, T2> : IResetSupport<Dictionary<T1, T2>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IResetSupport<Dictionary<T1, T2>>.Reset(Dictionary<T1, T2> value)
@@ -339,7 +339,7 @@ namespace Sparrow
         }
     }
 
-    public struct HashSetResetBehavior<T1> : IResetSupport<HashSet<T1>>
+    internal struct HashSetResetBehavior<T1> : IResetSupport<HashSet<T1>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IResetSupport<HashSet<T1>>.Reset(HashSet<T1> value)
@@ -348,7 +348,7 @@ namespace Sparrow
         }
     }
 
-    public struct ListResetBehavior<T1> : IResetSupport<List<T1>>
+    internal struct ListResetBehavior<T1> : IResetSupport<List<T1>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IResetSupport<List<T1>>.Reset(List<T1> value)
@@ -357,7 +357,7 @@ namespace Sparrow
         }
     }
 
-    public struct ObjectPoolContext<T, TR> : IDisposable 
+    internal struct ObjectPoolContext<T, TR> : IDisposable 
         where T : class
         where TR : struct, IResetSupport<T>
     {

@@ -10,7 +10,7 @@ namespace Sparrow.Utils
 {
 #if NETCOREAPP3_1_OR_GREATER
     [SuppressUnmanagedCodeSecurity]
-    public static unsafe class ZstdLib
+    internal static unsafe class ZstdLib
     {
         private const string LIBZSTD = @"libzstd";
 
@@ -112,28 +112,28 @@ namespace Sparrow.Utils
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_decompressStream(void* ctx, ZSTD_outBuffer* output, ZSTD_inBuffer* input);
 
-        public struct ZSTD_inBuffer
+        internal struct ZSTD_inBuffer
         {
             public void* Source;
             public UIntPtr Size;
             public UIntPtr Position;
         }
 
-        public struct ZSTD_outBuffer
+        internal struct ZSTD_outBuffer
         {
             public void* Source;
             public UIntPtr Size;
             public UIntPtr Position;
         }
 
-        public enum ZSTD_EndDirective
+        internal enum ZSTD_EndDirective
         {
             ZSTD_e_continue = 0,
             ZSTD_e_flush = 1,
             ZSTD_e_end = 2
         }
 
-        public enum ZSTD_cParameter
+        internal enum ZSTD_cParameter
         {
             ZSTD_c_compressionLevel = 100, /* Set compression parameters according to pre-defined cLevel table.
                               * Note that exact compression parameters are dynamically determined,
@@ -189,7 +189,7 @@ namespace Sparrow.Utils
             throw CreateDictionaryException(ptrToStringAnsi);
         }
 
-        public sealed class CompressContext : IDisposable
+        internal sealed class CompressContext : IDisposable
         {
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
@@ -300,7 +300,7 @@ namespace Sparrow.Utils
             return (int)result;
         }
 
-        public sealed class CompressionDictionary : IDisposable
+        internal sealed class CompressionDictionary : IDisposable
         {
             public void* Compression;
             public void* Decompression;

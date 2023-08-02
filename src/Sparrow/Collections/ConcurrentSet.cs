@@ -11,7 +11,7 @@ namespace Sparrow.Collections
     [DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
     public sealed class ConcurrentSet<T> : IEnumerable<T>
     {
-        public sealed class DebugProxy
+        internal sealed class DebugProxy
         {
             private readonly ConcurrentSet<T> _parent;
 

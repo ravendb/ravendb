@@ -425,9 +425,9 @@ namespace Sparrow.Json
 #endif
         }
 
-        public sealed class IntPtrComarer : IComparer<IntPtr>
+        internal sealed class IntPtrComparer : IComparer<IntPtr>
         {
-            public static IntPtrComarer Instance = new IntPtrComarer();
+            public static IntPtrComparer Instance = new IntPtrComparer();
 
             public int Compare(IntPtr x, IntPtr y)
             {
@@ -500,7 +500,7 @@ namespace Sparrow.Json
 #endif
     }
 
-    public sealed unsafe class UnmanagedMemoryManager : MemoryManager<byte>
+    internal sealed unsafe class UnmanagedMemoryManager : MemoryManager<byte>
     {
         private readonly byte* _address;
         private readonly int _length;

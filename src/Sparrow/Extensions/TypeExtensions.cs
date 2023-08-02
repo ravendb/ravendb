@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Sparrow.Extensions
 {
-    public static class TypeExtensions
+    internal static class TypeExtensions
     {
         internal const string RecordEqualityContractPropertyName = "EqualityContract";
 

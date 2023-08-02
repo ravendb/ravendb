@@ -5,7 +5,7 @@ using Sparrow.LowMemory;
 
 namespace Sparrow.Utils;
 
-public static class MemoryUtils
+internal static class MemoryUtils
 {
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();

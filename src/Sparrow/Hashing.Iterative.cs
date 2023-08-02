@@ -6,11 +6,11 @@ using System.Text;
 
 namespace Sparrow
 {
-    partial class Hashing
+    internal partial class Hashing
     {
-        public static class Iterative
+        internal static class Iterative
         {
-            public sealed class XXHash32Block
+            internal sealed class XXHash32Block
             {
                 private static readonly XXHash32Values[] Empty = new XXHash32Values[0];
 
@@ -36,7 +36,7 @@ namespace Sparrow
                 }
             }
 
-            public static unsafe class XXHash32
+            internal static unsafe class XXHash32
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static unsafe uint CalculateInline(byte* buffer, int len, XXHash32Block context, int startFrom = int.MaxValue)

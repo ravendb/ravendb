@@ -357,7 +357,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool ShouldReplaceDictionary(Transaction tx, ZstdLib.CompressionDictionary newDic)
+        internal bool ShouldReplaceDictionary(Transaction tx, ZstdLib.CompressionDictionary newDic)
         {
             int maxSpace = ZstdLib.GetMaxCompression(RawBuffer.Length) + OverheadSize;
 

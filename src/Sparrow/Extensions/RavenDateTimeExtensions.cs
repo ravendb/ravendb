@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Sparrow.Extensions
 {
-    public static class RavenDateTimeExtensions
+    internal static class RavenDateTimeExtensions
     {
         private const long InitialJavaScriptDateTicks = 621355968000000000;
 

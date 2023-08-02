@@ -95,7 +95,7 @@ namespace Sparrow
         public string ToStringValue() => Length == 0 ? string.Empty : Encoding.UTF8.GetString(Address, Length);
     }
 
-    public unsafe struct UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>
+    internal unsafe struct UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>
     {
         public static UnmanagedSpanComparer Instance = new();
 

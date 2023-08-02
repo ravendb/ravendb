@@ -416,7 +416,7 @@ namespace Sparrow
         }
     }
 
-    public static class DateTimeExtenstion
+    internal static class DateTimeExtenstion
     {
         public static DateTime Add(this DateTime date, TimeValue time)
         {

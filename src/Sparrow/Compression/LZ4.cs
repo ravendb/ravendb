@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Compression
 {
-    public sealed unsafe class LZ4
+    internal sealed unsafe class LZ4
     {
         public const int ACCELERATION_DEFAULT = 1;
 

@@ -2,7 +2,7 @@
 
 namespace Sparrow
 {
-    public static class Encodings
+    internal static class Encodings
     {
         public static readonly UTF8Encoding Utf8;
 

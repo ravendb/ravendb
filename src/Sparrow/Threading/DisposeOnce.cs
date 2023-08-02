@@ -12,7 +12,7 @@ namespace Sparrow.Threading
         void LeaveDispose();
 
     }
-    public struct ExceptionRetry : IDisposeOnceOperationMode {
+    internal struct ExceptionRetry : IDisposeOnceOperationMode {
         public void Initialize()
         {            
         }
@@ -164,7 +164,7 @@ namespace Sparrow.Threading
     }
     
     
-    public sealed class DisposeOnceAsync<TOperationMode>
+    internal sealed class DisposeOnceAsync<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
     {
         private readonly Func<Task> _action;

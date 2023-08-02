@@ -14,3 +14,4 @@
 [assembly: InternalsVisibleTo("Tryouts")]
 [assembly: InternalsVisibleTo("LicenseTests")]
 [assembly: InternalsVisibleTo("Subscriptions.Benchmark")]
+[assembly: InternalsVisibleTo("Regression.Benchmark")]

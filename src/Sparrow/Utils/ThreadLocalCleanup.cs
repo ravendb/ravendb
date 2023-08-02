@@ -2,7 +2,7 @@
 
 namespace Sparrow.Utils
 {
-    public static class ThreadLocalCleanup
+    internal static class ThreadLocalCleanup
     {
         public static event Action ReleaseThreadLocalState = delegate { };
 

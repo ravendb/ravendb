@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public sealed class LowMemoryNotification
+    internal sealed class LowMemoryNotification
     {
         private const string NotificationThreadName = "Low memory notification thread";
 

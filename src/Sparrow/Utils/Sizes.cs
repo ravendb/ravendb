@@ -2,7 +2,7 @@
 
 namespace Sparrow.Utils
 {
-    public static class Sizes
+    internal static class Sizes
     {
         public static string Humane(long? size)
         {

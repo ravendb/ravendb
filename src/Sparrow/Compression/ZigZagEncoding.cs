@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Compression
 {
-    public static class ZigZagEncoding
+    internal static class ZigZagEncoding
     {
         public const int MaxEncodedSize = 10;
 

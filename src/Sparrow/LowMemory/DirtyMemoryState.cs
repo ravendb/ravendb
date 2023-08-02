@@ -1,6 +1,6 @@
 ﻿namespace Sparrow.LowMemory
 {
-    public sealed class DirtyMemoryState 
+    internal sealed class DirtyMemoryState 
     {
         public bool IsHighDirty;
 

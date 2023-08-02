@@ -441,7 +441,7 @@ namespace Sparrow.Collections
         }
 
 
-        public struct ResetBehavior : IResetSupport<FastList<T>>
+        internal struct ResetBehavior : IResetSupport<FastList<T>>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Reset(FastList<T> builder)
@@ -450,7 +450,7 @@ namespace Sparrow.Collections
             }
         }
 
-        public struct WeakResetBehavior : IResetSupport<FastList<T>>
+        internal struct WeakResetBehavior : IResetSupport<FastList<T>>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Reset(FastList<T> builder)

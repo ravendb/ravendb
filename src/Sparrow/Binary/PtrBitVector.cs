@@ -7,7 +7,7 @@ using static Sparrow.Binary.Bits;
 
 namespace Sparrow.Binary
 {
-    public readonly unsafe struct PtrBitVector
+    internal readonly unsafe struct PtrBitVector
     {
         public readonly byte* Bits;
         public readonly int Count;

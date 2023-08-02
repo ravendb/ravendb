@@ -133,7 +133,7 @@ namespace Sparrow.LowMemory
                 ThrowInsufficientMemory(memInfo);
         }
 
-        public static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
+        internal static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
         {
             if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
                 EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
@@ -310,7 +310,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
+        internal static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
         {
             SmapsReader smapsReader = null;
             byte[][] buffers = null;
@@ -746,7 +746,7 @@ namespace Sparrow.LowMemory
             return totalMapped;
         }
 
-        public static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
+        internal static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
         {
             return new MemoryInfoResult.MemoryUsageLowHigh
             {
@@ -825,7 +825,7 @@ namespace Sparrow.LowMemory
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
-        public static DirtyMemoryState GetDirtyMemoryState()
+        internal static DirtyMemoryState GetDirtyMemoryState()
         {
             var totalScratchMemory = GetTotalScratchAllocatedMemory();
 
