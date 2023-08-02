@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Commands
 {
-    public sealed class ClaimDomainResult
+    internal sealed class ClaimDomainResult
     {
         public string Email { get; set; }
         public string[] Emails { get; set; }
@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Commands
         public string[] RootDomains { get; set; }
     }
 
-    public sealed class ForceRenewResult
+    internal sealed class ForceRenewResult
     {
         public bool Success { get; set; }
     }

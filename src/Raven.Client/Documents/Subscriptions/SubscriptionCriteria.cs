@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public sealed class SubscriptionTryout
+    internal sealed class SubscriptionTryout
     {
         public string ChangeVector { get; set; }
         public string Query { get; set; }

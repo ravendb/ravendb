@@ -13,7 +13,7 @@ namespace Raven.Client.Extensions
             _conventions = conventions;
         }
 
-        public sealed class MemberMetadata : IJavascriptMemberMetadata
+        internal sealed class MemberMetadata : IJavascriptMemberMetadata
         {
             public string MemberName { get; set; }
         }

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Queries
 {
-    public static class QueryFieldUtil
+    internal static class QueryFieldUtil
     {
         public static string EscapeIfNecessary(string name)
         {

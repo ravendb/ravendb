@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all previous document revisions metadata for specified document (with paging).
         /// </summary>
-        Task<List<MetadataAsDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default);
+        Task<List<IMetadataDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default);
 
         /// <summary>
         /// Returns a document revision by change vector.
@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all previous document revisions metadata for specified document (with paging).
         /// </summary>
-        Lazy<Task<List<MetadataAsDictionary>>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default); 
+        Lazy<Task<List<IMetadataDictionary>>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default); 
         
         /// <summary>
         /// Returns document revisions by change vectors.

@@ -9,7 +9,7 @@ using Sparrow.Platform;
 
 namespace Raven.Client.Extensions
 {
-     public static class WhoIsLocking
+    internal static class WhoIsLocking
     {
         private const int RmRebootReasonNone = 0;
         private const int CCH_RM_MAX_APP_NAME = 255;
@@ -50,9 +50,9 @@ namespace Raven.Client.Extensions
             try
             {
                 // Let the restart manager know what files we’re interested in
-                var pathStrings = new[]{filePath};
+                var pathStrings = new[] { filePath };
                 rv = RmRegisterResources(sessionHandle,
-                                         (uint) pathStrings.Length, pathStrings,
+                                         (uint)pathStrings.Length, pathStrings,
                                          0, null, 0, null);
                 if (rv != 0)
                     throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to RmRegisterResources for file '{filePath}' with error {rv} (sessionHandle={sessionHandle})");
@@ -68,7 +68,7 @@ namespace Raven.Client.Extensions
                 {
                     // Create an array to store the process results
                     var processInfo = new RM_PROCESS_INFO[pnProcInfoNeeded];
-                    pnProcInfo = (uint) processInfo.Length;
+                    pnProcInfo = (uint)processInfo.Length;
 
                     // Get the list
                     rv = RmGetList(sessionHandle, out pnProcInfoNeeded,
@@ -145,9 +145,11 @@ namespace Raven.Client.Extensions
         {
             public RM_UNIQUE_PROCESS Process;
             [MarshalAs(UnmanagedType.ByValTStr,
-                SizeConst = CCH_RM_MAX_APP_NAME + 1)] public readonly string strAppName;
+                SizeConst = CCH_RM_MAX_APP_NAME + 1)]
+            public readonly string strAppName;
             [MarshalAs(UnmanagedType.ByValTStr,
-                SizeConst = CCH_RM_MAX_SVC_NAME + 1)] public readonly string strServiceShortName;
+                SizeConst = CCH_RM_MAX_SVC_NAME + 1)]
+            public readonly string strServiceShortName;
             public readonly RM_APP_TYPE ApplicationType;
             public readonly uint AppStatus;
             public readonly uint TSSessionId;

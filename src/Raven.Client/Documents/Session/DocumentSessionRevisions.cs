@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Session
             return operation.GetRevisionsFor<T>();
         }
         
-        public List<MetadataAsDictionary> GetMetadataFor(string id, int start = 0, int pageSize = 25)
+        public List<IMetadataDictionary> GetMetadataFor(string id, int start = 0, int pageSize = 25)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
             var command = operation.CreateRequest();
@@ -140,11 +140,11 @@ namespace Raven.Client.Documents.Session
             return ((DocumentSession)Session).AddLazyOperation<T>(lazyRevisionOperation, null);
         }
 
-        Lazy<List<MetadataAsDictionary>> ILazyRevisionsOperations.GetMetadataFor(string id, int start, int pageSize)
+        Lazy<List<IMetadataDictionary>> ILazyRevisionsOperations.GetMetadataFor(string id, int start, int pageSize)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
             var lazyRevisionOperation = new LazyRevisionOperation<MetadataAsDictionary>(operation, LazyRevisionOperation<MetadataAsDictionary>.Mode.ListOfMetadata);
-            return ((DocumentSession)Session).AddLazyOperation<List<MetadataAsDictionary>>(lazyRevisionOperation, null);
+            return ((DocumentSession)Session).AddLazyOperation<List<IMetadataDictionary>>(lazyRevisionOperation, null);
         }
 
         Lazy<Dictionary<string, T>> ILazyRevisionsOperations.Get<T>(IEnumerable<string> changeVectors)

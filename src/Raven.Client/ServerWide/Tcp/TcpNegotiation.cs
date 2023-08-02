@@ -8,7 +8,7 @@ using Sparrow.Logging;
 
 namespace Raven.Client.ServerWide.Tcp
 {
-    public static class TcpNegotiation
+    internal static class TcpNegotiation
     {
         public const int OutOfRangeStatus = -1;
         public const int DropStatus = -2;
@@ -105,7 +105,7 @@ namespace Raven.Client.ServerWide.Tcp
         }
     }
 
-    public sealed class AsyncTcpNegotiateParameters : AbstractTcpNegotiateParameters
+    internal sealed class AsyncTcpNegotiateParameters : AbstractTcpNegotiateParameters
     {
         /// <summary>
         /// ReadResponseAndGetVersion Function should take care reading the TcpConnectionHeaderResponse respond from the input 'stream'
@@ -118,7 +118,7 @@ namespace Raven.Client.ServerWide.Tcp
         public Func<JsonOperationContext, AsyncBlittableJsonTextWriter, Stream, string, ValueTask<TcpConnectionHeaderMessage.NegotiationResponse>> ReadResponseAndGetVersionCallbackAsync { get; set; }
     }
 
-    public abstract class AbstractTcpNegotiateParameters
+    internal abstract class AbstractTcpNegotiateParameters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
         public TcpConnectionHeaderMessage.AuthorizationInfo AuthorizeInfo { get; set; }

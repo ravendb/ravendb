@@ -180,7 +180,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
     }
 
-    public static class RollupExtensions
+    internal static class RollupExtensions
     {
         public static TimeSeriesRollupEntry<T> AsRollupEntry<T>(this TimeSeriesEntry<T> entry) where T : new()
         {

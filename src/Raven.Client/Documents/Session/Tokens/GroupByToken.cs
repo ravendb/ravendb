@@ -3,7 +3,7 @@ using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class GroupByToken : QueryToken
+    internal sealed class GroupByToken : QueryToken
     {
         private readonly string _fieldName;
         private readonly GroupByMethod _method;

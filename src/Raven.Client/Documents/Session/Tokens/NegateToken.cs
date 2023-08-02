@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class NegateToken : QueryToken
+    internal sealed class NegateToken : QueryToken
     {
         private NegateToken()
         {

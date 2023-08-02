@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class DistinctToken : QueryToken
+    internal sealed class DistinctToken : QueryToken
     {
         private DistinctToken()
         {

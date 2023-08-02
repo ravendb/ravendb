@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class IntersectMarkerToken : QueryToken
+    internal sealed class IntersectMarkerToken : QueryToken
     {
         private IntersectMarkerToken()
         {

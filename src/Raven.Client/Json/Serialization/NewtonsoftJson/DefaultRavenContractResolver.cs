@@ -74,7 +74,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             throw new NotSupportedException("Cannot set DefaultMembersSearchFlags via reflection might have been removed. Set DefaultRavenContractResolver.MembersSearchFlag to null to work around this and please report it along with exact version of JSON.Net, please");
         }
 
-        public struct ClearExtensionData : IDisposable
+        public readonly struct ClearExtensionData : IDisposable
         {
             private readonly ExtensionDataSetter _setter;
             private readonly ExtensionDataGetter _getter;

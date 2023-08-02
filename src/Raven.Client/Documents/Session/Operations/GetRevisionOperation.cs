@@ -96,9 +96,9 @@ namespace Raven.Client.Documents.Session.Operations
             return results;
         }
 
-        public List<MetadataAsDictionary> GetRevisionsMetadataFor()
+        public List<IMetadataDictionary> GetRevisionsMetadataFor()
         {
-            var results = new List<MetadataAsDictionary>(_result.Results.Length);
+            var results = new List<IMetadataDictionary>(_result.Results.Length);
             foreach (BlittableJsonReaderObject revision in _result.Results)
             {
                 var metadata = revision.GetMetadata();

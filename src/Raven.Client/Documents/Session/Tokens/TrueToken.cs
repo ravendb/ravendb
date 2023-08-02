@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class TrueToken : QueryToken
+    internal sealed class TrueToken : QueryToken
     {
         private TrueToken()
         {

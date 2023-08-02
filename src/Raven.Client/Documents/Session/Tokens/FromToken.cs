@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 writer.Append("from '");
                 StringExtensions.EscapeString(writer, CollectionName);
                 writer.Append("'");
-                }
+            }
             else
             {
                 writer
