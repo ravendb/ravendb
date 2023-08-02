@@ -14,7 +14,9 @@ abstract class amazonSettings extends backupSettings {
     static availableAwsRegionEndpointsStatic = [
         { label: "Africa (Cape Town)", value: "af-south-1", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Hong Kong)", value: "ap-east-1", hasS3: true, hasGlacier: true },
+        { label: "Asia Pacific (Hyderabad)", value: "ap-south-2", hasS3: true, hasGlacier: false },
         { label: "Asia Pacific (Jakarta)", value: "ap-southeast-3", hasS3: true, hasGlacier: true },
+        { label: "Asia Pacific (Melbourne)", value: "ap-southeast-4", hasS3: true, hasGlacier: false },
         { label: "Asia Pacific (Mumbai)", value: "ap-south-1", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Osaka)", value: "ap-northeast-3", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Seoul)", value: "ap-northeast-2", hasS3: true, hasGlacier: true },
