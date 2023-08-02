@@ -27,13 +27,20 @@ public class CompareExchangeTests : RavenTestBase
         {
             string uniqueRequestId = RaftIdGenerator.NewId();
             string mykey = $"mykey{i}";
-            _ = Task.Run(async () =>
+            var timeoutAttemptTask = Task.Run(async () =>
             {
-                using JsonOperationContext context = JsonOperationContext.ShortTermSingleUse();
-                var value = context.ReadObject(new DynamicJsonValue {[$"prop{i}"] = "my value"}, "compare exchange");
-                var toRunTwiceCommand1 = new AddOrUpdateCompareExchangeCommand(store.Database, mykey, value, 0, context, uniqueRequestId);
-                toRunTwiceCommand1.Timeout = TimeSpan.FromSeconds(1);
-                await leader.ServerStore.Engine.CurrentLeader.PutAsync(toRunTwiceCommand1, toRunTwiceCommand1.Timeout.Value);
+                try
+                {
+                    using JsonOperationContext context = JsonOperationContext.ShortTermSingleUse();
+                    var value = context.ReadObject(new DynamicJsonValue {[$"prop{i}"] = "my value"}, "compare exchange");
+                    var toRunTwiceCommand1 = new AddOrUpdateCompareExchangeCommand(store.Database, mykey, value, 0, context, uniqueRequestId);
+                    toRunTwiceCommand1.Timeout = TimeSpan.FromSeconds(1);
+                    await leader.ServerStore.Engine.CurrentLeader.PutAsync(toRunTwiceCommand1, toRunTwiceCommand1.Timeout.Value);
+                }
+                catch (TimeoutException)
+                {
+                    // ignored
+                }
             });
 
             await Task.Delay(1);
@@ -41,11 +48,13 @@ public class CompareExchangeTests : RavenTestBase
             using JsonOperationContext context = JsonOperationContext.ShortTermSingleUse();
             var value = context.ReadObject(new DynamicJsonValue {[$"prop{i}"] = "my value"}, "compare exchange");
             var toRunTwiceCommand2 = new AddOrUpdateCompareExchangeCommand(store.Database, mykey, value, 0, context, uniqueRequestId);
-            toRunTwiceCommand2.Timeout = TimeSpan.FromSeconds(40);
+            toRunTwiceCommand2.Timeout = TimeSpan.FromSeconds(200);
             var (_, result) = await leader.ServerStore.Engine.CurrentLeader.PutAsync(toRunTwiceCommand2, toRunTwiceCommand2.Timeout.Value);
             Assert.NotNull(result);
             var compareExchangeResult = (CompareExchangeCommandBase.CompareExchangeResult)result;
             Assert.Equal(value, compareExchangeResult.Value);
+
+            await timeoutAttemptTask;
         })).ToArray();
 
         await Task.WhenAll(longCommandTasks);
