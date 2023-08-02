@@ -280,8 +280,11 @@ namespace Raven.Server.Smuggler.Documents
                     };
                 }
 
-                document.Data = context.ReadObject(document.Data, document.Id);
-
+                using (var old = document.Data)
+                {
+                    document.Data = context.ReadObject(document.Data, document.Id);
+                }
+                
                 return DatabaseContext.GetShardNumberFor(_allocator, id);
             }
 
