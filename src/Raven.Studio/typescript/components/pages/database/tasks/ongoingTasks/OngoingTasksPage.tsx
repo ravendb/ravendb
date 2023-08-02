@@ -290,23 +290,20 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         )}
                     </Col>
                 </Row>
+                {allTasksCount > 0 && isAdminAccessOrAbove(database) && (
+                    <OngoingTaskSelectActions
+                        allTasks={filteredDatabaseTaskNames}
+                        selectedTasks={selectedTaskNames}
+                        setSelectedTasks={setSelectedTaskNames}
+                        onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
+                        isTogglingState={isTogglingStateAny}
+                        isDeleting={isDeletingAny}
+                    />
+                )}
             </StickyHeader>
             <div className="flex-vertical">
                 <div className="scroll flex-grow">
-                    {allTasksCount === 0 ? (
-                        <EmptySet>No tasks have been created for this Database Group.</EmptySet>
-                    ) : (
-                        isAdminAccessOrAbove(database) && (
-                            <OngoingTaskSelectActions
-                                allTasks={filteredDatabaseTaskNames}
-                                selectedTasks={selectedTaskNames}
-                                setSelectedTasks={setSelectedTaskNames}
-                                onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
-                                isTogglingState={isTogglingStateAny}
-                                isDeleting={isDeletingAny}
-                            />
-                        )
-                    )}
+                    {allTasksCount === 0 && <EmptySet>No tasks have been created for this Database Group.</EmptySet>}
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
