@@ -34,6 +34,7 @@ abstract class amazonSettings extends backupSettings {
         { label: "Europe (Stockholm)", value: "eu-north-1", hasS3: true, hasGlacier: true },
         { label: "Europe (Spain)", value: "eu-south-2", hasS3: true, hasGlacier: false },
         { label: "Europe (Zurich)", value: "eu-central-2", hasS3: true, hasGlacier: false },
+        { label: "Israel (Tel Aviv)", value: "il-central-1", hasS3: true, hasGlacier: true },
         { label: "Middle East (Bahrain)", value: "me-south-1", hasS3: true, hasGlacier: true },
         { label: "Middle East (UAE)", value: "me-central-1", hasS3: true, hasGlacier: false },
         { label: "South America (São Paulo)", value: "sa-east-1", hasS3: true, hasGlacier: true },
