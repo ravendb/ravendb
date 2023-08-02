@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Session
 {
-    internal sealed class CmpXchg : MethodCall
+    public sealed class CmpXchg : MethodCall
     {
         public static CmpXchg Value(string key)
         {
