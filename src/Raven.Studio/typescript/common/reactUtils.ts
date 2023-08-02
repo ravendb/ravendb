@@ -26,3 +26,47 @@ export function bridgeToReact(reactView: React.FC<any>, viewType: viewType, boot
             assertUnreachable(viewType);
     }
 }
+
+// ReactToKnockoutComponent example of use:
+// class MyList extends ReactToKnockoutComponent<{ list: number[] }> {
+//     ref = createRef<HTMLDivElement>();
+//
+//     render() {
+//         return (
+//             <div ref={this.ref}>
+//                 <ul data-bind="foreach: props.list">
+//                     <li data-bind="text: $data"></li>
+//                 </ul>
+//             </div>
+//         );
+//     }
+// }
+
+export class ReactToKnockoutComponent<T> extends React.Component<T> {
+    [x: string]: any;
+
+    updateKnockout() {
+        this.__koTrigger(!this.__koTrigger());
+    }
+
+    componentDidMount() {
+        this.__koTrigger = ko.observable(true);
+        this.__koModel = ko.computed(function () {
+            this.__koTrigger();
+
+            return {
+                props: this.props,
+                state: this.state,
+            };
+        }, this);
+        ko.applyBindings(this.__koModel, this.ref.current);
+    }
+
+    componentWillUnmount() {
+        ko.cleanNode(this.ref.current);
+    }
+
+    componentDidUpdate() {
+        this.updateKnockout();
+    }
+}
