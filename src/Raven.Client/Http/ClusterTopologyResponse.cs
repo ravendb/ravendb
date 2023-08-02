@@ -6,6 +6,7 @@ namespace Raven.Client.Http
     {
         public string Leader;
         public string NodeTag;
+        public ServerNode.Role ServerRole;
         public ClusterTopology Topology;
         public long Etag;
         public Dictionary<string, NodeStatus> Status;

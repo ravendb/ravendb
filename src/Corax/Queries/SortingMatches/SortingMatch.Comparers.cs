@@ -30,10 +30,15 @@ namespace Corax.Queries.SortingMatches;
      }
      
      
-    private struct Descending<TInnerCmp>(TInnerCmp cmp) : IEntryComparer, IComparer<UnmanagedSpan> 
+    private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan> 
         where TInnerCmp : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private TInnerCmp _cmp = cmp;
+        private TInnerCmp _cmp;
+
+        public Descending(TInnerCmp cmp)
+        {
+            _cmp = cmp;
+        }
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
         {

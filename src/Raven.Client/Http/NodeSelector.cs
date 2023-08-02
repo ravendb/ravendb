@@ -111,20 +111,13 @@ namespace Raven.Client.Http
             for (int i = 0; i < len; i++)
             {
                 Debug.Assert(string.IsNullOrEmpty(serverNodes[i].Url) == false, $"Expected serverNodes Url not null or empty but got: \'{serverNodes[i].Url}\'");
-                if (stateFailures[i] == 0)
+                if (stateFailures[i] == 0 && serverNodes[i].ServerRole == ServerNode.Role.Member)
                 {
                     return (i, serverNodes[i]);
                 }
             }
 
             return UnlikelyEveryoneFaultedChoice(state);
-        }
-
-        internal (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
-        {
-            var state = _state;
-            var preferredNode = GetPreferredNodeInternal(state);
-            return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
         }
 
         internal int[] NodeSelectorFailures => _state.Failures;
@@ -136,6 +129,17 @@ namespace Raven.Client.Http
             if (state.Nodes.Count == 0)
                 throw new DatabaseDoesNotExistException("There are no nodes in the topology at all");
 
+            var stateFailures = state.Failures;
+            var serverNodes = state.Nodes;
+            var len = Math.Min(serverNodes.Count, stateFailures.Length);
+            for (int i = 0; i < len; i++)
+            {
+                if (stateFailures[i] == 0)
+                {
+                    return (i, serverNodes[i]);
+                }
+            }
+            
             return state.GetNodeWhenEveryoneMarkedAsFaulted();
         }
 

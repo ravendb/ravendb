@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -15,16 +16,22 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
         
-        protected abstract ValueTask DeleteRevisionsAsync(TOperationContext context, string[] documentIds);
+        protected abstract ValueTask DeleteRevisionsAsync(TOperationContext context, string[] documentIds, bool includeForceCreated,
+            OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
+            bool includeForceCreated = RequestHandler.GetBoolValueQueryString("includeForceCreated", required: false) ?? false;
+
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
                 var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                await DeleteRevisionsAsync(context, parameters.DocumentIds);
+                using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
+                {
+                    await DeleteRevisionsAsync(context, parameters.DocumentIds, includeForceCreated, token);
+                }
             }
             RequestHandler.NoContentStatus();
         }

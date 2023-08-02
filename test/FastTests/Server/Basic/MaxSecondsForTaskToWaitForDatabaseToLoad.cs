@@ -75,7 +75,7 @@ namespace FastTests.Server.Basic
                 var t = Task.Run(() =>
                 {
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
+                    using (var requestExecutor = RequestExecutor.CreateForShortTermUse(new string[] { url }, name, null, DocumentConventions.Default))
                     {
                         requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
@@ -85,7 +85,7 @@ namespace FastTests.Server.Basic
                 Assert.Throws<DatabaseLoadTimeoutException>(() =>
                 {
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
+                    using (var requestExecutor = RequestExecutor.CreateForShortTermUse(new string[] { url }, name, null, DocumentConventions.Default))
                     {
                         mre.WaitOne();
                         requestExecutor.Execute(new GetDocumentsCommand(requestExecutor.Conventions, "Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);

@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             try
             {
-                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {

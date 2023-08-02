@@ -46,6 +46,16 @@ namespace Raven.Client.Http
             
         }
 
+        internal ServerNode.Role GetServerRoleForTag(string nodeTag)
+        {
+            if (Members.ContainsKey(nodeTag) || Watchers.ContainsKey(nodeTag))
+                return ServerNode.Role.Member;
+            if (Promotables.ContainsKey(nodeTag))
+                return ServerNode.Role.Promotable;
+            
+            return ServerNode.Role.None;
+        }
+
         public bool Contains(string node)
         {
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);

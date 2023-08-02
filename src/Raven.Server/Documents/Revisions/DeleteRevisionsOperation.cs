@@ -10,7 +10,13 @@ namespace Raven.Server.Documents.Revisions
 {
     public sealed class DeleteRevisionsOperation : IMaintenanceOperation
     {
+        private readonly bool _includeForceCreated;
         private readonly Parameters _parameters;
+
+        public DeleteRevisionsOperation(bool includeForceCreated, Parameters parameters) : this(parameters)
+        {
+            _includeForceCreated = includeForceCreated;
+        }
 
         public DeleteRevisionsOperation(Parameters parameters)
         {
@@ -19,15 +25,16 @@ namespace Raven.Server.Documents.Revisions
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteRevisionsCommand(conventions, context, _parameters);
+            return new DeleteRevisionsCommand(_includeForceCreated, conventions, context, _parameters);
         }
 
         internal sealed class DeleteRevisionsCommand : RavenCommand
         {
+            private readonly bool _includeForceCreated;
             private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
 
-            public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
+            public DeleteRevisionsCommand(bool includeForceCreated, DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -35,6 +42,8 @@ namespace Raven.Server.Documents.Revisions
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
+
+                _includeForceCreated = includeForceCreated;
                 _conventions = conventions;
 
                 _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
@@ -42,7 +51,7 @@ namespace Raven.Server.Documents.Revisions
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/revisions";
+                url = $"{node.Url}/databases/{node.Database}/admin/revisions?includeForceCreated={_includeForceCreated}";
 
                 return new HttpRequestMessage
                 {

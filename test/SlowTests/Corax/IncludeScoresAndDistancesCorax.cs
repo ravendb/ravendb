@@ -15,10 +15,14 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 
-public class IncludeScoresAndDistancesCorax(ITestOutputHelper output) : RavenTestBase(output)
+public class IncludeScoresAndDistancesCorax : RavenTestBase
 {
     private string[] _data = {"maciej", "gracjan", "michal", "arek", "pawel"};
     private Random _random = new(123124);
+
+    public IncludeScoresAndDistancesCorax(ITestOutputHelper output) : base(output)
+    {
+    }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     [InlineData(true)]

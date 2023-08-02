@@ -31,7 +31,8 @@ namespace Raven.Client.Documents.Session
         public long TotalResults { get; set; }
         
         /// <summary>
-        /// Gets or sets the skipped results
+        /// The number of results skipped by the server.
+        /// When > 0 then value of TotalResults is invalidated.
         /// </summary>
         public long SkippedResults { get; set; }
         

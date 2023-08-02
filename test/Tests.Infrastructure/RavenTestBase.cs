@@ -152,6 +152,8 @@ namespace FastTests
                 {
                     options ??= Options.Default;
                     var serverToUse = options.Server ?? Server;
+                    AsyncHelpers.RunSync(() => serverToUse.ServerStore.EnsureNotPassiveAsync());
+
                     var servers = GetServersInCluster(serverToUse).ToList();
 
                     var name = GetDatabaseName(caller);

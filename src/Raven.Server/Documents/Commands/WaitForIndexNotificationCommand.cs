@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -10,6 +11,10 @@ namespace Raven.Server.Documents.Commands;
 internal sealed class WaitForIndexNotificationCommand : RavenCommand
 {
     private readonly List<long> _indexes;
+
+    public WaitForIndexNotificationCommand(long index) : this(new List<long>(capacity: 1) { index })
+    {
+    }
 
     public WaitForIndexNotificationCommand(List<long> indexes)
     {
@@ -37,5 +42,20 @@ internal sealed class WaitForIndexNotificationCommand : RavenCommand
         };
 
         return request;
+    }
+}
+
+internal class WaitForIndexNotificationOperation : IMaintenanceOperation
+{
+    private readonly long _index;
+
+    public WaitForIndexNotificationOperation(long index)
+    {
+        _index = index;
+    }
+
+    public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    {
+        return new WaitForIndexNotificationCommand(_index);
     }
 }

@@ -10,9 +10,15 @@ namespace Raven.Client.Documents.Operations.Revisions
     public sealed class EnforceRevisionsConfigurationOperation : IOperation<OperationIdResult>
     {
         private readonly long? _operationId;
+        private readonly bool _includeForceCreated;
 
         public EnforceRevisionsConfigurationOperation()
         {
+        }
+
+        public EnforceRevisionsConfigurationOperation(bool includeForceCreated)
+        {
+            _includeForceCreated = includeForceCreated;
         }
 
         internal EnforceRevisionsConfigurationOperation(long? operationId = null)
@@ -22,15 +28,17 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new EnforceRevisionsConfigurationCommand(_operationId);
+            return new EnforceRevisionsConfigurationCommand(_includeForceCreated, _operationId);
         }
 
         internal sealed class EnforceRevisionsConfigurationCommand : RavenCommand<OperationIdResult>
         {
+            private readonly bool _includeForceCreated;
             private readonly long? _operationId;
 
-            public EnforceRevisionsConfigurationCommand(long? operationId = null)
+            public EnforceRevisionsConfigurationCommand(bool includeForceCreated, long? operationId = null)
             {
+                _includeForceCreated = includeForceCreated;
                 _operationId = operationId;
             }
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -45,8 +53,11 @@ namespace Raven.Client.Documents.Operations.Revisions
                     .Append(node.Database)
                     .Append("/admin/revisions/config/enforce");
 
+                pathBuilder.Append("?includeForceCreated=");
+                pathBuilder.Append(_includeForceCreated);
+
                 if (_operationId.HasValue)
-                    pathBuilder.Append("?operationId=")
+                    pathBuilder.Append("&operationId=")
                         .Append(_operationId);
 
                 url = pathBuilder.ToString();

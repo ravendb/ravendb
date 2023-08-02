@@ -65,6 +65,7 @@ namespace Raven.Client.Http
         internal virtual bool CanReadFromCache { get; set; } = true;
         public virtual string SelectedNodeTag { get; protected internal set; }
         internal virtual int? SelectedShardNumber { get; set; }
+
         public int NumberOfAttempts { get; internal set; }
 
         internal long FailoverTopologyEtag = -2;

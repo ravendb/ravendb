@@ -8,6 +8,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
@@ -18,17 +19,18 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override async ValueTask DeleteRevisionsAsync(TransactionOperationContext context, string[] documentIds)
+        protected override async ValueTask DeleteRevisionsAsync(TransactionOperationContext context, string[] documentIds, bool includeForceCreated,
+            OperationCancelToken token)
         {
             var shardsToDocs = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, documentIds);
             var cmds = new Dictionary<int, RavenCommand>(shardsToDocs.Count);
             foreach (var (shard, ids) in shardsToDocs)
             {
-                cmds[shard] = new DeleteRevisionsOperation.DeleteRevisionsCommand(DocumentConventions.Default, context,
+                cmds[shard] = new DeleteRevisionsOperation.DeleteRevisionsCommand(includeForceCreated, DocumentConventions.Default, context,
                     new DeleteRevisionsOperation.Parameters() {DocumentIds = ids.Ids.ToArray()});
             }
-            using(var token = RequestHandler.CreateHttpRequestBoundOperationToken())
-                await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);
+            
+            await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);
         }
         
         internal readonly struct ShardedDeleteRevisionsOperation : IShardedOperation

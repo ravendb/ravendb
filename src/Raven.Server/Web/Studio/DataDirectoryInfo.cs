@@ -191,7 +191,7 @@ namespace Raven.Server.Web.Studio
             {
                 try
                 {
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(serverUrl, _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                     using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         var dataDirectoryInfo = new GetDataDirectoryInfoCommand(_path, _name, _isBackup);
