@@ -24,7 +24,7 @@ using Sparrow.Utils;
 
 namespace Raven.TestDriver
 {
-    public abstract class RavenTestDriver : IDisposable
+    public class RavenTestDriver : IDisposable
     {
         private static readonly EmbeddedServer TestServer = new EmbeddedServer();
 
