@@ -12,7 +12,7 @@ namespace Raven.Client.Util
     /// <summary>
     /// A helper class that translate between Disposable and Action
     /// </summary>
-    public sealed class DisposableAction : IDisposable
+    internal sealed class DisposableAction : IDisposable
     {
         private readonly Action _action;
 

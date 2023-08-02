@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
         void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valToAdd);
     }
 
-    public sealed class JavascriptMethodNameAttribute : Attribute
+    internal sealed class JavascriptMethodNameAttribute : Attribute
     {
         public string Name { get; }
 

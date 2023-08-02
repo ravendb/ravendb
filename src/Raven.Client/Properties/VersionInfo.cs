@@ -9,7 +9,7 @@ using Raven.Client.Properties;
 namespace Raven.Client.Properties
 {
     [AttributeUsage(AttributeTargets.Assembly)]
-    public sealed class RavenVersionAttribute : Attribute
+    internal sealed class RavenVersionAttribute : Attribute
     {
         public string CommitHash { get; set; }
         public string Build { get; set; }

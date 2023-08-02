@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-        public abstract class AbstractYieldStream<T, TInnerAsyncEnumerator> : IAsyncEnumerator<T>
+        internal abstract class AbstractYieldStream<T, TInnerAsyncEnumerator> : IAsyncEnumerator<T>
             where TInnerAsyncEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>
         {
             private readonly TInnerAsyncEnumerator _enumerator;
@@ -65,14 +65,14 @@ namespace Raven.Client.Documents.Session
             internal abstract T ResultCreator(TInnerAsyncEnumerator asyncEnumerator);
         }
 
-        public abstract class AbstractYieldStream<T> : AbstractYieldStream<T, IAsyncEnumerator<BlittableJsonReaderObject>>
+        internal abstract class AbstractYieldStream<T> : AbstractYieldStream<T, IAsyncEnumerator<BlittableJsonReaderObject>>
         {
             protected AbstractYieldStream(IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token) : base(enumerator, token)
             {
             }
         }
 
-        public sealed class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
+        internal sealed class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
         {
             private readonly AsyncDocumentSession _parent;
             private readonly IAbstractDocumentQueryImpl<T> _query;

@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class CloseSubclauseToken : QueryToken
+    internal sealed class CloseSubclauseToken : QueryToken
     {
         private CloseSubclauseToken()
         {

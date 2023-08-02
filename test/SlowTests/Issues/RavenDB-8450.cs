@@ -70,7 +70,7 @@ namespace SlowTests.Issues
         {
             private readonly SubscriptionTryout _tryout;
 
-            public SubscriptionTryoutOperation(SubscriptionTryout tryout)
+            internal SubscriptionTryoutOperation(SubscriptionTryout tryout)
             {
                 _tryout = tryout;
                 ResponseType = RavenCommandResponseType.Raw;

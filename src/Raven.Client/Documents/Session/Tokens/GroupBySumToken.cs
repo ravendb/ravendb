@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class GroupBySumToken : QueryToken
+    internal sealed class GroupBySumToken : QueryToken
     {
         private readonly string _projectedName;
         private readonly string _fieldName;

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
@@ -304,7 +305,7 @@ namespace SlowTests.Server.Replication
                     AssertRevisionFlags(metadata[1]);
                     AssertRevisionFlags(metadata[2]);
 
-                    void AssertRevisionFlags(MetadataAsDictionary revisionMetadata)
+                    void AssertRevisionFlags(IMetadataDictionary revisionMetadata)
                     {
                         flags = revisionMetadata["@flags"];
                         var cv = revisionMetadata["@change-vector"].ToString();

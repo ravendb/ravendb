@@ -2825,7 +2825,7 @@ more responsive application.
             return new DisposableAction(() => _prepareEntitiesDeletes = false);
         }
 
-        public sealed class DeletedEntitiesEnumeratorResult
+        internal sealed class DeletedEntitiesEnumeratorResult
         {
             public object Entity { get; set; }
 

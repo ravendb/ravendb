@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public sealed class GroupByCountToken : QueryToken
+    internal sealed class GroupByCountToken : QueryToken
     {
         private readonly string _fieldName;
 

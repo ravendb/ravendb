@@ -27,7 +27,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
     private readonly int _pageSize;
     private readonly int? _timeLimitInSec;
 
-    public ShardedSubscriptionTryoutOperation(HttpContext httpContext, TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
+    internal ShardedSubscriptionTryoutOperation(HttpContext httpContext, TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
     {
         _httpContext = httpContext;
         _context = context;

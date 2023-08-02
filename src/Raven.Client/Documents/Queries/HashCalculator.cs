@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
-    public unsafe struct HashCalculator : IDisposable
+    internal unsafe struct HashCalculator : IDisposable
     {
         private readonly JsonOperationContext _context;
 

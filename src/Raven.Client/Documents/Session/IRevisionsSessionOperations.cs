@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all previous document revisions metadata for specified document (with paging).
         /// </summary>
-        List<MetadataAsDictionary> GetMetadataFor(string id, int start = 0, int pageSize = 25);
+        List<IMetadataDictionary> GetMetadataFor(string id, int start = 0, int pageSize = 25);
 
         /// <summary>
         /// Returns a document revision by change vector.
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all previous document revisions metadata for specified document (with paging).
         /// </summary>
-        Lazy<List<MetadataAsDictionary>> GetMetadataFor(string id, int start = 0, int pageSize = 25); 
+        Lazy<List<IMetadataDictionary>> GetMetadataFor(string id, int start = 0, int pageSize = 25); 
         
         /// <summary>
         /// Returns a document revision by change vector.

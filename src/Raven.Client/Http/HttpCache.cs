@@ -280,7 +280,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public struct ReleaseCacheItem : IDisposable
+        public readonly struct ReleaseCacheItem : IDisposable
         {
             public readonly HttpCacheItem Item;
             private readonly int _cacheGeneration;

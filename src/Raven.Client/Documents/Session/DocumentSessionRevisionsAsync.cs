@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public async Task<List<MetadataAsDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
+        public async Task<List<IMetadataDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
         {
             using (Session.AsyncTaskHolder())
             {
@@ -142,11 +142,11 @@ namespace Raven.Client.Documents.Session
             return ((AsyncDocumentSession )Session).AddLazyOperation<Dictionary<string, T>>(lazyRevisionOperation, null, token);
         }
 
-        Lazy<Task<List<MetadataAsDictionary>>> ILazyRevisionsOperationsAsync.GetMetadataForAsync(string id, int start, int pageSize, CancellationToken token)
+        Lazy<Task<List<IMetadataDictionary>>> ILazyRevisionsOperationsAsync.GetMetadataForAsync(string id, int start, int pageSize, CancellationToken token)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
             var lazyRevisionOperation = new LazyRevisionOperation<MetadataAsDictionary>(operation, LazyRevisionOperation<MetadataAsDictionary>.Mode.ListOfMetadata);
-            return ((AsyncDocumentSession )Session).AddLazyOperation<List<MetadataAsDictionary>>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<List<IMetadataDictionary>>(lazyRevisionOperation, null, token);
 
         }
     }
