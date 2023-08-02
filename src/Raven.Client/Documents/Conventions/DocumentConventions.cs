@@ -1381,5 +1381,20 @@ namespace Raven.Client.Documents.Conventions
                 throw new InvalidOperationException(
                     $"Conventions has frozen after '{nameof(DocumentStore)}.{nameof(DocumentStore.Initialize)}()' and no changes can be applied to them.");
         }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action<RequestExecutor> OnBeforeTopologyUpdate;
+        }
     }
 }

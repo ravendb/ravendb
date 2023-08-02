@@ -366,6 +366,7 @@ namespace Raven.Client.Http
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
+            conventions.ForTestingPurposes?.OnBeforeTopologyUpdate?.Invoke(executor);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }
