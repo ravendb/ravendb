@@ -219,18 +219,32 @@ public sealed unsafe class FastPForEncoder  : IDisposable
             switch (numOfBits)
             {
                 case BiggerThanMaxMarker:
-                    // nothing to do, doesn't impact writes 
-                    _metadataPos += 17; // batch offset + 16 bytes
-                    continue;
+                    // we may have a sequence of deltas that are too large, so we need to scan through them
+                    // there is caveat that this sequence may belong to a block that we cannot fit in the current
+                    // buffer, so we have to scan through all of them and then maybe revert if there isn't enough space
+                    while(true)
+                    {
+                        if (BufferWillOverflow(17))
+                        {
+                            goto BreakLoop;
+                        }
+                        _metadataPos += 17; // batch offset + 16 bytes
+                        if (_metadataPos == _metadata.Count ||
+                            _metadata[_metadataPos] != BiggerThanMaxMarker)
+                        {
+                            numOfBits = _metadata[_metadataPos++];
+                            break;
+                        }
+                        _metadataPos++;
+                    } 
+                    break;
                 case VarIntBatchMarker:
                     var sizeOfVarIntBatch = _metadata[_metadataPos++];
                     var varintSize = WriteLastBatchAsVarIntDelta(sizeOfVarIntBatch, output + sizeUsed, outputSize - sizeUsed);
-                    var expectedMetadataSize = _metadataPos - startingMetadataPosition;
                     if (varintSize == 0 || // couldn't fit the var int buffer
-                        sizeUsed + varintSize + exceptionsRequiredSize + expectedMetadataSize > outputSize) // wouldn't be able to fit the exceptions & metadata
+                        BufferWillOverflow(varintSize)) // wouldn't be able to fit the exceptions & metadata
                     {
-                        _metadataPos = batchMetadataStart;
-                        goto AfterLoop;
+                        goto BreakLoop;
                     }
 
                     _offset += sizeOfVarIntBatch;
@@ -272,16 +286,24 @@ public sealed unsafe class FastPForEncoder  : IDisposable
             var finalSize = (sizeUsed + reqSize + exceptionsRequiredSize + metaSize);
             if (finalSize > outputSize)
             {
-                _metadataPos = batchMetadataStart;
-                break;
+                goto BreakLoop;
             }
             SimdBitPacking<MaskEntries>.Pack256(0, entriesOutput + _offset,
                 output + sizeUsed, numOfBits, new MaskEntries((1u << numOfBits) - 1));
             sizeUsed += reqSize;
             _offset += 256;
             exceptionCountRef += amountToAddToException;
+            continue;
+
+            BreakLoop:
+            _metadataPos = batchMetadataStart;
+            break;
+
+            bool BufferWillOverflow(int additionalSize)
+            {
+                return sizeUsed + additionalSize + exceptionsRequiredSize + (_metadataPos - startingMetadataPosition) > outputSize;
+            }
         }
-        AfterLoop:
 
         uint bitmap = 0;
         header.ExceptionsOffset = checked((ushort)sizeUsed);
