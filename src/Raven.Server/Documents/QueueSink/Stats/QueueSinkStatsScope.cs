@@ -40,4 +40,9 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
     {
         _stats.NumberOfConsumedMessages++;
     }
+
+    public void RecordsProcessedMessage()
+    {
+        _stats.NumberOfProcessedMessages++;
+    }
 }

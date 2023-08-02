@@ -140,7 +140,7 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
 
     protected override void WriteStats(List<QueueSinkTaskPerformanceStats> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
     {
-       // TODO arek writer.WriteQueueSinkTaskPerformanceStats(context, stats);
+       writer.WriteQueueSinkTaskPerformanceStats(context, stats);
     }
 
     private void EtlProcessRemoved(QueueSinkProcess queueSink)

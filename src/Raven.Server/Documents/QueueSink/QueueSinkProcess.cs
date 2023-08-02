@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -112,69 +113,96 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
     {
         ProcessFallback();
         bool batchStopped = false;
-        
-        List<byte[]> messageBatch = ConsumeMessages();
 
-        try
+        var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+        _lastStats = statsAggregator;
+
+        AddPerformanceStats(statsAggregator);
+
+        using (var stats = statsAggregator.CreateScope())
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(
-                       out DocumentsOperationContext context))
+            List<byte[]> messageBatch;
+
+            using (var consumeScope = stats.For(QueueSinkBatchPhases.Consume, start: false))
             {
-                using (var tx = context.OpenWriteTransaction())
+                messageBatch = ConsumeMessages(consumeScope);
+            }
+
+            if (messageBatch.Count == 0)
+                return;
+
+            try
+            {
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(
+                           out DocumentsOperationContext context))
                 {
-                    var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
-                    Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
-
-                    foreach (var message in messageBatch)
+                    using (var tx = context.OpenWriteTransaction())
+                    using (var scriptProcessingScope = stats.For(QueueSinkBatchPhases.ScriptProcessing))
                     {
-                        try
+                        var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
+                        Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
+
+                        foreach (var message in messageBatch)
                         {
-                            using var o = await context.ReadForMemoryAsync(new MemoryStream(message),
-                                "queue-message", CancellationToken);
-                            using (documentScript.Run(context, context, "execute", new object[] { o }))
-                            { }
-                        }
-                        catch (JavaScriptParseException e)
-                        {
-                            HandleScriptParseException(e);
-                            batchStopped = true;
-                        }
-                        catch (Exception e)
-                        {
-                            var msg = "Failed to process consumed message.";
-                            if (Logger.IsOperationsEnabled)
+                            try
                             {
-                                Logger.Operations(msg, e);
+                                using var o = await context.ReadForMemoryAsync(new MemoryStream(message),
+                                    "queue-message", CancellationToken);
+
+                                using (documentScript.Run(context, context, "execute", new object[] {o}))
+                                {
+                                }
+
+                                scriptProcessingScope.RecordProcessedMessage();
                             }
+                            catch (JavaScriptParseException e)
+                            {
+                                HandleScriptParseException(e);
+                                batchStopped = true;
+                            }
+                            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                            {
+                                return;
+                            }
+                            catch (Exception e)
+                            {
+                                var msg = "Failed to process consumed message by the script.";
 
-                            Statistics.RecordScriptExecutionError(e);
+                                if (Logger.IsOperationsEnabled)
+                                {
+                                    Logger.Operations(msg, e);
+                                }
+
+                                Statistics.RecordScriptExecutionError(e);
+                                scriptProcessingScope.RecordScriptError();
+                            }
                         }
-                    }
 
-                    if (batchStopped == false)
-                    {
-                        tx.Commit();
-                        Commit();
+                        if (batchStopped == false)
+                        {
+                            tx.Commit();
+                            Commit();
+                        }
                     }
                 }
             }
-        }
-        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception e)
-        {
-            var message = $"{Tag} Exception in queue sink process '{Name}'";
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception e)
+            {
+                var message = $"{Tag} Exception in queue sink process '{Name}'";
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(message, e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(message, e);
 
-            Statistics.RecordConsumeError(e.Message);
+                Statistics.RecordConsumeError(e.Message);
+            }
+
+            Statistics.ConsumeSuccess(messageBatch.Count);
+            Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
         }
-
-        Statistics.ConsumeSuccess(messageBatch.Count);
-        Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
     }
 
     private void AddPerformanceStats(QueueSinkStatsAggregator stats)
@@ -182,10 +210,10 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         _lastQueueSinkStats.Enqueue(stats);
 
         while (_lastQueueSinkStats.Count > 25)
-            _lastQueueSinkStats.TryDequeue(out stats);
+            _lastQueueSinkStats.TryDequeue(out _);
     }
 
-    protected abstract List<byte[]> ConsumeMessages();
+    protected abstract List<byte[]> ConsumeMessages(QueueSinkStatsScope stats);
 
     protected abstract void Commit();
 
@@ -317,11 +345,15 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
     public QueueSinkPerformanceStats[] GetPerformanceStats()
     {
-        throw new NotImplementedException();
+        var lastStats = _lastStats;
+
+        return _lastQueueSinkStats
+            .Select(x => x == lastStats ? x.ToPerformanceLiveStatsWithDetails() : x.ToPerformanceStats())
+            .ToArray();
     }
 
     public QueueSinkStatsAggregator GetLatestPerformanceStats()
     {
-        throw new NotImplementedException();
+        return _lastStats;
     }
 }

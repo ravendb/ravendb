@@ -20,7 +20,6 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     {
     }
 
-    private const string DefaultScript = "put(this.Id, this)";
     private readonly List<string> _defaultQueue = new() { "users" };
 
     [RequiresRabbitMqRetryFact]
@@ -32,7 +31,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
         byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
 
-        var producer = CreateRabbitMqProducer("amqp://guest:guest@localhost:5672/");
+        var producer = CreateRabbitMqProducer();
 
         producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
 
@@ -79,7 +78,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes3 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user3));
         byte[] userBytes4 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user4));
 
-        var producer = CreateRabbitMqProducer("amqp://guest:guest@localhost:5672/");
+        var producer = CreateRabbitMqProducer();
 
         producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
         producer.QueueDeclare(queue: "developers", exclusive: false);
@@ -144,7 +143,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
         byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
 
-        var producer = CreateRabbitMqProducer("amqp://guest:guest@localhost:5672/");
+        var producer = CreateRabbitMqProducer();
 
         producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
 
@@ -181,7 +180,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     {
         var numberOfUsers = 10;
 
-        var producer = CreateRabbitMqProducer("amqp://guest:guest@localhost:5672/");
+        var producer = CreateRabbitMqProducer();
 
         for (int i = 0; i < numberOfUsers; i++)
         {
@@ -268,14 +267,14 @@ public class RabbitMqSinkTests : QueueSinkTestBase
                 BrokerType = QueueBrokerType.RabbitMq,
                 RabbitMqConnectionSettings = new RabbitMqConnectionSettings
                 {
-                    ConnectionString = "amqp://guest:guest@localhost:5672/"
+                    ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value
                 }
             });
     }
 
-    private IModel CreateRabbitMqProducer(string url)
+    private IModel CreateRabbitMqProducer()
     {
-        var connectionFactory = new ConnectionFactory { Uri = new Uri(url) };
+        var connectionFactory = new ConnectionFactory { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
         var connection = connectionFactory.CreateConnection();
         var producer = connection.CreateModel();
         return producer;

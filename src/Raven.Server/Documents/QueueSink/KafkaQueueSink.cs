@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Confluent.Kafka;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Server.Documents.QueueSink.Stats;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
@@ -18,8 +22,10 @@ public class KafkaQueueSink : QueueSinkProcess
     
     private IConsumer<string, byte[]> _consumer;
 
-    protected override List<byte[]> ConsumeMessages()
+    protected override async Task<List<BlittableJsonReaderObject>> ConsumeMessages(DocumentsOperationContext context, QueueSinkStatsScope stats)
     {
+        var messageBatch = new List<BlittableJsonReaderObject>();
+
         if (_consumer == null)
         {
             try
@@ -36,10 +42,10 @@ public class KafkaQueueSink : QueueSinkProcess
                 }
 
                 EnterFallbackMode();
+
+                return messageBatch;
             }
         }
-
-        var messageBatch = new List<byte[]>();
 
         while (messageBatch.Count < Database.Configuration.QueueSink.MaxNumberOfConsumedMessagesInBatch)
         {
@@ -48,8 +54,18 @@ public class KafkaQueueSink : QueueSinkProcess
                 var message = messageBatch.Count == 0
                     ? _consumer.Consume(CancellationToken)
                     : _consumer.Consume(TimeSpan.Zero);
-                if (message?.Message is null) break;
-                messageBatch.Add(message.Message.Value);
+                
+                if (message?.Message is null) 
+                    break;
+
+                if (stats.IsRunning == false)
+                    stats.Start();
+
+                var jsonMessage = await context.ReadForMemoryAsync(new MemoryStream(message.Message.Value), "queue-message", CancellationToken);
+
+                messageBatch.Add(jsonMessage);
+
+                stats.RecordConsumedMessage();
             }
             catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
             {
