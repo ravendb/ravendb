@@ -14,19 +14,14 @@ type DestinationStatus = Exclude<OngoingTaskState, "None" | "PartiallyEnabled"> 
 
 interface TaskGroup {
     title: string | ReactNode;
-    tasks: AffectedTasksInfo[];
+    tasks: OngoingTaskSharedInfo[];
     destinationStatus?: DestinationStatus;
 }
 
-interface AffectedTasksInfo {
-    name: string;
-    currentStatus: OngoingTaskState;
-}
-
 interface AffectedTasksGrouped {
-    disabling?: AffectedTasksInfo[];
-    enabling?: AffectedTasksInfo[];
-    skipping?: AffectedTasksInfo[];
+    disabling?: OngoingTaskSharedInfo[];
+    enabling?: OngoingTaskSharedInfo[];
+    skipping?: OngoingTaskSharedInfo[];
 }
 
 interface OngoingTaskOperationConfirmProps {
@@ -40,6 +35,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
     const { type, taskSharedInfos, toggle, onConfirm } = props;
 
     const taskGroups = getTaskGroups(type, taskSharedInfos).filter((x) => x.tasks.length > 0);
+    const warningMessage = getWarningMessage(taskGroups);
 
     const onSubmit = () => {
         onConfirm();
@@ -72,15 +68,15 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                         <div className="text-center lead">{taskGroup.title}</div>
                         <div className="vstack gap-1 my-4">
                             {taskGroup.tasks.map((task) => (
-                                <div key={task.name} className="d-flex">
+                                <div key={task.taskName} className="d-flex">
                                     <div
                                         className={classNames(
                                             "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
                                         )}
                                     >
                                         <Icon
-                                            icon={getStatusIcon(task.currentStatus)}
-                                            color={getStatusColor(task.currentStatus)}
+                                            icon={getStatusIcon(task.taskState)}
+                                            color={getStatusColor(task.taskState)}
                                             margin="m-0"
                                         />
                                         {taskGroup.destinationStatus && (
@@ -98,7 +94,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                                             </>
                                         )}
                                     </div>
-                                    <div className="word-break align-self-center">{task.name}</div>
+                                    <div className="word-break align-self-center">{task.taskName}</div>
                                 </div>
                             ))}
                         </div>
@@ -106,14 +102,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                     </div>
                 ))}
 
-                {type === "disable" && (
-                    <Alert color="warning">
-                        <small>
-                            Please note that <strong>disabling</strong> these tasks will cause continuous tombstone
-                            accumulation until they are re-enabled or deleted, leading to increased disk space usage.
-                        </small>
-                    </Alert>
-                )}
+                {warningMessage && <Alert color="warning">{warningMessage}</Alert>}
             </ModalBody>
             <ModalFooter>
                 <Button color="link" onClick={toggle} className="text-muted">
@@ -188,12 +177,9 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
             const affectedTaskGrouped = tasks.reduce(
                 (accumulator: AffectedTasksGrouped, currentValue: OngoingTaskSharedInfo) => {
                     if (currentValue.taskState === "Enabled" || currentValue.taskState === "PartiallyEnabled") {
-                        accumulator.skipping.push({ name: currentValue.taskName, currentStatus: "Enabled" });
+                        accumulator.skipping.push({ ...currentValue, taskName: "Enabled" });
                     } else {
-                        accumulator.enabling.push({
-                            name: currentValue.taskName,
-                            currentStatus: currentValue.taskState,
-                        });
+                        accumulator.enabling.push(currentValue);
                     }
 
                     return accumulator;
@@ -224,12 +210,9 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
             const affectedTaskGrouped = tasks.reduce(
                 (accumulator: AffectedTasksGrouped, currentValue: OngoingTaskSharedInfo) => {
                     if (currentValue.taskState === "Disabled") {
-                        accumulator.skipping.push({ name: currentValue.taskName, currentStatus: "Disabled" });
+                        accumulator.skipping.push(currentValue);
                     } else {
-                        accumulator.disabling.push({
-                            name: currentValue.taskName,
-                            currentStatus: currentValue.taskState,
-                        });
+                        accumulator.disabling.push(currentValue);
                     }
 
                     return accumulator;
@@ -264,10 +247,7 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
                             You&apos;re about to <strong className="text-danger">delete</strong> following tasks
                         </>
                     ),
-                    tasks: tasks.map((x) => ({
-                        currentStatus: x.taskState,
-                        name: x.taskName,
-                    })),
+                    tasks,
                     destinationStatus: "Removed",
                 },
             ];
@@ -275,4 +255,35 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
         default:
             assertUnreachable(type);
     }
+}
+
+function getWarningMessage(taskGroups: TaskGroup[]): ReactNode {
+    const allDisableTasks = taskGroups.find((x) => x.destinationStatus === "Disabled")?.tasks ?? [];
+    const subscriptionDisableTasksCount = allDisableTasks.filter((x) => x.taskType === "Subscription").length;
+
+    const allDisableTasksCount = allDisableTasks.length;
+
+    if (allDisableTasksCount === 0 || allDisableTasksCount === subscriptionDisableTasksCount) {
+        return null;
+    }
+
+    if (subscriptionDisableTasksCount === 0) {
+        return (
+            <small>
+                Please note, <strong>disabling</strong>
+                {allDisableTasksCount === 1 ? " this task " : " these tasks "}will lead to continuous tombstone
+                accumulation until
+                {allDisableTasksCount === 1 ? " it is " : " they are "}re-enabled or deleted, resulting in increased
+                disk space usage.
+            </small>
+        );
+    }
+
+    return (
+        <small>
+            Please note, <strong>disabling</strong> the selected tasks (excluding <strong>Subscription</strong> tasks)
+            will lead to continuous tombstone accumulation until they are re-enabled or deleted, which will increase
+            disk space usage. This warning does not apply to Subscription tasks.
+        </small>
+    );
 }
