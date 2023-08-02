@@ -1684,7 +1684,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> IterateUniformly(FixedSizeKeyIndexDef index, long skip = 1)
+        public IEnumerable<(long Key, TableValueHolder TableValueHolder)> IterateUniformly(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
         {
             if (skip < 1)
                 throw new ArgumentOutOfRangeException(nameof(skip), "The skip must be positive and non zero.");
@@ -1693,7 +1693,7 @@ namespace Voron.Data.Tables
 
             long count = -1;
             using var it = fst.Iterate();
-            if (it.Seek(0) == false)
+            if (it.Seek(seek) == false)
                 yield break;
 
             var result = new TableValueHolder();
@@ -1703,7 +1703,7 @@ namespace Voron.Data.Tables
                 if (count % skip == 0)
                 {
                     GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    yield return (it.CurrentKey, result);
                 }
             }
         }

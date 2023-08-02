@@ -5,6 +5,7 @@ using Corax.Pipeline;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -214,11 +215,18 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         }
     }
 
-    private IEnumerable<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
+    private IEnumerator<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
     {
+        var size = queryContext.Documents.DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit;
+        var coraxDocumentTrainDocumentSource = new CoraxDocumentTrainSourceEnumerator(_documentStorage);
+        
         if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-            return _documentStorage.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, take);
-        return _documentStorage.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, collection, take);
+            return new PulsedTransactionEnumerator<Document, CoraxDocumentTrainSourceState>(queryContext.Documents,
+                state => coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, state), new(queryContext.Documents, size, take)); 
+
+        return new PulsedTransactionEnumerator<Document,CoraxDocumentTrainSourceState>(queryContext.Documents, 
+            state =>  coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, collection, state)
+            , new CoraxDocumentTrainSourceState(queryContext.Documents, size, take));
     }
 
     private IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
