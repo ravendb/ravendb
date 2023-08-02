@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void Clean(IndexCleanup mode);
 
         public abstract void Initialize(StorageEnvironment environment);
-
-        public abstract void OnInitializeComplete();
+        
+        public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator);
 
         public abstract void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache);
 

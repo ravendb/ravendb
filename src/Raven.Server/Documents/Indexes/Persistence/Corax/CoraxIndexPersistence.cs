@@ -22,7 +22,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
-
+    
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
@@ -119,19 +119,24 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void Initialize(StorageEnvironment environment)
     {
     }
-
-    public override void OnInitializeComplete()
+    
+    public override void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator)
+    {
+        using (indexingStatsAggregator.CreateScope().For(IndexingOperation.Corax.DictionaryTraining))
+            CreatePersistentDictionary();
+    }
+    
+    internal void CreatePersistentDictionary()
     {
         var contextPool = _index._contextPool;
 
         using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (var tx = context.OpenReadTransaction())
         {
-            // It is already initialized, we can return.
             if (CompactTree.HasDictionary(tx.InnerTransaction.LowLevelTransaction))
-                return;
+               return; 
         }
-
+        
         if (_index.SourceType != IndexSourceType.Documents)
             return;
 
@@ -153,8 +158,10 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
             var converter = CreateConverter(_index);
             converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
-            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
-            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, Math.Max(100, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation / 10));
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections,
+                _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
+            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections,
+                Math.Max(100, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation / 10));
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);

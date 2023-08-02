@@ -44,6 +44,7 @@ namespace Raven.Client.Documents.Indexes
             public const string Prepare = "Corax/Prepare";
             public const string AddDocument = "Corax/AddDocument";
             public const string Commit = "Corax/Commit";
+            public const string DictionaryTraining = "Corax/DictionaryTraining";
         }
 
         internal static class Storage
