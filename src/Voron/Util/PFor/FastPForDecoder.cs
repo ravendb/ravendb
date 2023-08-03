@@ -2,8 +2,10 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Data.PostingLists;
 
 namespace Voron.Util.PFor;
@@ -23,14 +25,15 @@ public unsafe struct FastPForDecoder : IDisposable
     private ushort _sharedPrefix;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
     private Vector256<long> _prev;
-    private ByteString _bs;
+    private ByteString _buffer;
+    private int NumberOfIntegersInBuffer => _buffer.Length / sizeof(uint);
 
     public FastPForDecoder(ByteStringContext allocator)
     {
         _allocator = allocator;
         const int initialExceptionsSize = 1024;
-        _exceptionsScope = allocator.Allocate(initialExceptionsSize * sizeof(uint), out _bs);
-        _exceptions = (uint*)_bs.Ptr;
+        _exceptionsScope = allocator.Allocate(initialExceptionsSize * sizeof(uint), out _buffer);
+        _exceptions = (uint*)_buffer.Ptr;
     }
 
     public void Init( byte* input, int size)
@@ -65,7 +68,7 @@ public unsafe struct FastPForDecoder : IDisposable
             exception += sizeof(ushort);
 
             int sizeRequired = count + exceptionBufferOffset;
-            if (sizeRequired > _bs.Length)
+            if (sizeRequired > NumberOfIntegersInBuffer)
             {
                 GrowAllocation(sizeRequired);
             }
@@ -82,13 +85,11 @@ public unsafe struct FastPForDecoder : IDisposable
 
     }
 
-    private void GrowAllocation(int size)
+    private void GrowAllocation(int sizeInElements)
     {
-        do
-        {
-            _allocator.GrowAllocation(ref _bs, ref _exceptionsScope, _bs.Length * 2);
-            _exceptions = (uint*)_bs.Ptr;
-        } while (size > _bs.Length);
+        int sizeInBytes = Bits.PowerOf2(sizeInElements * sizeof(uint));
+        _allocator.GrowAllocation(ref _buffer, ref _exceptionsScope, sizeInBytes);
+        _exceptions = (uint*)_buffer.Ptr;
     }
 
     public int Read(long* output, int outputCount)
