@@ -1,48 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Corax;
 using Corax.Mappings;
 using Corax.Utils;
 using Assert = Xunit.Assert;
 using FastTests.Voron;
-using GeoAPI;
-using NetTopologySuite;
 using Sparrow;
 using Sparrow.Server;
-using Spatial4n.Context.Nts;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Threading;
-using System.Xml.Linq;
 
 namespace FastTests.Corax;
 
 public class SpatialTests : StorageTest
 {
     private const int IdIndex = 0, CoordinatesIndex = 1;
-    private readonly IndexFieldsMapping _fieldsMapping;
-    private static readonly NtsSpatialContext GeoContext;
-    static SpatialTests()
-    {
-        GeometryServiceProvider.Instance = new NtsGeometryServices();
-        GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { IsGeo = true });
-    }
-    
     
     public SpatialTests(ITestOutputHelper output) : base(output)
     {
-        using var _ = StorageEnvironment.GetStaticContext(out var ctx);
-        
+    }
+
+    private static IndexFieldsMapping GetFieldsMapping(ByteStringContext ctx)
+    {
         Slice.From(ctx, "Id", ByteStringType.Immutable, out var idSlice);
         Slice.From(ctx, "Coordinates", ByteStringType.Immutable, out var idCoordinates);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, idSlice)
             .AddBinding(CoordinatesIndex, idCoordinates);
-        _fieldsMapping = builder.Build();
+        return builder.Build();
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
@@ -58,7 +47,9 @@ public class SpatialTests : StorageTest
             .ToList();
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        using (var writer = new IndexWriter(Env, _fieldsMapping))
+        var fieldsMapping = GetFieldsMapping(bsc);
+        
+        using (var writer = new IndexWriter(Env, fieldsMapping))
         {
             using (var entry = writer.Index(IdString))
             {
@@ -73,14 +64,14 @@ public class SpatialTests : StorageTest
         for (int i = 0; i < geohash.Length; ++i)
         {
             var partialGeohash = geohash.Substring(0, i + 1);
-            using (var searcher = new IndexSearcher(Env, _fieldsMapping))
+            using (var searcher = new IndexSearcher(Env, fieldsMapping))
             {
                 Span<long> ids = new long[16];
                 var entries = searcher.TermQuery("Coordinates", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
                 Page p = default;
                 var reader = searcher.GetEntryTermsReader(ids[0], ref p);
-                long fieldRootPage = searcher.FieldCache.GetLookupRootPage(_fieldsMapping.GetByFieldId(CoordinatesIndex).FieldName);
+                long fieldRootPage = searcher.FieldCache.GetLookupRootPage(fieldsMapping.GetByFieldId(CoordinatesIndex).FieldName);
                 Assert.True(reader.FindNextSpatial(fieldRootPage));
                 
                 Assert.Equal(reader.Latitude, latitude);
@@ -88,24 +79,17 @@ public class SpatialTests : StorageTest
             }
         }
 
-        using (var writer = new IndexWriter(Env, _fieldsMapping))
+        using (var writer = new IndexWriter(Env, fieldsMapping))
         {
             writer.TryDeleteEntry(IdString);
             writer.Commit();
         }
 
-        using (var searcher = new IndexSearcher(Env, _fieldsMapping))
+        using (var searcher = new IndexSearcher(Env, fieldsMapping))
         {
             Span<long> ids = new long[16];
             var entries = searcher.TermQuery("Coordinates", geohash);
             Assert.Equal(0, entries.Fill(ids));
         }
-    }
-
-
-    public override void Dispose()
-    {
-        base.Dispose();
-        _fieldsMapping?.Dispose();
     }
 }

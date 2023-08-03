@@ -25,9 +25,8 @@ public class RavenDB_19283 : StorageTest
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         
-        using var _ = StorageEnvironment.GetStaticContext(out var ctx);
-        Slice.From(ctx, "Items", ByteStringType.Immutable, out Slice itemsSlice);
-        Slice.From(ctx, "id()", ByteStringType.Immutable, out Slice idSlice);
+        Slice.From(bsc, "Items", ByteStringType.Immutable, out Slice itemsSlice);
+        Slice.From(bsc, "id()", ByteStringType.Immutable, out Slice idSlice);
         
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
         
