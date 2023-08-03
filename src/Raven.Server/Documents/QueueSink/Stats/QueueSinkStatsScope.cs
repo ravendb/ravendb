@@ -1,7 +1,7 @@
 ﻿using System.Linq;
-using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Utils.Stats;
+using Sparrow;
 
 namespace Raven.Server.Documents.QueueSink.Stats;
 
@@ -36,9 +36,9 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
         return operation;
     }
 
-    public void RecordConsumedMessage()
+    public void RecordPulledMessage()
     {
-        _stats.NumberOfConsumedMessages++;
+        _stats.NumberOfPulledMessages++;
     }
 
     public void RecordProcessedMessage()
@@ -49,5 +49,15 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
     public void RecordScriptError()
     {
         _stats.ScriptErrorCount++;
+    }
+
+    public void RecordPullCompleteReason(string reason)
+    {
+        _stats.BatchPullStopReason = reason;
+    }
+
+    public void RecordCurrentlyAllocated(long allocatedInBytes)
+    {
+        _stats.CurrentlyAllocated = new Size(allocatedInBytes, SizeUnit.Bytes);
     }
 }

@@ -7,10 +7,10 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.QueueSink)]
     public class QueueSinkConfiguration : ConfigurationCategory
     {
-        [Description("Max number of consumed messages in batch")]
+        [Description("Max number of pulled messages consumed in a single batch")]
         [DefaultValue(8192)]
-        [ConfigurationEntry("QueueSink.MaxNumberOfConsumedMessagesInBatch", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int? MaxNumberOfConsumedMessagesInBatch { get; protected set; }
+        [ConfigurationEntry("QueueSink.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? MaxBatchSize { get; protected set; }
         
         [Description("Maximum number of seconds Queue Sink process will be in a fallback mode after a connection failure. The fallback mode means suspending the process.")]
         [DefaultValue(60 * 15)]

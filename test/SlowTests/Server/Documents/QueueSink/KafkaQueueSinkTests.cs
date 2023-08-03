@@ -13,12 +13,15 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.QueueSink.Test;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 
 namespace SlowTests.Server.Documents.QueueSink
 {
@@ -29,7 +32,6 @@ namespace SlowTests.Server.Documents.QueueSink
         }
 
         private const string DefaultScript = "put(this.Id, this)";
-        private readonly List<string> _defaultQueue = new() { "users" };
 
         [RequiresKafkaRetryFact]
         public void SimpleScript()
@@ -45,13 +47,13 @@ namespace SlowTests.Server.Documents.QueueSink
 
             using IProducer<string, byte[]> producer = CreateKafkaProducer();
 
-            producer.Produce("users", kafkaMessage1);
-            producer.Produce("users", kafkaMessage2);
+            producer.Produce(UsersQueueName, kafkaMessage1);
+            producer.Produce(UsersQueueName, kafkaMessage2);
 
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { "users" });
+            SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
             AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
             using var session = store.OpenSession();
@@ -87,14 +89,14 @@ namespace SlowTests.Server.Documents.QueueSink
 
             using IProducer<string, byte[]> producer = CreateKafkaProducer();
 
-            producer.Produce("users", kafkaMessage1);
-            producer.Produce("users", kafkaMessage2);
+            producer.Produce(UsersQueueName, kafkaMessage1);
+            producer.Produce(UsersQueueName, kafkaMessage2);
 
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, script, new List<string>() { "users" });
+            SetupKafkaQueueSink(store, script, new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromSeconds(20));
+            var queueSinkDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+            AssertQueueSinkDone(queueSinkDone, TimeSpan.FromSeconds(20));
 
             using var session = store.OpenSession();
 
@@ -125,13 +127,13 @@ namespace SlowTests.Server.Documents.QueueSink
                 var user = new User { Id = $"users/{i}", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
                 byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
                 var kafkaMessage = new Message<string, byte[]> { Value = userBytes };
-                producer.Produce("users", kafkaMessage);
+                producer.Produce(UsersQueueName, kafkaMessage);
             }
             
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { "users" });
+            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
             AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
             using var session = store.OpenSession();
@@ -184,7 +186,7 @@ namespace SlowTests.Server.Documents.QueueSink
             using (var srcStore = GetDocumentStore())
             using (var dstStore = GetDocumentStore())
             {
-                SetupKafkaQueueSink(dstStore, DefaultScript, _defaultQueue, bootstrapServers: "http://localhost:1234");
+                SetupKafkaQueueSink(dstStore, DefaultScript, DefaultQueues, bootstrapServers: "http://localhost:1234");
 
                 var exportFile = GetTempFileName();
 
@@ -203,7 +205,7 @@ namespace SlowTests.Server.Documents.QueueSink
 
                 Assert.Equal(QueueBrokerType.Kafka, destinationRecord.QueueSinks[0].BrokerType);
                 Assert.Equal(DefaultScript, destinationRecord.QueueSinks[0].Scripts[0].Script);
-                Assert.Equal(_defaultQueue, destinationRecord.QueueSinks[0].Scripts[0].Queues);
+                Assert.Equal(DefaultQueues, destinationRecord.QueueSinks[0].Scripts[0].Queues);
                 
             }
         }
@@ -230,14 +232,15 @@ namespace SlowTests.Server.Documents.QueueSink
                             new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
                     }); //wrong bootstrap servers
 
-                var alert = await AssertWaitForNotNullAsync(() =>
+                var exception = await AssertWaitForNotNullAsync(() =>
                 {
-                    TryGetLoadError(store.Database, config, out var error);
-
-                    return Task.FromResult(error);
+                    var database = GetDatabase(store.Database).Result;
+                    var consumerCreationError = database.NotificationCenter.QueueSinkNotifications.GetAlert<ExceptionDetails>("Kafka Sink", $"test/test", AlertType.QueueSink_ConsumerCreationError);
+                    
+                    return Task.FromResult(consumerCreationError.Exception);
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
-                Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);
+                Assert.StartsWith("Confluent.Kafka.KafkaException: Local: Invalid argument or configuration", exception);
             }
         }
 

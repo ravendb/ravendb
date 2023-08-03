@@ -20,8 +20,6 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     {
     }
 
-    private readonly List<string> _defaultQueue = new() { "users" };
-
     [RequiresRabbitMqRetryFact]
     public void SimpleScript()
     {
@@ -33,18 +31,18 @@ public class RabbitMqSinkTests : QueueSinkTestBase
 
         var producer = CreateRabbitMqProducer();
 
-        producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
+        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
 
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
         SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
-            new List<string>() { "users" });
+            new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
         AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
         using var session = store.OpenSession();
@@ -80,24 +78,25 @@ public class RabbitMqSinkTests : QueueSinkTestBase
 
         var producer = CreateRabbitMqProducer();
 
-        producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
-        producer.QueueDeclare(queue: "developers", exclusive: false);
+        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+        string developersQueueName = $"developers{QueueSuffix}";
+        producer.QueueDeclare(queue: developersQueueName, exclusive: false);
 
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes2));
         
-        producer.BasicPublish(exchange: "", routingKey: "developers", basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes3));
-        producer.BasicPublish(exchange: "", routingKey: "developers", basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes4));
 
         using var store = GetDocumentStore();
         SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
-            new List<string>() { "users", "developers" });
+            new List<string>() { UsersQueueName, developersQueueName });
 
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
         AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
         using var session = store.OpenSession();
@@ -145,17 +144,17 @@ public class RabbitMqSinkTests : QueueSinkTestBase
 
         var producer = CreateRabbitMqProducer();
 
-        producer.QueueDeclare(queue: _defaultQueue[0], exclusive: false);
+        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
 
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
-        SetupRabbitMqQueueSink(store, script, new List<string>() { "users" });
+        SetupRabbitMqQueueSink(store, script, new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
         AssertQueueSinkDone(etlDone, TimeSpan.FromSeconds(20));
 
         using var session = store.OpenSession();
@@ -182,19 +181,21 @@ public class RabbitMqSinkTests : QueueSinkTestBase
 
         var producer = CreateRabbitMqProducer();
 
+        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+
         for (int i = 0; i < numberOfUsers; i++)
         {
             var user = new User { Id = $"users/{i}", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
             byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
-            producer.BasicPublish(exchange: "", routingKey: _defaultQueue[0], basicProperties: null,
+            producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
                 body: new ReadOnlyMemory<byte>(userBytes));
         }
 
         using var store = GetDocumentStore();
         SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
-            new List<string>() { "users" });
+            new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
         AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
 
         using var session = store.OpenSession();

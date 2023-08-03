@@ -12,6 +12,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         QueueSink_Warning,
         QueueSink_ScriptError,
         QueueSink_ConsumeError,
+        QueueSink_ConsumerCreationError,
 
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,

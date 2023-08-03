@@ -29,11 +29,11 @@ public class QueueSinkLoader : IDisposable
     protected Logger Logger;
     public QueueSinkProcess[] Processes => _processes;
     
-    public event Action<(string ConfigurationName, string TransformationName, QueueSinkProcessStatistics Statistics)> BatchCompleted;
+    public event Action<(string ConfigurationName, string ScriptName, QueueSinkProcessStatistics Statistics)> BatchCompleted;
 
-    public void OnBatchCompleted(string configurationName, string transformationName, QueueSinkProcessStatistics statistics)
+    public void OnBatchCompleted(string configurationName, string scriptName, QueueSinkProcessStatistics statistics)
     {
-        BatchCompleted?.Invoke((configurationName, transformationName, statistics));
+        BatchCompleted?.Invoke((configurationName, scriptName, statistics));
     }
 
     public event Action<QueueSinkProcess> ProcessAdded;

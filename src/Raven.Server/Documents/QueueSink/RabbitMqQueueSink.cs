@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.QueueSink;
 
@@ -8,7 +7,7 @@ namespace Raven.Server.Documents.QueueSink;
 public class RabbitMqQueueSink : QueueSinkProcess
 {
     public RabbitMqQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database,
-        string tag, CancellationToken shutdown) : base(configuration, script, database, tag, shutdown)
+        string tag) : base(configuration, script, database, tag)
     {
     }
 
@@ -16,9 +15,18 @@ public class RabbitMqQueueSink : QueueSinkProcess
     {
         var channel = CreateRabbitMqChannel();
         var consumer = new RabbitMqSinkConsumer(channel);
-        foreach (string queue in Script.Queues)
+
+        try
         {
-            channel.BasicConsume(queue: queue, autoAck: false, consumer);
+            foreach (string queue in Script.Queues)
+            {
+                channel.BasicConsume(queue: queue, autoAck: false, consumer);
+            }
+        }
+        catch
+        {
+            consumer.Dispose();
+            throw;
         }
 
         return consumer;

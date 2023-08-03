@@ -72,7 +72,9 @@ namespace Raven.Server.NotificationCenter
 
         public T GetAlert<T>(string processTag, string processName, AlertType alertType) where T : INotificationDetails, new()
         {
-            Debug.Assert(alertType == AlertType.QueueSink_ConsumeError || alertType == AlertType.QueueSink_ScriptError, $"Got type: {alertType}");
+            Debug.Assert(
+                alertType is AlertType.QueueSink_ConsumeError or AlertType.QueueSink_ScriptError or AlertType.QueueSink_Error
+                    or AlertType.QueueSink_ConsumerCreationError, $"Got type: {alertType}");
 
             var key = $"{processTag}/{processName}";
 

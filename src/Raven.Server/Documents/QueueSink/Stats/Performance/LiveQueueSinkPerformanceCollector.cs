@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Server.Json;
 using Raven.Server.Utils.Stats;
 using Sparrow.Json;
 
@@ -32,7 +33,7 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
     {
         Database.QueueSinkLoader.BatchCompleted += BatchCompleted;
         Database.QueueSinkLoader.ProcessAdded += ProcessAdded;
-        Database.QueueSinkLoader.ProcessRemoved += EtlProcessRemoved;
+        Database.QueueSinkLoader.ProcessRemoved += ProcessRemoved;
 
         try
         {
@@ -52,7 +53,7 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
 
                         perfStats.Add(new QueueSinkProcessPerformanceStats
                         {
-                            TransformationName = process.Script.Name,
+                            ScriptName = process.Script.Name,
                             Performance = process.GetPerformanceStats()
                         });
 
@@ -74,7 +75,7 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
         {
             Database.QueueSinkLoader.BatchCompleted -= BatchCompleted;
             Database.QueueSinkLoader.ProcessAdded -= ProcessAdded;
-            Database.QueueSinkLoader.ProcessRemoved -= EtlProcessRemoved;
+            Database.QueueSinkLoader.ProcessRemoved -= ProcessRemoved;
         }
     }
 
@@ -115,7 +116,7 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
 
                     processesStats.Add(new QueueSinkProcessPerformanceStats
                     {
-                        TransformationName = queueSink.Script.Name,
+                        ScriptName = queueSink.Script.Name,
                         Performance = itemsToSend.Select(item => item.ToPerformanceLiveStatsWithDetails()).ToArray()
                     });
 
@@ -140,10 +141,10 @@ public class LiveQueueSinkPerformanceCollector : DatabaseAwareLivePerformanceCol
 
     protected override void WriteStats(List<QueueSinkTaskPerformanceStats> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
     {
-       // TODO arek writer.WriteQueueSinkTaskPerformanceStats(context, stats);
+       writer.WriteQueueSinkTaskPerformanceStats(context, stats);
     }
 
-    private void EtlProcessRemoved(QueueSinkProcess queueSink)
+    private void ProcessRemoved(QueueSinkProcess queueSink)
     {
         if (_perQueueSinkProcessStats.TryGetValue(queueSink.Configuration.Name, out var processes) == false)
             return;
