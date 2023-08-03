@@ -49,6 +49,10 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
             (UnaryMatchOperation.GreaterThanOrEqual, long l) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, l),
             (UnaryMatchOperation.GreaterThanOrEqual, double d) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, d),
             (UnaryMatchOperation.GreaterThanOrEqual, string s) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, s),
+            
+            (UnaryMatchOperation.NotEquals, long l) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, l)),
+            (UnaryMatchOperation.NotEquals, double d) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, d)),
+            (UnaryMatchOperation.NotEquals, string s) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, s)),
             _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
         };
     }
