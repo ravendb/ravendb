@@ -33,7 +33,7 @@ using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class RachisAdminHandler : RequestHandler
+    public class RachisAdminHandler : ServerRequestHandler
     {
         [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.Operator)]
         public async Task ApplyCommand()
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true, CheckForChanges = false)]
         public async Task GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

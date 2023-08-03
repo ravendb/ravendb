@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_insert", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkInsert()
         {
-            var operationCancelToken = CreateOperationToken();
+            var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var id = GetLongQueryString("id");
             var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 

@@ -10,13 +10,12 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class DatabasesDebugHandler : RequestHandler
+    public class DatabasesDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/databases/idle", "GET", AuthorizationStatus.Operator)]
         public async Task Idle()
         {
             //var name = GetStringQueryString("name", required: false);
-
             var maxTimeDatabaseCanBeIdle = ServerStore.Configuration.Databases.MaxIdleTime.AsTimeSpan;
             var results = new List<DynamicJsonValue>();
 
@@ -27,7 +26,7 @@ namespace Raven.Server.Web.System
                     Name = databaseKvp.Key.ToString()
                 };
 
-                statistics.CanCleanup = ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, maxTimeDatabaseCanBeIdle, statistics, out _);
+                statistics.CanCleanup = ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
 
                 results.Add(statistics.ToJson());
             }
@@ -60,6 +59,8 @@ namespace Raven.Server.Web.System
 
             public string Name { get; set; }
 
+            public TimeSpan? MaxIdleTime { get; set; }
+
             public DateTime LastRecentlyUsed { get; set; }
 
             public DateTime LastWork { get; set; }
@@ -85,6 +86,7 @@ namespace Raven.Server.Web.System
                 return new DynamicJsonValue
                 {
                     [nameof(Name)] = Name,
+                    [nameof(MaxIdleTime)] = MaxIdleTime,
                     [nameof(LastRecentlyUsed)] = LastRecentlyUsed,
                     [nameof(LastWork)] = LastWork,
                     [nameof(IsLoaded)] = IsLoaded,

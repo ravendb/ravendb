@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         protected override void DisposeIndex()
         {
             base.DisposeIndex();
-            _reduceKeyProcessor.ReleaseBuffer();
+            _reduceKeyProcessor?.ReleaseBuffer();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

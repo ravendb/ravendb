@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    using (var token = CreateTimeLimitedQueryToken())
+                    using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                     using (var queryContext = QueryOperationContext.Allocate(Database))
                     {
                         var debug = GetStringQueryString("debug", required: false);
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
-            using (var token = CreateTimeLimitedQueryToken())
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
                 await gqr.WriteDetailedQueryResult(indexQuery, queryContext, writer, token);
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Handlers
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
 
-            using (var token = CreateTimeLimitedQueryToken())
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             {
                 var results = await gqr.GetAnalyzedQueryResults(indexQuery, queryContext, null, token);
 
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.Handlers
                 Operations.Operations.OperationType operationType)
         {
             var options = GetQueryOperationOptions();
-            var token = CreateTimeLimitedQueryOperationToken();
+            var token = CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
 
             var operationId = Database.Operations.GetNextOperationId();
 

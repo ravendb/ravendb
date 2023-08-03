@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunner
     {
+        private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
+
         public class Holder
         {
             public ScriptRunner Parent;
@@ -1947,6 +1949,13 @@ namespace Raven.Server.Documents.Patch
                     var result = call.Call(Undefined.Instance, _args);
                     return new ScriptRunnerResult(this, result);
                 }
+                catch (StatementsCountOverflowException e)
+                {
+                    JavaScriptUtils.Clear();
+                    throw new  Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
+                        $"The maximum number of statements executed have been reached - {_configuration.Patching.MaxStepsForScript}. You can configure it by modifying the configuration option: '{MaxStepsForScriptConfigurationKey}'.",
+                        e);
+                }
                 catch (JavaScriptException e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
@@ -2065,7 +2074,12 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (val.IsNull())
                         return null;
-                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode, isNested);
+                    
+                    var instance = val.AsObject();
+                    if (instance is BlittableObjectInstance boi && boi.TryGetOriginalDocumentIfUnchanged(out var doc))
+                        return doc;
+                    
+                    return JsBlittableBridge.Translate(context, ScriptEngine, instance, modifier, usageMode, isNested);
                 }
                 if (val.IsNumber())
                     return val.AsNumber();

@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminStatsHandler : RequestHandler
+    public class AdminStatsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/stats", "GET", AuthorizationStatus.Operator, SkipLastRequestTimeUpdate = true, IsDebugInformationEndpoint = true)]
         public async Task GetRootStats()

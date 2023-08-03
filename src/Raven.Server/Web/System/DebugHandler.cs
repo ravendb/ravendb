@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public sealed class DebugHandler : RequestHandler
+    public sealed class DebugHandler : ServerRequestHandler
     {
         [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Routes()

@@ -220,16 +220,18 @@ namespace Raven.Server.Documents.Subscriptions
                     using (context.OpenReadTransaction())
                     {
                         var inProgressConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
-
-                        foreach (var connection in inProgressConnections.GetConnections())
+                        if (inProgressConnections != null)
                         {
-                            var inProgressBatchStats = connection.GetBatchPerformanceStats();
-
-                            if (inProgressBatchStats?.Completed == false &&
-                                inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().NumberOfDocuments > 0 &&
-                                batchAggregators.Contains(inProgressBatchStats) == false)
+                            foreach (var connection in inProgressConnections.GetConnections())
                             {
-                                batchAggregators.Add(inProgressBatchStats);
+                                var inProgressBatchStats = connection.GetBatchPerformanceStats();
+
+                                if (inProgressBatchStats?.Completed == false &&
+                                    inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().NumberOfDocuments > 0 &&
+                                    batchAggregators.Contains(inProgressBatchStats) == false)
+                                {
+                                    batchAggregators.Add(inProgressBatchStats);
+                                }
                             }
                         }
                     }

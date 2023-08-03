@@ -71,7 +71,8 @@ namespace Raven.Server.Routing
                                 route.SkipLastRequestTimeUpdate,
                                 route.CorsMode,
                                 route.IsDebugInformationEndpoint,
-                                route.DisableOnCpuCreditsExhaustion);
+                                route.DisableOnCpuCreditsExhaustion,
+                                route.CheckForChanges);
 
                             optionsRouteInfo.Build(corsHandler);
                         }
@@ -89,7 +90,8 @@ namespace Raven.Server.Routing
                             route.SkipLastRequestTimeUpdate,
                             route.CorsMode,
                             route.IsDebugInformationEndpoint,
-                            route.DisableOnCpuCreditsExhaustion);
+                            route.DisableOnCpuCreditsExhaustion,
+                            route.CheckForChanges);
                     }
                     else
                     {

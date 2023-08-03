@@ -1109,7 +1109,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (Logger.IsInfoEnabled)
                         {
-                            await Logger.InfoWithWait("Unable to notify about cluster topology change", e);
+                            Logger.Info("Unable to notify about cluster topology change", e);
                         }
                     }
                 }
@@ -2493,11 +2493,9 @@ namespace Raven.Server.ServerWide
                 {
                     _server.Statistics.MaybePersist(ContextPool, Logger);
 
-                    var maxTimeDatabaseCanBeIdle = Configuration.Databases.MaxIdleTime.AsTimeSpan;
-
                     foreach (var databaseKvp in DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
                     {
-                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, maxTimeDatabaseCanBeIdle, statistics: null, out DocumentDatabase database) == false)
+                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: null, out DocumentDatabase database) == false)
                             continue;
 
                         var dbIdEtagDictionary = new Dictionary<string, long>();
@@ -2535,7 +2533,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, TimeSpan maxTimeDatabaseCanBeIdle, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database)
+        public bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database)
         {
             database = null;
             var now = SystemTime.UtcNow;
@@ -2544,16 +2542,6 @@ namespace Raven.Server.ServerWide
                 statistics.LastRecentlyUsed = lastRecentlyUsed;
 
             var diff = now - lastRecentlyUsed;
-
-            if (diff <= maxTimeDatabaseCanBeIdle)
-            {
-                if (statistics == null)
-                    return false;
-                else
-                {
-                    statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last recently used ({lastRecentlyUsed}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
-                }
-            }
 
             if (DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> resourceTask) == false
                 || resourceTask == null
@@ -2569,6 +2557,21 @@ namespace Raven.Server.ServerWide
             }
 
             database = resourceTask.Result;
+
+            var maxTimeDatabaseCanBeIdle = database.Configuration.Databases.MaxIdleTime.AsTimeSpan;
+
+            if (statistics != null)
+                statistics.MaxIdleTime = maxTimeDatabaseCanBeIdle;
+
+            if (diff <= maxTimeDatabaseCanBeIdle)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last recently used ({lastRecentlyUsed}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
+                }
+            }
 
             if (statistics != null)
                 statistics.IsLoaded = true;
@@ -3331,7 +3334,7 @@ namespace Raven.Server.ServerWide
 
                 using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                 {
-                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
+                    connectionInfo = ReplicationUtils.GetDatabaseTcpInfoAsync(GetNodeHttpServerUrl(), url, database, "Test-Connection", Server.Certificate.Certificate,
                         cts.Token);
                 }
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);

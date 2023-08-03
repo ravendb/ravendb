@@ -15,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
@@ -1040,13 +1041,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             return result;
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
-            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var periodicBackup in PeriodicBackups)
+            var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
+
+            foreach (var config in PeriodicBackups.Select(x => x.Configuration).Where(config => config.Disabled))
             {
-                if (periodicBackup.Configuration.Disabled)
-                    dict[periodicBackup.Configuration.Name] = tombstoneCollections;
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.Backup, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
             }
 
             return dict;

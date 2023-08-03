@@ -73,7 +73,10 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
+            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
+
+        public abstract Task CheckForChanges(RequestHandlerContext context);
 
         protected Stream TryGetRequestFromStream(string itemName)
         {
@@ -658,7 +661,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
-                        return new AllowedDbs { HasAccess = true};
+                        return new AllowedDbs { HasAccess = true };
 
                     await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                     return new AllowedDbs { HasAccess = false };
@@ -777,15 +780,21 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-        protected virtual OperationCancelToken CreateOperationToken()
+        protected virtual OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
 
-        protected virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        protected virtual OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
-    }
+        }
+
+        protected virtual OperationCancelToken CreateBackgroundOperationToken()
+        {
+            return new OperationCancelToken(ServerStore.ServerShutdown);
+        }
+
         /// <summary>
         /// puts the given string in TrafficWatch property of HttpContext.Items
         /// puts the given type in TrafficWatchChangeType property of HttpContext.Items

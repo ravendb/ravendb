@@ -154,7 +154,7 @@ namespace SlowTests.Issues
             await AssertWaitForValueAsync(async () => await GetMembersCount(store1, databaseName: databaseCopyName), 2);
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }

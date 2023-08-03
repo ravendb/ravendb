@@ -16,8 +16,6 @@ using Xunit.Abstractions;
 using Sparrow.Platform;
 using Raven.Tests.Core.Utils.Entities;
 
-
-
 namespace SlowTests.Issues
 {
     public class RavenDB_19948 : RavenTestBase
@@ -299,7 +297,7 @@ namespace SlowTests.Issues
                         GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath }
                     }
                 };
-               
+
                 var exception = Assert.Throws<RavenException>(() =>
                     store.Maintenance.ForDatabase(dbName).Send(new PutConnectionStringOperation<OlapConnectionString>(olapConnStr)));
                 Assert.Contains(

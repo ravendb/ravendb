@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -135,8 +137,16 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 CollectionNameRetriever collectionRetriever = map is QueryExpressionSyntax ? CollectionNameRetriever.QuerySyntax : CollectionNameRetriever.MethodSyntax;
                 visitor.Visit(map);
                 collectionRetriever.Visit(map);
-                indexData.IsMapReduceOrMultiMap |= collectionRetriever.CollectionNames.Length > 1;
-                indexData.Collections = collectionRetriever.CollectionNames;
+
+                if (collectionRetriever.CollectionNames is null)
+                {
+                    indexData.Collections = new[] {Raven.Client.Constants.Documents.Collections.AllDocumentsCollection};
+                }
+                else
+                {
+                    indexData.IsMapReduceOrMultiMap |= collectionRetriever.CollectionNames.Length > 1;
+                    indexData.Collections = collectionRetriever.CollectionNames;
+                }
             }
 
             return indexes;
@@ -412,8 +422,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             return SyntaxFactory.InvocationExpression(invocationExpression,
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(rewrittenArguments)));
-            
-            
         }
 
         private static ExpressionSyntax RewriteExpressionSyntax(IndexData indexData, ExpressionSyntax originalExpression, out string message)
@@ -430,11 +438,13 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 InvocationExpressionSyntax iesInner => RecursivelyTransformInvocationExpressionSyntax(indexData, iesInner, out message),
                 SimpleLambdaExpressionSyntax =>  originalExpression,
                 IdentifierNameSyntax ins => ChangeIdentifierToIndexMergerDefaultWhenNeeded(ins), 
-                BinaryExpressionSyntax bes => RewriteBinaryExpression(indexData, bes),
+                BinaryExpressionSyntax bes => RewriteBinaryExpression(indexData, bes, out message),
                 ParenthesizedExpressionSyntax pes => RewriteParenthesizedExpressionSyntax(indexData, pes, out message),
                 LiteralExpressionSyntax => originalExpression,
                 ConditionalExpressionSyntax ces => RewriteConditionalExpressionSyntax(indexData, ces, out message),
                 PrefixUnaryExpressionSyntax pues => pues,
+                CastExpressionSyntax ces => RewriteCastExpressionSyntax(indexData, ces, out message),
+                ElementAccessExpressionSyntax eaes => RewriteElementAccessExpressionSyntax(indexData, eaes, out message),
                 _ => null
             };
             
@@ -446,7 +456,19 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 return original;
             }
         }
-        
+
+        private static ExpressionSyntax RewriteElementAccessExpressionSyntax(IndexData indexData, ElementAccessExpressionSyntax eaes, out string message)
+        {
+            var innerExpression = RewriteExpressionSyntax(indexData, eaes.Expression, out message);
+            return SyntaxFactory.ElementAccessExpression(innerExpression, eaes.ArgumentList);
+        }
+
+        private static ExpressionSyntax RewriteCastExpressionSyntax(IndexData indexData, CastExpressionSyntax ces, out string message)
+        {
+            var innerExpression = RewriteExpressionSyntax(indexData, ces.Expression, out message);
+            return SyntaxFactory.CastExpression(ces.OpenParenToken, ces.Type, ces.CloseParenToken, innerExpression);
+        }
+
         private static ExpressionSyntax RewriteParenthesizedExpressionSyntax(IndexData indexData, ParenthesizedExpressionSyntax pes, out string message)
         {
             var innerExpression = pes.Expression;
@@ -493,10 +515,11 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             return expr.Parent;
         }
         
-        private static BinaryExpressionSyntax RewriteBinaryExpression(IndexData indexData, BinaryExpressionSyntax original)
+        private static BinaryExpressionSyntax RewriteBinaryExpression(IndexData indexData, BinaryExpressionSyntax original, out string message)
         {
-            var leftSide = RewriteExpressionSyntax(indexData, original.Left, out var _);
-            var rightSide = RewriteExpressionSyntax(indexData, original.Right, out var _);
+            var leftSide = RewriteExpressionSyntax(indexData, original.Left, out var m1);
+            var rightSide = RewriteExpressionSyntax(indexData, original.Right, out var m2);
+            message = m1 is null && m2 is null ? null : $"{m1 ?? string.Empty} | {m2 ?? string.Empty}";
             return SyntaxFactory.BinaryExpression(original.Kind(), leftSide, original.OperatorToken, rightSide);
         }
         
@@ -511,13 +534,26 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 return SyntaxFactory.MemberAccessExpression(memberAccessExpression.Kind(), inner, memberAccessExpression.Name);
             }
             
-            if (memberAccessExpression?.Expression is SimpleNameSyntax)
+            if (memberAccessExpression?.Expression is SimpleNameSyntax sns )
             {
+                if (sns.Identifier.ToString() != data.FromIdentifier)
+                    return memberAccessExpression;
+                
                 return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, DefaultDocumentIdentifier,
                     memberAccessExpression.Name);
             }
+            
+            if (memberAccessExpression?.Expression is InvocationExpressionSyntax ies)
+            {
+                var expr = RecursivelyTransformInvocationExpressionSyntax(data, ies, out var _);
+                return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, memberAccessExpression.Name);
+            }
 
-
+            if (memberAccessExpression?.Expression is ThisExpressionSyntax tes)
+            {
+                return memberAccessExpression;
+            }
+            
             return null;
         }
 

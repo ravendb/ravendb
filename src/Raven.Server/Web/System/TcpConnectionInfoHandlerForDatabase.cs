@@ -11,12 +11,25 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Get()
         {
+            var forExternalUse = CanConnectViaPublicClusterTcpUrl() == false;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl());
+                var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl(), forExternalUse);
                 context.Write(writer, output);
             }
+        }
+
+        private bool CanConnectViaPublicClusterTcpUrl()
+        {
+            var senderUrl = GetStringQueryString("senderUrl", required: false);
+            if (string.IsNullOrEmpty(senderUrl))
+                return true;
+
+            var clusterTopology = ServerStore.GetClusterTopology();
+            var (hasUrl, _) = clusterTopology.TryGetNodeTagByUrl(senderUrl);
+            return hasUrl;
         }
     }
 }

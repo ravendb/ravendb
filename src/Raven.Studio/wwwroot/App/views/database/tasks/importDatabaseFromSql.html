@@ -501,7 +501,7 @@
                     </span>
                     <div class="inline-edit" data-bind="with: effectiveInnerTable, visible: action() === 'embed'">
                         <span class="static">
-                            <span class="raven-property-name" data-bind="text: $parent.name"></span>:
+                            <span class="raven-property-name m-0" data-bind="text: $parent.name"></span>
                         </span>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
                     </div>
@@ -513,6 +513,25 @@
                             <span class="text-muted" data-bind="visible: $parent.type === 'OneToMany'">, ...]</span>
                         </div>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
+                    </div>
+                    <div data-bind="with: effectiveInnerTable, visible: action() === 'embed'">
+                        <div class="d-flex align-items-center gap-3 margin-left">
+                            <div class="small-label">SQL keys</div>
+                            <div class="btn-group link-actions">
+                                <button class="btn btn-sm btn-default" title="Skip @sql-keys" 
+                                        data-bind="css: { active: sqlKeysStorage() === 'None' }, click: _.partial(sqlKeysStorage, 'None')">
+                                    <i class="icon-skip"></i>
+                                </button>
+                                <button class="btn btn-sm btn-default" title="Put @sql-keys as a nested document property" 
+                                        data-bind="css: { active: sqlKeysStorage() === 'AsNestedDocumentProperty' }, click: _.partial(sqlKeysStorage, 'AsNestedDocumentProperty')">
+                                    <i class="icon-nested-document-property"></i>
+                                </button>
+                                <button class="btn btn-sm btn-default" title="Put @sql-keys in document metadata" 
+                                        data-bind="css: { active: sqlKeysStorage() === 'OnDocumentMetadata' }, click: _.partial(sqlKeysStorage, 'OnDocumentMetadata')">
+                                    <i class="icon-document-metadata"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
         </div>

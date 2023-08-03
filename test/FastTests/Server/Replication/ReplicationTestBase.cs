@@ -301,7 +301,6 @@ namespace FastTests.Server.Replication
                 {
                     MentorNode = responsibleNode
                 };
-                ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }
             await Task.WhenAll(tasks);
@@ -376,10 +375,6 @@ namespace FastTests.Server.Replication
         protected static async Task SetReplicationConflictResolutionAsync(DocumentStore store, StraightforwardConflictResolution conflictResolution)
         {
             await UpdateConflictResolver(store, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
-        }
-
-        protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
-        {
         }
 
         protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)

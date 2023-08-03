@@ -23,7 +23,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class MemoryDebugHandler : RequestHandler
+    public class MemoryDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/memory/gc", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GcInfo()
@@ -294,7 +294,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var memInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
-            long totalLuceneUnmanagedAllocations = NativeMemory.TotalAllocatedMemoryByLucene;
             var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
             var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
             var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
@@ -327,7 +326,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.WorkingSet)] = memInfo.WorkingSet.ToString(),
                 [nameof(MemoryInfo.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
-                [nameof(MemoryInfo.LuceneUnmanagedAllocations)] = Size.Humane(totalLuceneUnmanagedAllocations),
+                [nameof(MemoryInfo.LuceneManagedAllocationsForTermCache)] = Size.Humane(NativeMemory.TotalLuceneManagedAllocationsForTermCache),
+                [nameof(MemoryInfo.LuceneUnmanagedAllocationsForSorting)] = Size.Humane(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
                 [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Sodium.LockedBytes),
@@ -538,7 +538,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string Remarks { get; set; }
             public string ManagedAllocations { get; set; }
             public string UnmanagedAllocations { get; set; }
-            public string LuceneUnmanagedAllocations { get; set; }
+            public string LuceneManagedAllocationsForTermCache { get; set; }
+            public string LuceneUnmanagedAllocationsForSorting { get; set; }
             public string EncryptionBuffersInUse { get; set; }
             public string EncryptionBuffersPool { get; set; }
             public string EncryptionLockedMemory { get; set; }

@@ -14,7 +14,7 @@ abstract class ongoingTaskModel {
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     
     taskConnectionStatus = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus>();    
-    
+
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
     stateText: KnockoutComputed<string>;

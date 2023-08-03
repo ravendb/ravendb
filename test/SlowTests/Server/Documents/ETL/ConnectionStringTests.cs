@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -38,6 +39,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -127,6 +129,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = "SqlConnectionString",
                     ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -196,7 +199,8 @@ namespace SlowTests.Server.Documents.ETL
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                        FactoryName = "Npgsql"
                     };
                     var elasticConnectionStr = new ElasticSearchConnectionString
                     {
@@ -236,7 +240,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [Fact]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetDocumentStore())
@@ -250,7 +254,8 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    FactoryName = "Npgsql"
                 };
                 var elasticConnectionStr = new ElasticSearchConnectionString
                 {
@@ -274,6 +279,29 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.True(resultElastic.SqlConnectionStrings.Count == 0);
                 Assert.True(resultElastic.RavenConnectionStrings.Count == 0);
                 Assert.True(resultElastic.ElasticSearchConnectionStrings.Count > 0);
+            }
+        }
+
+        [Fact]
+        public void CannotAddSqlConnectionStringWithInvalidFactoryName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var e = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                {
+                    Name = "Invalid Factory Connection String",
+                    ConnectionString = "some-connection-string-that-doesnt-matter",
+                    FactoryName = "Invalid.Factory.4.20-final.stable"
+                }))); 
+                Assert.Contains("Invalid connection string configuration. Errors: Unsupported factory 'Invalid.Factory.4.20-final.stable'", e.Message);
+                
+                e = Assert.Throws<BadRequestException>(()=>store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                    {
+                        Name = "Not-supported Factory Connection String",
+                        ConnectionString = "some-connection-string-that-doesnt-matter",
+                        FactoryName = "System.Data.OleDb"
+                    }))); 
+                Assert.Contains("Raven.Client.Exceptions.BadRequestException: Invalid connection string configuration. Errors: Factory 'System.Data.OleDb' is not implemented yet.", e.Message);
             }
         }
     }

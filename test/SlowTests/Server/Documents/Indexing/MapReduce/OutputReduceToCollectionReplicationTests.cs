@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
@@ -91,11 +91,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        protected override void ModifyReplicationDestination(ReplicationNode replicationNode)
-        {
-            //replicationNode.SkipIndexReplication = true;
-        }
-
         public string TombstoneCleanerIdentifier => nameof(OutputReduceToCollectionReplicationTests);
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
@@ -106,7 +101,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             };
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             throw new NotImplementedException();
         }

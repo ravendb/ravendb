@@ -24,7 +24,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class NodeDebugHandler : RequestHandler
+    public class NodeDebugHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/node/clear-http-clients-pool", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task ClearHttpClientsPool()
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
                 {
-                    var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
+                    var info = await ReplicationUtils.GetServerTcpInfoAsync(url, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
                     result.TcpInfo.TcpInfoTime = sp.ElapsedMilliseconds;
 
                     using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

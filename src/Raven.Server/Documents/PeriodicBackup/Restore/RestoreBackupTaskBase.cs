@@ -337,11 +337,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
                         database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
 
+                        result.Files.FileCount = filesToRestore.Count + (snapshotRestore ? 1 : 0);
+                        
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
                             if (snapshotRestore)
                             {
-                                await RestoreFromSmugglerFile(onProgress, database, firstFile, context);
+                                await RestoreFromSmugglerFile(onProgress, database, firstFile, context, result);
                                 await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
 
                                 result.SnapshotRestore.Processed = true;
@@ -675,9 +677,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             for (var i = 0; i < filesToRestore.Count - 1; i++)
             {
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{filesToRestore.Count:#,#;;0}");
+
+                var fileName = filesToRestore[i];
+                result.Files.CurrentFileName = fileName;
+                result.Files.CurrentFile++;
+
                 onProgress.Invoke(result.Progress);
 
-                var filePath = GetBackupPath(filesToRestore[i]);
+                var filePath = GetBackupPath(fileName);
                 await ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
@@ -687,12 +694,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
-            var lastFilePath = GetBackupPath(filesToRestore.Last());
 
             result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
+
+            var lastFileName = filesToRestore.Last();
+            result.Files.CurrentFileName = lastFileName;
+            result.Files.CurrentFile++;
+
             result.Indexes.Skipped = RestoreFromConfiguration.SkipIndexes;
 
             onProgress.Invoke(result.Progress);
+
+            var lastFilePath = GetBackupPath(lastFileName);
             await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
@@ -755,6 +768,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
+
+            result.Files.CurrentFileName = null;
 
             long totalExecutedCommands = 0;
 
@@ -913,7 +928,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         /// <param name="database"></param>
         /// <param name="smugglerFile"></param>
         /// <param name="context"></param>
-        protected async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context)
+        /// <param name="result"></param>
+        protected async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile,
+            DocumentsOperationContext context, RestoreResult result)
         {
             var destination = new DatabaseDestination(database);
 
@@ -926,6 +943,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var lastPath = GetSmugglerBackupPath(smugglerFile);
 
+            result.Files.CurrentFileName = smugglerFile; 
+            result.Files.CurrentFile++;
+
+            onProgress.Invoke(result.Progress);
             using (var zip = await GetZipArchiveForSnapshot(lastPath))
             {
                 foreach (var entry in zip.Entries)

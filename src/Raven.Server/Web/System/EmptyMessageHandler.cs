@@ -10,7 +10,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.System
 {
-    public class EmptyMessageHandler : RequestHandler
+    public class EmptyMessageHandler : ServerRequestHandler
     {
         [RavenAction("/test/empty-message", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Get()

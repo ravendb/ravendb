@@ -20,6 +20,7 @@ using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -45,6 +46,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -4148,6 +4150,8 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
+        public string BlockingSourceName => TombstoneCleanerIdentifier;
+
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
@@ -4165,11 +4169,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
-            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            if (Status == IndexRunningStatus.Disabled || Status == IndexRunningStatus.Paused)
-                dict[Name] = Collections;
+            var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
+
+            if (Status is not (IndexRunningStatus.Disabled or IndexRunningStatus.Paused)) 
+                return dict;
+
+            var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.Index, Name);
+            dict[source] = Collections;
 
             return dict;
         }

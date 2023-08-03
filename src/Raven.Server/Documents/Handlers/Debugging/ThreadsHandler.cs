@@ -21,7 +21,7 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ThreadsHandler : RequestHandler
+    public class ThreadsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task StackTrace()
