@@ -31,7 +31,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public List<RevisionRecord> Revisions;
 
         // for sharding
-        public HashSet<long> ActiveBatchesFromSender;
         public string ShardName;
 
         public RecordBatchSubscriptionDocumentsCommand()
@@ -351,8 +350,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(ShardName)] = ShardName;
 
-            if (ActiveBatchesFromSender != null)
-                json[nameof(ActiveBatchesFromSender)] = new DynamicJsonArray(ActiveBatchesFromSender);
             if (Documents != null)
                 json[nameof(Documents)] = new DynamicJsonArray(Documents);
             if(Revisions != null)

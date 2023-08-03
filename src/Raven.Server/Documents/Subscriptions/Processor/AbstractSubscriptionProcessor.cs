@@ -69,7 +69,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand, TItem> : I
 
     protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, SubscriptionBatchItem batchItem);
 
-    public abstract Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch);
+    public abstract Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch);
 
     public abstract Task AcknowledgeBatchAsync(long batchId, string changeVector);
 

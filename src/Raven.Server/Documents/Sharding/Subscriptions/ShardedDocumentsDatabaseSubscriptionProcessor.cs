@@ -184,9 +184,9 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
 
     public HashSet<string> Skipped;
 
-    public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
+    public override async Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch)
     {
-        var result = await SubscriptionConnectionsState.RecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
+        var result = await SubscriptionConnectionsState.TryRecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
         Skipped = result.Skipped as HashSet<string>;
         return result.Index;
     }

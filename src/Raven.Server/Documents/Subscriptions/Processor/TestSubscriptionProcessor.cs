@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             Fetcher.StartEtag = etag;
         }
 
-        public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
+        public override Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch)
         {
             throw new NotSupportedException();
         }
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             Fetcher.StartEtag = etag;
         }
 
-        public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch)
+        public override Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch)
         {
             throw new NotSupportedException();
         }

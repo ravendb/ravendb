@@ -12,6 +12,6 @@ public interface ISubscriptionProcessor<TIncludesCommand> : IDisposable
 {
     IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out TIncludesCommand includesCommands);
     Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch);
-    Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch);
+    Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch);
     Task AcknowledgeBatchAsync(long currentBatchId, string clientReplyChangeVector);
 }

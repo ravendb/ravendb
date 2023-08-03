@@ -36,7 +36,7 @@ public sealed class OrchestratedSubscriptionProcessor : AbstractSubscriptionProc
     }
 
     // should never hit this
-    public override Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
+    public override Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
 
     // should never hit this
     public override Task AcknowledgeBatchAsync(long batchId, string changeVector) => throw new NotImplementedException();

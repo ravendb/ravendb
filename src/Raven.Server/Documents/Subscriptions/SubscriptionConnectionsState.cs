@@ -211,12 +211,12 @@ namespace Raven.Server.Documents.Subscriptions
             return await RecordBatchInternal(command);
         }
 
-        public async Task<(long Index, object Skipped)> RecordBatchDocumentsAsync(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
+        public async Task<(long Index, object Skipped)> TryRecordBatchDocumentsAsync(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
         {
             if (list.Count == 0 && deleted.Count == 0 && lastRecordedChangeVector == null)
             {
                 // nothing to record
-                return await Task.FromResult<(long, object)>((0, null));
+                return await Task.FromResult<(long, object)>((ISubscriptionConnection.NonExistentBatch, null));
             }
 
             var command = new RecordBatchSubscriptionDocumentsCommand(
