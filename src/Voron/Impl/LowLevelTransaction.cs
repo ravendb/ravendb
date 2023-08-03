@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -53,7 +52,7 @@ namespace Voron.Impl
         public long NumberOfModifiedPages => _numberOfModifiedPages;
 
         private readonly WriteAheadJournal _journal;
-        internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
+        internal readonly List<JournalSnapshot> JournalSnapshots = new();
 
         bool IPagerLevelTransactionState.IsWriteTransaction => Flags == TransactionFlags.ReadWrite;
 
@@ -70,12 +69,11 @@ namespace Voron.Impl
 #if DEBUG
             public int BuilderUsages;
 #endif
-            public readonly TableValueBuilder TableValueBuilder = new TableValueBuilder();
+            public readonly TableValueBuilder TableValueBuilder = new();
 
-            public int ScratchPagesTablePoolIndex = 0;
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-            public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
+            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
+            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new ();
+            public readonly HashSet<long> DirtyPagesPool = new ();
 
             public void Reset()
             {

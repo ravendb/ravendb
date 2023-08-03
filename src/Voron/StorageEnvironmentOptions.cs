@@ -313,6 +313,7 @@ namespace Voron
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AssertNoCatastrophicFailure()
         {
             if (_catastrophicFailure == null)
@@ -321,10 +322,15 @@ namespace Voron
             if (_skipCatastrophicFailureAssertion)
                 return;
 
-            if (_log.IsInfoEnabled)
-                _log.Info($"CatastrophicFailure state, about to throw. Originally was set in the following stack trace : {_catastrophicFailureStack}");
+            AssertNoCatastrophicFailureUnlikely();
 
-            _catastrophicFailure.Throw(); // force re-throw of error
+            void AssertNoCatastrophicFailureUnlikely()
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"CatastrophicFailure state, about to throw. Originally was set in the following stack trace : {_catastrophicFailureStack}");
+
+                _catastrophicFailure.Throw(); // force re-throw of error
+            }
         }
 
         public IDisposable SkipCatastrophicFailureAssertion()
