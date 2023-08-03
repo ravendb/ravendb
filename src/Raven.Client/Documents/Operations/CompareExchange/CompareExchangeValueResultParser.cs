@@ -86,12 +86,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             var type = typeof(T);
 
             if (raw == null)
-                return new CompareExchangeValue<T>(key, index, default, null, cv);
+                return new CompareExchangeValue<T>(key, index, default, cv, metadata: null);
 
             MetadataAsDictionary metadata = null;
             if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) && bjro != null)
             {
-                metadata = materializeMetadata == false 
+                metadata = materializeMetadata == false
                     ? new MetadataAsDictionary(bjro)
                     : MetadataAsDictionary.MaterializeFromBlittable(bjro);
             }
@@ -100,34 +100,34 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             {
                 // simple
                 raw.TryGet(Constants.CompareExchange.ObjectFieldName, out T value);
-                return new CompareExchangeValue<T>(key, index, value, metadata, cv);
+                return new CompareExchangeValue<T>(key, index, value, cv, metadata);
             }
 
             if (type == typeof(BlittableJsonReaderObject))
             {
                 if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object rawValue) == false)
                 {
-                    return new CompareExchangeValue<T>(key, index, default, metadata, cv);
+                    return new CompareExchangeValue<T>(key, index, default, cv, metadata);
                 }
 
                 switch (rawValue)
                 {
                     case null:
-                        return new CompareExchangeValue<T>(key, index, default, metadata, cv);
+                        return new CompareExchangeValue<T>(key, index, default, cv, metadata);
                     case BlittableJsonReaderObject _:
-                        return new CompareExchangeValue<T>(key, index, (T)rawValue, metadata, cv);
+                        return new CompareExchangeValue<T>(key, index, (T)rawValue, cv, metadata);
                     default:
-                        return new CompareExchangeValue<T>(key, index, (T)(object)raw, metadata, cv);
+                        return new CompareExchangeValue<T>(key, index, (T)(object)raw, cv, metadata);
                 }
             }
 
             if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
             {
-                return new CompareExchangeValue<T>(key, index, default, metadata, cv);
+                return new CompareExchangeValue<T>(key, index, default, cv, metadata);
             }
 
             var converted = conventions.Serialization.DefaultConverter.FromBlittable<ResultHolder>(raw);
-            return new CompareExchangeValue<T>(key, index, converted.Object, metadata, cv);
+            return new CompareExchangeValue<T>(key, index, converted.Object, cv, metadata);
         }
 
         private class ResultHolder

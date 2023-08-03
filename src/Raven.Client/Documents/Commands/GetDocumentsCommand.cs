@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Commands
         private readonly string[] _includes;
         private readonly string[] _counters;
         private readonly bool _includeAllCounters;
-        private bool _loadFromClusterWideTx;
+        private TransactionMode _txMode;
 
         private readonly IEnumerable<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly IEnumerable<string> _revisionsIncludeByChangeVector;
@@ -66,7 +67,7 @@ namespace Raven.Client.Documents.Commands
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
-        
+
         public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionsIncludesByChangeVector, DateTime? revisionIncludeByDateTimeBefore, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
@@ -103,7 +104,7 @@ namespace Raven.Client.Documents.Commands
                 .Append(node.Database)
                 .Append("/docs?");
 
-            if (_loadFromClusterWideTx)
+            if (_txMode == TransactionMode.ClusterWide)
                 pathBuilder.Append("&txMode=ClusterWide");
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
@@ -179,7 +180,7 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append("&revisions=").Append(Uri.EscapeDataString(changeVector));
                 }
             }
-            
+
             if (_revisionsIncludeByDateTime != null)
             {
                 pathBuilder.Append("&revisionsBefore=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
@@ -269,9 +270,9 @@ namespace Raven.Client.Documents.Commands
 
         public override bool IsReadRequest => true;
 
-        internal void FromClusterWideTx()
+        internal void SetTransactionMode(TransactionMode mode)
         {
-            _loadFromClusterWideTx = true;
+            _txMode = mode;
         }
     }
 }

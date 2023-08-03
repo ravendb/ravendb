@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         public long Index { get; internal set; }
         public T Value { get; set; }
 
-        public string ChangeVector { get; set; }
+        public string ChangeVector { get; internal set; }
         
         public IMetadataDictionary Metadata => _metadataAsDictionary ??= new MetadataAsDictionary();
 
@@ -28,12 +28,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         IMetadataDictionary ICompareExchangeValue.Metadata => Metadata;
         bool ICompareExchangeValue.HasMetadata => HasMetadata;
 
-        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null) : this(key, index, value, metadata, null)
+        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null) 
+            : this(key, index, value, changeVector: null, metadata)
         {
             
         }
         
-        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata, string changeVector)
+        internal CompareExchangeValue(string key, long index, T value, string changeVector, IMetadataDictionary metadata)
         {
             Key = key;
             Index = index;
