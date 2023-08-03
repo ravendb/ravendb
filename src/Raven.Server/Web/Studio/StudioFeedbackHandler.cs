@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
-    public class StudioFeedbackHandler : RequestHandler
+    public class StudioFeedbackHandler : ServerRequestHandler
     {
         [RavenAction("/studio/feedback", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Feedback()

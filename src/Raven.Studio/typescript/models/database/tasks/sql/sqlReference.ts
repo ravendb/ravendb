@@ -50,7 +50,8 @@ class sqlReference {
             ColumnsMapping: this.effectiveInnerTable().getColumnsMapping(binaryToAttachment),
             AttachmentNameMapping: this.effectiveInnerTable().getAttachmentsMapping(binaryToAttachment),
             LinkedCollections: this.effectiveInnerTable().getLinkedReferencesDto(),
-            NestedCollections: this.effectiveInnerTable().getEmbeddedReferencesDto(binaryToAttachment)
+            NestedCollections: this.effectiveInnerTable().getEmbeddedReferencesDto(binaryToAttachment),
+            SqlKeysStorage: this.effectiveInnerTable().sqlKeysStorage()
         };
     }
     

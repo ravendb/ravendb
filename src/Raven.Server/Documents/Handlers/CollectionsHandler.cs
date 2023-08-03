@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
-                using (var token = CreateOperationToken())
+                using (var token = CreateHttpRequestBoundOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

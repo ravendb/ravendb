@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Sparrow.Utils;
 using Voron;
 using Voron.Impl;
 
@@ -25,6 +27,12 @@ namespace Raven.Server.Indexing
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, LuceneIndexInputType indexInputType) : this(tx, environment, tempFileCache, "Files", indexInputType)
         { }
+
+        static LuceneVoronDirectory()
+        {
+            ArrayHolder.OnArrayHolderCreated = NativeMemory.IncrementLuceneManagedAllocations;
+            ArrayHolder.OnArrayHolderDisposed = NativeMemory.DecrementLuceneManagedAllocations;
+        }
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name, LuceneIndexInputType indexInputType)
         {
@@ -56,7 +64,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            return filesTree.Read(name) != null;
+            return filesTree.Exists(name);
         }
 
         public override string[] ListAll(IState s)
@@ -122,8 +130,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            var readResult = filesTree.Read(name);
-            if (readResult == null)
+            if (filesTree.Exists(name) == false)
                 throw new FileNotFoundException("Could not find file", name);
 
             using (Slice.From(state.Transaction.Allocator, name, out Slice str))
@@ -168,8 +175,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            var readResult = filesTree.ReadStream(name);
-            if (readResult == null)
+            if (filesTree.Exists(name) == false)
                 throw new FileNotFoundException("Could not find file", name);
 
             filesTree.DeleteStream(name);

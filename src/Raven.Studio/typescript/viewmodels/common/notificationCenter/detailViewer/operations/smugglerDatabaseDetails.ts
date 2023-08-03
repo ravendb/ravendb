@@ -51,6 +51,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     messagesJoined: KnockoutComputed<string>;
     previousProgressMessages: string[];
     processingSpeed: KnockoutComputed<string>;
+    
+    filesProcessed: KnockoutComputed<File>;
+    
+    filesCount: KnockoutComputed<Raven.Client.Documents.Smuggler.SmugglerProgressBase.FileCounts>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -61,6 +65,29 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     protected initObservables() {
         super.initObservables();
+        
+        this.filesCount = ko.pureComputed(() => {
+            if (this.op.status() !== "InProgress") {
+                return null;
+            }
+
+            const status = this.op.progress();
+            if (!status) {
+                return null;
+            }
+
+            if ("Files" in status) {
+                const files = (status as Raven.Client.ServerWide.Operations.RestoreProgress).Files;
+
+                if (!files.FileCount) {
+                    return null;
+                }
+                
+                return files;
+            }
+            
+            return null;
+        });
         
         this.canDelay = ko.pureComputed(() => {
             const completed = this.op.isCompleted();
@@ -343,9 +370,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }
 
         let processingSpeedText = smugglerDatabaseDetails.ProcessingText;
-        const isDocuments = name === "Documents";
 
-        const skippedCount = isDocuments ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
+        const hasSkippedCount = "SkippedCount" in item;
+        const skippedCount = hasSkippedCount ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
         
         if (this.showSpeed(name) && item.StartTime) {
             const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
@@ -363,8 +390,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             stage: stage,
             hasReadCount: true, // it will be reassigned in post-processing
             readCount: item.ReadCount.toLocaleString(),
-            hasSkippedCount: isDocuments,
-            skippedCount: isDocuments ? skippedCount.toLocaleString() : "-",
+            hasSkippedCount: hasSkippedCount,
+            skippedCount: hasSkippedCount ? skippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
             processingSpeedText: processingSpeedText,

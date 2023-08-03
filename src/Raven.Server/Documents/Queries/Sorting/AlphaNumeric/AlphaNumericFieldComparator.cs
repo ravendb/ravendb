@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.IO;
 using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
-using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             _values = new UnmanagedStringArray.UnmanagedString[numHits];
             _field = field;
         }
+        
 
         public override int Compare(int slot1, int slot2)
         {
@@ -99,13 +100,14 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             private AlphanumComparer()
             {
-
+    
             }
 
             public unsafe struct AlphanumericStringComparisonState
             {
+                public int CurrentCharacterCharAmount;
+                public fixed char CurCharacters[4];
                 public int CurPositionInString;
-                public char CurCharacter;
                 public readonly UnmanagedStringArray.UnmanagedString OriginalString;
                 public readonly int StringLength;
                 public bool CurSequenceIsNumber;
@@ -113,85 +115,95 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 public int CurSequenceStartPosition;
                 public int StringBufferOffset;
 
-                public AlphanumericStringComparisonState(UnmanagedStringArray.UnmanagedString originalString)
+                public unsafe AlphanumericStringComparisonState(UnmanagedStringArray.UnmanagedString originalString)
                 {
                     StringLength = Encoding.UTF8.GetCharCount(originalString.StringAsBytes);
                     OriginalString = originalString;
                     CurSequenceStartPosition = 0;
                     NumberLength = 0;
                     CurSequenceIsNumber = false;
-                    CurCharacter = (char)0;
                     CurPositionInString = 0;
                     StringBufferOffset = 0;
+                    CurrentCharacterCharAmount = 0;
                 }
 
                 public void ScanNextAlphabeticOrNumericSequence()
                 {
-                    CurSequenceStartPosition = StringBufferOffset;
-                    var used = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurCharacter);
-                    CurSequenceIsNumber = char.IsDigit(CurCharacter);
-                    NumberLength = 0;
-
-                    var curCharacterIsDigit = CurSequenceIsNumber;
-                    var insideZeroPrefix = CurCharacter == '0';
-
-                    // Walk through all following characters that are digits or
-                    // characters in BOTH strings starting at the appropriate marker.
-                    // Collect char arrays.
-                    do
+                    fixed (char* ptrCurCharacters = CurCharacters)
                     {
-                        if (CurSequenceIsNumber)
+                        CurSequenceStartPosition = StringBufferOffset;
+                        var characterBuffer = new Span<char>(ptrCurCharacters, 4);
+                        var (usedBytes, usedChars) = ReadCharacter(OriginalString.StringAsBytes, StringBufferOffset, characterBuffer);
+                        CurSequenceIsNumber = usedChars == 1 && char.IsDigit(CurCharacters[0]);
+                        NumberLength = 0;
+
+                        var curCharacterIsDigit = CurSequenceIsNumber;
+                        var insideZeroPrefix = CurSequenceIsNumber && CurCharacters[0] == '0';
+
+                        // Walk through all following characters that are digits or
+                        // characters in BOTH strings starting at the appropriate marker.
+                        // Collect char arrays.
+                        do
                         {
-                            if (CurCharacter != '0')
+                            if (CurSequenceIsNumber)
                             {
-                                insideZeroPrefix = false;
+                                if (CurCharacters[0] != '0')
+                                {
+                                    insideZeroPrefix = false;
+                                }
+
+                                if (insideZeroPrefix == false)
+                                {
+                                    NumberLength++;
+                                }
                             }
 
-                            if (insideZeroPrefix == false)
+                            CurPositionInString += usedChars;
+                            StringBufferOffset += usedBytes;
+
+                            if (CurPositionInString < StringLength)
                             {
-                                NumberLength++;
+                                (usedBytes, usedChars) = ReadCharacter(OriginalString.StringAsBytes, StringBufferOffset, characterBuffer);
+                                curCharacterIsDigit = usedChars == 1 && char.IsDigit(CurCharacters[0]);
                             }
-                        }
-
-                        CurPositionInString++;
-                        StringBufferOffset += used;
-
-                        if (CurPositionInString < StringLength)
-                        {
-                            used = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurCharacter);
-                            curCharacterIsDigit = char.IsDigit(CurCharacter);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    } while (curCharacterIsDigit == CurSequenceIsNumber);
-
+                            else
+                            {
+                                break;
+                            }
+                        } while (curCharacterIsDigit == CurSequenceIsNumber);
+                    }
                 }
 
                 [ThreadStatic]
                 private static Decoder Decoder;
 
-                private static int ReadOneChar(Span<byte> str, int offset, ref char ch)
+                private static (int BytesUsed, int CharUsed) ReadCharacter(ReadOnlySpan<byte> str, int offset, Span<char> charactersBuffer)
                 {
-                    fixed (byte* buffer = str)
-                    fixed (char* c = &ch)
+                    var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
+                    
+                    //Numbers and ASCII are always 1 so we will pay the price only in case of UTF-8 characters.
+                    //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
+                    var (byteLengthOfCharacter, charNeededToEncodeCharacters) = str[offset] switch
                     {
-                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
-                        decoder.Convert(buffer + offset, str.Length - offset, c, 1, flush: true, out var bytesUsed,
-                            out var charUsed, out _);
-
-                        if (charUsed != 1)
-                            throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
-
-                        return bytesUsed;
-                    }
+                        <= 0b0111_1111 => (1,1), /* 1 byte sequence: 0b0xxxxxxxx */
+                        <= 0b1101_1111 => (2, Encoding.UTF8.GetCharCount(str.Slice(offset, 2))), /* 2 byte sequence: 0b110xxxxxx */
+                        <= 0b1110_1111 => (3, Encoding.UTF8.GetCharCount(str.Slice(offset, 3))), /* 0b1110xxxx: 3 bytes sequence */
+                        <= 0b1111_0111 => (4, Encoding.UTF8.GetCharCount(str.Slice(offset, 4))), /* 0b11110xxx: 4 bytes sequence */
+                        _ => throw new InvalidDataException($"Characters should be between 1 and 4 bytes long and cannot match the specified sequence. This is invalid code.")
+                    };
+                    
+                    Debug.Assert(charactersBuffer.Length >= charNeededToEncodeCharacters, $"Character requires more than {charactersBuffer.Length} space to be decoded.");
+                    
+                    //In case of surrogate we could've to use two characters to convert it.
+                    decoder.Convert(str.Slice(offset, byteLengthOfCharacter), charactersBuffer, flush: true, out int bytesUsed,out int charUsed, out _);
+                    
+                    return (bytesUsed, charUsed);
                 }
 
-                public int CompareWithAnotherState(AlphanumericStringComparisonState other)
+                public int CompareWithAnotherState(ref AlphanumericStringComparisonState other)
                 {
-                    var string1State = this;
-                    var string2State = other;
+                    ref var string1State = ref this;
+                    ref var string2State = ref other;
 
                     // if both sequences are numbers, compare between them
                     if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
@@ -218,8 +230,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     }
 
                     // should be case insensitive
-                    char ch1 = default;
-                    char ch2 = default;
+                    Span<char> ch1 = stackalloc char[4];
+                    Span<char> ch2 = stackalloc char[4];
                     var offset1 = string1State.CurSequenceStartPosition;
                     var offset2 = string2State.CurSequenceStartPosition;
 
@@ -228,18 +240,24 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                     while (length1 > 0 && length2 > 0)
                     {
-                        var read1 = ReadOneChar(string1State.OriginalString.StringAsBytes, offset1, ref ch1);
-                        var read2 = ReadOneChar(string2State.OriginalString.StringAsBytes, offset2, ref ch2);
+                        var (read1Bytes, read1Chars) = ReadCharacter(string1State.OriginalString.StringAsBytes, offset1, ch1);
+                        var (read2Bytes, read2Chars) = ReadCharacter(string2State.OriginalString.StringAsBytes, offset2, ch2);
 
-                        length1 -= read1;
-                        length2 -= read2;
+                        length1 -= read1Bytes;
+                        length2 -= read2Bytes;
 
-                        var result = char.ToLowerInvariant(ch1) - char.ToLowerInvariant(ch2);
+                        int result = read1Chars switch
+                        {
+                            1 when read2Chars == 1 => char.ToLowerInvariant(ch1[0]) - char.ToLowerInvariant(ch2[0]),
+                            2 when read2Chars == 2 => ch1.Slice(0, read1Chars).SequenceCompareTo(ch2.Slice(0, read2Chars)),
+                            1 => -1, //non-surroagate is always bigger than surrogate character
+                            _ => 1
+                        };
 
                         if (result == 0)
                         {
-                            offset1 += read1;
-                            offset2 += read2;
+                            offset1 += read1Bytes;
+                            offset2 += read2Bytes;
                             continue;
                         }
 
@@ -296,7 +314,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     string1State.ScanNextAlphabeticOrNumericSequence();
                     string2State.ScanNextAlphabeticOrNumericSequence();
 
-                    var result = string1State.CompareWithAnotherState(string2State);
+                    var result = string1State.CompareWithAnotherState(ref string2State);
 
                     if (result != 0)
                     {

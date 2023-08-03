@@ -42,7 +42,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration |
                                                                                   DatabaseRecordItemType.QueueConnectionStrings |
                                                                                   DatabaseRecordItemType.QueueEtls |
-                                                                                  DatabaseRecordItemType.IndexesHistory;
+                                                                                  DatabaseRecordItemType.IndexesHistory |
+                                                                                  DatabaseRecordItemType.Refresh;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

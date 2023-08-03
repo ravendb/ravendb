@@ -1088,6 +1088,12 @@ namespace Voron.Data.BTrees
             return new ReadResult(GetValueReaderFromHeader(node));
         }
 
+        public bool Exists(Slice key)
+        {
+            var p = FindPageFor(key, out _);
+            return p.LastMatch == 0;
+        }
+
         public int GetDataSize(Slice key)
         {
             TreeNodeHeader* node;

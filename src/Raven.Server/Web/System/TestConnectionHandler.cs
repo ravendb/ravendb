@@ -20,7 +20,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
-    public class TestConnectionHandler : RequestHandler
+    public class TestConnectionHandler : ServerRequestHandler
     {
         [RavenAction("/admin/test-connection", "POST", AuthorizationStatus.Operator)]
         public async Task TestConnection()

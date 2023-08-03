@@ -29,7 +29,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
 {
-    public class StudioHandler : RequestHandler
+    public class StudioHandler : ServerRequestHandler
     {
         /// <summary>
         /// Control structure for a cached file

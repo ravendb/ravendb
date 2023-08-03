@@ -55,7 +55,8 @@ namespace Raven.Client.Http
                 }),
                 TopologyEtag = -2,
                 _disableTopologyUpdates = true,
-                _disableClientConfigurationUpdates = true
+                _disableClientConfigurationUpdates = true,
+                _topologyHeaderName = Constants.Headers.ClusterTopologyEtag
             };
             return executor;
         }
@@ -64,7 +65,8 @@ namespace Raven.Client.Http
         {
             var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
             {
-                _disableClientConfigurationUpdates = true
+                _disableClientConfigurationUpdates = true,
+                _topologyHeaderName = Constants.Headers.ClusterTopologyEtag
             };
 
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, null);

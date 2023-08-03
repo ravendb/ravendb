@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
             if (newIndex == null)
                 throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
 
-            using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan.FromMinutes(15)))
             {
                 Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
             }
@@ -834,7 +834,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
 
-            using (var token = CreateTimeLimitedOperationToken())
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationToken())
             using (var context = QueryOperationContext.Allocate(Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

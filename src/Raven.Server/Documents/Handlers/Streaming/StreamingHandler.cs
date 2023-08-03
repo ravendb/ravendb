@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     },
                     initialState);
 
-                using (var token = CreateOperationToken())
+                using (var token = CreateHttpRequestBoundOperationToken())
                 await using (var writer = GetLoadDocumentsResultsWriter(format, context, ResponseBodyStream()))
                 {
                     writer.StartResponse();
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                using (var token = CreateOperationToken())
+                using (var token = CreateHttpRequestBoundOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var reader = new TimeSeriesReader(context, documentId, name, from, to, offset, token.Token);
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
-            using (var token = CreateTimeLimitedQueryToken())
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using (var queryContext = QueryOperationContext.Allocate(Database))
             {
                 var documentId = GetStringQueryString("fromDocument", false);
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
-            using (var token = CreateTimeLimitedQueryToken())
+            using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using (var queryContext = QueryOperationContext.Allocate(Database))
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();

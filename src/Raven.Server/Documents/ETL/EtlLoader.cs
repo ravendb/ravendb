@@ -20,6 +20,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -848,34 +849,38 @@ namespace Raven.Server.Documents.ETL
             return lastProcessedTombstones;
         }
 
-        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        public Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
-            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (ElasticSearchEtlConfiguration config in ElasticSearchDestinations)
+            var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
+
+            foreach (var config in ElasticSearchDestinations.Where(config => config.Disabled))
             {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
-            foreach (OlapEtlConfiguration config in OlapDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
-            }
-            foreach (QueueEtlConfiguration config in QueueDestinations)
-            {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.ElasticSearchEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
             }
 
-            foreach (RavenEtlConfiguration config in RavenDestinations)
+            foreach (var config in OlapDestinations.Where(config => config.Disabled))
             {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.OlapEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
             }
-            foreach (SqlEtlConfiguration config in SqlDestinations)
+
+            foreach (var config in QueueDestinations.Where(config => config.Disabled))
             {
-                if (config.Disabled)
-                    dict[config.Name] = tombstoneCollections;
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
+            }
+
+            foreach (var config in RavenDestinations.Where(config => config.Disabled))
+            {
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
+            }
+
+            foreach (var config in SqlDestinations.Where(config => config.Disabled))
+            {
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.SqlEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
             }
 
             return dict;

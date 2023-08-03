@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -566,6 +568,48 @@ select new
             Assert.Equal(0, results.Suggestions.Count);
         }
 
+        
+        [Fact]
+        public void CanRewriteDictAccessorAndCoalescingExpression()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "OrdersA",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    Employee2 = order.Employee[""maciej""],
+    Company2 = order.Company ?? DateTime.MinValue,
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "OrdersB",
+                Maps = { @"from ord in docs.Orders
+select new
+{
+    ord.Employee,
+    ord.Company,
+    TotalSum = ord.Day.Add(ord.A + ord.B)
+}" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+
+            Assert.Equal(1, results.Suggestions.Count);
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
+select new
+{
+    Company = doc.Company,
+    Company2 = doc.Company ?? DateTime.MinValue,
+    Employee = doc.Employee,
+    Employee2 = doc.Employee[""maciej""],
+    TotalSum = doc.Day.Add(doc.A + doc.B)
+}", results.Suggestions.First().MergedIndex.Maps.First());
+        }
+        
         [Fact]
         public void AutoIndexesWillNotBeIncludedInOperationOutput()
         {
@@ -601,6 +645,32 @@ select new
             var merger = new IndexMerger(dictionary);
             Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Suggestions.Count);
             Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
+        }
+        
+        private class TestIndex : AbstractIndexCreationTask<object, TestIndex.Result>
+        {
+            public class Result
+            {
+                public object Doc { get; set; }
+            }
+
+            public TestIndex()
+            {
+                Map = objects => from obj in objects
+                    select new Result {Doc = obj};
+            }
+        }
+    
+        [Fact]
+        public async Task TestCase()
+        {
+            using var store = GetDocumentStore();
+            await store.ExecuteIndexAsync(new TestIndex());
+            var re = store.GetRequestExecutor();
+            var c = re.HttpClient;
+        
+            var response = await re.HttpClient.GetAsync(new Uri($"{store.Urls.First()}/databases/{store.Database}/indexes/suggest-index-merge"));
+            Assert.True(response.IsSuccessStatusCode);
         }
 
         private record AutoIndexMockup(string Name, int Count);

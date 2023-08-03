@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
@@ -235,6 +236,11 @@ namespace Raven.Client.Documents.Operations
             return new GetOperationStateOperation.GetOperationStateCommand(id, nodeTag);
         }
 
+        protected virtual RavenCommand GetKillOperationCommand(long id, string nodeTag = null)
+        {
+            return new KillOperationCommand(id, nodeTag);
+        }
+
         public void OnNext(OperationStatusChange change)
         {
             _lock.Wait();
@@ -309,31 +315,46 @@ namespace Raven.Client.Documents.Operations
             return WaitForCompletionAsync<IOperationResult>(timeout);
         }
 
-        public async Task<TResult> WaitForCompletionAsync<TResult>(TimeSpan? timeout = null)
+        public Task<TResult> WaitForCompletionAsync<TResult>(TimeSpan? timeout = null)
+            where TResult : IOperationResult
+        {
+            if (timeout == null)
+                return WaitForCompletionAsync<TResult>(CancellationToken.None);
+
+            using (var cts = new CancellationTokenSource(timeout.Value))
+                return WaitForCompletionAsync<TResult>(cts.Token);
+        }
+
+        public Task<IOperationResult> WaitForCompletionAsync(CancellationToken token)
+        {
+            return WaitForCompletionAsync<IOperationResult>(token);
+        }
+
+        public async Task<TResult> WaitForCompletionAsync<TResult>(CancellationToken token)
             where TResult : IOperationResult
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out _context))
             {
                 var result = await InitializeResult().ConfigureAwait(false);
 
-#pragma warning disable 4014
-                Task.Factory.StartNew(Initialize);
-#pragma warning restore 4014
-                bool completed;
+                _ = Task.Factory.StartNew(Initialize);
+
                 try
                 {
-                    completed = await result.WaitWithTimeout(timeout).ConfigureAwait(false);
+#if NET6_0_OR_GREATER
+                    await result.WaitAsync(token).ConfigureAwait(false);
+#else
+                    await result.WithCancellation(token).ConfigureAwait(false);
+#endif
+                }
+                catch (TaskCanceledException e) when (token.IsCancellationRequested)
+                {
+                    await StopProcessingUnderLock().ConfigureAwait(false);
+                    throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
                 }
                 catch (Exception e)
                 {
                     await StopProcessingUnderLock(e).ConfigureAwait(false);
-                    completed = true;
-                }
-
-                if (completed == false)
-                {
-                    await StopProcessingUnderLock().ConfigureAwait(false);
-                    throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 
                 await _additionalTask.ConfigureAwait(false);
@@ -350,6 +371,30 @@ namespace Raven.Client.Documents.Operations
             where TResult : IOperationResult
         {
             return AsyncHelpers.RunSync(() => WaitForCompletionAsync<TResult>(timeout));
+        }
+
+        public IOperationResult WaitForCompletion(CancellationToken token)
+        {
+            return WaitForCompletion<IOperationResult>(token);
+        }
+
+        public TResult WaitForCompletion<TResult>(CancellationToken token)
+            where TResult : IOperationResult
+        {
+            return AsyncHelpers.RunSync(() => WaitForCompletionAsync<TResult>(token));
+        }
+
+        public void Kill()
+        {
+            AsyncHelpers.RunSync(() => KillAsync());
+        }
+
+        public async Task KillAsync(CancellationToken token = default)
+        {
+            var command = GetKillOperationCommand(_id, NodeTag);
+
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
         }
     }
 }

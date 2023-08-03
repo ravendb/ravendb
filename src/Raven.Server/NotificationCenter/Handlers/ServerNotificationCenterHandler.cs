@@ -106,7 +106,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         }
     }
 
-    public abstract class ServerNotificationHandlerBase : RequestHandler
+    public abstract class ServerNotificationHandlerBase : ServerRequestHandler
     {
         protected CanAccessDatabase GetDatabaseAccessValidationFunc(RavenServer.AuthenticateConnection authenticationStatus = null)
         {

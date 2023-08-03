@@ -80,13 +80,13 @@ namespace Raven.Server.Smuggler.Migration
                     if ((_buildVersion >= 40000 && _buildVersion < 41000) || _buildVersion == 40)
                     {
                         // prevent NRE, counter were added in 4.1
-                        smugglerResult.Counters = new SmugglerProgressBase.CountsWithLastEtag();
+                        smugglerResult.Counters = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
                     }
 
                     if ((_buildVersion >= 40000 && _buildVersion < 50000) || (_buildVersion >= 40 && _buildVersion < 50))
                     {
                         // prevent NRE, time series were added in 5.0
-                        smugglerResult.TimeSeries = new SmugglerProgressBase.CountsWithLastEtag();
+                        smugglerResult.TimeSeries = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
                     }
 
                     var importInfo = new ImportInfo

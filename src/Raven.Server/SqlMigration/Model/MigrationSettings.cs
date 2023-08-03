@@ -2,6 +2,7 @@
 
 namespace Raven.Server.SqlMigration.Model
 {
+    
     public class MigrationSettings
     {
         public List<RootCollection> Collections { get; set; }

@@ -72,7 +72,7 @@ namespace SlowTests.Server.Documents.Patching
                     session.SaveChanges();
                 }
 
-                await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(() => store.Operations.SendAsync(new PatchOperation<User>("users/2", null, new PatchRequest
+                await Assert.ThrowsAsync<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(() => store.Operations.SendAsync(new PatchOperation<User>("users/2", null, new PatchRequest
                 {
                     Script = @"for (var i=0; i< this.Lines.length; i++){}"
                 })));

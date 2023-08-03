@@ -29,17 +29,18 @@ namespace Raven.Server.Documents
 
         public override void Init(RequestHandlerContext context)
         {
-            base.Init(context);
-
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+            base.Init(context);
         }
 
-        public Task CheckForChanges(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
+            if (context.CheckForChanges == false)
+                return Task.CompletedTask;
+
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
@@ -124,34 +125,44 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected OperationCancelToken CreateTimeLimitedOperationToken()
+        protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return CreateHttpRequestBoundTimeLimitedOperationToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan);
         }
 
-        protected OperationCancelToken CreateTimeLimitedQueryToken()
+        protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return CreateHttpRequestBoundTimeLimitedOperationToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan);
         }
 
-        protected OperationCancelToken CreateTimeLimitedCollectionOperationToken()
+        protected override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
-            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected OperationCancelToken CreateTimeLimitedQueryOperationToken()
-        {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
-        }
-
-        protected override OperationCancelToken CreateOperationToken()
+        protected override OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
             return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation()
         {
-            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForCollectionOperation()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedBackgroundOperationToken()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+        
+        protected override OperationCancelToken CreateBackgroundOperationToken()
+        {
+            return new OperationCancelToken(Database.DatabaseShutdown);
         }
 
         protected bool ShouldAddPagingPerformanceHint(long numberOfResults)

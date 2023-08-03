@@ -10,7 +10,7 @@ using Sparrow.Server.Extensions;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminTcpConnectionDebugInfoHandler : RequestHandler
+    public class AdminTcpConnectionDebugInfoHandler : ServerRequestHandler
     {
         [RavenAction("/admin/debug/info/tcp/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task Statistics()

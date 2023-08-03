@@ -43,6 +43,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\validateAssembly.ps1'
 . '.\scripts\validateRuntimeConfig.ps1'
 . '.\scripts\version.ps1'
+. '.\scripts\githubReleases.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
 . '.\scripts\target.ps1'
@@ -269,6 +270,7 @@ Foreach ($target in $targets) {
 write-host "Done creating packages."
 
 if ($buildType -eq 'stable') {
+    CreateRelease $version "ravendb" "ravendb" $env:vcsRootBranch $env:GITHUB_ACCESS_TOKEN $env:ravendbChangelog $DryRunVersionBump
     BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }
 

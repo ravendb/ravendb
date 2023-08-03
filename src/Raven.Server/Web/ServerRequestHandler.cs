@@ -5,16 +5,12 @@ namespace Raven.Server.Web
 {
     public abstract class ServerRequestHandler : RequestHandler
     {
-        public override void Init(RequestHandlerContext context)
+        public override Task CheckForChanges(RequestHandlerContext context)
         {
-            base.Init(context);
+            if (context.CheckForChanges == false)
+                return Task.CompletedTask;
 
-            context.HttpContext.Response.OnStarting(() => CheckForTopologyChanges(context));
-        }
-
-        public Task CheckForTopologyChanges(RequestHandlerContext context)
-        {
-            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
+            var topologyEtag = GetLongFromHeaders(Constants.Headers.ClusterTopologyEtag);
             if (topologyEtag.HasValue && Server.ServerStore.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
 

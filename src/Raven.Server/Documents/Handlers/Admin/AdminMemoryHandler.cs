@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminMemoryHandler : RequestHandler
+    public class AdminMemoryHandler : ServerRequestHandler
     {
         [RavenAction("/admin/memory/gc", "GET", AuthorizationStatus.Operator)]
         public async Task CollectGarbage()

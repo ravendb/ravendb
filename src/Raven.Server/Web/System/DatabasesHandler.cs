@@ -35,7 +35,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
-    public sealed class DatabasesHandler : RequestHandler
+    public sealed class DatabasesHandler : ServerRequestHandler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CheckForChanges = false)]
         public async Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        public static readonly int LoadedDocumentsCacheSize = 16 * 1024;
+
         public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
 
         public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
@@ -45,7 +47,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        private Dictionary<string, Document> _loadedDocuments;
+        private LruDictionary<string, Document> _loadedDocuments;
         private Dictionary<string, Document> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
@@ -698,7 +700,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocumentIds == null)
             {
                 _loadedDocumentIds = new HashSet<string>();
-                _loadedDocuments = new Dictionary<string, Document>();
+                _loadedDocuments = new LruDictionary<string, Document>(LoadedDocumentsCacheSize);
                 _loadedDocumentsByAliasName = new Dictionary<string, Document>();
             }
             _loadedDocumentIds.Clear();

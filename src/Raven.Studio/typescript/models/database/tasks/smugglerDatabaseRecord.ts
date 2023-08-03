@@ -15,6 +15,7 @@ class smugglerDatabaseRecord {
     includeTimeSeries = ko.observable<boolean>(true);
     includeSettings = ko.observable<boolean>(true);
     includeRevisions = ko.observable<boolean>(true);
+    includeRefresh = ko.observable<boolean>(true);
     includeExpiration = ko.observable<boolean>(true);
     includePeriodicBackups = ko.observable<boolean>(true);
     includeExternalReplications = ko.observable<boolean>(true);
@@ -100,6 +101,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeRevisions()) {
             result.push("Revisions");
+        }
+        if (this.includeRefresh()) {
+            result.push("Refresh");
         }
         if (this.includeExpiration()) {
             result.push("Expiration");

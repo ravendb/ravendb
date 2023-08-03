@@ -95,6 +95,4 @@ namespace Raven.Client.Documents.Replication
 
         public abstract string FromString();
     }
-
-   
 }
