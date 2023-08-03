@@ -145,7 +145,7 @@ namespace Voron.Debugging
                                         var nestedReport = GetReport(textLookup, input.IncludeDetails);
                                         nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
                                         trees.Add(nestedReport);
-                                        trees.Add(GetContainerReport(treeReport.Name + "/" + nestedReport.Name, textLookup.State.TermsContainerId, input.IncludeDetails));
+                                        trees.Add(GetContainerReport(nestedReport.Name, textLookup.State.TermsContainerId, input.IncludeDetails));
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
