@@ -45,8 +45,7 @@ namespace Raven.Client.Documents.Session.Operations
                 : new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore,
                     _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
 
-            if (_session.TransactionMode == TransactionMode.ClusterWide)
-                cmd.FromClusterWideTx();
+            cmd.SetTransactionMode(_session.TransactionMode);
             return cmd;
         }
 
