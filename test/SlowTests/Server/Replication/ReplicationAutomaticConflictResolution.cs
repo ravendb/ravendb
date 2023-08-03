@@ -443,7 +443,7 @@ return out;
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker");
+                    }, "marker$users/1");
 
                     session.SaveChanges();
                 }
@@ -453,7 +453,7 @@ return out;
                 await SetupReplicationAsync(third, fourth);
                 await SetupReplicationAsync(fourth, first);
 
-                Assert.True(WaitForDocument(fourth, "marker"));
+                Assert.True(WaitForDocument(fourth, "marker$users/1"));
 
                 using (var session = fourth.OpenSession())
                 {
@@ -466,18 +466,17 @@ return out;
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker2");
+                    }, "marker2$users/1");
 
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForDocument(first, "marker2"));
+                Assert.True(WaitForDocument(third, "marker2$users/1"));
 
-
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? first.Database : await Sharding.GetShardDatabaseNameForDocAsync(first, "users/1"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? second.Database : await Sharding.GetShardDatabaseNameForDocAsync(second, "users/1"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? third.Database : await Sharding.GetShardDatabaseNameForDocAsync(third, "users/1"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? fourth.Database : await Sharding.GetShardDatabaseNameForDocAsync(fourth, "users/1"));
+                await EnsureNoReplicationLoopAsync(first, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(second, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(third, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(fourth, options.DatabaseMode);
             }
         }
 
