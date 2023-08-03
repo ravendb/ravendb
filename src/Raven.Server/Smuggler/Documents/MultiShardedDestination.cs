@@ -250,41 +250,41 @@ namespace Raven.Server.Smuggler.Documents
 
             private int GetShardNumberAndHandleLegacyRevisionsIfNeeded(Document document)
             {
-                if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision) == false &&
-                    document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions) == false) ||
-                    document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                var legacy = document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision) ||
+                             document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions);
+                if (legacy == false)
                     return DatabaseContext.GetShardNumberFor(_allocator, document.Id);
 
-
-                JsonOperationContext context = GetContextForNewDocument();
-                string id;
-                if (document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision))
+                string id = document.Id;
+                if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
-                    var endIndex = document.Id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
-                    id = document.Id.Substring(0, endIndex);
-
-                    metadata.Modifications = new DynamicJsonValue
+                    JsonOperationContext context = GetContextForNewDocument();
+                    if (document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision))
                     {
-                        ["Raven-Document-Parent-Revision"] = document.Id,
-                        ["Raven-Document-Revision-Status"] = "Historical"
-                    };
-                }
-                else
-                {
-                    id = document.Id;
+                        var endIndex = document.Id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                        id = document.Id.Substring(0, endIndex);
 
-                    metadata.Modifications = new DynamicJsonValue
+                        metadata.Modifications = new DynamicJsonValue
+                        {
+                            ["Raven-Document-Parent-Revision"] = document.Id,
+                            ["Raven-Document-Revision-Status"] = "Historical"
+                        };
+                    }
+                    else
                     {
-                        ["Raven-Document-Revision"] = document.Id,
-                        ["Raven-Document-Revision-Status"] = "Current"
-                    };
+                        metadata.Modifications = new DynamicJsonValue
+                        {
+                            ["Raven-Document-Revision"] = document.Id,
+                            ["Raven-Document-Revision-Status"] = "Current"
+                        };
+                    }
+
+                    using (var old = document.Data)
+                    {
+                        document.Data = context.ReadObject(document.Data, document.Id);
+                    }
                 }
 
-                using (var old = document.Data)
-                {
-                    document.Data = context.ReadObject(document.Data, document.Id);
-                }
-                
                 return DatabaseContext.GetShardNumberFor(_allocator, id);
             }
 
