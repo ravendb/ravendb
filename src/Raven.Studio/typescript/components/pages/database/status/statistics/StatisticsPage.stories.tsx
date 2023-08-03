@@ -25,7 +25,7 @@ export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] })
 
     indexesService.withGetStats(args.stats);
 
-    return <StatisticsPage database={args.db} />;
+    return <StatisticsPage db={args.db} />;
 };
 
 export const StatsSingleNode = boundCopy(StatisticsTemplate, {

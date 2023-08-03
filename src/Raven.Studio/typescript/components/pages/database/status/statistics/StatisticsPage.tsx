@@ -10,22 +10,19 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { IndexesDatabaseStats } from "components/pages/database/status/statistics/partials/IndexesDatabaseStats";
 import { StatsHeader } from "components/pages/database/status/statistics/partials/StatsHeader";
+import { NonShardedViewProps } from "components/models/common";
 
-interface StatisticsPageProps {
-    database: database;
-}
-
-export function StatisticsPage(props: StatisticsPageProps) {
-    const { database } = props;
+export function StatisticsPage(props: NonShardedViewProps) {
+    const { db } = props;
 
     const dispatch = useAppDispatch();
     const detailsVisible = useAppSelector(statisticsViewSelectors.detailsVisible);
 
     useEffect(() => {
-        dispatch(initView(database));
-    }, [database, dispatch]);
+        dispatch(initView(db));
+    }, [db, dispatch]);
 
-    const rawJsonUrl = useAppUrls().appUrl.forEssentialStatsRawData(database);
+    const rawJsonUrl = useAppUrls().appUrl.forEssentialStatsRawData(db);
 
     return (
         <>
@@ -34,7 +31,7 @@ export function StatisticsPage(props: StatisticsPageProps) {
                 <EssentialDatabaseStatsComponent rawJsonUrl={rawJsonUrl} />
 
                 {detailsVisible && <DetailedDatabaseStats key="db-stats" />}
-                {detailsVisible && <IndexesDatabaseStats database={database} key="index-stats" />}
+                {detailsVisible && <IndexesDatabaseStats database={db} key="index-stats" />}
             </div>
         </>
     );

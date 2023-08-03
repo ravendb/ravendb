@@ -83,7 +83,7 @@ export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
         dto.length = 0;
     });
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
@@ -92,7 +92,7 @@ export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
@@ -101,7 +101,7 @@ export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
@@ -110,7 +110,7 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPage> = () => {
@@ -119,7 +119,7 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
     commonInit();
     configureDifferentIndexStates();
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage> = () => {
@@ -128,7 +128,7 @@ export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage>
     commonInit();
     configureDifferentIndexStates();
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
@@ -142,7 +142,7 @@ export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };
 
 export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
@@ -156,5 +156,5 @@ export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
-    return <IndexesPage database={db} />;
+    return <IndexesPage db={db} />;
 };

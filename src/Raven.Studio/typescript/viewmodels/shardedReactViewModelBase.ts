@@ -29,7 +29,7 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
         const reactDirtyFlag = getReactDirtyFlag(this.dirtyFlag, this.customDiscardStayResult);
         const reactProps = {
             ...args,
-            database: this.db,
+            db: this.db,
             location: this.location,
         };
 

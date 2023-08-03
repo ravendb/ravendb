@@ -14,7 +14,7 @@ function render() {
     const db = DatabasesStubs.shardedDatabase();
     return rtlRender(
         <div>
-            <StatisticsPage database={db} />
+            <StatisticsPage db={db} />
         </div>
     );
 }
