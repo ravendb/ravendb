@@ -175,7 +175,7 @@ namespace Raven.Server.Documents
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
                 });
-                _hasClusterTransaction = new ManualResetEvent(false);
+                _hasClusterTransaction = new ManualResetEventSlim(false);
                 IdentityPartsSeparator = '/';
             }
             catch (Exception)
@@ -361,10 +361,10 @@ namespace Raven.Server.Documents
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 }, null);
-
+                var threadName = $"{Name} Cluster Transaction Thread";
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
-                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, "Cluster Transaction" , _logger);
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, threadName, _logger);
                     try
                     {
                         _hasClusterTransaction.Set();
@@ -418,7 +418,7 @@ namespace Raven.Server.Documents
             return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
 
-        private readonly ManualResetEvent _hasClusterTransaction;
+        private readonly ManualResetEventSlim _hasClusterTransaction;
         public readonly DatabaseMetricCacher MetricCacher;
 
         public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
@@ -466,7 +466,7 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                _hasClusterTransaction.WaitOne();
+                _hasClusterTransaction.Wait(DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -887,7 +887,7 @@ namespace Raven.Server.Documents
             {
                 var clusterTransactions = _clusterTransactionsThread;
                 _clusterTransactionsThread = null;
-                _hasClusterTransaction.Set();
+                
                 if (clusterTransactions != null && PoolOfThreads.LongRunningWork.Current != clusterTransactions)
                     clusterTransactions.Join(int.MaxValue);
             });
