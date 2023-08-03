@@ -11,6 +11,14 @@ import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
 
+interface VirtualGridParams<T> {
+    controller: KnockoutObservable<virtualGridController<T>> | ((gridController: virtualGridController<T>) => void);
+    emptyTemplate: string;
+    condensed: boolean;
+    disableStripes: boolean;
+    afterRender?: () => void
+}
+
 class virtualGrid<T extends object> {
     
     static readonly rowHeightRegular = 36;
@@ -65,7 +73,7 @@ class virtualGrid<T extends object> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean, disableStripes: boolean, afterRender?: () => void }) {
+    constructor(params: VirtualGridParams<T>) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();

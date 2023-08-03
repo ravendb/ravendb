@@ -42,7 +42,7 @@ export function bridgeToReact(reactView: React.FC<any>, viewType: viewType, boot
 //     }
 // }
 
-export class ReactToKnockoutComponent<T> extends React.Component<T> {
+export class ReactToKnockoutComponent<P = any, S = any> extends React.PureComponent<P, S> {
     [x: string]: any;
 
     updateKnockout() {
@@ -66,7 +66,8 @@ export class ReactToKnockoutComponent<T> extends React.Component<T> {
         ko.cleanNode(this.ref.current);
     }
 
-    componentDidUpdate() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    componentDidUpdate(prevProps: Readonly<P>, prevState: Readonly<S>) {
         this.updateKnockout();
     }
 }
