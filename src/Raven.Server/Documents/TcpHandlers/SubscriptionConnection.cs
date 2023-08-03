@@ -394,12 +394,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last) => _database.SubscriptionStorage.RaiseNotificationForBatchEnded(name, last);
 
-
         protected override async Task<SubscriptionBatchStatus> TryRecordBatchAndUpdateStatusAsync(IChangeVectorOperationContext context, SubscriptionBatchResult result)
         {
             //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
             LastSentChangeVectorInThisConnection = result.LastChangeVectorSentInThisBatch;
-            CurrentBatchId = await Processor.RecordBatchAsync(result.LastChangeVectorSentInThisBatch);
+            CurrentBatchId = await Processor.TryRecordBatchAsync(result.LastChangeVectorSentInThisBatch);
 
             State.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
                 State.LastChangeVectorSent,

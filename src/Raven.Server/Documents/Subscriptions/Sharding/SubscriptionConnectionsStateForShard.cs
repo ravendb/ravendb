@@ -53,7 +53,6 @@ public sealed class SubscriptionConnectionsStateForShard : SubscriptionConnectio
     {
         command.DatabaseName = ShardedDocumentDatabase.ShardedDatabaseName;
         command.ShardName = ShardedDocumentDatabase.Name;
-        command.ActiveBatchesFromSender = GetActiveBatches();
         return base.RecordBatchInternal(command);
     }
 

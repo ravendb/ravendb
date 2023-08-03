@@ -71,8 +71,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
         }
 
-        public override async Task<long> RecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
-            (await SubscriptionConnectionsState.RecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
+        public override async Task<long> TryRecordBatchAsync(string lastChangeVectorSentInThisBatch) =>
+            (await SubscriptionConnectionsState.TryRecordBatchDocumentsAsync(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
 
         public override async Task AcknowledgeBatchAsync(long batchId, string changeVector)
         {
