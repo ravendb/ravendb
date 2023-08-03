@@ -90,6 +90,7 @@ namespace Raven.Server.Documents
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
             internal bool ShouldFetchIdleStateImmediately = false;
+            internal Action<Exception> OnFailedRescheduleNextScheduledActivity;
             internal bool PreventNodePromotion = false;
         }
 
@@ -1148,12 +1149,14 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 // we have to swallow any exception here.
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
+
+                ForTestingPurposes?.OnFailedRescheduleNextScheduledActivity?.Invoke(e);
             }
         }
 
