@@ -1295,27 +1295,27 @@ namespace Raven.Server.ServerWide
                         }
                         else
                         {
-                            bool emptyShardTypology = true;
+                            RemoveFromTopology(record.Sharding.Orchestrator.Topology);
+
                             foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
                             {
-                                if (shardTopology.RelevantFor(removed))
-                                {
-                                    if (shardTopology.Count == 1)
-                                    {
-                                        // todo : RavenDB-17161 
-                                    }
-
-                                    shardTopology.RemoveFromTopology(removed);
-                                    // Explicit removing of the node means that we modify the replication factor
-                                    shardTopology.ReplicationFactor = shardTopology.Count;
-                                    emptyShardTypology &= shardTopology.Count == 0;
-                                }
+                                RemoveFromTopology(shardTopology);
                             }
 
-                            if (emptyShardTypology)
+                            if (record.Sharding.Shards.Sum(s => s.Value.Count) == 0)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
                                 continue;
+                            }
+
+                            
+                            void RemoveFromTopology(DatabaseTopology topology)
+                            {
+                                if (topology.RelevantFor(removed))
+                                {
+                                    topology.RemoveFromTopology(removed);
+                                    topology.ReplicationFactor--;
+                                }
                             }
                         }
 

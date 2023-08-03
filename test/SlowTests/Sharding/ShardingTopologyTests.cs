@@ -657,5 +657,164 @@ namespace SlowTests.Sharding
                 }
             }
         }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RemoveNonRelatedClusterNode()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
+
+            var options = new Options
+            {
+                DatabaseMode = RavenDatabaseMode.Sharded,
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = new ShardingConfiguration
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>(2),
+                        Orchestrator = new OrchestratorConfiguration
+                        {
+                            Topology = new OrchestratorTopology
+                            {
+                                Members = new List<string>{"A", "B"},
+                                ReplicationFactor = 2
+                            }
+                        }
+                    };
+
+                    r.Sharding.Shards[0] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"A"},
+                        ReplicationFactor = 1,
+                    };
+                    r.Sharding.Shards[1] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"B"},
+                        ReplicationFactor = 1,
+                    };
+                },
+                ReplicationFactor = 1, // this ensures not to use the same path for the replicas
+                Server = leader
+            };
+
+            using (var store = GetDocumentStore(options))
+            {
+                await leader.ServerStore.Engine.RemoveFromClusterAsync("C");
+                await DisposeAndRemoveServer(Servers.Single(s => s.ServerStore.NodeTag == "C"));
+                
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.NotNull(record);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RemoveClusterNodeWithAllShardsOnIt()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
+            var options = new Options
+            {
+                DatabaseMode = RavenDatabaseMode.Sharded,
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = new ShardingConfiguration
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>(),
+                        Orchestrator = new OrchestratorConfiguration
+                        {
+                            Topology = new OrchestratorTopology
+                            {
+                                Members = new List<string>{"C"},
+                                ReplicationFactor = 1
+                            }
+                        }
+                    };
+
+                    r.Sharding.Shards[0] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"C"},
+                        ReplicationFactor = 1,
+                    };
+                    r.Sharding.Shards[1] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"C"},
+                        ReplicationFactor = 1,
+                    };
+                },
+                ReplicationFactor = 1, // this ensures not to use the same path for the replicas
+                Server = leader
+            };
+
+            using (var store = GetDocumentStore(options))
+            {
+                await leader.ServerStore.Engine.RemoveFromClusterAsync("C");
+                await DisposeAndRemoveServer(Servers.Single(s => s.ServerStore.NodeTag == "C"));
+                
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Null(record);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RemoveClusterNodeWithSomeShardsOnIt()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
+            var options = new Options
+            {
+                DatabaseMode = RavenDatabaseMode.Sharded,
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = new ShardingConfiguration
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>(),
+                        Orchestrator = new OrchestratorConfiguration
+                        {
+                            Topology = new OrchestratorTopology
+                            {
+                                Members = new List<string>{"A", "B", "C"},
+                                ReplicationFactor = 3
+                            }
+                        }
+                    };
+
+                    r.Sharding.Shards[0] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"A","B"},
+                        ReplicationFactor = 2,
+                    };
+                    r.Sharding.Shards[1] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"B", "C"},
+                        ReplicationFactor = 2
+                    };
+                    r.Sharding.Shards[2] = new DatabaseTopology
+                    {
+                        Members = new List<string>{"A", "C"},
+                        ReplicationFactor = 2
+                    };
+                },
+                ReplicationFactor = 2, // this ensures not to use the same path for the replicas
+                Server = leader
+            };
+
+            using (var store = GetDocumentStore(options))
+            {
+                await leader.ServerStore.Engine.RemoveFromClusterAsync("C");
+                await DisposeAndRemoveServer(Servers.Single(s => s.ServerStore.NodeTag == "C"));
+                
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.NotNull(record);
+
+                Assert.Equal(2, record.Sharding.Orchestrator.Topology.Count);
+                Assert.Contains(record.Sharding.Orchestrator.Topology.AllNodes, n => n == "A" || n == "B");
+
+                Assert.Equal(2, record.Sharding.Shards[0].Count);
+                Assert.Contains(record.Sharding.Shards[0].AllNodes, n => n == "A" || n == "B");
+
+                Assert.Equal(1, record.Sharding.Shards[1].Count);
+                Assert.Contains(record.Sharding.Shards[1].AllNodes, n => n == "B");
+
+                Assert.Equal(1, record.Sharding.Shards[2].Count);
+                Assert.Contains(record.Sharding.Shards[2].AllNodes, n => n == "A");
+            }
+        }
     }
 }
