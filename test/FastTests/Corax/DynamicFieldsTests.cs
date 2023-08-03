@@ -68,9 +68,8 @@ public unsafe class DynamicFieldsTests : StorageTest
     {
         using ByteStringContext bsc = new(SharedMultipleUseFlag.None);
 
-        using IDisposable _ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
+        Slice.From(bsc, "A", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
         using IndexFieldsMapping knownFields = IndexFieldsMappingBuilder.CreateForWriter(false)
@@ -142,16 +141,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void WillDeleteDynamicReferences()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var writer = new IndexWriter(Env, fields))
         {
@@ -182,16 +180,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void WillDeleteDynamicReferencesWithOutOfOrderRepeats()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice,  LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29)));
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var writer = new IndexWriter(Env, fields))
         {
@@ -225,16 +222,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void DynamicFieldWithSameNameOfStatic()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var writer = new IndexWriter(Env, fields))
         {
@@ -266,16 +262,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void MixingStaticAndDynamicFieldsCorax()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
             using (var entry = writer.Index("users/1"))
@@ -332,9 +327,8 @@ public unsafe class DynamicFieldsTests : StorageTest
     [InlineData(53.015261, 18.611487, "u3mjxe0kr")]
     public void CanIndexReadAndDeleteLongLatSpatialDynamically(double latitude, double longitude, string geohash)
     {
-        using IndexFieldsMapping fields = PrepareSpatial();
-
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using IndexFieldsMapping fields = PrepareSpatial(bsc);
         using (var writer = new IndexWriter(Env, fields))
         {
             using (var builder = writer.Index(IdString))
@@ -379,9 +373,8 @@ public unsafe class DynamicFieldsTests : StorageTest
 
     const string IdString = "entry-1";
 
-    private static IndexFieldsMapping PrepareSpatial()
+    private IndexFieldsMapping PrepareSpatial(ByteStringContext ctx)
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
@@ -396,8 +389,8 @@ public unsafe class DynamicFieldsTests : StorageTest
     [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
     public void WriteAndReadSpatialListDynamically(int size, double[] lat, double[] lon)
     {
-        using IndexFieldsMapping fields = PrepareSpatial();
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using IndexFieldsMapping fields = PrepareSpatial(bsc);
         
         long entryId;
         using (var indexWriter = new IndexWriter(Env, fields))
@@ -445,16 +438,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void MixingStaticAndDynamicFieldsCorax3()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
             using (var entryBuilder = writer.Index("users/1"))
@@ -502,16 +494,15 @@ public unsafe class DynamicFieldsTests : StorageTest
     [Fact]
     public void MixingStaticAndDynamicFieldsCorax2()
     {
-        using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
-        Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice dSlice);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(bsc, "Name", ByteStringType.Immutable, out Slice dSlice);
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
         {
             using (var entryBuilder = writer.Update("users/1"u8))
