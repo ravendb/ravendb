@@ -20,17 +20,13 @@ public class QueueSinkPerformanceStats
 
     public QueueSinkPerformanceOperation Details { get; set; }
 
-    public int NumberOfConsumedMessages{ get; set; }
+    public int NumberOfPulledMessages{ get; set; }
 
     public int NumberOfProcessedMessages { get; set; }
 
     public Size CurrentlyAllocated { get; set; }
-
-    public Size BatchSize { get; set; }
-
-    public string BatchTransformationCompleteReason { get; set; }
-
-    public string BatchStopReason { get; set; }
+    
+    public string BatchPullStopReason { get; set; }
 
     public int ScriptErrorCount { get; set; }
 

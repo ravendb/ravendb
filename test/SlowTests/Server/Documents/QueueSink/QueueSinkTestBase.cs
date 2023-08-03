@@ -37,7 +37,14 @@ namespace SlowTests.Server.Documents.QueueSink
         }
         protected QueueSinkTestBase(ITestOutputHelper output) : base(output)
         {
+            QueueSuffix = Guid.NewGuid().ToString("N");
         }
+
+        protected string QueueSuffix { get; }
+
+        protected string UsersQueueName => $"users{QueueSuffix}";
+
+        protected List<string> DefaultQueues => new() { UsersQueueName };
 
         protected AddQueueSinkOperationResult AddQueueSink<T>(DocumentStore src, QueueSinkConfiguration configuration, T connectionString) where T : ConnectionString
         {
@@ -70,7 +77,7 @@ namespace SlowTests.Server.Documents.QueueSink
         {
             var database = GetDatabase(databaseName).Result;
 
-            string tag = "Kafka";
+            string tag = "Kafka Sink";
 
             var loadAlertError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_Error);
             var loadAlertConsumeError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ConsumeError);
@@ -99,7 +106,7 @@ namespace SlowTests.Server.Documents.QueueSink
             return false;
         }
         
-        protected ManualResetEventSlim WaitForEtl(DocumentStore store,
+        protected ManualResetEventSlim WaitForQueueSinkBatch(DocumentStore store,
             Func<string, QueueSinkProcessStatistics, bool> predicate)
         {
             var database = GetDatabase(store.Database).Result;
@@ -108,7 +115,7 @@ namespace SlowTests.Server.Documents.QueueSink
 
             database.QueueSinkLoader.BatchCompleted += x =>
             {
-                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                if (predicate($"{x.ConfigurationName}/{x.ScriptName}", x.Statistics))
                     mre.Set();
             };
 

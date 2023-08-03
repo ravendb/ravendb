@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using Confluent.Kafka;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -10,8 +9,7 @@ namespace Raven.Server.Documents.QueueSink;
 
 public class KafkaQueueSink : QueueSinkProcess
 {
-    public KafkaQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database,
-        string tag, CancellationToken shutdown) : base(configuration, script, database, tag, shutdown)
+    public KafkaQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database, string tag) : base(configuration, script, database, tag)
     {
     }
 

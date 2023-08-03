@@ -54,12 +54,9 @@ public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
             _channel.BasicAck(_latestDeliveryTag.Value, true);
         }
     }
-
     
-    
-    // todo: dispose
     public void Dispose()
     {
-        throw new NotImplementedException();
+        _channel.Dispose();
     }
 }

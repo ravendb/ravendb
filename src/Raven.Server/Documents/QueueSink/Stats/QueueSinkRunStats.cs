@@ -1,4 +1,5 @@
-﻿using Raven.Client.Util;
+﻿
+using Sparrow;
 
 namespace Raven.Server.Documents.QueueSink.Stats;
 
@@ -6,15 +7,13 @@ public class QueueSinkRunStats
 {
     public Size CurrentlyAllocated;
 
-    public int NumberOfConsumedMessages;
+    public int NumberOfPulledMessages;
 
     public int NumberOfProcessedMessages;
 
     public int ScriptErrorCount;
 
-    public string BatchStopReason;
+    public string BatchPullStopReason;
 
     public bool? SuccessfullyProcessed;
-
-    public Size BatchSize;
 }

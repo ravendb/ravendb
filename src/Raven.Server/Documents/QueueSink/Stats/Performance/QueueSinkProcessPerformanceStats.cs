@@ -2,6 +2,6 @@
 
 public class QueueSinkProcessPerformanceStats
 {
-    public string TransformationName { get; set; }
+    public string ScriptName { get; set; }
     public QueueSinkPerformanceStats[] Performance { get; set; }
 }

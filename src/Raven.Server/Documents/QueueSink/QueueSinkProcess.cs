@@ -6,13 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Background;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.QueueSink.Stats;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
@@ -20,25 +18,46 @@ using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Utils;
+using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.QueueSink;
 
-public abstract class QueueSinkProcess : BackgroundWorkBase
+public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 {
+    private const int MinBatchSize = 16;
+
+    private CancellationTokenSource _cts;
+    private PoolOfThreads.LongRunningWork _longRunningWork;
+
+    private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
+
+    private NativeMemory.ThreadStats _threadAllocations;
+    private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+    private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
+    private readonly Logger _logger;
+
     private int _statsId;
     private QueueSinkStatsAggregator _lastStats;
 
-    private readonly ConcurrentQueue<QueueSinkStatsAggregator> _lastQueueSinkStats =
-        new ConcurrentQueue<QueueSinkStatsAggregator>();
+    private readonly ConcurrentQueue<QueueSinkStatsAggregator> _lastQueueSinkStats = new();
 
     private IQueueSinkConsumer _consumer;
 
     protected QueueSinkProcess(QueueSinkConfiguration configuration, QueueSinkScript script,
-        DocumentDatabase database, string tag, CancellationToken shutdown)
-        : base($"[{tag}] {configuration.Name}/{script.Name}", shutdown)
+        DocumentDatabase database, string tag)
     {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
+        _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
         Database = database;
         Configuration = configuration;
         Script = script;
@@ -53,13 +72,15 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         switch (configuration.BrokerType)
         {
             case QueueBrokerType.Kafka:
-                return new KafkaQueueSink(configuration, script, database, "Kafka Sink", database.DatabaseShutdown);
+                return new KafkaQueueSink(configuration, script, database, "Kafka Sink");
             case QueueBrokerType.RabbitMq:
-                return new RabbitMqQueueSink(configuration, script, database, "RabbitMQ Sink", database.DatabaseShutdown);
+                return new RabbitMqQueueSink(configuration, script, database, "RabbitMQ Sink");
             default:
                 throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
         }
     }
+
+    protected CancellationToken CancellationToken => _cts.Token;
 
     protected string GroupId => $"{Database.DatabaseGroupId}/{Name}";
 
@@ -111,153 +132,194 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         }
     }
 
-    protected override async Task DoWork()
+    private void Run()
     {
-        if (_consumer == null)
+        while (true)
         {
             try
             {
-                _consumer = CreateConsumer();
+                if (CancellationToken.IsCancellationRequested)
+                    return;
             }
-            catch (Exception e)
+            catch (ObjectDisposedException)
             {
-                string msg = $"Failed to create consumer for {Name}.";
-
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations(msg, e);
-                }
-
-                EnterFallbackMode();
-
                 return;
             }
-        }
 
-        var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-        _lastStats = statsAggregator;
-
-        AddPerformanceStats(statsAggregator);
-        
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (var stats = statsAggregator.CreateScope())
-        {
-            var messageBatch = new List<BlittableJsonReaderObject>();
-            
-            using (var consumeScope = stats.For(QueueSinkBatchPhases.Consume, start: false))
+            if (FallbackTime != null)
             {
-                while (messageBatch.Count < Database.Configuration.QueueSink.MaxNumberOfConsumedMessagesInBatch && CancellationToken.IsCancellationRequested == false)
+                if (CancellationToken.WaitHandle.WaitOne(FallbackTime.Value))
+                    return;
+
+                FallbackTime = null;
+            }
+
+            EnsureThreadAllocationStats();
+
+            try
+            {
+                if (_consumer == null)
                 {
                     try
                     {
-                        var message = messageBatch.Count == 0
-                            ? _consumer.Consume(CancellationToken)
-                            : _consumer.Consume(TimeSpan.Zero);
-
-                        if (message is null)
-                            break;
-
-                        if (consumeScope.IsRunning == false)
-                            consumeScope.Start();
-
-                        var jsonMessage = await context.ReadForMemoryAsync(new MemoryStream(message), "queue-message", CancellationToken);
-
-                        messageBatch.Add(jsonMessage);
-
-                        consumeScope.RecordConsumedMessage();
-
-                        // TODO arek - can continue batch
-                    }
-                    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
-                    {
-                        return;
+                        _consumer = CreateConsumer();
                     }
                     catch (Exception e)
                     {
-                        string msg = "Failed to consume message.";
+                        string msg = "Failed to create queue consumer";
 
-                        if (Logger.IsOperationsEnabled)
-                        {
-                            Logger.Operations(msg, e);
-                        }
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"[{Name}] {msg}", e);
+
+                        var key = $"{Tag}/{Name}";
+
+                        var alert = AlertRaised.Create(Database.Name, Tag, msg, AlertType.QueueSink_ConsumerCreationError, NotificationSeverity.Error, key, new ExceptionDetails(e));
+
+                        Database.NotificationCenter.Add(alert);
 
                         EnterFallbackMode();
-                        Statistics.RecordConsumeError(e.Message, 0);
+                        continue;
                     }
                 }
-            }
 
-            if (messageBatch.Count == 0)
-                return;
+                var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+                _lastStats = statsAggregator;
 
-            bool batchStopped = false;
+                AddPerformanceStats(statsAggregator);
 
-            try
-            {
-                
-                    using (var tx = context.OpenWriteTransaction())
-                    using (var scriptProcessingScope = stats.For(QueueSinkBatchPhases.ScriptProcessing))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var stats = statsAggregator.CreateScope())
+                {
+                    var messages = new List<BlittableJsonReaderObject>();
+
+                    using (var pullScope = stats.For(QueueSinkBatchPhases.Pull, start: false))
                     {
-                        var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
-                        Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
-
-                        foreach (var message in messageBatch)
+                        while (true)
                         {
                             try
                             {
-                                using (message)
-                                using (documentScript.Run(context, context, "execute", new object[] {message}))
-                                {
-                                }
+                                var message = messages.Count == 0
+                                    ? _consumer.Consume(CancellationToken)
+                                    : _consumer.Consume(TimeSpan.Zero);
 
-                                scriptProcessingScope.RecordProcessedMessage();
+                                if (message is null)
+                                    break;
+
+                                if (pullScope.IsRunning == false)
+                                    pullScope.Start();
+
+                                var json = context.Sync.ReadForMemory(new MemoryStream(message), "queue-message");
+
+                                messages.Add(json);
+
+                                pullScope.RecordPulledMessage();
+
+                                if (CanContinueBatch(stats, messages.Count, context) == false)
+                                    break;
                             }
-                            catch (JavaScriptParseException e)
-                            {
-                                HandleScriptParseException(e);
-                                batchStopped = true;
-                            }
-                            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                            catch (OperationCanceledException)
                             {
                                 return;
                             }
                             catch (Exception e)
                             {
-                                var msg = "Failed to process consumed message by the script.";
+                                string msg = "Failed to consume message.";
 
-                                if (Logger.IsOperationsEnabled)
-                                {
-                                    Logger.Operations(msg, e);
-                                }
+                                if (_logger.IsOperationsEnabled)
+                                    _logger.Operations(msg, e);
 
-                                Statistics.RecordScriptExecutionError(e);
-                                scriptProcessingScope.RecordScriptError();
+                                Statistics.RecordConsumeError(e.Message);
+
+                                EnterFallbackMode();
                             }
                         }
+                    }
 
-                        if (batchStopped == false)
+                    bool batchStopped = false;
+                    var processed = 0;
+
+                    try
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        using (var scriptProcessingScope = stats.For(QueueSinkBatchPhases.ScriptProcessing))
                         {
-                            tx.Commit();
-                            _consumer.Commit();
+                            var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
+                            Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
+
+                            foreach (var message in messages)
+                            {
+                                try
+                                {
+                                    using (message)
+                                    using (documentScript.Run(context, context, "execute", new object[] { message }))
+                                    {
+                                    }
+
+                                    scriptProcessingScope.RecordProcessedMessage();
+                                    processed++;
+                                }
+                                catch (JavaScriptParseException e)
+                                {
+                                    HandleScriptParseException(e);
+                                    batchStopped = true;
+                                }
+                                catch (Exception e)
+                                {
+                                    var msg = "Failed to process consumed message by the script.";
+
+                                    if (_logger.IsOperationsEnabled)
+                                    {
+                                        _logger.Operations(msg, e);
+                                    }
+
+                                    Statistics.RecordScriptExecutionError(e);
+                                    scriptProcessingScope.RecordScriptError();
+                                }
+                            }
+
+                            if (batchStopped == false)
+                            {
+                                tx.Commit();
+                                _consumer.Commit();
+                            }
                         }
                     }
-            }
-            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
-            {
-                return;
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        var message = $"{Tag} Exception in queue sink process '{Name}'";
+
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(message, e);
+
+                        Statistics.RecordConsumeError(e.Message);
+                    }
+
+                    statsAggregator.Complete();
+
+                    Statistics.ConsumeSuccess(processed);
+                    Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+                }
             }
             catch (Exception e)
             {
-                var message = $"{Tag} Exception in queue sink process '{Name}'";
+                var msg = $"Unexpected error in {Tag} process: '{Name}'";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(message, e);
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(msg, e);
+                }
 
-                Statistics.RecordConsumeError(e.Message);
+                // TODO arekReportStopReasonToStats($"{msg} : {e}");
             }
-
-            Statistics.ConsumeSuccess(messageBatch.Count);
-            Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+            finally
+            {
+                _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+            }
         }
     }
 
@@ -271,23 +333,37 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
     protected abstract IQueueSinkConsumer CreateConsumer();
 
-    private class TestQueueMessageCommand : PatchDocumentCommand
+    public void Start()
     {
-        private readonly BlittableJsonReaderObject _message;
+        if (_longRunningWork != null)
+            return;
 
-        public TestQueueMessageCommand(JsonOperationContext context, PatchRequest patch, BlittableJsonReaderObject message) : base(context, Guid.NewGuid().ToString(),
-            null, false, (patch, null), (null, null), null, '/', isTest: true, debugMode: true, collectResultsNeeded: true, returnDocument: true)
-        {
-            _message = message;
-        }
+        if (Script.Disabled || Configuration.Disabled)
+            return;
 
-        protected override Document GetCurrentDocument(DocumentsOperationContext context, string id)
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
+
+        var threadName = $"{Tag} process: {Name}";
+        _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
         {
-            return new Document
+            try
             {
-                Data = _message
-            };
-        }
+                // This has lower priority than request processing, so we let the OS
+                // schedule this appropriately
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
+                NativeMemory.EnsureRegistered();
+                Run();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to run ETL {Name}", e);
+            }
+        }, null, ThreadNames.ForEtlProcess(threadName, Tag, Name));
+
+        if (_logger.IsOperationsEnabled)
+            _logger.Operations($"Starting {Tag} process: '{Name}'.");
+
     }
 
     public static TestQueueSinkScriptResult TestScript(TestQueueSinkScript testScript, DocumentsOperationContext context, DocumentDatabase database)
@@ -333,22 +409,31 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
 
     public void Stop(string reason)
     {
+        if (_longRunningWork == null)
+            return;
+
         string msg = $"Stopping {Tag} process: '{Name}'. Reason: {reason}";
 
-        if (Logger.IsOperationsEnabled)
+        if (_logger.IsOperationsEnabled)
         {
-            Logger.Operations(msg);
+            _logger.Operations(msg);
         }
 
-        base.Stop();
+        _cts.Cancel();
+
+        var longRunningWork = _longRunningWork;
+        _longRunningWork = null;
+
+        if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
+            longRunningWork.Join(int.MaxValue);
     }
 
     private void HandleScriptParseException(Exception e)
     {
         var message = $"[{Name}] Could not parse script. Stopping Queue Sink process.";
 
-        if (Logger.IsOperationsEnabled)
-            Logger.Operations(message, e);
+        if (_logger.IsOperationsEnabled)
+            _logger.Operations(message, e);
 
         var key = $"{Tag}/{Name}";
         var details = new QueueSinkErrorsDetails();
@@ -386,11 +471,8 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
                 Math.Max(5, secondsSinceLastError * 2)));
         }
-
-        Thread.Sleep(FallbackTime.Value);
-        FallbackTime = null;
     }
-    
+
     public QueueSinkPerformanceStats[] GetPerformanceStats()
     {
         var lastStats = _lastStats;
@@ -405,10 +487,106 @@ public abstract class QueueSinkProcess : BackgroundWorkBase
         return _lastStats;
     }
 
-    public override void Dispose()
+    private bool CanContinueBatch(QueueSinkStatsScope stats, int batchSize, DocumentsOperationContext ctx)
     {
-        base.Dispose();
+        if (Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+        {
+            var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
 
-        _consumer?.Dispose();
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"[{Name}] {reason}");
+
+            stats.RecordPullCompleteReason(reason);
+
+            return false;
+        }
+
+        if (_lowMemoryFlag.IsRaised() && batchSize >= MinBatchSize)
+        {
+            var reason = $"The batch was stopped after processing {batchSize:#,#;;0} items because of low memory";
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"[{Name}] {reason}");
+
+            stats.RecordPullCompleteReason(reason);
+            return false;
+        }
+
+        var totalAllocated = new Size(_threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes), SizeUnit.Bytes);
+        _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
+
+        stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
+
+        if (totalAllocated > _currentMaximumAllowedMemory)
+        {
+            if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                    totalAllocated,
+                    Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Database.ServerStore.Server.MetricCacher, _logger, out var memoryUsage) == false)
+            {
+                var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
+                if (memoryUsage != null)
+                {
+                    reason += " Current memory usage: " +
+                               $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                               $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                }
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"[{Name}] {reason}");
+
+                stats.RecordPullCompleteReason(reason);
+
+                ctx.DoNotReuse = true;
+
+                return false;
+            }
+        }
+
+        var maxBatchSize = Database.Configuration.QueueSink.MaxBatchSize;
+
+        if (maxBatchSize != null && batchSize >= maxBatchSize)
+        {
+            var reason = $"Stopping the batch because maximum batch size limit was reached ({batchSize})";
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"[{Name}] {reason}");
+
+            stats.RecordPullCompleteReason(reason);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    protected void EnsureThreadAllocationStats()
+    {
+        _threadAllocations = NativeMemory.CurrentThreadStats;
+    }
+
+    public void Dispose()
+    {
+        if (CancellationToken.IsCancellationRequested)
+            return;
+
+        var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {GetType().Name}: '{Name}'");
+
+        exceptionAggregator.Execute(() => Stop("Dispose"));
+
+        exceptionAggregator.Execute(() => _cts.Dispose());
+        exceptionAggregator.Execute(() => _consumer?.Dispose());
+
+        exceptionAggregator.ThrowIfNeeded();
+    }
+
+    public void LowMemory(LowMemorySeverity lowMemorySeverity)
+    {
+        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+        _lowMemoryFlag.Raise();
+    }
+
+    public void LowMemoryOver()
+    {
+        _lowMemoryFlag.Lower();
     }
 }

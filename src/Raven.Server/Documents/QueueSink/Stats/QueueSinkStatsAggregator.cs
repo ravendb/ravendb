@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Utils.Stats;
+using Sparrow;
+using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.QueueSink.Stats;
 
@@ -61,14 +63,12 @@ public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, Queue
             Started = StartTime,
             Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
             Details = Scope.ToQueueSinkPerformanceOperation("Queue Sink"),
-            NumberOfConsumedMessages = Stats.NumberOfConsumedMessages,
+            NumberOfPulledMessages = Stats.NumberOfPulledMessages,
             NumberOfProcessedMessages = Stats.NumberOfProcessedMessages,
             ScriptErrorCount = Stats.ScriptErrorCount,
             SuccessfullyProcessed = Stats.SuccessfullyProcessed,
-            // TODO arek NumberOfCreatedDocuments,
-            BatchStopReason = Stats.BatchStopReason,
-            //CurrentlyAllocated = new Size(Stats.CurrentlyAllocated.GetValue(SizeUnit.Bytes)),
-            //BatchSize = new Size(Stats.BatchSize.GetValue(SizeUnit.Bytes)),
+            BatchPullStopReason = Stats.BatchPullStopReason,
+            CurrentlyAllocated = new Size(Stats.CurrentlyAllocated.GetValue(SizeUnit.Bytes)),
         };
     }
 }
