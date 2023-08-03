@@ -255,37 +255,37 @@ namespace Raven.Server.Smuggler.Documents
                 if (legacy == false)
                     return DatabaseContext.GetShardNumberFor(_allocator, document.Id);
 
-                string id = document.Id;
-                if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                if (document.TryGetMetadata(out BlittableJsonReaderObject metadata) == false)
+                    return DatabaseContext.GetShardNumberFor(_allocator, document.Id);
+
+                string id = null;
+                JsonOperationContext context = GetContextForNewDocument();
+                if (document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision))
                 {
-                    JsonOperationContext context = GetContextForNewDocument();
-                    if (document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyRevision))
-                    {
-                        var endIndex = document.Id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
-                        id = document.Id.Substring(0, endIndex);
+                    var endIndex = document.Id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                    id = document.Id.Substring(0, endIndex);
 
-                        metadata.Modifications = new DynamicJsonValue
-                        {
-                            ["Raven-Document-Parent-Revision"] = document.Id,
-                            ["Raven-Document-Revision-Status"] = "Historical"
-                        };
-                    }
-                    else
+                    metadata.Modifications = new DynamicJsonValue
                     {
-                        metadata.Modifications = new DynamicJsonValue
-                        {
-                            ["Raven-Document-Revision"] = document.Id,
-                            ["Raven-Document-Revision-Status"] = "Current"
-                        };
-                    }
-
-                    using (var old = document.Data)
+                        ["Raven-Document-Parent-Revision"] = document.Id,
+                        ["Raven-Document-Revision-Status"] = "Historical"
+                    };
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue
                     {
-                        document.Data = context.ReadObject(document.Data, document.Id);
-                    }
+                        ["Raven-Document-Revision"] = document.Id,
+                        ["Raven-Document-Revision-Status"] = "Current"
+                    };
                 }
 
-                return DatabaseContext.GetShardNumberFor(_allocator, id);
+                using (var old = document.Data)
+                {
+                    document.Data = context.ReadObject(document.Data, document.Id);
+                }
+
+                return DatabaseContext.GetShardNumberFor(_allocator, id ?? document.Id);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
