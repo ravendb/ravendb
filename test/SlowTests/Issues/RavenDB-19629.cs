@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,8 @@ public class RavenDB_19629 : RavenTestBase
     public RavenDB_19629(ITestOutputHelper output) : base(output)
     {
     }
-    [Fact]
+
+    [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
     public async Task CanDeleteCmpXchgValue2()
     {
         using var store = GetDocumentStore();
@@ -21,7 +23,7 @@ public class RavenDB_19629 : RavenTestBase
             await session.StoreAsync(new User { Name = "arava" }, "users/arava");
             await session.SaveChangesAsync();
         }
-        
+
         using (var session = store.OpenAsyncSession())
         {
             session.Delete("users/arava");
@@ -41,18 +43,18 @@ public class RavenDB_19629 : RavenTestBase
             await session.SaveChangesAsync();
         }
     }
-    
-    [Fact]
+
+    [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
     public async Task TestSessionMixture2()
     {
         using (var store = GetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
             {
-                await session.StoreAsync(new User(),"foo/bar");
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                await session.StoreAsync(new User(), "foo/bar");
                 await session.SaveChangesAsync();
             }
 
@@ -62,13 +64,13 @@ public class RavenDB_19629 : RavenTestBase
                 await session.SaveChangesAsync();
             }
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var user = await session.LoadAsync<User>("foo/bar");
                 Assert.Null(user);
-                await session.StoreAsync(new User(),"foo/bar");
+                await session.StoreAsync(new User(), "foo/bar");
                 await session.SaveChangesAsync();
             }
         }
