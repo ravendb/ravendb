@@ -21,13 +21,13 @@ import ActionContextUtils from "components/utils/actionContextUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface IndexesPageProps {
-    database: database;
+    db: database;
     stale?: boolean;
     indexName?: string;
 }
 
 export function IndexesPage(props: IndexesPageProps) {
-    const { database, stale, indexName: indexToHighlight } = props;
+    const { db, stale, indexName: indexToHighlight } = props;
 
     const { canReadWriteDatabase } = useAccessManager();
     const { reportEvent } = useEventsCollector();
@@ -63,11 +63,11 @@ export function IndexesPage(props: IndexesPageProps) {
         getSelectedIndexes,
         confirmDeleteIndexes,
         globalIndexingStatus,
-    } = useIndexesPage(database, stale);
+    } = useIndexesPage(db, stale);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
-        return confirmDeleteIndexes(database, getSelectedIndexes());
+        return confirmDeleteIndexes(db, getSelectedIndexes());
     };
 
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
@@ -76,14 +76,14 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
 
-    const allActionContexts = ActionContextUtils.getContexts(database.getLocations());
+    const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
     if (loading) {
         return <LoadingView />;
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes database={database} />;
+        return <NoIndexes database={db} />;
     }
 
     return (
@@ -108,7 +108,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
                         {/*  TODO  <IndexGlobalIndexing /> */}
                     </Row>
-                    {canReadWriteDatabase(database) && (
+                    {canReadWriteDatabase(db) && (
                         <IndexSelectActions
                             indexNames={indexNames}
                             selectedIndexes={selectedIndexes}
@@ -151,8 +151,8 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 pauseIndexing={() => pauseIndexes([index])}
                                                 index={index}
                                                 hasReplacement={!!replacement}
-                                                database={database}
-                                                deleteIndex={() => confirmDeleteIndexes(database, [index])}
+                                                database={db}
+                                                deleteIndex={() => confirmDeleteIndexes(db, [index])}
                                                 selected={selectedIndexes.includes(index.name)}
                                                 toggleSelection={() => toggleSelection(index)}
                                                 key={index.name}
@@ -190,8 +190,8 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     disableIndexing={() => disableIndexes([replacement])}
                                                     pauseIndexing={() => pauseIndexes([replacement])}
                                                     index={replacement}
-                                                    database={database}
-                                                    deleteIndex={() => confirmDeleteIndexes(database, [replacement])}
+                                                    database={db}
+                                                    deleteIndex={() => confirmDeleteIndexes(db, [replacement])}
                                                     selected={selectedIndexes.includes(replacement.name)}
                                                     toggleSelection={() => toggleSelection(replacement)}
                                                     key={replacement.name}
