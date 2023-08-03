@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -189,12 +190,19 @@ namespace SlowTests.Server.Replication
                 var stats = await collector.Stats.DequeueAsync();
                 Assert.Equal(1, stats.Count);
                 Assert.Equal(LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal, ((LiveReplicationPerformanceCollector.OutgoingPerformanceStats)stats[0]).Type);
-                ;
-                var collector2 = await GetPerformanceCollectorAsync(receiverStore, receiver);
-                var stats2 = await collector2.Stats.DequeueAsync();
 
                 var expectedStatsCount = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3; // for sharding we have 3 incoming connections (one for each shard in source)
-                Assert.Equal(expectedStatsCount, stats2.Count);
+
+                List<LiveReplicationPerformanceCollector.IReplicationPerformanceStats> stats2 = null;
+                var statsCount = await WaitForValueAsync(async () =>
+                {
+                    var collector2 = await GetPerformanceCollectorAsync(receiverStore, receiver);
+                    stats2 = await collector2.Stats.DequeueAsync();
+                    return stats2.Count;
+                }, expectedStatsCount);
+
+                Assert.NotNull(stats2);
+                Assert.Equal(expectedStatsCount, statsCount);
                 for (var i = 0; i < expectedStatsCount; i++)
                 {
                     Assert.Equal(LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal, ((LiveReplicationPerformanceCollector.IncomingPerformanceStats)stats2[i]).Type);
