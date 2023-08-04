@@ -5,10 +5,10 @@
                 <i class="icon-cancel"></i>
             </button>
             <h4 class="modal-title text-warning" data-bind="visible: reasons().IsStale">
-                    Index <span data-bind="text: $root.indexName"></span> is stale.
+                    Index <span data-bind="text: $root.indexName" class="word-break"></span> is stale.
             </h4>
             <h4 class="modal-title text-success" data-bind="visible: !reasons().IsStale">
-                Index <span data-bind="text: $root.indexName"></span> is up to date.
+                Index <span data-bind="text: $root.indexName" class="word-break"></span> is up to date.
             </h4>
         </div>
         <div class="modal-body" data-bind="with: reasons">
