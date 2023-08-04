@@ -295,6 +295,16 @@ class indexPerformance extends shardViewModelBase {
             "Corax/Commit": undefined as string,
             "Corax/Convert": undefined as string,
             "Corax/AddDocument": undefined as string,
+            "TextualValues": undefined as string,
+            "FloatingValues": undefined as string,
+            "IntegerValues": undefined as string,
+            "Deletions": undefined as string,
+            "DynamicFields": undefined as string,
+            "SpatialValues": undefined as string,
+            "StaticField": undefined as string,
+            "StoredValues": undefined as string,
+            "Suggestions": undefined as string,
+            "Field": undefined as string,
             "UnknownOperation": undefined as string
         }
     };
@@ -1029,6 +1039,10 @@ class indexPerformance extends shardViewModelBase {
 
         if (operationName.startsWith("Collection_")) {
             return tracks.Collection;
+        }
+        
+        if (operationName.startsWith("Field_")) {
+            return tracks.Field;
         }
         
         console.warn(`Operation "${operationName}" is not supported. Using unknown-operation color in performance graph.`);
