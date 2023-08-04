@@ -6,8 +6,8 @@
             </button>
             <h4 class="modal-title">Query Timings</h4>
         </div>
-        <div class="modal-body">
-            <div class="panel-body js-timings-container timings" style="height: 350px; width: 850px">
+        <div class="modal-body scroll">
+            <div class="panel-body js-timings-container timings m-0" style="height: 350px; width: 850px">
                 <div class="toggle toggle-right">
                     <input id="log-scale" class="styled" type="checkbox" data-bind="checked: timingsGraph.useLogScale">
                     <label for="log-scale" class="properties-label">
@@ -28,10 +28,10 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <div class="timing-legend-item">
+    <div class="timing-legend-item d-flex align-items-start lh-base">
         <i data-bind="attr: { 'class': 'item-rect ' + $root.timingsGraph.getColorClass(name) }"></i>
-        <span class="name" data-bind="text: name"></span>
-        <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+        <small class="name word-break" data-bind="text: name"></small>
+        <small class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></small>
     </div>
     <div data-bind="foreach: children">
         <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">
