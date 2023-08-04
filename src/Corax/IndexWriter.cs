@@ -1496,7 +1496,7 @@ namespace Corax
             return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
-        private void Commit() => Commit<EmptyStatsScope>(default);
+        public void Commit() => Commit<EmptyStatsScope>(default);
         
         public void Commit<TStatsScope>(TStatsScope stats)
             where TStatsScope : struct, ICoraxStatsScope
