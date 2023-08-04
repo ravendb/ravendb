@@ -13,7 +13,6 @@ param(
     [switch]$JustNuget,
     [switch]$Debug,
     [switch]$NoBundling,
-    [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
     [switch]$Help)
 
@@ -258,9 +257,3 @@ Foreach ($target in $targets) {
 }
 
 write-host "Done creating packages."
-
-if ($buildType -eq 'stable') {
-    CreateRelease $version "ravendb" "ravendb" $env:vcsRootBranch $env:GITHUB_ACCESS_TOKEN $env:ravendbChangelog $DryRunVersionBump
-    BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
-}
-
