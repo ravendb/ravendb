@@ -1535,9 +1535,19 @@ namespace Raven.Server.Documents.Indexes
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
                     }
 
+                    if (IndexPersistence.RequireOnBeforeExecuteIndexing())
                     {
                         var onBeforeExecutionStats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-                        IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats);
+                        try
+                        {
+                            AddIndexingPerformance(onBeforeExecutionStats);
+                            IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats);
+                        }
+                        finally
+                        {
+                            onBeforeExecutionStats.Complete();
+                            NotifyAboutCompletedBatch(false);
+                        }
                     }
                     
                     while (true)

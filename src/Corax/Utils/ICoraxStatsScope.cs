@@ -22,7 +22,7 @@ internal struct EmptyStatsScope : ICoraxStatsScope
 {
     public ICoraxStatsScope For(string name, bool start = true)
     {
-        return default;
+        return this;
     }
     
     public void Dispose()

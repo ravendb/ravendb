@@ -255,7 +255,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _initialized = true;
         }
-        
+
+        public override bool RequireOnBeforeExecuteIndexing()
+        {
+            return false;
+        }
+
         public override void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator)
         {
         }

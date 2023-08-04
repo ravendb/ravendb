@@ -1,5 +1,4 @@
 ﻿using System;
-using Corax.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
@@ -119,33 +118,40 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void Initialize(StorageEnvironment environment)
     {
     }
-    
-    public override void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator)
-    {
-        using (indexingStatsAggregator.CreateScope().For(IndexingOperation.Corax.DictionaryTraining))
-            CreatePersistentDictionary();
-    }
-    
-    internal void CreatePersistentDictionary()
+
+    public override bool RequireOnBeforeExecuteIndexing()
     {
         var contextPool = _index._contextPool;
-
         using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (var tx = context.OpenReadTransaction())
         {
             if (CompactTree.HasDictionary(tx.InnerTransaction.LowLevelTransaction))
-               return; 
+                return false; 
         }
-        
+
+            
         if (_index.SourceType != IndexSourceType.Documents)
-            return;
+            return false;
 
+        return true;
+    }
+
+    public override void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator)
+    {
+        CreatePersistentDictionary(indexingStatsAggregator);
+        
+    }
+
+    private void CreatePersistentDictionary(IndexingStatsAggregator indexingStatsAggregator)
+    {
+        var contextPool = _index._contextPool;
         var documentStorage = _index.DocumentDatabase.DocumentsStorage;
-
-        using var _ = CultureHelper.EnsureInvariantCulture();
-        using var __ = contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
+        
+        using var scope = indexingStatsAggregator.CreateScope();
+        using var _ = scope.For(IndexingOperation.Corax.DictionaryTraining);
+        using var __ = CultureHelper.EnsureInvariantCulture();
+        using var ___ = contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
         using var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index);
-
         using (CurrentIndexingScope.Current = _index.CreateIndexingScope(indexContext, queryContext))
         {
             indexContext.PersistentContext.LongLivedTransactions = true;

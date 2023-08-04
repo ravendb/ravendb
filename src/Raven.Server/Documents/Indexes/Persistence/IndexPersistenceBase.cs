@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void Clean(IndexCleanup mode);
 
         public abstract void Initialize(StorageEnvironment environment);
+
+        public abstract bool RequireOnBeforeExecuteIndexing();
         
         public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator);
 
@@ -45,6 +47,4 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void DisposeWriters();
         public abstract void Dispose();
     }
-
-
 }
