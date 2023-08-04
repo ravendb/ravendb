@@ -400,6 +400,7 @@ namespace Corax
             public readonly Dictionary<double, int> Doubles;
             public Dictionary<Slice, int> Suggestions;
             public readonly Analyzer Analyzer;
+            public readonly string NameForStatistics;
             public readonly Slice Name;
             public readonly Slice NameLong;
             public readonly Slice NameDouble;
@@ -416,12 +417,12 @@ namespace Corax
             }
 
             public IndexedField(IndexFieldBinding binding) : this(binding.FieldId, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble,
-                binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore)
+                binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, binding.FieldNameForStatistics)
             {
             }
 
             public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-                FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore)
+                FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, string nameForStatistics = null)
             {
                 Name = name;
                 NameLong = nameLong;
@@ -436,6 +437,7 @@ namespace Corax
                 Longs = new Dictionary<long, int>();
                 Doubles = new Dictionary<double, int>();
                 FieldIndexingMode = fieldIndexingMode;
+                NameForStatistics = nameForStatistics ?? $"Field_{Name}";
             }
 
             public void Clear()
@@ -1494,12 +1496,16 @@ namespace Corax
             return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
-        public void Commit()
+        private void Commit() => Commit<EmptyStatsScope>(default);
+        
+        public void Commit<TStatsScope>(TStatsScope stats)
+            where TStatsScope : struct, ICoraxStatsScope
         {
             _indexDebugDumper.Commit();
             using var _ = _entriesAllocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
-            
-            ProcessDeletes();
+
+            using (stats.For(CommitOperation.Deletions))
+                ProcessDeletes();
             
             Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
@@ -1515,13 +1521,22 @@ namespace Corax
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
                 var indexedField = _knownFieldsTerms[fieldId];
+                using var staticFieldScope = stats.For(indexedField.NameForStatistics);
+
                 if (indexedField.Textual.Count == 0)
                     continue;
 
-                InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
-                InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
-                InsertSpatialField(entriesToSpatialTree, indexedField);
+                using (staticFieldScope.For(CommitOperation.TextualValues))
+                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+                
+                using (staticFieldScope.For(CommitOperation.IntegerValues))
+                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
+                
+                using (staticFieldScope.For(CommitOperation.FloatingValues))
+                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
+
+                using (staticFieldScope.For(CommitOperation.SpatialValues))
+                    InsertSpatialField(entriesToSpatialTree, indexedField);
 
                 if (indexedField.HasMultipleTermsPerField)
                 {
@@ -1533,10 +1548,19 @@ namespace Corax
             {
                 foreach (var (_, indexedField) in _dynamicFieldsTerms)
                 {
-                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
-                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
-                    InsertSpatialField(entriesToSpatialTree,  indexedField);
+                    using var dynamicFieldScope = stats.For(indexedField.NameForStatistics);
+
+                    using (dynamicFieldScope.For(CommitOperation.TextualValues))
+                        InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+
+                    using (dynamicFieldScope.For(CommitOperation.IntegerValues))
+                        InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
+                    
+                    using (dynamicFieldScope.For(CommitOperation.FloatingValues))
+                        InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
+                    
+                    using (dynamicFieldScope.For(CommitOperation.SpatialValues))
+                        InsertSpatialField(entriesToSpatialTree,  indexedField);
                     
                     if (indexedField.HasMultipleTermsPerField)
                     {
@@ -1545,7 +1569,8 @@ namespace Corax
                 }
             }
 
-            WriteIndexEntries();
+            using(stats.For(CommitOperation.StoredValues))
+                WriteIndexEntries();
 
             _pForEncoder.Dispose();
             _pForEncoder = null;
@@ -1556,6 +1581,7 @@ namespace Corax
             // Check if we have suggestions to deal with. 
             if (_hasSuggestions)
             {
+                using var __ = stats.For(CommitOperation.Suggestions);
                 for (var fieldId = 0; fieldId < _knownFieldsTerms.Length; fieldId++)
                 {
                     IndexedField indexedField = _knownFieldsTerms[fieldId];
