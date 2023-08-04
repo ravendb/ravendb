@@ -14,8 +14,8 @@ public static class CommitOperation
     public const string IntegerValues = nameof(IntegerValues);
     public const string Deletions = nameof(Deletions);
     public const string Suggestions = nameof(Suggestions);
-    public const string DynamicFields = nameof(DynamicFields);
-    public const string Spatials = nameof(Spatials);
+    public const string SpatialValues = nameof(SpatialValues);
+    public const string StoredValues = nameof(StoredValues);
 }
 
 internal struct EmptyStatsScope : ICoraxStatsScope

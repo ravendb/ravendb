@@ -74,9 +74,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             if (_indexWriter != null)
             {
-                using (stats.For(IndexingOperation.Corax.Commit))
+                using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
                 {
-                    _indexWriter.Commit();
+                    _indexWriter.Commit(new CoraxIndexingStats(commitStats));
                 }
             }
         }
