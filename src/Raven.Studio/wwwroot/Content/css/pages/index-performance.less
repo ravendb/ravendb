@@ -195,11 +195,11 @@
             color: @color-5;
         }
 
-        .luceneRecreateSearcher .deletions .storedValues .suggestions {
+        .luceneRecreateSearcher, .deletions, .storedValues, .suggestions, .coraxField {
             color: lighten(@color-5, 10%);
         }
         
-        .textualValues .floatingValues .integerValues .spatialValues {
+        .textualValues, .floatingValues, .integerValues, .spatialValues {
             color: lighten(@color-5, 20%);
         }
 
@@ -217,6 +217,10 @@
 
         .unknownOperation {
             color: @default-operation-color;
+        }
+        
+        .coraxDictionaryTraining {
+            color: darken(@color-5, 10%);
         }
     }
 }
