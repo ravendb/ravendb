@@ -35,7 +35,7 @@ namespace Raven.Server.Utils
                     if (result.ContainsKey(prop.Name)) // already dealt with
                         continue;
 
-                    prop.Token = doc.ProcessTokenTypeFlags(prop.Token);
+                    prop.Token = BlittableJsonReaderBase.ProcessTokenTypeFlags(prop.Token);
                     switch (prop.Token)
                     {
                         case BlittableJsonToken.StartObject:
