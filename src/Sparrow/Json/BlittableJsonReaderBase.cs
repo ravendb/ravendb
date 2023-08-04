@@ -30,9 +30,8 @@ namespace Sparrow.Json
         public bool NoCache { get; set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
+        protected static int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
-            AssertContextNotDisposed();
             // process part of byte flags that responsible for property ids sizes
             const BlittableJsonToken mask =
                 BlittableJsonToken.PropertyIdSizeByte | 
@@ -56,9 +55,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
+        protected static int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
-            AssertContextNotDisposed();
             // process part of byte flags that responsible for offset sizes
             const BlittableJsonToken mask =
                 BlittableJsonToken.OffsetSizeByte |
@@ -96,16 +94,14 @@ namespace Sparrow.Json
                 BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
         
-        public BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
+        public static BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
         {
-            AssertContextNotDisposed();
-
             var token = currentType & TypesMask;
-            if (token >= BlittableJsonToken.StartObject && token <= BlittableJsonToken.RawBlob)
+            if (token is >= BlittableJsonToken.StartObject and <= BlittableJsonToken.RawBlob)
                 return currentType & TypesMask;
 
             ThrowInvalidType(currentType);
-            return default(BlittableJsonToken);// will never happen
+            return default;// will never happen
         }
 
         private static void ThrowInvalidType(BlittableJsonToken currentType)
@@ -114,9 +110,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int ReadNumber(byte* value, long sizeOfValue)
+        protected int ReadNumber(byte* value, long sizeOfValue)
         {
-            AssertContextNotDisposed();
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))
                 goto Successful;
@@ -233,40 +228,9 @@ namespace Sparrow.Json
             ThrowInvalidShift();
             return -1;
         }
-        
-        public static long ReadVariableSizeLongInReverse(byte* buffer, int pos, out byte offset)
-        {
-            // Read out an Int32 7 bits at a time.  The high bit 
-            // of the byte when on means to continue reading more bytes.
-            // we assume that the value shouldn't be zero very often
-            // because then we'll always take 5 bytes to store it
-            offset = 0;
-            long count = 0;
-            byte shift = 0;
-            byte b;
-            do
-            {
-                if (shift == 70)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
-
-                b = buffer[pos];
-                pos--;
-                offset++;
-
-                count |= ((long)(b & 0x7F)) << shift;
-                shift += 7;                
-            }
-            while ((b & 0x80) != 0);
-            return count;
-
-            Error:
-            ThrowInvalidShift();
-            return -1;
-        }
 
         protected long ReadVariableSizeLong(int pos)
         {
-            AssertContextNotDisposed();
             // ReadAsync out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
 
