@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -14,11 +13,13 @@ namespace SlowTests.Issues
         public RavenDB_17702(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
-        public async Task InsertOldSegmentAfterDeletionProblem1()
+
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Cluster | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task InsertOldSegmentAfterDeletionProblem1(Options options)
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
                     }
                     foreach (var server in Servers)
                     {
-                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1", server);
                         var tss = database.DocumentsStorage.TimeSeriesStorage;
                         var res = await WaitForValueAsync(() =>
                         {
@@ -64,17 +65,17 @@ namespace SlowTests.Issues
                             }
                         }, 0, 5000);
                         Assert.Equal(0, res);
-
                     }
                 }
             }
         }
 
-        [Fact]
-        public async Task InsertOldSegmentAfterDeletionProblem2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task InsertOldSegmentAfterDeletionProblem2(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var now = DateTime.UtcNow;
                 using (var session = store1.OpenSession())
