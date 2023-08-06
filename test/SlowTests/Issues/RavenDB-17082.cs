@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
@@ -22,8 +21,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task RevertRevisionWithMoreInfo()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithMoreInfo(Options options)
         {
             var names = new[]
             {
@@ -32,13 +32,13 @@ namespace SlowTests.Issues
                 "profile.png",
             };
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
                     session.CountersFor("users/1").Increment("Downloads", 100);
                     await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                     {
@@ -52,10 +52,10 @@ namespace SlowTests.Issues
                 {
                     session.CountersFor("users/1").Delete("Downloads");
                     session.Advanced.Attachments.Delete("users/1", "ImGgE/jPeG");
-                   await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -82,11 +82,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RemoveResolveFlagAfterRevert()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveResolveFlagAfterRevert(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
 
@@ -110,14 +111,10 @@ namespace SlowTests.Issues
                     };
                     await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
-
-
-                    await session.StoreAsync(new Person(), "marker");
-                    await session.SaveChangesAsync();
                 }
 
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocument(store1, "marker");
+                await EnsureReplicatingAsync(store2, store1);
 
                 last = DateTime.UtcNow;
                 using (var session = store1.OpenAsyncSession())
@@ -129,8 +126,8 @@ namespace SlowTests.Issues
                     await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
                 }
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                WaitForUserToContinueTheTest(store1);
+
+                var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
@@ -159,7 +156,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("Name3", persons[1].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[1]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision ).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
                     Assert.Equal("Name2", persons[2].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[2]);
@@ -168,8 +165,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertRevisionWithAttachments()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithAttachments(Options options)
         {
             var names = new[]
             {
@@ -178,7 +176,7 @@ namespace SlowTests.Issues
                 "profile.png",
             };
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -195,14 +193,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                   await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                   {
+                    await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                    {
                         session.Advanced.Attachments.Store("users/1", names[1], backgroundStream, "ImGgE/jPeG");
                         await session.SaveChangesAsync();
-                   }
+                    }
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -210,7 +208,7 @@ namespace SlowTests.Issues
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         token: token);
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
@@ -231,8 +229,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertRevisionWithDeleteAttachments()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithDeleteAttachments(Options options)
         {
             var names = new[]
             {
@@ -241,7 +240,7 @@ namespace SlowTests.Issues
                 "profile.png",
             };
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -262,7 +261,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -270,7 +269,7 @@ namespace SlowTests.Issues
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         token: token);
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
@@ -290,11 +289,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertRevisionWithCounters()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithCounters(Options options)
         {
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -312,7 +312,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -320,7 +320,7 @@ namespace SlowTests.Issues
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         token: token);
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
@@ -329,8 +329,7 @@ namespace SlowTests.Issues
                     Assert.Equal("Name1", rev[0].Name);
                     var counters = await session.CountersFor(rev[0]).GetAllAsync();
                     Assert.Equal(1, counters.Count);
-                    Assert.Equal(100 , counters["Downloads"]);
-
+                    Assert.Equal(100, counters["Downloads"]);
 
                     var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
@@ -345,13 +344,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertRevisionWithDeleteCounters()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithDeleteCounters(Options options)
         {
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -367,7 +366,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -375,7 +374,7 @@ namespace SlowTests.Issues
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         token: token);
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
@@ -385,7 +384,6 @@ namespace SlowTests.Issues
                     var counters = await session.CountersFor(rev[0]).GetAllAsync();
                     Assert.Equal(1, counters.Count);
                     Assert.Equal(100, counters["Downloads"]);
-
 
                     var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
@@ -400,10 +398,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RemoveRevertFlagAfterNewInfo1()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveRevertFlagAfterNewInfo1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store);
 
@@ -431,7 +430,7 @@ namespace SlowTests.Issues
 
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "foo/bar");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -476,10 +475,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RemoveRevertFlagAfterNewInfo2()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveRevertFlagAfterNewInfo2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store);
 
@@ -504,10 +504,9 @@ namespace SlowTests.Issues
                     };
                     await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
-
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "foo/bar");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -532,7 +531,7 @@ namespace SlowTests.Issues
                     session.CountersFor("foo/bar").Increment("Downloads", 100);
                     await session.SaveChangesAsync();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var foo = await session.LoadAsync<Person>("foo/bar");
@@ -550,10 +549,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertToTombstone()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertToTombstone(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store);
 
@@ -587,7 +587,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
 
                 }
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "foo/bar");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -631,13 +631,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevertRevisionWithTimeSeries()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertRevisionWithTimeSeries(Options options)
         {
             DateTime last = default;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -656,7 +656,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
