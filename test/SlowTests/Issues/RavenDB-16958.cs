@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -54,8 +53,9 @@ namespace SlowTests.Issues
             return ravenServer;
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task MoveOnToNextTcpAddressOnGuidFailInSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MoveOnToNextTcpAddressOnGuidFailInSubscriptions(Options options)
         {
             //Create same cert servers. B tries to open subscription but accidentally connects to A, after which the guid check fails and failover occurs.
             using (var serverA = CreateSecuredServer())
@@ -66,8 +66,11 @@ namespace SlowTests.Issues
                 using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
-                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
-                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
+                    var record = new DatabaseRecord(database);
+                    options.ModifyDatabaseRecord?.Invoke(record);
+
+                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(record));
+                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(record));
 
                     using (var session = storeB.OpenSession())
                     {
@@ -100,8 +103,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Certificates)]
-        public async Task MoveOnToNextTcpAddressOnCertFailInSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MoveOnToNextTcpAddressOnCertFailInSubscriptions(Options options)
         {
             // create 2 servers with different certs. A tries to connect to itself but accidentaly tries to connect to B, cert is rejected and failover occurs.
             // A then connects to itself successfully.
@@ -113,8 +117,11 @@ namespace SlowTests.Issues
                 using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
-                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
-                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
+                    var record = new DatabaseRecord(database);
+                    options.ModifyDatabaseRecord?.Invoke(record);
+
+                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(record));
+                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(record));
 
                     using (var session = storeB.OpenSession())
                     {
@@ -147,8 +154,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task MoveOnToNextTcpAddressOnCertFailInReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MoveOnToNextTcpAddressOnCertFailInReplication(Options options)
         {
             //A tries to replicate with B. B sends tcpInfo with C's url. A fails to connect to C with cert and then moves on to connect to B.
             using (var serverC = CreateSecuredServer(uniqueCerts: true)) //certC
@@ -163,9 +171,18 @@ namespace SlowTests.Issues
                 using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = databaseA, Conventions = { DisposeCertificate = false } }.Initialize())
                 using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = databaseC, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
-                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseB)));
-                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseA)));
-                    storeC.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseC)));
+                    var recordA = new DatabaseRecord(databaseA);
+                    options.ModifyDatabaseRecord?.Invoke(recordA);
+
+                    var recordB = new DatabaseRecord(databaseB);
+                    options.ModifyDatabaseRecord?.Invoke(recordB);
+
+                    var recordC = new DatabaseRecord(databaseC);
+                    options.ModifyDatabaseRecord?.Invoke(recordC);
+
+                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(recordB));
+                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(recordA));
+                    storeC.Maintenance.Server.Send(new CreateDatabaseOperation(recordC));
 
                     await SetupReplicationAsync(storeA, storeB);
 
@@ -181,8 +198,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task MoveOnToNextTcpAddressOnGuidFailInReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MoveOnToNextTcpAddressOnGuidFailInReplication(Options options)
         {
             //A tries to replicate with B. B sends tcpInfo with C's url. A accepts C's certificate and then fails on Guid check. Will failover and then succeed.
             using (var serverC = CreateSecuredServer(uniqueCerts: false)) //certA
@@ -195,9 +213,12 @@ namespace SlowTests.Issues
                 using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
-                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
-                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
-                    storeC.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
+                    var record = new DatabaseRecord(database);
+                    options.ModifyDatabaseRecord?.Invoke(record);
+
+                    storeB.Maintenance.Server.Send(new CreateDatabaseOperation(record));
+                    storeA.Maintenance.Server.Send(new CreateDatabaseOperation(record));
+                    storeC.Maintenance.Server.Send(new CreateDatabaseOperation(record));
 
                     await SetupReplicationAsync(storeA, storeB);
 
@@ -213,8 +234,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task MoveOnToNextTcpAddressOnGuidFailInCluster()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MoveOnToNextTcpAddressOnGuidFailInCluster(Options options)
         {
             //Leader asks node for tcpInfo and node answers with Leader's url. Leader will try to connect to Node and end up connecting to itself,
             //guid check will fail, and failover will happen.
@@ -232,7 +254,10 @@ namespace SlowTests.Issues
                 using (var leaderStore =
                     new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
-                    var res = leaderStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
+                    var record = new DatabaseRecord(database);
+                    options.ModifyDatabaseRecord?.Invoke(record);
+
+                    var res = leaderStore.Maintenance.Server.Send(new CreateDatabaseOperation(record));
                 }
 
                 using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
