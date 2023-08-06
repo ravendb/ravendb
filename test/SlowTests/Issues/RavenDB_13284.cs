@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -16,8 +15,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ExternalReplicationCanReestablishAfterServerRestarts()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationCanReestablishAfterServerRestarts(Options options)
         {
             var serverSrc = GetNewServer(new ServerCreationOptions
             {
@@ -27,12 +27,12 @@ namespace SlowTests.Issues
             {
                 RunInMemory = false
             });
-            using (var storeSrc = GetDocumentStore(new Options
+            using (var storeSrc = GetDocumentStore(new Options(options)
             {
                 Server = serverSrc,
                 Path = Path.Combine(serverSrc.Configuration.Core.DataDirectory.FullPath, "ExternalReplicationCanReestablishAfterServerRestarts")
             }))
-            using (var storeDst = GetDocumentStore(new Options
+            using (var storeDst = GetDocumentStore(new Options(options)
             {
                 Server = serverDst,
                 Path = Path.Combine(serverDst.Configuration.Core.DataDirectory.FullPath, "ExternalReplicationCanReestablishAfterServerRestarts")
