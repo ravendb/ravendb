@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -25,10 +22,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task StripRevisionFlagFromTombstone()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StripRevisionFlagFromTombstone(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration()
                 {
@@ -52,12 +50,11 @@ namespace SlowTests.Issues
 
                 await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration());
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
                 }
-
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -65,18 +62,18 @@ namespace SlowTests.Issues
                     var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
                     Assert.False(tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions));
                 }
-
             }
         }
 
-        [Fact]
-        public async Task StripRevisionFlagFromTombstoneWithExternalReplication()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StripRevisionFlagFromTombstoneWithExternalReplication(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_FooBar-1"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_FooBar-2"
             }))
@@ -103,15 +100,14 @@ namespace SlowTests.Issues
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
-                WaitForUserToContinueTheTest(store2);
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                var db2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "users/1");
                 var val2 = await WaitForValueAsync(() =>
                     {
-                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
+                            var rev = db2.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
                             return rev.Count;
                         }
                     }, 4
@@ -120,17 +116,17 @@ namespace SlowTests.Issues
                 Assert.Equal(4, val2);
                 await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration());
 
-                db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 IOperationResult enforceResult;
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
-                
+                using (var token = new OperationCancelToken(db1.Configuration.Databases.OperationTimeout.AsTimeSpan, db1.DatabaseShutdown, CancellationToken.None))
+                    enforceResult = await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
+
                 var val = await WaitForValueAsync(() =>
                     {
-                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
+                            var tombstone = db1.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
                             return tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions);
                         }
                     }, false
@@ -146,13 +142,12 @@ namespace SlowTests.Issues
                 var res = WaitForDocument(store2, "marker");
                 Assert.True(res);
 
-                db = await Databases.GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 val2 = await WaitForValueAsync(() =>
                     {
-                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
+                            var rev = db2.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
                             return rev.Count;
                         }
                     }, 0
@@ -161,10 +156,10 @@ namespace SlowTests.Issues
 
                 val = await WaitForValueAsync(() =>
                 {
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
+                        var tombstone = db2.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
                         return tombstone.Tombstone != null && tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions);
                     }
                 }, false
@@ -173,35 +168,20 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task EnforceRevisionConfigurationWithConflict()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task EnforceRevisionConfigurationWithConflict(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1",
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo2",
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
             }))
             {
-
                 await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration()
                 {
                     Default = new RevisionsCollectionConfiguration()
@@ -209,7 +189,7 @@ namespace SlowTests.Issues
                         Disabled = false
                     }
                 });
-                WaitForUserToContinueTheTest(store1);
+
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Store(new User { Name = "test" }, "users/1");
@@ -226,7 +206,7 @@ namespace SlowTests.Issues
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration());
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
 
