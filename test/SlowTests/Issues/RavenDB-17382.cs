@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -20,17 +18,18 @@ namespace SlowTests.Issues
 
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
-        [Fact]
-        public async Task ReplicateDocumentsFromDifferentCollectionsUpdate()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicateDocumentsFromDifferentCollectionsUpdate(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var ongoing = await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "John Dow", Age = 30}, "users/1");
+                    session.Store(new User { Name = "John Dow", Age = 30 }, "users/1");
 
                     session.SaveChanges();
                 }
@@ -44,46 +43,38 @@ namespace SlowTests.Issues
                 using (var session = store1.OpenSession())
                 {
                     session.Delete("users/1");
-
                     session.SaveChanges();
                 }
 
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var database = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 await database.TombstoneCleaner.ExecuteCleanup();
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new Employee { FirstName = "Toli"}, "users/1");
+                    session.Store(new Employee { FirstName = "Toli" }, "users/1");
 
                     session.SaveChanges();
                 }
 
                 await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User { Name = "John Dow", Age = 30 }, "Marker");
-
-                    session.SaveChanges();
-                }
-
-                await WaitForDocumentToReplicateAsync<User>(store2, "Marker", 15000);
-
-                var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1, stats.CountOfDocuments);
+                var stats = await GetDatabaseStatisticsAsync(store2);
+                var expectedDocuments = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3;
+                Assert.Equal(expectedDocuments, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfDocumentsConflicts);
 
                 var conflicts = (await store2.Commands().GetConflictsForAsync("users/1")).ToList();
                 Assert.Equal(2, conflicts.Count);
-
             }
         }
 
-        [Fact]
-        public async Task ReplicateDocumentsFromDifferentCollectionsConflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicateDocumentsFromDifferentCollectionsConflict(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -98,23 +89,15 @@ namespace SlowTests.Issues
                 }
 
                 await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User { Name = "John Dow", Age = 30 }, "Marker");
-
-                    session.SaveChanges();
-                }
-
-                await WaitForDocumentToReplicateAsync<User>(store2, "Marker", 15000);
-
-                var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1, stats.CountOfDocuments);
+                var stats = await GetDatabaseStatisticsAsync(store2);
+                var expectedDocuments = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3;
+                Assert.Equal(expectedDocuments, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfDocumentsConflicts);
 
                 var conflicts = (await store2.Commands().GetConflictsForAsync("users/1")).ToList();
                 Assert.Equal(2, conflicts.Count);
-
             }
         }
     }
