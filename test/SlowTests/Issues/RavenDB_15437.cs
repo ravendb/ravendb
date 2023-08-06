@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using SlowTests.Core.Utils.Entities;
@@ -17,11 +16,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldNotHaveCounterAndCountersSnapshotInMetadata()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotHaveCounterAndCountersSnapshotInMetadata(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(storeA);
 
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 await SetupReplicationAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeA, storeB);
 
-                var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                var dbA = await GetDocumentDatabaseInstanceForAsync(storeA, options.DatabaseMode, "users/1");
                 dbA.Configuration.Replication.MaxItemsCount = 1;
                 dbA.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
 
