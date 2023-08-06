@@ -5,8 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
-using Raven.Client;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -16,7 +14,6 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -50,16 +47,17 @@ namespace SlowTests.Issues
             public string Name;
         }
 
-        [Fact]
-        public async Task WillDeleteOrphanedAtomicGuards_AfterRestoreFromBackup()
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WillDeleteOrphanedAtomicGuards_AfterRestoreFromBackup(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 // this forces us to create an orphan!
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"),new AtomicGuard{Id = "users/phoebe"}, 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"), new AtomicGuard { Id = "users/phoebe" }, 0));
                 await session.StoreAsync(new User { Name = "arava" }, "users/arava");
                 await session.SaveChangesAsync();
             }
@@ -71,7 +69,7 @@ namespace SlowTests.Issues
 
             // we are simulating a scenario where we took a backup midway through removing an atomic guard
 
-            using var store2 = GetDocumentStore(caller: store.Database + "_Restored");
+            using var store2 = GetDocumentStore(options, caller: store.Database + "_Restored");
 
             op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName, CancellationToken.None);
             await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
@@ -99,17 +97,17 @@ namespace SlowTests.Issues
             public string Id;
         }
 
-        [Fact]
-        public async Task CanHandleConflictsWithClusterTransactionIndex()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleConflictsWithClusterTransactionIndex(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
-            using var store2 = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
+            using var store2 = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 await session.StoreAsync(new User { Name = "arava" }, "users/arava");
-                await session.StoreAsync(new User { Name = "marker" }, "marker");
                 await session.SaveChangesAsync();
             }
 
@@ -120,9 +118,8 @@ namespace SlowTests.Issues
             }
 
             await SetupReplicationAsync(store, store2);
+            await EnsureReplicatingAsync(store, store2);
 
-            Assert.True(WaitForDocument(store2, "marker"));
-            WaitForUserToContinueTheTest(store2);
             using (var session2 = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var arava = await session2.LoadAsync<User>("users/arava");
@@ -133,11 +130,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task WillMarkClusterWideDocumentsWithTransactionId()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WillMarkClusterWideDocumentsWithTransactionId(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -156,11 +154,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task WillGetGoodErrorOnMismatchClusterTxId()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WillGetGoodErrorOnMismatchClusterTxId(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -186,11 +185,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task WillFailNormalTransactionThatDoesNotMatchAtomicGuardIndex()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WillFailNormalTransactionThatDoesNotMatchAtomicGuardIndex(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -217,11 +217,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanDeleteCmpXchgValue()
+        [RavenTheory(RavenTestCategory.CompareExchange | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteCmpXchgValue(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -243,12 +244,12 @@ namespace SlowTests.Issues
             }
         }
 
-
-        [Fact]
-        public async Task CanModifyDocumentAfterFirstTime()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanModifyDocumentAfterFirstTime(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -267,11 +268,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ModificationInAnotherTransactionWillFail()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ModificationInAnotherTransactionWillFail(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -298,12 +300,12 @@ namespace SlowTests.Issues
             }
         }
 
-
-        [Fact]
-        public async Task ModificationInAnotherTransactionWillFailWithDelete()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ModificationInAnotherTransactionWillFailWithDelete(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
