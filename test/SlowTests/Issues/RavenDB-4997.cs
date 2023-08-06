@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,31 +18,13 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public async Task Load_of_conflicted_document_with_tombstone_should_result_in_error()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_of_conflicted_document_with_tombstone_should_result_in_error(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -81,31 +60,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Load_of_conflicted_document_with_another_document_should_result_in_error()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_of_conflicted_document_with_another_document_should_result_in_error(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -135,31 +96,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Delete_of_conflicted_document_should_resolve_conflict()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Delete_of_conflicted_document_should_resolve_conflict(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -180,51 +123,23 @@ namespace SlowTests.Issues
 
                 using (var session = storeA.OpenSession())
                 {
-                    session.Delete("users/1"); 
+                    session.Delete("users/1");
                     session.SaveChanges();
                 }
 
                 var conflicts = storeA.Commands().GetConflictsFor("users/1");
-                Assert.Equal(0,conflicts.Length);
+                Assert.Equal(0, conflicts.Length);
             }
         }
 
-        [Fact]
-        public async Task Load_of_several_conflicted_document_should_result_in_error()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_of_several_conflicted_document_should_result_in_error(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeC = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+            options = UpdateConflictSolverAndGetMergedOptions(options);
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
