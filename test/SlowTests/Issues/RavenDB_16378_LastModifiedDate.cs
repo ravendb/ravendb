@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -15,38 +14,36 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldPreserveLastModifiedDateOfReplicatedTombstone()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldPreserveLastModifiedDateOfReplicatedTombstone(Options options)
         {
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore(new Options
+            using (var src = GetDocumentStore(options))
+            using (var dst = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_dst"
             }))
             {
-                var srcDb = await GetDatabase(src.Database);
-                var dstDb = await GetDatabase(dst.Database);
+                var srcDb = await GetDocumentDatabaseInstanceForAsync(src, options.DatabaseMode, "marker");
+                var dstDb = await GetDocumentDatabaseInstanceForAsync(dst, options.DatabaseMode, "marker");
 
                 srcDb.Time.UtcDateTime = () => DateTime.UtcNow.Add(TimeSpan.FromDays(-30));
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new { Foo = "delete-marker" }, "delete-marker");
-
+                    session.Store(new { Foo = "delete-marker" }, "delete-marker$marker");
                     session.SaveChanges();
                 }
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("delete-marker");
-
+                    session.Delete("delete-marker$marker");
                     session.SaveChanges();
                 }
 
                 using (var session = src.OpenSession())
                 {
                     session.Store(new { Foo = "marker" }, "marker");
-
                     session.SaveChanges();
                 }
 
