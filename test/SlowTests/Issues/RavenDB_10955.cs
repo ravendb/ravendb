@@ -1,8 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Orders;
-using Raven.Client.Documents;
+﻿using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -17,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ConflictResolutionShouldPreserveDocumentIdCasing()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConflictResolutionShouldPreserveDocumentIdCasing(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = s => $"{s}_foo1"
             }))
@@ -33,6 +30,7 @@ namespace SlowTests.Issues
                     {
                         ResolveToLatest = true
                     };
+                    options.ModifyDatabaseRecord?.Invoke(record);
                 }
             }))
             {
@@ -55,8 +53,7 @@ namespace SlowTests.Issues
                 }
 
                 await SetupReplicationAsync(store1, store2);
-
-                WaitForMarker(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var s2 = store2.OpenSession())
                 {
@@ -64,17 +61,6 @@ namespace SlowTests.Issues
                     Assert.Equal("Foo/Bar", user.Id); // Id should not be lowercased
                 }
             }
-        }
-
-        private void WaitForMarker(DocumentStore store1, DocumentStore store2)
-        {
-            var id = "marker - " + Guid.NewGuid();
-            using (var session = store1.OpenSession())
-            {
-                session.Store(new Product { Name = "Marker" }, id);
-                session.SaveChanges();
-            }
-            Assert.True(WaitForDocument(store2, id));
         }
     }
 }
