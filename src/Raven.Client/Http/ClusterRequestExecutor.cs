@@ -132,14 +132,8 @@ namespace Raven.Client.Http
                     await ClusterTopologyLocalCache.TrySavingAsync(TopologyHash, command.Result, Conventions, context, CancellationToken.None).ConfigureAwait(false);
 
                     var results = command.Result;
-                    var nodes = ServerNode.CreateFrom(results.Topology);
+                    var newTopology = ServerNode.CreateFrom(results.Topology, results.Etag);
 
-                    var newTopology = new Topology
-                    {
-                        Nodes = nodes,
-                        Etag = results.Etag
-                    };
-                    
                     UpdateNodeSelector(newTopology, parameters.ForceUpdate);
 
                     OnTopologyUpdatedInvoke(newTopology, parameters.DebugTag);
@@ -176,12 +170,9 @@ namespace Raven.Client.Http
             if (clusterTopology == null)
                 return false;
 
-            var nodes = ServerNode.CreateFrom(clusterTopology.Topology);
+            var topology = ServerNode.CreateFrom(clusterTopology.Topology, 0);
 
-            _nodeSelector = new NodeSelector(new Topology
-            {
-                Nodes = nodes
-            });
+            _nodeSelector = new NodeSelector(topology);
 
             return true;
         }

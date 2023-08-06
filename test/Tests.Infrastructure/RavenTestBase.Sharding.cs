@@ -236,6 +236,27 @@ public partial class RavenTestBase
             return orchestrator;
         }
 
+        public List<ShardedDatabaseContext> GetOrchestratorsInCluster(string database, List<RavenServer> servers)
+        {
+            var orchestrators = new List<ShardedDatabaseContext>();
+            ShardedDatabaseContext orchestrator = null;
+            foreach (var server in servers)
+            {
+                try
+                {
+                    orchestrator = GetOrchestrator(database, server);
+                }
+                catch (InvalidOperationException)
+                {
+                    // expected
+                }
+            }
+
+            Assert.NotNull(orchestrator);
+            orchestrators.Add(orchestrator);
+            return orchestrators;
+        }
+
         public async Task WaitForOrchestratorsToUpdate(string database, long index)
         {
             var servers = _parent.GetServers();
