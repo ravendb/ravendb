@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
@@ -20,10 +19,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(bool disableOnSrc)
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(Options options, bool disableOnSrc)
         {
             var srcServer = GetNewServer(new ServerCreationOptions
             {
@@ -33,15 +32,15 @@ namespace SlowTests.Issues
             {
                 RunInMemory = false
             });
-            using (var srcStore = GetDocumentStore(new Options
+            using (var srcStore = GetDocumentStore(new Options(options)
             {
                 Server = srcServer
             }))
-            using (var dstStore1 = GetDocumentStore(new Options
+            using (var dstStore1 = GetDocumentStore(new Options(options)
             {
                 Server = dstServer
             }))
-            using (var dstStore2 = GetDocumentStore(new Options
+            using (var dstStore2 = GetDocumentStore(new Options(options)
             {
                 Server = dstServer
             }))
@@ -57,7 +56,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(dstStore1, docId, u => u.Name == "ayende"));
 
-                var srcDb = await srcServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcStore.Database);
+                var srcDb = await GetDocumentDatabaseInstanceForAsync(srcStore, options.DatabaseMode, docId, srcServer);
 
                 var tcpConnections = srcDb.RunningTcpConnections.ToList();
 
