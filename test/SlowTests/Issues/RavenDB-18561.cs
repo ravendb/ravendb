@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
@@ -17,8 +13,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Replication_Doesnt_Work_After_Exception_In_Conflict_Resolver_Script()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Replication_Doesnt_Work_After_Exception_In_Conflict_Resolver_Script(Options options)
         {
             using var storeSrc = GetDocumentStore(new Options { ModifyDatabaseRecord = ModifyDatabaseRecord });
             using var storeDst = GetDocumentStore(new Options { ModifyDatabaseRecord = ModifyDatabaseRecord });
@@ -45,18 +42,19 @@ namespace SlowTests.Issues
             }
 
             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, "users/1", 15000));
-        }
 
-        void ModifyDatabaseRecord(DatabaseRecord record)
-        {
-            record.ConflictSolverConfig = new ConflictSolver
+            void ModifyDatabaseRecord(DatabaseRecord record)
             {
-                ResolveToLatest = false,
-                ResolveByCollection = new Dictionary<string, ScriptResolver>
+                record.ConflictSolverConfig = new ConflictSolver
                 {
-                    {"Users", new ScriptResolver {Script = "throw new Error('Something is wrong!!!');"}}
-                }
-            };
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>
+                    {
+                        {"Users", new ScriptResolver {Script = "throw new Error('Something is wrong!!!');"}}
+                    }
+                };
+                options.ModifyDatabaseRecord?.Invoke(record);
+            }
         }
 
         private class User
