@@ -115,6 +115,8 @@ namespace Raven.Server.Commercial
 
         public int MaxCores => GetValue<int?>(LicenseAttribute.Cores) ?? 3;
 
+        public int? MaxCoresPerNode { get; set; }
+
         public int MaxClusterSize
         {
             get
@@ -261,6 +263,7 @@ namespace Raven.Server.Commercial
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,
+                [nameof(MaxCoresPerNode)] = MaxCoresPerNode,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(HasEncryption)] = HasEncryption,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,

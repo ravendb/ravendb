@@ -174,7 +174,7 @@ namespace Raven.Server.Commercial
                     OsInfo = nodeInfo.OsInfo
                 };
 
-                await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, LicenseStatus.MaxCores);
+                await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, LicenseStatus);
             }
             catch (Exception e)
             {
@@ -287,7 +287,7 @@ namespace Raven.Server.Commercial
             if (licenseLimits?.NodeLicenseDetails != null &&
                 licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
             {
-                return Math.Min(detailsPerNode.UtilizedCores, LicenseStatus.MaxCores);
+                return Math.Min(detailsPerNode.UtilizedCores, LicenseStatus.MaxCoresPerNode ?? LicenseStatus.MaxCores);
             }
 
             // we don't have any license limits for this node, let's put our info to update it
@@ -353,7 +353,7 @@ namespace Raven.Server.Commercial
                 detailsPerNode.MaxUtilizedCores = maxUtilizedCores;
             }
 
-            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus.MaxCores, raftRequestId);
+            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus, raftRequestId);
         }
 
         private async Task<Client.ServerWide.Commands.NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)

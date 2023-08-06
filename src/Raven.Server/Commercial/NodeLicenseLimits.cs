@@ -11,6 +11,8 @@ namespace Raven.Server.Commercial
 
         public int LicensedCores { get; set; }
 
+        public int? MaxCoresPerNode { get; set; }
+
         public List<string> AllNodes { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -20,6 +22,7 @@ namespace Raven.Server.Commercial
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(DetailsPerNode)] = DetailsPerNode.ToJson(),
                 [nameof(LicensedCores)] = LicensedCores,
+                [nameof(MaxCoresPerNode)] = MaxCoresPerNode,
                 [nameof(AllNodes)] = AllNodes
             };
         }
