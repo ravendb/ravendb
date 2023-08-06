@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -15,11 +14,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldNotHaveCounterSnapshotInMetadata()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotHaveCounterSnapshotInMetadata(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 // create a conflict
 
@@ -44,7 +44,7 @@ namespace SlowTests.Issues
 
                 // conflict will be resolved to latest (incoming doc from A to B)
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
@@ -53,7 +53,6 @@ namespace SlowTests.Issues
                     Assert.False(md.TryGet(Constants.Documents.Metadata.RevisionCounters, out object countersSnapshot));
                 }
             }
-
         }
     }
 }
