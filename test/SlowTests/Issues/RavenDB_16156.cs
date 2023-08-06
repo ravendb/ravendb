@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -15,11 +13,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanRecreatedFromDeletedClusterTx()
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRecreatedFromDeletedClusterTx(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
 
@@ -48,22 +47,22 @@ namespace SlowTests.Issues
                         await session.StoreAsync(new Person
                         {
                             Name = i.ToString()
-                        },"karmel");
+                        }, "karmel");
                         await session.SaveChangesAsync();
                     }
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1,store2);
+                await EnsureReplicatingAsync(store1, store2);
             }
         }
 
-        [Fact]
-        public async Task CanRecreatedFromDeletedClusterTx2()
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRecreatedFromDeletedClusterTx2(Options options)
         {
-            using (var store1 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
             {
-
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -75,11 +74,11 @@ namespace SlowTests.Issues
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var p = await session.LoadAsync<Person>( "karmel");
+                    var p = await session.LoadAsync<Person>("karmel");
                     p.Name = "Karmel";
                     await session.SaveChangesAsync();
                 }
-               
+
                 for (int i = 0; i < 9; i++)
                 {
                     using (var session = store1.OpenAsyncSession())
@@ -87,18 +86,19 @@ namespace SlowTests.Issues
                         await session.StoreAsync(new Person
                         {
                             Name = i.ToString()
-                        },"karmel2");
+                        }, "karmel2");
                         await session.SaveChangesAsync();
                     }
                 }
             }
         }
 
-        [Fact]
-        public async Task CanRecreatedFromDeletedClusterTx3()
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRecreatedFromDeletedClusterTx3(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
@@ -125,14 +125,14 @@ namespace SlowTests.Issues
                         await session.StoreAsync(new Person
                         {
                             Name = i.ToString()
-                        },"karmel");
+                        }, "karmel");
                         await session.SaveChangesAsync();
                     }
                 }
 
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
-                await EnsureReplicatingAsync(store1,store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
@@ -142,22 +142,22 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Person
                     {
                         Name = "Store2"
-                    },"store2/karmel");
+                    }, "store2/$karmel");
                     await session.SaveChangesAsync();
                 }
 
-                await EnsureReplicatingAsync(store2,store1);
+                await EnsureReplicatingAsync(store2, store1);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Person
                     {
                         Name = "Store1"
-                    },"store1/karmel");
+                    }, "store1/$karmel");
                     await session.SaveChangesAsync();
                 }
 
-                WaitForUserToContinueTheTest(store2);
+                await EnsureReplicatingAsync(store1, store2);
             }
         }
     }
