@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly BlockingCollection<ReplicationBatch> _batches = new();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
-        private string _lastAcceptedChangeVectorFromShard;
         private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public readonly string DestinationDatabaseName;
@@ -91,7 +90,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             if (batch.Items.Count == 0)
             {
-                SendHeartbeat(batch.LastAcceptedChangeVector ?? _lastAcceptedChangeVectorFromShard);
+                SendHeartbeat(null);
                 batch.LastAcceptedChangeVector = LastAcceptedChangeVector;
                 return;
             }
@@ -147,7 +146,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             var (type, reply) = HandleServerResponse(getFullResponse: true);
 
-            batch.LastAcceptedChangeVector = _lastAcceptedChangeVectorFromShard = reply.DatabaseChangeVector;
+            batch.LastAcceptedChangeVector = reply.DatabaseChangeVector;
             batch.LastEtagAccepted = _lastSentDocumentEtag = reply.LastEtagAccepted;
 
             MissingAttachmentMessage = type == ReplicationMessageReply.ReplyType.MissingAttachments ?
