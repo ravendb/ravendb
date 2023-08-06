@@ -497,11 +497,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                             OsInfo = nodeInfo.OsInfo
                         };
 
-                        var maxCores = ServerStore.LicenseManager.LicenseStatus.MaxCores;
-
                         try
                         {
-                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores, $"{raftRequestId}/put-license-limits");
+                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, ServerStore.LicenseManager.LicenseStatus, $"{raftRequestId}/put-license-limits");
                         }
                         catch
                         {

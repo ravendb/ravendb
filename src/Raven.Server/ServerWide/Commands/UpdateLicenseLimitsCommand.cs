@@ -66,7 +66,7 @@ namespace Raven.Server.ServerWide.Commands
                     Value.DetailsPerNode.MaxUtilizedCores = currentDetailsPerNode.MaxUtilizedCores;
                 }
 
-                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(currentDetailsPerNode.UtilizedCores);
+                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(currentDetailsPerNode.UtilizedCores, Value.MaxCoresPerNode);
             }
             else
             {
@@ -79,7 +79,7 @@ namespace Raven.Server.ServerWide.Commands
                     throw new RachisApplyException($"Node {Value.NodeTag} isn't part of the cluster, all nodes are: {string.Join(", ", Value.AllNodes)}");
 
                 var coresPerNodeToDistribute = Math.Max(1, availableCoresToDistribute / unassignedNodesCount);
-                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(coresPerNodeToDistribute);
+                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(coresPerNodeToDistribute, Value.MaxCoresPerNode);
             }
 
             licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
@@ -92,7 +92,7 @@ namespace Raven.Server.ServerWide.Commands
                 // the number of licensed cores is less then the number of nodes
                 foreach (var detailsPerNode in licenseLimits.NodeLicenseDetails.Values)
                 {
-                    detailsPerNode.UtilizedCores = detailsPerNode.GetMaxCoresToUtilize(1);
+                    detailsPerNode.UtilizedCores = detailsPerNode.GetMaxCoresToUtilize(1, Value.MaxCoresPerNode);
                 }
 
                 return;
@@ -116,7 +116,7 @@ namespace Raven.Server.ServerWide.Commands
                 var nodeDetails = nodesToDistribute[i];
 
                 var coresToDistributePerNode = (int)Math.Ceiling((double)coresToDistribute / (nodesToDistribute.Count - i));
-                var utilizedCores = nodeDetails.GetMaxCoresToUtilize(coresToDistributePerNode);
+                var utilizedCores = nodeDetails.GetMaxCoresToUtilize(coresToDistributePerNode, Value.MaxCoresPerNode);
                 nodeDetails.UtilizedCores = utilizedCores;
                 coresToDistribute -= utilizedCores;
             }
