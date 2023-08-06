@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
@@ -14,7 +13,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
@@ -33,13 +31,15 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task GetAttachmentsForDocumentShouldReturnAttachmentsOfRevisions()
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetAttachmentsForDocumentShouldReturnAttachmentsOfRevisions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                await SetupRevisionsForTest(Server, store, store.Database);
                 var id = "user/1";
+
+                await SetupRevisionsForTest(Server, store, options.DatabaseMode, id);
 
                 using (var session = store.OpenSession())
                 {
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                     var m = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     Assert.Equal(4, m.Count);
                     var cv = (string)m.First()[Constants.Documents.Metadata.ChangeVector];
-                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, id);
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                     using (documentsContext.OpenReadTransaction())
                     {
@@ -89,8 +89,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ItemsShouldPreserveTheOrderInStorageAfterReplicatingToDestinationsWithRevisionsConfig()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ItemsShouldPreserveTheOrderInStorageAfterReplicatingToDestinationsWithRevisionsConfig(Options options)
         {
             var reasonableWaitTime = Debugger.IsAttached ? (int)TimeSpan.FromMinutes(15).TotalMilliseconds : (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
 
@@ -100,11 +101,14 @@ namespace SlowTests.Issues
                 RegisterForDisposal = false
             }))
             {
-                using (var source = GetDocumentStore(new Options { Server = server }))
-                {
-                    await SetupRevisionsForTest(server, source, source.Database);
+                var servers = new List<RavenServer> { server };
 
+                using (var source = GetDocumentStore(new Options(options) { Server = server }))
+                {
                     var id = "user/0";
+
+                    await SetupRevisionsForTest(server, source, options.DatabaseMode, id);
+
                     using (var session = source.OpenSession())
                     {
                         session.Store(new User { Name = "EGR_0" }, id);
@@ -131,13 +135,11 @@ namespace SlowTests.Issues
                     var etag = 0L;
 
                     using var disposable1 = server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
-                    using (var firstDestination = GetDocumentStore(new Options { ModifyDatabaseName = s => GetDatabaseName() + "_destination", Server = server }))
+                    using (var firstDestination = GetDocumentStore(new Options(options) { ModifyDatabaseName = s => GetDatabaseName() + "_destination", Server = server }))
                     {
-                        await SetupRevisionsForTest(server, firstDestination, firstDestination.Database);
+                        await SetupRevisionsForTest(server, firstDestination, options.DatabaseMode, id);
 
-                        var stats = source.Maintenance.Send(new GetStatisticsOperation());
-
-                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                        var database = await GetDocumentDatabaseInstanceForAsync(source, options.DatabaseMode, id, server);
                         using var disposable2 = database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context1);
                         using (context1.OpenReadTransaction())
                         {
@@ -151,7 +153,10 @@ namespace SlowTests.Issues
                         }
                         // Replication from source to firstDestination
                         await SetupReplicationAsync(source, firstDestination);
-                        Assert.True(WaitForValue(() => AssertReplication(firstDestination, firstDestination.Database, stats), true, reasonableWaitTime, 333));
+                        await EnsureReplicatingAsync(source, firstDestination);
+
+                        var stats = await GetDatabaseStatisticsAsync(source, servers: servers);
+                        Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));
 
                         using (var session = source.OpenAsyncSession())
                         {
@@ -160,8 +165,10 @@ namespace SlowTests.Issues
                             await session.SaveChangesAsync();
                         }
 
-                        stats = source.Maintenance.Send(new GetStatisticsOperation());
-                        Assert.True(WaitForValue(() => AssertReplication(firstDestination, firstDestination.Database, stats), true, reasonableWaitTime, 333));
+                        await EnsureReplicatingAsync(source, firstDestination);
+
+                        stats = await GetDatabaseStatisticsAsync(source, servers: servers);
+                        Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));
                         using (context1.OpenReadTransaction())
                         {
                             firstReplicationOrder.AddRange(ReplicationDocumentSenderBase.GetReplicationItems(database, context1, etag, new ReplicationDocumentSenderBase.ReplicationStats
@@ -171,7 +178,7 @@ namespace SlowTests.Issues
                             }, new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
                         }
 
-                        var database2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(firstDestination.Database);
+                        var database2 = await GetDocumentDatabaseInstanceForAsync(firstDestination, options.DatabaseMode, id, server);
                         Assert.NotNull(database2);
 
                         // record the replicated items order
@@ -197,13 +204,13 @@ namespace SlowTests.Issues
                             if (item is AttachmentReplicationItem a1 && item2 is AttachmentReplicationItem a2)
                             {
                                 Assert.Equal(a1.Key.ToString(), a2.Key.ToString());
-                                Assert.Equal(a1.ChangeVector, a2.ChangeVector);
+                                AssertChangeVectors(context, a1.ChangeVector, a2.ChangeVector);
                                 Assert.Equal(a1.Type, a2.Type);
                             }
                             else if (item is DocumentReplicationItem d1 && item2 is DocumentReplicationItem d2)
                             {
                                 Assert.Equal(d1.Id, d2.Id);
-                                Assert.Equal(d1.ChangeVector, d2.ChangeVector);
+                                AssertChangeVectors(context, d1.ChangeVector, d2.ChangeVector);
                                 Assert.Equal(d1.Flags | DocumentFlags.FromReplication, d2.Flags);
                                 var type1 = d1.Flags.Contain(DocumentFlags.Revision) ? " (Revision)" : "";
                                 var type2 = d2.Flags.Contain(DocumentFlags.Revision) ? " (Revision)" : "";
@@ -233,9 +240,21 @@ namespace SlowTests.Issues
                 }
             }
         }
-        private static bool AssertReplication(DocumentStore destinationStore, string database, DatabaseStatistics sourceStats)
+
+        private void AssertChangeVectors(DocumentsOperationContext context, string changeVectorA, string changeVectorB)
         {
-            var destinationStats = destinationStore.Maintenance.ForDatabase(database).Send(new GetStatisticsOperation());
+            changeVectorA = context.GetChangeVector(changeVectorA).Version;
+            changeVectorB = context.GetChangeVector(changeVectorB).Version;
+
+            changeVectorA = changeVectorA.Trim();
+            changeVectorB = changeVectorB.Trim();
+
+            Assert.Equal(changeVectorA, changeVectorB);
+        }
+
+        private async Task<bool> AssertReplicationAsync(DocumentStore destinationStore, string database, DatabaseStatistics sourceStats, List<RavenServer> servers)
+        {
+            var destinationStats = await GetDatabaseStatisticsAsync(destinationStore, database, servers: servers);
             if (destinationStats.CountOfAttachments == sourceStats.CountOfAttachments
                 && destinationStats.CountOfDocuments == sourceStats.CountOfDocuments
                 && destinationStats.CountOfRevisionDocuments == sourceStats.CountOfRevisionDocuments
@@ -245,7 +264,7 @@ namespace SlowTests.Issues
             return false;
         }
 
-        private static async Task SetupRevisionsForTest(RavenServer server, DocumentStore store, string database)
+        private async Task SetupRevisionsForTest(RavenServer server, DocumentStore store, RavenDatabaseMode mode, string id)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -260,7 +279,7 @@ namespace SlowTests.Issues
             {
                 var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                 var (index, _) = await server.ServerStore.ModifyDatabaseRevisions(context, store.Database, configurationJson, Guid.NewGuid().ToString());
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var documentDatabase = await GetDocumentDatabaseInstanceForAsync(store, mode, id, server);
                 await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, server.ServerStore.Engine.OperationTimeout);
             }
         }

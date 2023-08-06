@@ -290,7 +290,7 @@ public partial class RavenTestBase
             return null;
         }
 
-        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null)
+        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
         {
             var shardingConfiguration = record != null ? record.Sharding : await GetShardingConfigurationAsync(store, database);
             DatabaseStatistics combined = new DatabaseStatistics();
@@ -308,7 +308,7 @@ public partial class RavenTestBase
             var uniqueAttachments = new HashSet<string>();
             foreach (var shardNumber in shardingConfiguration.Shards.Keys)
             {
-                var db = await GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database ?? store.Database, shardNumber));
+                var db = await GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database ?? store.Database, shardNumber), servers);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
