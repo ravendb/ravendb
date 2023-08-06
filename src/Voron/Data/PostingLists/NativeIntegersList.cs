@@ -47,7 +47,7 @@ public unsafe struct NativeIntegersList : IDisposable
         {
             GrowListUnlikely(1);
         }
-
+        Debug.Assert(RawItems + Count < _releaseItems.GetStringEnd());
         RawItems[Count++] = l;
     }
 
@@ -91,6 +91,7 @@ public unsafe struct NativeIntegersList : IDisposable
     public void Clear()
     {
         Count = 0;
+        RawItems = (long*)_releaseItems.GetStringStartPtr();
     }
 
     public long First => *RawItems;

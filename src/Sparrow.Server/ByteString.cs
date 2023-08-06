@@ -1790,6 +1790,17 @@ namespace Sparrow.Server
             {
                 return new Scope(scope._parent, scope._str);
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public byte* GetStringStartPtr()
+            {
+                return _str.HasValue == false ? null : _str.Ptr;
+            }
+
+            public byte* GetStringEnd()
+            {
+                return _str.HasValue == false ? null : _str.Ptr + _str.Length;
+            }
         }
 
         public struct ExternalScope : IDisposable
