@@ -3136,13 +3136,14 @@ namespace Raven.Server.ServerWide
             await Cluster.WaitForIndexNotification(result.Index);
         }
 
-        public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores, string raftRequestId = null)
+        public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, LicenseStatus licenseStatus, string raftRequestId = null)
         {
             var nodeLicenseLimits = new NodeLicenseLimits
             {
                 NodeTag = nodeTag,
                 DetailsPerNode = detailsPerNode,
-                LicensedCores = maxLicensedCores,
+                LicensedCores = licenseStatus.MaxCores,
+                MaxCoresPerNode = licenseStatus.MaxCoresPerNode,
                 AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
             };
 

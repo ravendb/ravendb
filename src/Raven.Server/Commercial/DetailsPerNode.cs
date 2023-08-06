@@ -42,11 +42,14 @@ namespace Raven.Server.Commercial
             };
         }
 
-        public int GetMaxCoresToUtilize(int requestedCores)
+        public int GetMaxCoresToUtilize(int requestedCores, int? maxCoresPerNode)
         {
             var coresToUtilize = Math.Min(requestedCores, NumberOfCores);
             if (MaxUtilizedCores != null)
                 coresToUtilize = Math.Min(coresToUtilize, MaxUtilizedCores.Value);
+
+            if (maxCoresPerNode is > 0)
+                coresToUtilize = Math.Min(coresToUtilize, maxCoresPerNode.Value);
 
             return coresToUtilize;
         }

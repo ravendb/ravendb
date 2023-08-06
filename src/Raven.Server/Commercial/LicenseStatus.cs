@@ -94,6 +94,8 @@ namespace Raven.Server.Commercial
 
         public int MaxCores => GetValue<int?>("cores") ?? 3;
 
+        public int? MaxCoresPerNode { get; set; }
+
         public bool IsIsv => GetValue<bool>("redist");
 
         public bool HasEncryption => GetValue<bool>("encryption");
@@ -200,6 +202,7 @@ namespace Raven.Server.Commercial
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,
+                [nameof(MaxCoresPerNode)] = MaxCoresPerNode,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(HasEncryption)] = HasEncryption,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
