@@ -1,36 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using FastTests;
-using FastTests.Server.Replication;
-using FastTests.Utils;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.NotificationCenter;
-using Raven.Server.Utils;
-using Xunit;
-using Constants = Raven.Client.Constants;
-using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide.Context;
-using Xunit.Abstractions;
+﻿using System.IO;
 using System.Threading;
-using Amazon.Runtime;
-using System.Security.Cryptography;
-using Nito.AsyncEx;
+using System.Threading.Tasks;
 using Tests.Infrastructure;
-using static Raven.Server.Documents.Replication.ReplicationOperation;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -40,15 +12,16 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task DeadLockTest()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeadLockTest(Options options)
         {
             var server = GetNewServer();
 
-            using var store1 = GetDocumentStore(new Options { Server = server, ReplicationFactor = 1 });
-            using var store2 = GetDocumentStore(new Options { Server = server, ReplicationFactor = 1 });
+            using var store1 = GetDocumentStore(new Options(options) { Server = server, ReplicationFactor = 1 });
+            using var store2 = GetDocumentStore(new Options(options) { Server = server, ReplicationFactor = 1 });
 
-            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+            var database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "Users/2-A", server);
             var replicationLoader = database.ReplicationLoader;
 
             var handlersMre = new ManualResetEvent(false);
