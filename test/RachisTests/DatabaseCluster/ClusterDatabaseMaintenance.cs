@@ -333,6 +333,221 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
+        public async Task RequestExecutorWillChooseRehabNodeIfTheRestOfClusterIsDown()
+        {
+            var clusterSize = 2;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 2,
+                Server = cluster.Nodes[0],
+            }))
+            {
+                var watcher = cluster.Nodes[1];
+                var leader = cluster.Nodes[0];
+
+                //prevent leader from promoting any rehabs
+                leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
+
+                var re = store.GetRequestExecutor();
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return re.Topology?.Nodes.Count ?? 0;
+                }, 2);
+
+                var r = await DisposeServerAndWaitForFinishOfDisposalAsync(watcher);
+
+                //wait for it to go to rehab state
+                var rehabs = await WaitForValueAsync(async () => await GetRehabCount(store), 1);
+                Assert.Equal(1, rehabs);
+
+                //bring it back up but it will stay in rehab
+                cluster.Nodes[1] = GetNewServer(new ServerCreationOptions
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    DataDirectory = r.DataDirectory,
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = r.Url
+                    }
+                });
+                watcher = cluster.Nodes[1];
+
+                //wait until watcher catches up to the leader's topology
+                var updateTopCommandIndex = Cluster.LastRaftIndexForCommand(leader, nameof(UpdateTopologyCommand));
+                await watcher.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, updateTopCommandIndex);
+
+                // force update the client's topology
+                var preferredNode = await re.GetPreferredNode();
+                await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+
+                await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return re.Topology?.Nodes.Count(x => x.ServerRole == ServerNode.Role.Rehab);
+                }, 1);
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
+        public async Task ThrowWhenAllNodesArePromotable()
+        {
+            var clusterSize = 2;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ReplicationFactor = 1,
+                       Server = cluster.Leader,
+                   }))
+            {
+                var re = store.GetRequestExecutor();
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return re.Topology?.Nodes.Count == 1;
+                }, true);
+                
+                var existingNode = GetDatabaseRecord(store).Topology.AllNodes.Single();
+                var otherNode = cluster.Nodes.Single(x => x.ServerStore.NodeTag != existingNode).ServerStore.NodeTag;
+
+                //prevent leader from promoting the replica - should stay promotable
+                cluster.Leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
+
+                //add new replica to db
+                var add = new AddDatabaseNodeOperation(store.Database, otherNode);
+                await store.Maintenance.Server.SendAsync(add);
+
+                //remove the old replica
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: existingNode));
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    var record = GetDatabaseRecord(store);
+                    return record.Topology.Count == 1 && record.Topology.Promotables.Count == 1;
+                }, true);
+
+                // force update the client's topology
+                try
+                {
+                    var preferredNode = await re.GetPreferredNode();
+                    await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                }
+                catch { }
+
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+                });
+                Assert.Contains("no nodes in the topology", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding | RavenTestCategory.ClientApi)]
+        public async Task ThrowWhenOneOfTheShardsOnlyHasPromotableReplica()
+        {
+            var clusterSize = 2;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: clusterSize);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = GetDatabaseRecord(store);
+                var promotableShard = 2;
+                var nodeToRemove = record.Sharding.Shards[promotableShard].AllNodes.Single();
+                var nodeForPromotable = cluster.Nodes.Single(x => x.ServerStore.NodeTag != nodeToRemove).ServerStore.NodeTag;
+
+                //prevent leader from promoting the replica - should stay promotable
+                cluster.Leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
+
+                //add new replica to db
+                var add = new AddDatabaseNodeOperation(store.Database, shardNumber: promotableShard, nodeForPromotable);
+                await store.Maintenance.Server.SendAsync(add);
+
+                //remove the old replica
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: nodeToRemove, shardNumber: promotableShard));
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    record = GetDatabaseRecord(store);
+                    return record.Sharding.Shards[promotableShard].Count == 1 && record.Sharding.Shards[promotableShard].Promotables.Count == 1;
+                }, true);
+                
+                // force update the shard's executor topology
+                var orchestrator = Sharding.GetOrchestratorInCluster(store.Database, cluster.Nodes);
+                foreach (var shardNumber in record.Sharding.Shards.Keys)
+                {
+                    var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(shardNumber);
+                    var preferredNode = await orchestratorRequestExecutor.GetPreferredNode();
+                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                }
+                
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation("test"));
+                });
+                Assert.Contains("no nodes in the topology", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding | RavenTestCategory.ClientApi)]
+        public async Task CanExecuteProxySelectedNodeRequestWhenNodeIsPromotableSharded()
+        {
+            var clusterSize = 2;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: clusterSize);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = GetDatabaseRecord(store);
+                var promotableShard = 2;
+                var nodeToRemove = record.Sharding.Shards[promotableShard].AllNodes.Single();
+                var nodeForPromotable = cluster.Nodes.Single(x => x.ServerStore.NodeTag != nodeToRemove).ServerStore.NodeTag;
+                
+                //prevent leader from promoting the replica - should stay promotable
+                cluster.Leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
+
+                //add new replica to shard
+                var add = new AddDatabaseNodeOperation(store.Database, shardNumber: promotableShard, nodeForPromotable);
+                await store.Maintenance.Server.SendAsync(add);
+
+                //remove the old replica
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: nodeToRemove, shardNumber: promotableShard));
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    record = GetDatabaseRecord(store);
+                    return record.Sharding.Shards[promotableShard].Count == 1 && record.Sharding.Shards[promotableShard].Promotables.Count == 1;
+                }, true);
+
+                // force update the shard's executor topology
+                var orchestrators = Sharding.GetOrchestratorsInCluster(store.Database, cluster.Nodes);
+                foreach (var orchestrator in orchestrators)
+                {
+                    var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(promotableShard);
+                    var preferredNode = await orchestratorRequestExecutor.GetPreferredNode();
+                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                }
+                
+                await store.Maintenance.ForNode(nodeForPromotable).ForShardWithProxy(promotableShard).SendAsync(new GetIndexesProgressOperation(nodeTag: nodeForPromotable));
+            }
+        }
+        
         [Fact]
         public async Task DontMoveToRehabOnNoChangeAfterTimeout()
         {

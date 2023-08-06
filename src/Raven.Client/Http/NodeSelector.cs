@@ -12,7 +12,7 @@ namespace Raven.Client.Http
         private sealed class NodeSelectorState
         {
             public readonly Topology Topology;
-            public readonly List<ServerNode> Nodes;
+            public List<ServerNode> Nodes => Topology.Nodes;
             public readonly int[] Failures;
             public readonly int[] FastestRecords;
             public int Fastest;
@@ -22,7 +22,6 @@ namespace Raven.Client.Http
             public NodeSelectorState(Topology topology)
             {
                 Topology = topology;
-                Nodes = topology.Nodes;
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
                 UnlikelyEveryoneFaultedChoiceIndex = 0;

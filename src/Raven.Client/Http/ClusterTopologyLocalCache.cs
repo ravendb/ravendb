@@ -84,6 +84,7 @@ namespace Raven.Client.Http
                         [nameof(clusterTopology.Topology)] = clusterTopology.Topology.ToJson(),
                         [nameof(clusterTopology.Leader)] = clusterTopology.Leader,
                         [nameof(clusterTopology.NodeTag)] = clusterTopology.NodeTag,
+                        [nameof(clusterTopology.ServerRole)] = clusterTopology.ServerRole,
                         [nameof(clusterTopology.Etag)] = clusterTopology.Etag,
                         ["PersistedAt"] = DateTimeOffset.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite),
                     };

@@ -39,7 +39,7 @@ namespace Raven.Server.Utils
 
         private static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, GetTcpInfoCommand getTcpInfoCommand, X509Certificate2 certificate, CancellationToken token)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, certificate, DocumentConventions.DefaultForServer))//TODO stav: createForFixed instead?
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);

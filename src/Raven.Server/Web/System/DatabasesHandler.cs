@@ -174,10 +174,12 @@ namespace Raven.Server.Web.System
                     {
                         long stampIndex;
                         IEnumerable<DynamicJsonValue> dbNodes;
+                        IEnumerable<DynamicJsonValue> promotables = null;
                         if (rawRecord.IsSharded)
                         {
                             dbNodes = rawRecord.Sharding.Orchestrator.Topology.Members.Select(x =>
                                 TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member));
+                            
                             stampIndex = rawRecord.Sharding.Shards.Max(x => x.Value.Stamp?.Index ?? -1);
                         }
                         else
@@ -186,18 +188,17 @@ namespace Raven.Server.Web.System
                                     TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
                                 .Concat(rawRecord.Topology.Rehabs.Select(x =>
                                     TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab)));
-                            
-                            if (includePromotables)
-                            {
-                                dbNodes = dbNodes.Concat(rawRecord.Topology.Promotables.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable)));
-                            }
+
+                            if(includePromotables)
+                                promotables = rawRecord.Topology.Promotables.Select(x =>
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable));
 
                             stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
                         }
 
                         context.Write(writer, new DynamicJsonValue
                         {
+                            [nameof(Topology.Promotables)] = new DynamicJsonArray(promotables ?? new List<DynamicJsonValue>()),
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(dbNodes),
                             [nameof(Topology.Etag)] = stampIndex
                         });

@@ -380,9 +380,9 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
+        internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false, bool includePromotables = false)
         {
-            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls);
+            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls, includePromotables);
             executor._disableClientConfigurationUpdates = true;
             return executor;
         }
@@ -396,7 +396,7 @@ namespace Raven.Client.Http
 
         internal static RequestExecutor CreateForShard(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = CreateForServer(initialUrls, databaseName, certificate, conventions, usePrivateUrls: true);
+            var executor = CreateForServer(initialUrls, databaseName, certificate, conventions, usePrivateUrls: true, includePromotables: true);
             return executor;
         }
 
@@ -438,7 +438,7 @@ namespace Raven.Client.Http
         internal static RequestExecutor CreateForShortTermUse(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             // This request executor doesn't call SingleTopologyUpdate so it won't attempt to reach the server of the url before it knows our certificate
-            // It's topology will also not have cluster tags populated so it cannot be used long term for operations with SelectedNodeTag
+            // Its topology will also not have cluster tags populated so it cannot be used long term for operations with SelectedNodeTag
             var urls = ValidateUrls(initialUrls, certificate);
             var nodes = urls.Select(u => new ServerNode
             {
@@ -622,10 +622,18 @@ namespace Raven.Client.Http
             return UnlikelyExecuteAsync(command, context, topologyUpdate, sessionInfo, token);
         }
 
-        public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
+        public (int? CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
             if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
             {
+                var promotables = _nodeSelector.Topology.Promotables;
+                foreach (var node in promotables)
+                {
+                    if (node.ClusterTag == cmd.SelectedNodeTag)
+                    {
+                        return (null, node);
+                    }
+                }
                 return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
             
@@ -1579,7 +1587,7 @@ namespace Raven.Client.Http
                     if (command.IsFailedWithNode(chosenNode) == false)
                         command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is not relevant for this node anymore.");
 
-                    (int index, ServerNode node) = ChooseNodeForRequest(command, sessionInfo);
+                    (int? index, ServerNode node) = ChooseNodeForRequest(command, sessionInfo);
 
                     if (command.FailedNodes.ContainsKey(node))
                     {
@@ -1678,7 +1686,7 @@ namespace Raven.Client.Http
 
             if (_nodeSelector == null)
             {
-                SpawnHealthChecks(chosenNode, nodeIndex.Value);
+                SpawnHealthChecks(chosenNode);
                 return false;
             }
 
@@ -1693,7 +1701,7 @@ namespace Raven.Client.Http
                 return true;
             }
 
-            SpawnHealthChecks(chosenNode, nodeIndex.Value);
+            SpawnHealthChecks(chosenNode);
 
             var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
             var topologyEtag = _nodeSelector.Topology?.Etag ?? -2;
@@ -1770,7 +1778,7 @@ namespace Raven.Client.Http
                                 if (failedNodes.ContainsKey(node))
                                 {
                                     // if other node succeed in broadcast we need to send health checks to the original failed node
-                                    SpawnHealthChecks(node, index);
+                                    SpawnHealthChecks(node);
                                 }
                             }
 
@@ -1794,7 +1802,7 @@ namespace Raven.Client.Http
                     command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
 
                     _nodeSelector.OnFailedRequest(failed.Index);
-                    SpawnHealthChecks(node, failed.Index);
+                    SpawnHealthChecks(node);
 
                     tasks.Remove(completed);
                     continue;
@@ -1831,7 +1839,7 @@ namespace Raven.Client.Http
 
         public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
         {
-            SpawnHealthChecks(chosenNode, nodeIndex);
+            SpawnHealthChecks(chosenNode);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
 
@@ -1848,14 +1856,14 @@ namespace Raven.Client.Http
             return serverNode;
         }
 
-        private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
+        private void SpawnHealthChecks(ServerNode chosenNode)
         {
             if (_nodeSelector?.Topology.Nodes.Count < 2)
                 return;
 
             var nodeStatus = new Lazy<NodeStatus>(() =>
             {
-                var s = new NodeStatus(this, nodeIndex, chosenNode);
+                var s = new NodeStatus(this, chosenNode);
                 s.StartTimer();
 
                 return s;
@@ -1886,7 +1894,7 @@ namespace Raven.Client.Http
                 throw new ArgumentException($"Node {tag} was not found in the cluster topology.");
             }
 
-            var nodeStatus = new NodeStatus(this, i, copy[i]);
+            var nodeStatus = new NodeStatus(this, copy[i]);
             return CheckNodeStatusCallback(nodeStatus).ContinueWith(t => nodeStatus.Dispose());
         }
 
@@ -1894,7 +1902,7 @@ namespace Raven.Client.Http
         {
             // In some cases, race conditions may occur with a recently changed topology and a failed node.
             // We still should check the node's health, and if healthy, remove its timer and restore its index.
-            int nodeIndex;
+            int? nodeIndex;
             ServerNode serverNode;
             Lazy<NodeStatus> status;
 
@@ -1911,7 +1919,7 @@ namespace Raven.Client.Http
                 return;
             }
             
-            if (serverNode == null)
+            if (serverNode == null || nodeIndex == null)
                 return;
 
             try
@@ -1920,7 +1928,7 @@ namespace Raven.Client.Http
                 {
                     try
                     {
-                        await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
+                        await PerformHealthCheck(serverNode, nodeIndex.Value, context).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -2284,14 +2292,12 @@ namespace Raven.Client.Http
         {
             private TimeSpan _timerPeriod;
             private readonly RequestExecutor _requestExecutor;
-            public readonly int NodeIndex;
             public readonly ServerNode Node;
             private Timer _timer;
 
-            public NodeStatus(RequestExecutor requestExecutor, int nodeIndex, ServerNode node)
+            public NodeStatus(RequestExecutor requestExecutor, ServerNode node)
             {
                 _requestExecutor = requestExecutor;
-                NodeIndex = nodeIndex;
                 Node = node;
                 _timerPeriod = TimeSpan.FromMilliseconds(100);
             }

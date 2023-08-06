@@ -6,5 +6,6 @@ namespace Raven.Client.Http
     {
         public long Etag;
         public List<ServerNode> Nodes;
+        public List<ServerNode> Promotables = new List<ServerNode>();
     }
 }

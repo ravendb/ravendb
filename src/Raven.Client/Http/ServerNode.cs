@@ -84,15 +84,21 @@ namespace Raven.Client.Http
             _lastServerVersionCheck = 0;
         }
 
-        internal static List<ServerNode> CreateFrom(ClusterTopology topology)
+        internal static Topology CreateFrom(ClusterTopology topology, long etag)
         {
-            var nodes = new List<ServerNode>();
+            var newTopology = new Topology()
+            {
+                Etag = etag,
+                Nodes = new List<ServerNode>(),
+                Promotables = new List<ServerNode>()
+            };
+           
             if (topology == null)
-                return nodes;
-
+                return newTopology;
+            
             foreach (var member in topology.Members)
             {
-                nodes.Add(new ServerNode
+                newTopology.Nodes.Add(new ServerNode
                 {
                     Url = member.Value,
                     ClusterTag = member.Key,
@@ -102,15 +108,15 @@ namespace Raven.Client.Http
 
             foreach (var watcher in topology.Watchers)
             {
-                nodes.Add(new ServerNode
+                newTopology.Nodes.Add(new ServerNode
                 {
                     Url = watcher.Value,
                     ClusterTag = watcher.Key,
                     ServerRole = Role.Member
                 });
             }
-
-            return nodes;
+            
+            return newTopology;
         }
     }
 }

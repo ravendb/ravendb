@@ -104,6 +104,18 @@ namespace Raven.Client.Http
                         WriteNode(writer, node, context);
                     }
                     writer.WriteEndArray();
+                    
+                    writer.WriteComma();
+                    writer.WritePropertyName(context.GetLazyString(nameof(topology.Promotables)));
+                    writer.WriteStartArray();
+                    for (var i = 0; i < topology.Promotables.Count; i++)
+                    {
+                        var node = topology.Promotables[i];
+                        if (i != 0)
+                            writer.WriteComma();
+                        WriteNode(writer, node, context);
+                    }
+                    writer.WriteEndArray();
 
                     writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(topology.Etag)));
