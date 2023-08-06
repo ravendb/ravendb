@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,12 +12,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldReplicateCounters()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldReplicateCounters(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 var documentId = "users/1";
                 using (var session = storeA.OpenAsyncSession())
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 // verify that all counters are replicated
                 using (var session = storeB.OpenAsyncSession())
@@ -59,16 +59,16 @@ namespace SlowTests.Issues
 
                 // upon incoming replication from A to B,
                 // B will split the CounterGroup document into 2 parts (hopefully not with identical change vectors)
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeC);
-                EnsureReplicating(storeB, storeC);
+                await EnsureReplicatingAsync(storeB, storeC);
 
                 using (var session = storeC.OpenAsyncSession())
                 {
                     var doc = await session.LoadAsync<User>(documentId);
                     var metadataCounters = session.Advanced.GetCountersFor(doc);
-                    Assert.Equal(count, metadataCounters.Count); 
+                    Assert.Equal(count, metadataCounters.Count);
                 }
 
                 using (var session = storeC.OpenAsyncSession())
@@ -78,6 +78,5 @@ namespace SlowTests.Issues
                 }
             }
         }
-
     }
 }
