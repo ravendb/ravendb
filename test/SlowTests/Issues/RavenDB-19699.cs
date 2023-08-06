@@ -1,26 +1,25 @@
-﻿using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
-using System;
-using FastTests.Server.Replication;
+﻿using System;
+using System.Threading.Tasks;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_19699 : ReplicationTestBase
     {
-        
         public RavenDB_19699(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task ShouldCreateAndReplicateTimeSeriesDeletedRangeWhenDeletingDocument()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldCreateAndReplicateTimeSeriesDeletedRangeWhenDeletingDocument(Options options)
         {
             const string id = "users/1";
-            using (var store = GetDocumentStore())
-            using (var replica = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var replica = GetDocumentStore(options))
             {
                 var baseline = DateTime.Now;
 
@@ -49,7 +48,7 @@ namespace SlowTests.Issues
                     Assert.Equal(3, tsEntries.Length);
                 }
 
-                var brokenReplication = await BreakReplication(Server.ServerStore, store.Database);
+                using var replication = await GetReplicationManagerAsync(store, store.Database, options.DatabaseMode, breakReplication: true);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -69,7 +68,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                brokenReplication.Mend();
+                replication.Mend();
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.Name == "ayende2"));
 
@@ -78,16 +77,16 @@ namespace SlowTests.Issues
                     var tsEntries = await session.TimeSeriesFor(id, "heartrate").GetAsync();
                     Assert.Equal(1, tsEntries.Length);
                 }
-
             }
         }
 
-        [Fact]
-        public async Task DeletingTimeSeriesAndModifyingItsDocumentShouldNotResultInConflictOnReplica()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeletingTimeSeriesAndModifyingItsDocumentShouldNotResultInConflictOnReplica(Options options)
         {
             const string id = "users/1";
-            using (var store = GetDocumentStore())
-            using (var replica = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var replica = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -115,7 +114,7 @@ namespace SlowTests.Issues
                 {
                     // delete timeseries and update document
                     session.TimeSeriesFor(id, "heartrate").Delete();
-                    
+
                     var doc = await session.LoadAsync<User>(id);
                     doc.Name = "ayende2";
 
@@ -132,12 +131,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ConflictBetweenDocWithTsAndDeletion_WhenDeletionWins()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConflictBetweenDocWithTsAndDeletion_WhenDeletionWins(Options options)
         {
             const string id = "users/1";
-            using (var store = GetDocumentStore())
-            using (var replica = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var replica = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.Name == "ayende"));
 
-                var brokenReplication = await BreakReplication(Server.ServerStore, store.Database);
+                using var replication = await GetReplicationManagerAsync(store, store.Database, options.DatabaseMode, breakReplication: true);
 
                 using (var session = replica.OpenAsyncSession())
                 {
@@ -167,7 +167,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                brokenReplication.Mend();
+                replication.Mend();
 
                 Assert.True(WaitForDocumentDeletion(replica, id, 5000));
 
@@ -176,16 +176,16 @@ namespace SlowTests.Issues
                     var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
                     Assert.Null(ts);
                 }
-
             }
         }
 
-        [Fact]
-        public async Task ConflictBetweenDocWithAndDocWithoutTs_WhenDocWithoutTsWins()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConflictBetweenDocWithAndDocWithoutTs_WhenDocWithoutTsWins(Options options)
         {
             const string id = "users/1";
-            using (var store = GetDocumentStore())
-            using (var replica = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var replica = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -197,11 +197,12 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
+                using var replication = await GetReplicationManagerAsync(store, store.Database, options.DatabaseMode);
                 await SetupReplicationAsync(store, replica);
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.Name == "ayende"));
 
-                var brokenReplication = await BreakReplication(Server.ServerStore, store.Database);
+                replication.Break();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -217,7 +218,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                brokenReplication.Mend();
+                replication.Mend();
 
                 await AssertWaitForNotNullAsync(async () =>
                 {
@@ -230,7 +231,6 @@ namespace SlowTests.Issues
                     var doc = await session.LoadAsync<User>(id);
                     Assert.Equal("ayende2", doc.Name);
                 }
-
             }
         }
     }
