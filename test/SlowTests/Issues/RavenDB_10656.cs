@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;
 using Raven.Client;
@@ -21,12 +20,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task RevisionsWillBeReplicatedEvenIfTheyAreNotConfiguredOnTheDestinationNode()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsWillBeReplicatedEvenIfTheyAreNotConfiguredOnTheDestinationNode(Options options)
         {
             var company = new Company { Name = "Company Name" };
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 //await RevisionsHelper.SetupRevisionsAsync(store2); // not setting up revisions on purpose
@@ -43,7 +43,9 @@ namespace SlowTests.Issues
                     company3.Name = "Hibernating Rhinos";
                     await session.SaveChangesAsync();
                 }
-                WaitForMarker(store1, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
@@ -54,12 +56,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevisionsWillBeReplicatedEvenIfTheyAreDisabledOnTheDestinationNode()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsWillBeReplicatedEvenIfTheyAreDisabledOnTheDestinationNode(Options options)
         {
             var company = new Company { Name = "Company Name" };
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
@@ -79,7 +82,9 @@ namespace SlowTests.Issues
                     company3.Name = "Hibernating Rhinos";
                     await session.SaveChangesAsync();
                 }
-                WaitForMarker(store1, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
@@ -90,12 +95,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RevisionsDeletesWillBeReplicatedEvenIfTheyAreDisabledOnTheDestinationNode()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsDeletesWillBeReplicatedEvenIfTheyAreDisabledOnTheDestinationNode(Options options)
         {
             var company = new Company { Name = "Company Name" };
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store1);
                 await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
@@ -113,7 +119,8 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForMarker(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(company.Id);
@@ -122,17 +129,6 @@ namespace SlowTests.Issues
                     Assert.Contains(DocumentFlags.Revision.ToString(), revisionsMetadata[1].GetString(Constants.Documents.Metadata.Flags));
                 }
             }
-        }
-
-        private void WaitForMarker(IDocumentStore store1, IDocumentStore store2)
-        {
-            var id = "marker - " + Guid.NewGuid();
-            using (var session = store1.OpenSession())
-            {
-                session.Store(new Product { Name = "Marker" }, id);
-                session.SaveChanges();
-            }
-            Assert.True(WaitForDocument(store2, id));
         }
 
         public string TombstoneCleanerIdentifier => nameof(RavenDB_10656);
