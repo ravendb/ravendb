@@ -1,26 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents;
-using Raven.Server;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Client.Documents.Operations.Replication;
-using System.Threading;
-using System.Collections.Concurrent;
-using System.IO;
-using Lucene.Net.Util;
-using Raven.Client.Documents.BulkInsert;
-using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Config;
-using FastTests.Utils;
-using Sparrow;
 
 namespace SlowTests.Issues
 {
@@ -30,8 +14,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Replicate_2_Docs_Which_Is_Bigger_Then_Batch_Size()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Replicate_2_Docs_Which_Is_Bigger_Then_Batch_Size(Options options)
         {
             var co = new ServerCreationOptions
             {
@@ -42,8 +27,8 @@ namespace SlowTests.Issues
             };
             var node = GetNewServer(co);
 
-            using var store1 = GetDocumentStore(new Options { RunInMemory = false, Server = node, ReplicationFactor = 1 });
-            using var store2 = GetDocumentStore(new Options { RunInMemory = false, Server = node, ReplicationFactor = 1 });
+            using var store1 = GetDocumentStore(new Options(options) { RunInMemory = false, Server = node, ReplicationFactor = 1 });
+            using var store2 = GetDocumentStore(new Options(options) { RunInMemory = false, Server = node, ReplicationFactor = 1 });
 
             var docs = new List<User>();
             using (var session = store1.OpenAsyncSession())
@@ -89,7 +74,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)] = "1234",
             };
 
-            var (nodes, leader) = await CreateRaftCluster(3,customSettings: settings);
+            var (nodes, leader) = await CreateRaftCluster(3, customSettings: settings);
             foreach (var node in nodes)
             {
                 Assert.Equal(node.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded, 1234);
@@ -99,7 +84,7 @@ namespace SlowTests.Issues
         private async Task WaitAndAssertDocReplicationAsync<T>(DocumentStore store, string id, int timeout = 15_000) where T : class
         {
             var result = await WaitForDocumentToReplicateAsync<User>(store, id, timeout);
-            Assert.True(result!=null, $"doc \"{id}\" didn't replicated.");
+            Assert.True(result != null, $"doc \"{id}\" didn't replicated.");
         }
 
         class User
