@@ -465,14 +465,22 @@ namespace Raven.Server.Documents.Queries.Results
                 for (int i = 0; i < list.Count; i++)
                 {
                     if (list[i] is Document d)
+                    {
+                        d.EnsureDocumentId();
+
                         array.Add(d.Data);
+                    }
                     else
                         array.Add(list[i]);
                 }
                 fieldVal = array;
             }
+
             if (fieldVal is Document d2)
+            {
+                d2.EnsureDocumentId();
                 fieldVal = d2.Data;
+            }
 
             result[key] = fieldVal;
         }
