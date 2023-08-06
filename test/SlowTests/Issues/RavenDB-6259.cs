@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Replication;
@@ -35,15 +34,15 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ToLatestConflictResolutionOfTumbstoneAndUpdateShouldNotReviveTubmstone_And_ShouldNotCauseInfiniteIndexingLoop()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ToLatestConflictResolutionOfTumbstoneAndUpdateShouldNotReviveTubmstone_And_ShouldNotCauseInfiniteIndexingLoop(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 slave.ExecuteIndex(new PersonAndAddressIndex());
                 var res = await SetupReplicationAsync(master, slave);
-
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -55,20 +54,15 @@ namespace SlowTests.Issues
                     }).ConfigureAwait(false);
                     await session.StoreAsync(new Person
                     {
-                        Id = "people/1",
+                        Id = "people/1$addresses/1",
                         AddressId = "addresses/1",
                         Name = "Ezekiel"
                     }).ConfigureAwait(false);
 
-                    await session.StoreAsync(new
-                    {
-                        Foo = "marker"
-                    }, "marker").ConfigureAwait(false);
-
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                Assert.True(WaitForDocument(slave, "marker"));
+                await EnsureReplicatingAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -84,10 +78,6 @@ namespace SlowTests.Issues
                     address.ZipCode = 2;
                     await session.StoreAsync(address);
 
-                    await session.StoreAsync(new
-                    {
-                        Foo = "marker"
-                    }, "marker2").ConfigureAwait(false);
                     await session.SaveChangesAsync();
                 }
 
@@ -100,10 +90,9 @@ namespace SlowTests.Issues
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
 
                 await SetupReplicationAsync(master, slave);
+                await EnsureReplicatingAsync(master, slave);
 
-                Assert.True(WaitForDocument(slave, "marker2"));
-
-                var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.Database);
+                var slaveServer = await GetDocumentDatabaseInstanceForAsync(slave, options.DatabaseMode, "addresses/1");
                 using (slaveServer.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -129,7 +118,6 @@ namespace SlowTests.Issues
                         Assert.Equal(changeVectorFor, session.Advanced.GetChangeVectorFor(person));
                     }
                 }
-
             }
         }
     }
