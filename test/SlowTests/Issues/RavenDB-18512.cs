@@ -1,11 +1,7 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,8 +14,9 @@ public class RavenDB_18512 : ReplicationTestBase
     {
     }
 
-    [Fact]
-    public async Task WillDeDuplicateAttachmentsOverTheWire()
+    [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task WillDeDuplicateAttachmentsOverTheWire(Options options)
     {
         var data = new byte[1024 * 16];
         Random.Shared.NextBytes(data);
@@ -29,28 +26,22 @@ public class RavenDB_18512 : ReplicationTestBase
             ModifyDatabaseRecord = record =>
             {
                 record.Settings["Replication.MaxItemsCount"] = "1";
+                options.ModifyDatabaseRecord?.Invoke(record);
             }
         });
-        using var store2 = GetDocumentStore();
-
+        using var store2 = GetDocumentStore(options);
 
         int count = 1;
         for (int i = 0; i < 10; i++)
         {
             using var session1 = store1.OpenAsyncSession();
-            await session1.StoreAsync(new { }, "items/" + count);
-            session1.Advanced.Attachments.Store("items/" + count, "attachment-" + count, new MemoryStream(data));
+            await session1.StoreAsync(new { }, $"items/{count}$items/1");
+            session1.Advanced.Attachments.Store($"items/{count}$items/1", "attachment-" + count, new MemoryStream(data));
             await session1.SaveChangesAsync();
             count++;
         }
 
-        using (var session1 = store1.OpenAsyncSession())
-        {
-            await session1.StoreAsync(new { }, "marker");
-
-            await session1.SaveChangesAsync();
-        }
-        DocumentDatabase database = await GetDatabase(store2.Database);
+        var database = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "items/1");
         int attachmentsSent = 0;
         database.ReplicationLoader.AttachmentStreamsReceived += (handler, i) =>
         {
@@ -58,9 +49,7 @@ public class RavenDB_18512 : ReplicationTestBase
         };
 
         await SetupReplicationAsync(store1, store2);
-        WaitForUserToContinueTheTest(store2);
-
-        Assert.True(WaitForDocument(store2, "marker"));
+        await EnsureReplicatingAsync(store1, store2);
 
         Assert.Equal(1, attachmentsSent);
     }
