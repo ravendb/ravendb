@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -28,7 +26,6 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -59,18 +56,18 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [Fact]
-        public async Task ThrowOnTooLargeClusterTransactionRequest()
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ThrowOnTooLargeClusterTransactionRequest(Options options)
         {
             var (_, leader) = await CreateRaftCluster(3, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MaxSizeOfSingleRaftCommand)] = "1"
             });
-            using (var leaderStore = GetDocumentStore(new Options
+            using (var leaderStore = GetDocumentStore(new Options(options)
             {
                 Server = leader,
                 ReplicationFactor = 3,
-
             }))
             {
                 var user1 = new User()
@@ -110,7 +107,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanCreateClusterTransactionRequest(Options options)
         {
@@ -174,7 +171,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(3, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
@@ -249,7 +246,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
@@ -286,7 +283,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanImportExportAndBackupWithClusterTransactions(Options options, bool disableGuards)
@@ -380,7 +377,7 @@ namespace SlowTests.Cluster
                     session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
                     var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
                     Assert.Equal(user2.Name, user.Name);
-                    WaitForUserToContinueTheTest(store);
+                  
                     user = await session.LoadAsync<User>("foo/bar");
                     Assert.Equal(user3.Name, user.Name);
                 }
@@ -655,7 +652,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CreateUniqueUser(Options options)
         {
@@ -698,7 +695,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SessionCompareExchangeCommands(Options options)
         {
@@ -731,7 +728,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Counters)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTxWithCounters(Options options)
         {
@@ -763,7 +760,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Counters)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ThrowOnClusterTransactionWithCounters(Options options)
         {
@@ -789,7 +786,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Attachments)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ThrowOnClusterTransactionWithAttachments(Options options)
         {
@@ -822,7 +819,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.TimeSeries)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ThrowOnClusterTransactionWithTimeSeries(Options options)
         {
@@ -848,7 +845,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ModifyDocumentWithRevision(Options options)
         {
@@ -904,7 +901,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutDocumentInDifferentCollectionWithRevision(Options options)
         {
@@ -977,7 +974,7 @@ namespace SlowTests.Cluster
         /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
         /// </summary>
         /// <returns></returns>
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionRequestWithRevisions(Options options)
         {
@@ -1223,7 +1220,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanAddNullValueToCompareExchange(Options options)
         {
@@ -1244,7 +1241,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetListCompareExchange(Options options)
         {
@@ -1266,7 +1263,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionConflict(Options options)
         {
@@ -1440,10 +1437,11 @@ namespace SlowTests.Cluster
             return new string(str);
         }
 
-        [Fact]
-        public async Task BlockWorkingWithAtomicGuardBySession()
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BlockWorkingWithAtomicGuardBySession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -1480,10 +1478,11 @@ namespace SlowTests.Cluster
             public bool Locked;
         }
 
-        [Fact]
-        public async Task CanModifyingAtomicGuardViaOperations()
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanModifyingAtomicGuardViaOperations(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string docId = "users/1";
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
