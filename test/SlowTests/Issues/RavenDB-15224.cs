@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,11 +12,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldReplicateCounterDelete()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldReplicateCounterDelete(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 // delete counter on B
                 using (var session = storeB.OpenAsyncSession())
@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                EnsureReplicating(storeB, storeA);
+                await EnsureReplicatingAsync(storeB, storeA);
 
                 // counter should be deleted on A
                 using (var session = storeA.OpenAsyncSession())
