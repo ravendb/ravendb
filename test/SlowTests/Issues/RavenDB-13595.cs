@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,11 +12,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ShouldCloneTheConflictedHiLoDocumentOnReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldCloneTheConflictedHiLoDocumentOnReplication(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
-            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo2" }))
+            using (var store1 = GetDocumentStore(new Options(options) { ModifyDatabaseName = s => s + "_foo1" }))
+            using (var store2 = GetDocumentStore(new Options(options) { ModifyDatabaseName = s => s + "_foo2" }))
             {
                 using (var s1 = store1.OpenSession())
                 {
