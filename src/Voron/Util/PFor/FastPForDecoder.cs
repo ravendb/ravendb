@@ -20,7 +20,7 @@ public unsafe struct FastPForDecoder : IDisposable
     private byte* _metadata;
     private byte* _end;
     private uint* _exceptions;
-    private fixed int _exceptionOffsets[32];
+    private fixed int _exceptionOffsets[33];
     private int _prefixShiftAmount;
     private ushort _sharedPrefix;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
