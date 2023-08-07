@@ -113,11 +113,14 @@ namespace Voron.Data.Containers
                 }
             }
 
+            
             [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
             public void Clear(byte* pagePointer)
             {
+#if DEBUG       // Skipping this outside of debug, since the cost 2%+ of indexing see: RavenDB-21027
                 var size = Get(ref pagePointer);
                 new Span<byte>(pagePointer, size).Clear();
+#endif
                 _compactBackingStore = 0;
             }
         }
