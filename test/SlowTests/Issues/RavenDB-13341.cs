@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
@@ -24,14 +23,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task DatabaseChangeVectorIsUpdatedCorrectly()
         {
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var documentsStorage = documentDatabase.DocumentsStorage;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -93,7 +92,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task DatabaseChangeVectorIsUpdatedCorrectlyInACluster()
         {
             var databaseName = nameof(DatabaseChangeVectorIsUpdatedCorrectlyInACluster);
@@ -169,11 +168,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanReplicateMissingAttachment()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateMissingAttachment(Options options)
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
             {
                 const string documentId = "users/1-A";
                 const string attachmentName = "foo.png";
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(source));
+                var documentDatabase = await GetDocumentDatabaseInstanceForAsync(source, options.DatabaseMode, documentId);
                 var documentsStorage = documentDatabase.DocumentsStorage;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
