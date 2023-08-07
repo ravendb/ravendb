@@ -206,6 +206,7 @@ namespace Corax.Queries
                 return results;
             }
 
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
@@ -213,7 +214,9 @@ namespace Corax.Queries
                 _ = VariableSizeEncoding.Read<int>(term._containerItem.Address, out var offset); // discard count here
                 using var reader = new FastPForDecoder(term._ctx);
                 reader.Init(term._containerItem.Address + offset, term._containerItem.Length - offset);
+
                 var decodedMatches = stackalloc long[1024];
+
                 int bufferIndex = 0;
                 int matchedIndex = 0;
                 while (bufferIndex < matches)
