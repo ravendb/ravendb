@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -136,14 +137,16 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
     private readonly List<(int FieldId, string FieldName, ByteString Value)> _terms;
     private readonly Builder _builder;
-
-    public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, int take = int.MaxValue)
+    private readonly CancellationToken _token;
+    
+    public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, CancellationToken token, int take = int.MaxValue)
     {
         _indexContext = indexContext;
         _index = index;
         _indexType = indexType;
         _converter = converter;
         _take = take;
+        _token = token;
 
         _documentStorage = storage;
         _queryContext = queryContext;
@@ -162,7 +165,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         
         foreach (var collection in _collections)
         {
-            using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection, _take), collection, _indexContext, scope, _indexType);
+            using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection, _take, _token), collection, _indexContext, scope, _indexType);
             while (true)
             {
                 if (itemEnumerator.MoveNext(_queryContext.Documents, out var mapResults, out var _) == false)
@@ -215,23 +218,23 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         }
     }
 
-    private IEnumerator<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
+    private IEnumerator<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long take, CancellationToken token)
     {
         var size = queryContext.Documents.DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit;
         var coraxDocumentTrainDocumentSource = new CoraxDocumentTrainSourceEnumerator(_documentStorage);
         
         if (collection == Constants.Documents.Collections.AllDocumentsCollection)
             return new PulsedTransactionEnumerator<Document, CoraxDocumentTrainSourceState>(queryContext.Documents,
-                state => coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, state), new(queryContext.Documents, size, take)); 
+                state => coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, state), new(queryContext.Documents, size, take, token)); 
 
         return new PulsedTransactionEnumerator<Document,CoraxDocumentTrainSourceState>(queryContext.Documents, 
             state =>  coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, collection, state)
-            , new CoraxDocumentTrainSourceState(queryContext.Documents, size, take));
+            , new CoraxDocumentTrainSourceState(queryContext.Documents, size, take, token));
     }
 
-    private IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long take = int.MaxValue)
+    private IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long take, CancellationToken token)
     {
-        foreach (var document in GetDocumentsEnumerator(queryContext, collection, take))
+        foreach (var document in GetDocumentsEnumerator(queryContext, collection, take, token))
         {
             yield return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
         }

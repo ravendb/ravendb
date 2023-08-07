@@ -1541,7 +1541,11 @@ namespace Raven.Server.Documents.Indexes
                         try
                         {
                             AddIndexingPerformance(onBeforeExecutionStats);
-                            IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats);
+                            IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats, _indexingProcessCancellationTokenSource.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            //this will be handled below.
                         }
                         finally
                         {

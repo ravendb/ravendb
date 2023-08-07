@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract bool RequireOnBeforeExecuteIndexing();
         
-        public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator);
+        public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator, CancellationToken token);
 
         public abstract void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache);
 

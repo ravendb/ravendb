@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Enumerators;
 using Sparrow;
@@ -35,7 +36,7 @@ public class CoraxDocumentTrainSourceEnumerator
             if (state.Take <= 0)
                 yield break;
 
-            
+            state.Token.ThrowIfCancellationRequested();
             yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
         }
     }
@@ -50,7 +51,8 @@ public class CoraxDocumentTrainSourceEnumerator
             
             if (state.Take <= 0)
                 yield break;
-
+            
+            state.Token.ThrowIfCancellationRequested();
             yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
         }
     }
@@ -62,12 +64,15 @@ public class CoraxDocumentTrainSourceState : PulsedEnumerationState<Document>
     public long Take;
     private bool _initialized;
     public long CurrentKey = 0;
+    public readonly CancellationToken Token;
+    
     
     // Creates cycle when we've to return a document.
     public long DocumentSkip;
-    public CoraxDocumentTrainSourceState(DocumentsOperationContext context, Size pulseLimit, long takeLimit, int numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded) : base(context, pulseLimit, numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
+    public CoraxDocumentTrainSourceState(DocumentsOperationContext context, Size pulseLimit, long takeLimit, CancellationToken token, int numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded) : base(context, pulseLimit, numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
     {
         _takeLimit = takeLimit;
+        Token = token;
     }
 
     public void InitializeState(Table documentsTable)
