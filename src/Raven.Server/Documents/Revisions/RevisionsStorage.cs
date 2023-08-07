@@ -667,7 +667,7 @@ namespace Raven.Server.Documents.Revisions
                     configuration, result.PreviousCount, result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete);
+            var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete);
 
             IncrementCountOfRevisions(context, prefixSlice, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -698,7 +698,8 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var result = new DeleteOldRevisionsResult();
                 var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, skipForceCreated, result);
-                var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete);
+                var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
+                var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete);
                 moreWork |= result.HasMore;
                 IncrementCountOfRevisions(context, prefixSlice, -deleted);
             }
@@ -833,11 +834,13 @@ namespace Raven.Server.Documents.Revisions
                 numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
             }
 
+            var first = true;
+            var skip = 0;
 
             while (true)
             {
                 var ended = true;
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip, startsWith: true))
                 {
                     if (numberOfRevisionsToDelete <= deleted)
                         break;
@@ -853,6 +856,12 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     yield return revision;
+                    if (first)
+                    {
+                        first = false;
+                        skip++;
+                    }
+
                     deleted++;
 
                     ended = false;
@@ -869,52 +878,84 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, CollectionName collectionName,
-            string changeVector, long lastModifiedTicks, 
+            string changeVector, long lastModifiedTicks, long revisionsPreviousCount,
             IEnumerable<Document> revisionsToRemove)
         {
             var writeTables = new Dictionary<string, Table>();
             long maxEtagDeleted = 0;
             var deleted = 0L;
 
+            var first = true;
+            Document lastRevision = null;
+
             foreach (var revision in revisionsToRemove)
             {
-                using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                if (first)
                 {
-                    CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
-
-                    maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
-                    if (revision.Flags.Contain(DocumentFlags.HasAttachments))
-                    {
-                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                    }
-
-                    Table writeTable = null;
-                    if (table.ReadByKey(keySlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
-                    {
-                        writeTable = table;
-                    }
-                    else
-                    {
-                        // We request to delete revision with the wrong collection
-                        var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data);
-
-                        var collection = _documentsStorage.ExtractCollectionName(context, revisionData.Data);
-                        if (writeTables.TryGetValue(collection.Name, out writeTable) == false)
-                        {
-                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collection);
-                            writeTables[collection.Name] = writeTable;
-                        }
-                    }
-
-                    writeTable.DeleteByKey(keySlice);
+                    lastRevision = revision;
+                    first = false;
+                    continue;
                 }
 
+                maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevision.Etag);
+                DeleteRevisionFromTable(context, table, writeTables, lastRevision, collectionName, changeVector, lastModifiedTicks);
+
                 deleted++;
+                lastRevision = revision;
+            }
+
+
+            if (lastRevision != null)
+            {
+                var remained = revisionsPreviousCount - deleted;
+                var skipLast = lastRevision.Flags.Contain(DocumentFlags.DeleteRevision) && remained > 1;
+                if (skipLast == false)
+                {
+                    maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevision.Etag);
+                    DeleteRevisionFromTable(context, table, writeTables, lastRevision, collectionName, changeVector, lastModifiedTicks);
+                    deleted++;
+                }
             }
 
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deleted;
         }
+
+        private void DeleteRevisionFromTable(DocumentsOperationContext context, Table table, Dictionary<string, Table> writeTables,
+            Document revision, CollectionName collectionName,
+            string changeVector, long lastModifiedTicks)
+        {
+            using (revision)
+            using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+            {
+                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+
+                if (revision.Flags.Contain(DocumentFlags.HasAttachments))
+                {
+                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                }
+
+                Table writeTable = null;
+                if (table.ReadByKey(keySlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
+                {
+                    writeTable = table;
+                }
+                else
+                {
+                    // We request to delete revision with the wrong collection
+                    var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data);
+
+                    var collection = _documentsStorage.ExtractCollectionName(context, revisionData.Data);
+                    if (writeTables.TryGetValue(collection.Name, out writeTable) == false)
+                    {
+                        writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collection);
+                        writeTables[collection.Name] = writeTable;
+                    }
+                }
+                writeTable.DeleteByKey(keySlice);
+            }
+        }
+
 
         private class ConflictedRevisionsDeletionState
         {
@@ -1091,6 +1132,7 @@ namespace Raven.Server.Documents.Revisions
 
             result.HasMore = false;
             var skip = 0;
+            var first = true;
 
             while (true)
             {
@@ -1119,6 +1161,11 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     yield return revision;
+                    if (first)
+                    {
+                        first = false;
+                        skip++;
+                    }
                     ended = false;
                     break;
                 }
@@ -1153,6 +1200,8 @@ namespace Raven.Server.Documents.Revisions
         {
             var deleted = 0L;
             var skip = 0;
+            var first = true;
+
             while (true)
             {
                 var ended = true;
@@ -1176,6 +1225,12 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     yield return revision;
+                    if (first)
+                    {
+                        first = false;
+                        skip++;
+                    }
+
                     deleted++;
 
                     ended = false;
