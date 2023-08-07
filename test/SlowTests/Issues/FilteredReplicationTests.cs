@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -34,7 +33,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Seasame_st()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -107,11 +106,12 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public async Task Counters_and_force_revisions()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Counters | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Counters_and_force_revisions(Options options)
         {
-            using var storeA = GetDocumentStore();
-            using var storeB = GetDocumentStore();
+            using var storeA = GetDocumentStore(options);
+            using var storeB = GetDocumentStore(options);
 
             using (var s = storeA.OpenAsyncSession())
             {
@@ -161,7 +161,7 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument(storeB, "users/pheobe"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Can_Setup_Filtered_Replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -191,7 +191,7 @@ namespace SlowTests.Issues
                 }));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Cannot_setup_partial_filtered_replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -237,7 +237,7 @@ namespace SlowTests.Issues
             [TimeSeriesValue(0)] public double HeartRate;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task WhenDeletingHubReplicationWillRemoveAllAccess()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -295,7 +295,7 @@ namespace SlowTests.Issues
             Assert.NotEmpty(accesses);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Can_pull_via_filtered_replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -407,8 +407,6 @@ namespace SlowTests.Issues
                     Assert.Null(attachment);
                 }
 
-                WaitForUserToContinueTheTest(storeA);
-
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
                 Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
@@ -420,7 +418,6 @@ namespace SlowTests.Issues
                 {
                     Assert.NotNull(attachment);
                 }
-
             }
 
             using (var s = storeA.OpenAsyncSession())
@@ -448,7 +445,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Can_push_via_filtered_replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -599,7 +596,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Can_pull_and_push_and_filter_at_dest_and_source()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -692,7 +689,6 @@ namespace SlowTests.Issues
             WaitForDocument(storeB, "users/ayende");
             WaitForDocument(storeA, "users/ayende/config");
 
-            WaitForUserToContinueTheTest(storeA);
             using (var s = storeB.OpenAsyncSession())
             {
                 Assert.Null(await s.LoadAsync<object>("users/ayende/office"));
@@ -721,7 +717,7 @@ namespace SlowTests.Issues
             public string Source;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task PickupConfigurationChangesOnTheFly()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -800,7 +796,7 @@ namespace SlowTests.Issues
             EnsureReplicating(sinkStore1, hubStore);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Sinks_should_not_update_hubs_change_vector()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -948,7 +944,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Sinks_should_not_update_hubs_change_vector2()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1113,7 +1109,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Sinks_should_not_update_hubs_change_vector3()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1355,7 +1351,7 @@ namespace SlowTests.Issues
             Assert.Equal(0, r.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates | RavenTestCategory.BackupExportImport)]
         public async Task Can_import_export_replication_certs()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1427,7 +1423,7 @@ namespace SlowTests.Issues
             Assert.Equal("Arava", accessResults[0].Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Cannot_use_access_paths_if_filtering_is_not_set()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1462,7 +1458,7 @@ namespace SlowTests.Issues
             Assert.Contains("Filtering replication is not set for this Replication Hub task. AllowedSinkToHubPaths and AllowedHubToSinkPaths cannot have a value.", ex.InnerException.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Must_use_access_paths_if_filtering_is_set()
         {
             var certificates = Certificates.SetupServerAuthentication();
