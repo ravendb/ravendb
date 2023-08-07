@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,17 +12,18 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Writing_of_a_new_counter_group_document_upon_incoming_replication_should_affect_metrics()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Writing_of_a_new_counter_group_document_upon_incoming_replication_should_affect_metrics(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var bulk = storeA.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)
                     {
-                        bulk.Store(new User(), "users/" + i);
+                        bulk.Store(new User(), $"users/{i}$users/1");
                     }
                 }
 
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                     {
                         for (int j = 0; j < 100; j++)
                         {
-                            var countersFor = session.CountersFor("users/" + (i * 100 + j));
+                            var countersFor = session.CountersFor($"users/{(i * 100 + j)}$users/1");
                             countersFor.Increment("myCounter1");
                             countersFor.Increment("myCounter2");
                             countersFor.Increment("myCounter3");
@@ -43,28 +43,28 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var databaseA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                var databaseA = await GetDocumentDatabaseInstanceForAsync(storeA, options.DatabaseMode, "users/1");
 
                 Assert.True(databaseA.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseA.Metrics.Counters.BytesPutsPerSec.Count > 1);
 
                 await SetupReplicationAsync(storeA, storeB);
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
-                var databaseB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                var databaseB = await GetDocumentDatabaseInstanceForAsync(storeB, options.DatabaseMode, "users/1");
 
                 Assert.True(databaseB.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count > 1);
-
             }
         }
 
-        [Fact]
-        public async Task Incrementing_an_existing_counter_upon_incoming_replication_should_affect_metrics()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Incrementing_an_existing_counter_upon_incoming_replication_should_affect_metrics(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 foreach (var store in new [] {storeA, storeB})
                 {
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < 1000; i++)
                         {
-                            bulk.Store(new User(), "users/" + i);
+                            bulk.Store(new User(), $"users/{i}$users/1");
                         }
                     }
 
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                         {
                             for (int j = 0; j < 100; j++)
                             {
-                                var countersFor = session.CountersFor("users/" + (i * 100 + j));
+                                var countersFor = session.CountersFor($"users/{(i * 100 + j)}$users/1");
                                 countersFor.Increment("myCounter1");
                                 countersFor.Increment("myCounter2");
                                 countersFor.Increment("myCounter3");
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var databaseB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                var databaseB = await GetDocumentDatabaseInstanceForAsync(storeB, options.DatabaseMode, "users/1");
 
                 Assert.True(databaseB.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count > 1);
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
                 var oldBytesPutsCount = databaseB.Metrics.Counters.BytesPutsPerSec.Count;
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
                 
                 Assert.Equal(oldPutsCount * 2, databaseB.Metrics.Counters.PutsPerSec.Count);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count >= oldBytesPutsCount * 2);
@@ -112,11 +112,11 @@ namespace SlowTests.Issues
                 // increment a single counter
                 using (var session = storeA.OpenSession())
                 {
-                    session.CountersFor("users/0").Increment("myCounter1");
+                    session.CountersFor("users/0$users/1").Increment("myCounter1");
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
 
                 // ensure that on the replicated node counter metrics
                 // show a single write (and not entire counter group)   
