@@ -91,7 +91,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 2 revisions
             using (var session = store.OpenAsyncSession())
@@ -110,7 +110,8 @@ namespace SlowTests
             {
                 Default = null
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
+
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
@@ -148,7 +149,7 @@ namespace SlowTests
                     }
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create doc with 3 revisions
             for (int i = 0; i < 3; i++)
@@ -183,7 +184,7 @@ namespace SlowTests
                     }
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
@@ -210,7 +211,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 10
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 10 revisions
             for (int i = 0; i < 10; i++)
@@ -231,7 +232,7 @@ namespace SlowTests
                     MaximumRevisionsToDeleteUponDocumentUpdate = 2
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -269,7 +270,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 2 revisions
             using (var session = store.OpenAsyncSession())
@@ -302,7 +303,7 @@ namespace SlowTests
                     PurgeOnDelete = true,
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             await EnforceConfiguration(store);
 
@@ -395,7 +396,7 @@ namespace SlowTests
             await SetupReplicationAsync(src, dst); // Conflicts resolved
             await EnsureReplicatingAsync(src, dst);
 
-            WaitForUserToContinueTheTest(dst);
+            // WaitForUserToContinueTheTest(dst);
 
             using (var session = dst.OpenAsyncSession())
             {
@@ -453,7 +454,7 @@ return oldestDoc;"
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(dst, Server.ServerStore, configuration: configuration);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -514,7 +515,7 @@ return oldestDoc;"
                     MinimumRevisionAgeToKeep = TimeSpan.FromHours(1)
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration2);
+            await RevisionsHelper.SetupRevisions(dst, Server.ServerStore, configuration: configuration2);
 
             await TriggerRevisionsDelete(ChangingType.EnforceConfiguration, dst);
             using (var session = dst.OpenAsyncSession())
@@ -564,7 +565,7 @@ return oldestDoc;"
             };
 
             // Setup Config with MinimumRevisionsToKeep=5
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration5);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration5);
             // Create 5 regular revision
             for (int i = 1; i <= 5; i++)
             {
@@ -576,7 +577,7 @@ return oldestDoc;"
             }
 
             // Remove all configurations except the Conflicts Config
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: noConfiguration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: noConfiguration);
             // Create 10 force-created revisions
             for (int i = 1; i <= 10; i++)
             {
@@ -860,7 +861,7 @@ return oldestDoc;"
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create doc with 3 revisions
             for (int i = 0; i < 3; i++)
@@ -895,7 +896,7 @@ return oldestDoc;"
             {
                 Default = null
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: noConfiguration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: noConfiguration);
 
             // Create doc with 2 force-created revisions
             for (int i = 3; i < 5; i++)
@@ -928,11 +929,8 @@ return oldestDoc;"
                         MaximumRevisionsToDeleteUponDocumentUpdate = 1
                     }
                 };
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: maxUponUpdateConfig);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: maxUponUpdateConfig);
             }
-
-
-            // WaitForUserToContinueTheTest(store, debug: false);
 
             await store.Maintenance.SendAsync(new DeleteRevisionsOperation(includeForceCreated, new DeleteRevisionsOperation.Parameters { DocumentIds = new[] { "Docs/2", "Docs/1" } }));
 
@@ -964,7 +962,7 @@ return oldestDoc;"
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 2 revisions
             using (var session = store.OpenAsyncSession())
@@ -999,7 +997,7 @@ return oldestDoc;"
                     Default = null
                 };
             }
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -1083,7 +1081,7 @@ return oldestDoc;"
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -1101,7 +1099,7 @@ return oldestDoc;"
             {
                 Default = null
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: emptyConfig);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: emptyConfig);
 
             // Delete doc
             using (var session = store.OpenAsyncSession())
