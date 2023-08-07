@@ -2,16 +2,15 @@
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
 using System.Threading;
-using FastTests.Server.Replication;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -21,13 +20,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CheckTcpTrafficWatch()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CheckTcpTrafficWatch(Options options)
         {
             DoNotReuseServer();
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var cts = new CancellationTokenSource();
 
@@ -84,15 +84,15 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CheckTcpTrafficWatchExceptionMessage(bool exceptionType)
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CheckTcpTrafficWatchExceptionMessage(Options options, bool exceptionType)
         {
             DoNotReuseServer();
 
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var cts = new CancellationTokenSource();
 
