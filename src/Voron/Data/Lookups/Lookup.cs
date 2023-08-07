@@ -1079,7 +1079,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return;
         }
 
-    NotFound:
+        NotFound:
         state.LastMatch = match > 0 ? 1 : -1;
         state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
     }

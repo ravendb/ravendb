@@ -92,6 +92,7 @@ public unsafe struct FastPForDecoder : IDisposable
         _exceptions = (uint*)_buffer.Ptr;
     }
 
+    [SkipLocalsInit]
     public int Read(long* output, int outputCount)
     {
         var prefixAmount = _prefixShiftAmount;
@@ -206,6 +207,7 @@ public unsafe struct FastPForDecoder : IDisposable
 
         return read;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void PrefixSumAndStoreToOutput(Vector256<ulong> curUl, ref Vector256<long> prev)
         {
             var cur = curUl.AsInt64();

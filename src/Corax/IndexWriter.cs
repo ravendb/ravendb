@@ -1899,6 +1899,7 @@ namespace Corax
             return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
+        [SkipLocalsInit]
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
@@ -1906,14 +1907,20 @@ namespace Corax
             var llt = _transaction.LowLevelTransaction;
             var item = Container.Get(llt, containerId);
             Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
-            int removalIndex = 0;
+
             
             // combine with existing values
+
+            // PERF: We use SkipLocalsInit because we don't need to ensure this stack space to be filled with zeroes
+            // which diminish the amount of work this method has to do.
             var buffer = stackalloc long[1024];
-            var bufferAsSpan = new Span<long>(buffer, 1024);
+           
             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
+
+            int removalIndex = 0;
             var removals = entries.Removals;
+            var bufferAsSpan = new Span<long>(buffer, 1024);
             while (true)
             {
                 var read = _pforDecoder.Read(buffer, 1024);
@@ -1981,7 +1988,7 @@ namespace Corax
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
-        private unsafe AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
+        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
             

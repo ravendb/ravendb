@@ -57,7 +57,7 @@ namespace Voron.Data.Containers
                 get => (_compactBackingStore & 0x1F) == 0;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Get(ref byte* pagePointer)
             {
                 // The offset it stored in bits 5..16, but it is actually 4 bytes
