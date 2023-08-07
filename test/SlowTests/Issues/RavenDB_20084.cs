@@ -48,8 +48,8 @@ public class RavenDB_20084 : ClusterTestBase
             leaderStore.Initialize();
             var debugInfo = new List<string> { $"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
 
-            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = exception =>
-                debugInfo.Add(exception.ToString());
+            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = (exception, erroredDatabaseName) =>
+                debugInfo.Add($"Failed to schedule the next activity for the idle database '{erroredDatabaseName}': {exception}");
 
             // Populating the database and forcibly transitioning it to an idle state
             await Backup.FillClusterDatabaseWithRandomDataAsync(databaseSizeInMb: 1, leaderStore, clusterSize);
