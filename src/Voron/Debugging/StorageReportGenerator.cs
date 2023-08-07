@@ -135,7 +135,7 @@ namespace Voron.Debugging
                                     if (lookup.State.DictionaryId < 0)
                                     {
                                         var nestedReport = GetReport(lookup, input.IncludeDetails);
-                                        nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                        nestedReport.Name = treeReport.Name + "/" + nestedReport.Name + " (Lookup)";
                                         trees.Add(nestedReport);
                                     }
                                     else
@@ -143,9 +143,10 @@ namespace Voron.Debugging
                                         tree.Forget(it.CurrentKey);
                                         var textLookup = tree.LookupFor<CompactTree.CompactKeyLookup>(it.CurrentKey);
                                         var nestedReport = GetReport(textLookup, input.IncludeDetails);
-                                        nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                        string nestedReportName = treeReport.Name + "/" + nestedReport.Name;
+                                        nestedReport.Name = nestedReportName +" (CompactTree)";
                                         trees.Add(nestedReport);
-                                        trees.Add(GetContainerReport(nestedReport.Name, textLookup.State.TermsContainerId, input.IncludeDetails));
+                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", textLookup.State.TermsContainerId, input.IncludeDetails));
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
@@ -153,9 +154,9 @@ namespace Voron.Debugging
                                 case RootObjectType.FixedSizeTree:
                                     var header = (FixedSizeTreeHeader.Large*)readResult.Reader.Base;
                                     var set = tree.FixedTreeFor(it.CurrentKey, (byte)header->ValueSize);
-                                    var nesteSetReport = GetReport(set, input.IncludeDetails);
-                                    nesteSetReport.Name = treeReport.Name + "/" + nesteSetReport.Name;
-                                    trees.Add(nesteSetReport);
+                                    var nestedSetReport = GetReport(set, input.IncludeDetails);
+                                    nestedSetReport.Name = treeReport.Name + "/" + nestedSetReport.Name +", FixedSizeTree";
+                                    trees.Add(nestedSetReport);
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(rootObjectType.ToString());
