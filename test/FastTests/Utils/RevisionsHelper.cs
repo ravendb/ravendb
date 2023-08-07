@@ -89,7 +89,7 @@ namespace FastTests.Utils
             };
 
             modifyConfiguration?.Invoke(configuration);
-            var index = await SetupRevisions(serverStore, database, configuration);
+            var index = await SetupRevisionsInternal(serverStore, database, configuration);
             var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
             return index;
@@ -106,7 +106,7 @@ namespace FastTests.Utils
             };
 
             var database = documentStore.Database;
-            var index = await SetupRevisions(serverStore, database, configuration);
+            var index = await SetupRevisionsInternal(serverStore, database, configuration);
 
             var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
@@ -114,7 +114,22 @@ namespace FastTests.Utils
             return index;
         }
 
-        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)
+        public static async Task SetupRevisions(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsConfiguration configuration)
+        {
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
+            if (serverStore == null)
+                throw new ArgumentNullException(nameof(serverStore));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
+        }
+
+        private static async Task<long> SetupRevisionsInternal(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
