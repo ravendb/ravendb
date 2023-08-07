@@ -33,7 +33,7 @@ namespace Sparrow.Json
             }
 
             pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance);
-            pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
+            pathCacheByIndex = new Dictionary<int, object>();
         }
 
         public void ReleasePathCache(Dictionary<StringSegment, object> pathCache, Dictionary<int, object> pathCacheByIndex)

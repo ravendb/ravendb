@@ -9,8 +9,6 @@ namespace Sparrow.Json
     {
         protected BlittableJsonReaderObject _parent;
         protected byte* _mem;
-        protected byte* _propNames;
-        protected int _propNamesDataOffsetSize;
         protected internal JsonOperationContext _context;
 
         protected BlittableJsonReaderBase(JsonOperationContext context)
