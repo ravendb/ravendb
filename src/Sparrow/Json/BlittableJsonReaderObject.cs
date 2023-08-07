@@ -26,7 +26,9 @@ namespace Sparrow.Json
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private readonly bool _isRoot;
-        private byte* _objStart;
+        private readonly byte* _objStart;
+        private readonly byte* _propNames;
+        private readonly int _propNamesDataOffsetSize;
 
         public DynamicJsonValue Modifications;
 
@@ -79,11 +81,22 @@ namespace Sparrow.Json
 
             var propOffsetStart = _size - 2;
             var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out byte offset);
-            // init document level properties
             if (propsOffset >= size)
                 ThrowInvalidPropertiesOffest();
 
-            SetupPropertiesAccess(mem, propsOffset);
+            // init document level properties
+            _propNames = (mem + propsOffset);
+
+            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
+
+            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
+                _propNamesDataOffsetSize = sizeof(byte);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
+                _propNamesDataOffsetSize = sizeof(short);
+            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
+                _propNamesDataOffsetSize = sizeof(int);
+            else
+                ThrowOutOfRangeException(propNamesOffsetFlag);
 
             // get pointer to property names array on document level
 
@@ -109,32 +122,6 @@ namespace Sparrow.Json
             //(or won't throw, but this is actually worse!)
             throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size",
                 nameof(size));
-        }
-
-        private void SetupPropertiesAccess(byte* mem, int propsOffset)
-        {
-            AssertContextNotDisposed();
-
-            _propNames = (mem + propsOffset);
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-            switch (propNamesOffsetFlag)
-            {
-                case BlittableJsonToken.OffsetSizeByte:
-                    _propNamesDataOffsetSize = sizeof(byte);
-                    break;
-
-                case BlittableJsonToken.OffsetSizeShort:
-                    _propNamesDataOffsetSize = sizeof(short);
-                    break;
-
-                case BlittableJsonToken.OffsetSizeInt:
-                    _propNamesDataOffsetSize = sizeof(int);
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        $"Property names offset flag should be either byte, short of int, instead of {propNamesOffsetFlag}");
-            }
         }
 
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
@@ -655,7 +642,7 @@ namespace Sparrow.Json
         {
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
-            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var position, out var propertyId);
+            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var position, out _);
             if (CompareTokens(expectedToken, token) == false)
             {
                 result = null;
@@ -937,29 +924,24 @@ namespace Sparrow.Json
         {
             isBlittableJsonReader = false;
             BlittableJsonToken actualType = type & TypesMask;
-            if (actualType == BlittableJsonToken.String)
-                return ReadStringLazily(position);
-            if (actualType == BlittableJsonToken.Integer)
-                return ReadVariableSizeLong(position);
-            if (actualType == BlittableJsonToken.StartObject)
-            {
-                isBlittableJsonReader = true;
-                return new BlittableJsonReaderObject(position, _parent ?? this, type) { NoCache = NoCache };
-            }
 
-            return GetObjectUnlikely(type, position, actualType, out isBlittableJsonReader);
-        }
-
-        private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType, out bool isBlittableJsonReader)
-        {
             switch (actualType)
             {
+                case BlittableJsonToken.String:
+                    return ReadStringLazily(position);
+
+                case BlittableJsonToken.Integer:
+                    return ReadVariableSizeLong(position);
+
+                case BlittableJsonToken.StartObject:
+                    isBlittableJsonReader = true;
+                    return new BlittableJsonReaderObject(position, _parent ?? this, type) { NoCache = NoCache };
+
                 case BlittableJsonToken.EmbeddedBlittable:
                     isBlittableJsonReader = true;
                     return ReadNestedObject(position);
 
                 case BlittableJsonToken.RawBlob:
-                    isBlittableJsonReader = false;
                     return ReadRawBlob(position);
 
                 case BlittableJsonToken.StartArray:
@@ -970,15 +952,12 @@ namespace Sparrow.Json
                     };
 
                 case BlittableJsonToken.CompressedString:
-                    isBlittableJsonReader = false;
                     return ReadCompressStringLazily(position);
 
                 case BlittableJsonToken.Boolean:
-                    isBlittableJsonReader = false;
                     return ReadNumber(_mem + position, 1) == 1 ? BoxedTrue : BoxedFalse;
 
                 case BlittableJsonToken.Null:
-                    isBlittableJsonReader = false;
                     return null;
 
                 case BlittableJsonToken.LazyNumber:
@@ -988,6 +967,7 @@ namespace Sparrow.Json
 
             throw new ArgumentOutOfRangeException(nameof(type), type.ToString(), "Unexpected type: " + type);
         }
+
 
         internal sealed class RawBlob
         {
@@ -1026,7 +1006,6 @@ namespace Sparrow.Json
 
             _mem = null;
             _metadataPtr = null;
-            _objStart = null;
             Modifications = null;
 
             if (_objectsPathCache != null)
