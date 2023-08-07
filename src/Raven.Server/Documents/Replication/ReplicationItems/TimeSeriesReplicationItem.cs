@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(From)] = From.ToString("O");
             djv[nameof(To)] = To.ToString("O");
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             return djv;
