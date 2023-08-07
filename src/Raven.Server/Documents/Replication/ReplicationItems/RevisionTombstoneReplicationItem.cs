@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
             return djv;
         }
