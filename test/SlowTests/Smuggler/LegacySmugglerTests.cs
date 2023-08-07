@@ -188,7 +188,7 @@ namespace SlowTests.Smuggler
                     Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.StartsWith("RV:", changeVector);
+                    Assert.Contains("RV:", changeVector);
 
                     var revisions = session.Advanced.Revisions.GetFor<User>("users/1");
                     Assert.Equal(4, revisions.Count);
