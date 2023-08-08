@@ -193,7 +193,6 @@ namespace Corax
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
                 TermSize = size;
-                NeedToSortToDeleteDuplicates = true;
                 Additions = new();
                 Additions.Initialize(context);
                 Removals = new();
@@ -221,7 +220,6 @@ namespace Corax
             private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq )
             {
                 AssertPreparationIsNotFinished();
-                NeedToSortToDeleteDuplicates = true;
 
                 if (list.Count > 0)
                 {
@@ -238,6 +236,10 @@ namespace Corax
                         }
 
                         return;
+                    }
+                    if (cur.EntryId > entryId)
+                    {
+                        NeedToSortToDeleteDuplicates = true;
                     }
                 }
 
@@ -1716,7 +1718,7 @@ namespace Corax
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
                 entries.Prepare(_entriesAllocator);
                 
-                UpdateEntriesForTerm(ref entriesForTerm, entries);
+                UpdateEntriesForTerm(ref entriesForTerm, in entries);
 
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
@@ -1927,7 +1929,7 @@ namespace Corax
                 var read = _pforDecoder.Read(buffer, 1024);
                 if (read == 0)
                     break;
-
+                
                 EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
                 for (int i = 0; i < read; i++)
                 {
