@@ -99,26 +99,18 @@ namespace Voron.Data.PostingLists
         public void Add(long value)
         {
             if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed"); 
-            
+                throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
+            Debug.Assert((value & 1) == 0);
             _additions.Add(value);
-        }
-
-        public void Remove(ReadOnlySpan<long> values)
-        {
-            _removals.Add(values);
-        }
-
-        public void Add(ReadOnlySpan<long> values)
-        {
-            _additions.Add(values);
         }
         
         public void Remove(long value)
         {
-            _removals.Add(value);
+            Debug.Assert((value & 1) == 0);
+            // used for testing only!
+            // we need to explicitly mark it with 0b001 so merging will be fast
+            _removals.Add(value | 1); 
         }
-
 
         [Conditional("DEBUG")]
         public void Render()
@@ -391,7 +383,19 @@ namespace Voron.Data.PostingLists
             var additions = _additions.RawItems;
             var removals = _removals.RawItems;
 
-            var pforDecoder = new FastPForDecoder(_llt.Allocator);
+            var decoder = new FastPForDecoder(_llt.Allocator);
+            
+            UpdateList(additions, additionsCount, removals, removalsCount, encoder, ref tempList, ref decoder);
+            
+            decoder.Dispose();
+            tempList.Dispose();
+            encoder.Dispose();
+        }
+
+        public void UpdateList(long* additions, int additionsCount, long* removals, int removalsCount, 
+            FastPForEncoder encoder, ref NativeIntegersList tempList, ref FastPForDecoder decoder)
+        {
+            tempList.Clear();
 
             while (additionsCount != 0 || removalsCount != 0)
             {
@@ -399,9 +403,9 @@ namespace Voron.Data.PostingLists
                 long first = -1;
                 if (additionsCount > 0)
                     first = additions[0];
-                if (removalsCount > 0) 
+                if (removalsCount > 0)
                     first = first == -1 ? removals[0] : Math.Min(removals[0], first);
-            
+
                 FindPageFor(first);
                 long limit = NextParentLimit();
                 ref var state = ref _stk[_pos];
@@ -421,9 +425,9 @@ namespace Voron.Data.PostingLists
                 {
                     // check if we want to merge this page
                     PopPage();
-            
+
                     ref var parent = ref _stk[_pos];
-            
+
                     var branch = new PostingListBranchPage(parent.Page);
                     Debug.Assert(branch.Header->NumberOfEntries >= 2);
                     var siblingIdx = GetSiblingIndex(parent);
@@ -433,7 +437,7 @@ namespace Voron.Data.PostingLists
                     var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
                     if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListLeaf)
                         continue;
-                    
+
                     var sibling = new PostingListLeafPage(siblingPage);
                     if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                     {
@@ -441,21 +445,19 @@ namespace Voron.Data.PostingLists
                         // we do that to prevent "jumping" around between adding a page & removing that
                         continue;
                     }
-                    
-                    PostingListLeafPage.Merge(_llt.Allocator,ref pforDecoder, leafPage.Header,
+
+                    PostingListLeafPage.Merge(_llt.Allocator, ref decoder, leafPage.Header,
                         parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
                         parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
                     );
 
                     MergeSiblingsAtParent();
-                } 
+                }
             }
-            
-            tempList.Dispose();
-            pforDecoder.Dispose();
-            encoder.Dispose();
+
+
         }
-        
+
         private static int GetSiblingIndex(in PostingListCursorState parent)
         {
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
@@ -664,12 +666,11 @@ namespace Voron.Data.PostingLists
             return rootPage;
         }
 
-        public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState, ReadOnlySpan<long> additions, ReadOnlySpan<long> removals)
+        public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState,
+            long* additions, int additionsCount, long* removals, int removalsCount, FastPForEncoder encoder, ref NativeIntegersList tempList, ref FastPForDecoder decoder)
         {
             using var pl = new PostingList(transactionLowLevelTransaction, Slices.Empty, postingListState);
-            pl.Add(additions);
-            pl.Remove(removals);
-            pl.PrepareForCommit();
+            pl.UpdateList(additions, additionsCount, removals, removalsCount, encoder, ref tempList, ref decoder);
             postingListState = pl.State;
 
             return pl.State.NumberOfEntries;

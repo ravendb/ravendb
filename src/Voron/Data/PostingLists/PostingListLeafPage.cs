@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Impl;
 using Voron.Util.PFor;
@@ -81,29 +82,23 @@ public readonly unsafe struct PostingListLeafPage
         Memory.Copy(newPagePtr, Header, PageHeader.SizeOf);
         InitLeaf(newHeader);
 
-        var existingList = new NativeIntegersList(tx.Allocator, (Header->NumberOfEntries+255)/256 * 256);
-        existingList.Count = ReadAllEntries(tx.Allocator,existingList.RawItems, existingList.Capacity);
+        int numberOfEntriesToReserve = Header->NumberOfEntries + maxAdditionsLimit + maxRemovalsLimit;
+        int requiredSizeAligned256 = (numberOfEntriesToReserve+255)/256 * 256;
+        tempList.EnsureCapacity(requiredSizeAligned256);
 
-        Debug.Assert(existingList.Count == Header->NumberOfEntries);
+        tempList.Count = ReadAllEntries(tx.Allocator,tempList.RawItems, tempList.Capacity);
+        Debug.Assert(tempList.Count == Header->NumberOfEntries);
+        
+        var needSorting = removalsCount > 0 || // any removal force sorting
+                          // here we test if the first new addition is smaller than the largest existing, requiring sorting  
+                          (maxAdditionsLimit > 0 && additions[0] <= tempList.RawItems[tempList.Count - 1]);
 
-        int existingIndex = 0, additionsIdx = 0, removalsIdx = 0;
+        tempList.AddUnsafe(additions, maxAdditionsLimit);
+        tempList.AddUnsafe(removals, maxRemovalsLimit);
 
-        long existingCurrent = InvalidValue, additionCurrent = InvalidValue, removalCurrent = InvalidValue;
-        while (true)
+        if (needSorting)
         {
-            if (existingIndex < existingList.Count && existingCurrent == InvalidValue) 
-                existingCurrent = existingList.RawItems[existingIndex++];
-
-            if (additionsIdx < maxAdditionsLimit && additionCurrent == InvalidValue) 
-                additionCurrent = additions[additionsIdx++];
-
-            if (removalsIdx < maxRemovalsLimit && removalCurrent == InvalidValue) 
-                removalCurrent = removals[removalsIdx++];
-
-            if (additionCurrent == InvalidValue && existingCurrent == InvalidValue)
-                break;
-            
-            AddItemToList(ref tempList);
+           tempList.SortAndRemoveDuplicatesAndRemovals();
         }
 
         int entriesCount = 0;
@@ -123,47 +118,12 @@ public readonly unsafe struct PostingListLeafPage
         Memory.Set(newPagePtr + PageHeader.SizeOf + sizeUsed, 0, Constants.Storage.PageSize - (PageHeader.SizeOf + sizeUsed));
         Memory.Copy(Header, newPagePtr, Constants.Storage.PageSize);
             
-        existingList.Dispose();
         tmpPageScope.Dispose();
         
-        additions += additionsIdx;
-        additionsCount -= additionsIdx;
-        removals += removalsIdx;
-        removalsCount -= removalsIdx;
-        
-        void AddItemToList(ref NativeIntegersList list)
-        {
-            long current;
-            if (additionCurrent < existingCurrent || existingCurrent == InvalidValue)
-            {
-                current = additionCurrent;
-                additionCurrent = InvalidValue;
-            }
-            else if (additionCurrent == existingCurrent)
-            {
-                current = additionCurrent;
-                additionCurrent = InvalidValue;
-                existingCurrent = InvalidValue;
-            }
-            else // existingCurrent > existingCurrent
-            {
-                current = existingCurrent;
-                existingCurrent = InvalidValue;
-            }
-
-            if (removalCurrent < current)
-            {
-                removalCurrent = InvalidValue;
-            }
-            else if (removalCurrent == current)
-            {
-                removalCurrent = InvalidValue;
-            }
-            else
-            {
-                list.Add(current);
-            }
-        }
+        additions += maxAdditionsLimit;
+        additionsCount -= maxAdditionsLimit;
+        removals += maxRemovalsLimit;
+        removalsCount -= maxRemovalsLimit;
     }
     
      /// <summary>

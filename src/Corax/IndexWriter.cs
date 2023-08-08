@@ -18,6 +18,8 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data;
@@ -64,6 +66,7 @@ namespace Corax
         private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
+        private NativeIntegersList _entriesToTermsBuffer;
 
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
@@ -92,13 +95,14 @@ namespace Corax
         [StructLayout(LayoutKind.Sequential)]
         internal struct EntriesModifications
         {
-            private const int ControlBits = 3;
-            private const int ControlMask = 0b111;
+            private const int ControlBits = 4;
+            private const int ControlMask = 0b1111;
 
-            private const int HasLong = 0b001;
-            private const int HasDouble = 0b010;
+            private const int HasLong = 0b0001;
+            private const int HasDouble = 0b0010;
 
-            private const int NeedSorting = 0b100;
+            private const int NeedSorting = 0b0100;
+            private const int NeeddUpdates = 0b1000;
 
             private int _termSize;
             private long _longValue;
@@ -159,7 +163,7 @@ namespace Corax
             public NativeList<TermInEntryModification> Removals;
             public NativeList<TermInEntryModification> Updates;
 
-            private bool NeedToSortToDeleteDuplicates
+            private bool NeedToSort
             {
                 get => (_termSize & NeedSorting) != 0;
                 set
@@ -171,6 +175,22 @@ namespace Corax
                     else
                     {
                         _termSize |= NeedSorting;
+                    }
+                } 
+            }
+            
+            private bool NeedToUpdate
+            {
+                get => (_termSize & NeeddUpdates) != 0;
+                set
+                {
+                    if (value == false)
+                    {
+                        _termSize &= ~NeeddUpdates;
+                    }
+                    else
+                    {
+                        _termSize |= NeeddUpdates;
                     }
                 } 
             }
@@ -220,7 +240,7 @@ namespace Corax
             private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq )
             {
                 AssertPreparationIsNotFinished();
-
+                NeedToUpdate = true;
                 if (list.Count > 0)
                 {
                     ref var cur = ref list.RawItems[list.Count - 1];
@@ -239,7 +259,7 @@ namespace Corax
                     }
                     if (cur.EntryId > entryId)
                     {
-                        NeedToSortToDeleteDuplicates = true;
+                        NeedToSort = true;
                     }
                 }
 
@@ -249,12 +269,16 @@ namespace Corax
 
             private void DeleteAllDuplicates([NotNull] ByteStringContext context)
             {
-                if (NeedToSortToDeleteDuplicates == false)
+                if (NeedToUpdate == false)
                     return;
-                NeedToSortToDeleteDuplicates = false;
-                
-                Additions.Sort();
-                Removals.Sort();
+                NeedToUpdate = false;
+
+                if (NeedToSort)
+                {
+                    Additions.Sort();
+                    Removals.Sort();
+                    NeedToSort = false;
+                }
 
                 var oldUpdates = Updates.Count;
                 int additionPos = 0, removalPos = 0;
@@ -308,17 +332,6 @@ namespace Corax
                 
                 ValidateNoDuplicateEntries();
             }
-
-            // There is an case we found in RavenDB-19688
-            // Sometimes term can be added and removed for the same in the same batch and there can be multiple other docs between this two operations.
-            // This requires us to ensure we don't have duplicates here.
-            public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out Span<long> additions, out Span<long> removals)
-            {
-                GetEncodedAdditionsAndRemovals(context, out long* addPtr, out long* removePtr);
-                additions = new Span<long>(addPtr, Additions.Count);
-                removals = new Span<long>(removePtr, Removals.Count);
-            }
-
             public void GetEncodedAdditions([NotNull] ByteStringContext context, out long* additions) => GetEncodedAdditionsAndRemovals(context, out additions, out _);
             public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out long* additions, out long* removals)
             {
@@ -344,7 +357,9 @@ namespace Corax
                 for (int i = 0; i < Removals.Count; i++)
                 {
                     ref var cur = ref Removals.RawItems[i];
-                    removals[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
+                    // Here we use a trick, we want to avoid a 3 way merge, so we use the last bit as indication that this is a
+                    // value that needs to be removed, after the sorting, we can scan, find the matching removal & addition and skip both
+                    removals[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, (TermIdMask)1);
                 }
             }
 
@@ -524,7 +539,10 @@ namespace Corax
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
+            _tempListBuffer = new NativeIntegersList(_entriesAllocator);
+            _entriesToTermsBuffer = new NativeIntegersList(_entriesAllocator);
         }
+        
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             _transaction = tx;
@@ -1057,6 +1075,7 @@ namespace Corax
         private readonly IndexOperationsDumper _indexDebugDumper;
         private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
+        private NativeIntegersList _tempListBuffer;
         private FastPForEncoder _pForEncoder;
         private readonly Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
         private ByteStringContext _entriesAllocator;
@@ -1901,7 +1920,6 @@ namespace Corax
             return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
-        [SkipLocalsInit]
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
@@ -1916,42 +1934,30 @@ namespace Corax
 
             // PERF: We use SkipLocalsInit because we don't need to ensure this stack space to be filled with zeroes
             // which diminish the amount of work this method has to do.
-            var buffer = stackalloc long[1024];
            
-            _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
+            var count = VariableSizeEncoding.Read<int>(item.Address, out var offset);
+
+            int capacity = Math.Max(256, count + entries.Additions.Count + entries.Removals.Count);
+            _entriesToTermsBuffer.EnsureCapacity(capacity);
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
+            Debug.Assert(_entriesToTermsBuffer.Capacity > 0 && _entriesToTermsBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.REad");
+            _entriesToTermsBuffer.Count = _pforDecoder.Read(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Capacity);
+            entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out long* additions, out long* removals);
 
-            int removalIndex = 0;
-            var removals = entries.Removals;
-            var bufferAsSpan = new Span<long>(buffer, 1024);
-            while (true)
+            var needSorting = entries.Removals.Count > 0 || // any removal force sorting
+                              // here we test if the first new addition is smaller than the largest existing, requiring sorting  
+                              (entries.Additions.Count > 0 && additions[0] <= _entriesToTermsBuffer.RawItems[_entriesToTermsBuffer.Count - 1]);
+            
+            _entriesToTermsBuffer.Add(additions, entries.Additions.Count);
+            _entriesToTermsBuffer.Add(removals, entries.Removals.Count);
+
+            if (needSorting)
             {
-                var read = _pforDecoder.Read(buffer, 1024);
-                if (read == 0)
-                    break;
-                
-                EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
-                for (int i = 0; i < read; i++)
-                {
-                    if (removalIndex < removals.Count)
-                    {
-                        long entryId = removals.RawItems[removalIndex].EntryId;
-                        if (buffer[i] == entryId)
-                        {
-                            removalIndex++;
-                            continue;
-                        }
-
-                        if (buffer[i] > entryId)
-                            throw new InvalidDataException("Attempt to remove value " + entryId + ", but got " + buffer[i] );
-                    } 
-                    entries.Addition(_entriesAllocator, buffer[i]);
-                }
+                _entriesToTermsBuffer.SortAndRemoveDuplicatesAndRemovals();
             }
+            
 
-            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
-
-            if (entries.Additions.Count == 0)
+            if (_entriesToTermsBuffer.Count == 0)
             {
                 Container.Delete(llt, _postingListContainerId, containerId);
                 termIdInTree = -1;
@@ -1959,7 +1965,7 @@ namespace Corax
             }
 
             
-            if (TryEncodingToBuffer(additions, entries.Additions.Count, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Count, tmpBuf, out var encoded) == false)
             {
 
                 AddNewTermToSet(out termIdInTree);
@@ -2070,8 +2076,15 @@ namespace Corax
             var setSpace = Container.GetMutable(llt, containerId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
-            entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out Span<long> additions, out Span<long> removals);
-            var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, removals);
+            entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out var additions, out var removals);
+            //TEMP CODE
+            for (int i = 0; i < entries.Removals.Count; i++)
+            {
+                removals[i] &= ~1;
+            }
+            
+            var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, entries.Additions.Count, removals,
+                entries.Removals.Count, _pForEncoder, ref _tempListBuffer, ref _pforDecoder );
 
             termId = -1;
 
