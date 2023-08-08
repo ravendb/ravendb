@@ -252,7 +252,8 @@ namespace RachisTests.DatabaseCluster
                 }, true);
 
                 var error = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new GetIndexesProgressOperation(dbNode.ServerStore.NodeTag)));
-                Assert.Contains("No connection could be made because the target machine actively refused it", error.Message);
+                Assert.True(error.Message.Contains("No connection could be made because the target machine actively refused it") ||
+                            error.Message.Contains("Connection refused"));
             }
         }
 
