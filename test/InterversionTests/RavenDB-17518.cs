@@ -8,7 +8,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static InterversionTests.ReplicationTests;
 
 namespace InterversionTests
 {
@@ -44,7 +43,7 @@ namespace InterversionTests
                     await session.SaveChangesAsync();
                 }
 
-                await SetupReplication(store, oldStore);
+                await SetupReplicationAsync(store, oldStore);
 
                 var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
@@ -54,7 +53,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows| RavenTestCategory.Counters)]
         public async Task ShouldNotReplicateTimeSeriesToOldServer()
         {
             const string docId = "users/1";
@@ -80,7 +79,7 @@ namespace InterversionTests
                     await session.SaveChangesAsync();
                 }
 
-                await SetupReplication(store, oldStore);
+                await SetupReplicationAsync(store, oldStore);
 
                 var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
@@ -107,7 +106,7 @@ namespace InterversionTests
                     await session.SaveChangesAsync();
                 }
 
-                await SetupReplication(store, oldStore);
+                await SetupReplicationAsync(store, oldStore);
                 await EnsureReplicatingAsync(store, oldStore);
 
                 using (var session = store.OpenAsyncSession())
@@ -179,7 +178,7 @@ namespace InterversionTests
                     await session.SaveChangesAsync();
                 }
 
-                await SetupReplication(store, oldStore);
+                await SetupReplicationAsync(store, oldStore);
 
                 var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);

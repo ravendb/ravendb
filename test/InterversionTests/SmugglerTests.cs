@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -23,8 +24,6 @@ namespace InterversionTests
 {
     public class SmugglerTests : InterversionTestBase
     {
-        const string Server42Version = "4.2.124-nightly-20230112-0944";
-        const string Server54Version = "5.4.101";
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
 
         private static readonly DatabaseItemType _operateOnTypes42 = DatabaseItemType.Documents |
@@ -78,7 +77,7 @@ namespace InterversionTests
             Export,
             Import
         }
-        
+
         public SmugglerTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -145,56 +144,10 @@ namespace InterversionTests
                 Assert.Equal(0, actual.CountOfRevisionDocuments);
                 Assert.Equal(0, actual.CountOfCounterEntries);
 
-                Assert.Equal((0,0,0), import);
+                Assert.Equal((0, 0, 0), import);
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
-        public async Task CanExportFrom54XAndImportToCurrent()
-        {
-            var file = GetTempFileName();
-            using var store54 = await GetDocumentStoreAsync(Server54Version);
-            using var storeCurrent = GetDocumentStore();
-            store54.Maintenance.Send(new CreateSampleDataOperation());
-            using (var session = store54.OpenAsyncSession())
-            {
-                for (var i = 0; i < 5; i++)
-                {
-                    var user = new User { Name = "raven" + i };
-                    await session.StoreAsync(user);
-                    session.CountersFor(user).Increment("Like");
-                }
-                await session.SaveChangesAsync();
-            }
-
-            //Export
-            var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes54;
-            var exportOperation = await store54.Smuggler.ExportAsync(exportOptions, file);
-            await exportOperation.WaitForCompletionAsync(_operationTimeout);
-
-            var expected = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
-
-            //Import
-            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-            var importOperation = await storeCurrent.Smuggler.ImportAsync(importOptions, file);
-            await importOperation.WaitForCompletionAsync(_operationTimeout);
-
-            var actual = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
-
-            var export = await GetMetadataCounts(store54);
-            var import = await GetMetadataCounts(storeCurrent);
-
-            //Assert
-            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
-            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
-
-            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
-            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
-            Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
-
-            Assert.Equal(export, import);
-        }
 
         [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
@@ -259,58 +212,10 @@ namespace InterversionTests
                 Assert.Equal(0, actual.CountOfRevisionDocuments);
                 Assert.Equal(0, actual.CountOfCounterEntries);
 
-                Assert.Equal((0,0,0), import);
+                Assert.Equal((0, 0, 0), import);
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
-        public async Task CanExportFromCurrentAndImportTo54()
-        {
-            var file = GetTempFileName();
-            using var store54 = await GetDocumentStoreAsync(Server54Version);
-            using var storeCurrent = GetDocumentStore();
-            //Export
-            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
-            using (var session = storeCurrent.OpenAsyncSession())
-            {
-                var dateTime = new DateTime(2020, 3, 29);
-
-                for (var i = 0; i < 5; i++)
-                {
-                    var user = new User { Name = "raven" + i };
-                    await session.StoreAsync(user);
-                    session.TimeSeriesFor(user, "Heartrate").Append(dateTime, 59d, "watches/fitbit");
-                }
-                await session.SaveChangesAsync();
-            }
-
-            var exportOptions = new DatabaseSmugglerExportOptions();
-            var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
-
-            await exportOperation.WaitForCompletionAsync(_operationTimeout);
-
-            DatabaseStatistics expected = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
-
-            //Import
-            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-            var importOperation = await store54.Smuggler.ImportAsync(importOptions, file);
-            await importOperation.WaitForCompletionAsync(_operationTimeout);
-
-            var actual = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
-
-            //Assert
-            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
-            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
-
-            var export = await GetMetadataCounts(storeCurrent);
-            var import = await GetMetadataCounts(store54);
-
-            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
-            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
-            Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
-
-            Assert.Equal(export, import);
-        }
 
         [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
@@ -332,7 +237,7 @@ namespace InterversionTests
                 }
                 await session.SaveChangesAsync();
             }
-            
+
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
             exportOptions.OperateOnTypes = _operateOnTypes42;
@@ -347,8 +252,8 @@ namespace InterversionTests
             //Import
             var databaseName = "Import" + exportStore42.Database;
             exportStore42.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
-            using var importStore42 = new DocumentStore {Database = databaseName, Urls = exportStore42.Urls}.Initialize();
-            
+            using var importStore42 = new DocumentStore { Database = databaseName, Urls = exportStore42.Urls }.Initialize();
+
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
             importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
             if (excludeOn == ExcludeOn.Import)
@@ -378,8 +283,30 @@ namespace InterversionTests
                 Assert.Equal(0, actual.CountOfRevisionDocuments);
                 Assert.Equal(0, actual.CountOfCounterEntries);
 
-                Assert.Equal((0,0,0), import);
+                Assert.Equal((0, 0, 0), import);
             }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportFromCurrentAndImportTo54X(Options options)
+        {
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore(options);
+
+            await InsertDataAndExecuteExportImportAsync(storeCurrent, store54);
+            await GetStatsAndAssertAsync(storeCurrent, store54);
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportFrom54XAndImportToCurrent(Options options)
+        {
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore(options);
+
+            await InsertDataAndExecuteExportImportAsync(store54, storeCurrent);
+            await GetStatsAndAssertAsync(store54, storeCurrent);
         }
 
         //Migrator
@@ -406,10 +333,10 @@ namespace InterversionTests
 
             var fromStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
             var toStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
-            
+
             //Assert
             Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
-            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments, 
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments,
                 $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
 
             Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
@@ -487,10 +414,10 @@ namespace InterversionTests
 
             var fromStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
             var toStat = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
-            
+
             //Assert
             Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
-            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments, 
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments,
                 $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
 
             Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
@@ -561,7 +488,8 @@ namespace InterversionTests
                 BuildMajorVersion = versionRespond.MajorVersion,
                 MigrationSettings = new DatabaseMigrationSettings
                 {
-                    DatabaseName = @from.Database, OperateOnTypes = operateOnTypes
+                    DatabaseName = @from.Database,
+                    OperateOnTypes = operateOnTypes
                 }
             };
 
@@ -579,11 +507,55 @@ namespace InterversionTests
             {
                 var allDoc = await session.Advanced.AsyncRawQuery<dynamic>("from @all_docs").ToArrayAsync();
                 var metadatas = allDoc.Select(session.Advanced.GetMetadataFor).ToArray();
-                var counters = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasCounters)) );
-                var attachment = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasAttachments)) );
-                var revision = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasRevisions)) );
+                var counters = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasCounters)));
+                var attachment = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasAttachments)));
+                var revision = metadatas.Count(md => md.TryGetValue(Constants.Documents.Metadata.Flags, out string f) && f.Contains(nameof(DocumentFlags.HasRevisions)));
                 return (counters, attachment, revision);
             }
+        }
+
+        private async Task InsertDataAndExecuteExportImportAsync(DocumentStore fromStore, DocumentStore toStore)
+        {
+            var file = GetTempFileName();
+
+            try
+            {
+                await fromStore.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                                                    DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
+
+                //Export
+                var exportOptions = new DatabaseSmugglerExportOptions();
+                var exportOperation = await fromStore.Smuggler.ExportAsync(exportOptions, file);
+                await exportOperation.WaitForCompletionAsync(_operationTimeout);
+
+                //Import
+                var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
+                var importOperation = await toStore.Smuggler.ImportAsync(importOptions, file);
+                await importOperation.WaitForCompletionAsync(_operationTimeout);
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        private async Task GetStatsAndAssertAsync(DocumentStore store1, DocumentStore store2)
+        {
+            var expected = await GetDatabaseStatisticsAsync(store1);
+            var actual = await GetDatabaseStatisticsAsync(store2);
+
+            //Assert
+            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+            var export = await GetMetadataCounts(store1);
+            var import = await GetMetadataCounts(store2);
+
+            Assert.Equal(export, import);
         }
     }
 }

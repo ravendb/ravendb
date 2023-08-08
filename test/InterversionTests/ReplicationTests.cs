@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -47,13 +48,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-            {
-                Name = "MyExternalReplication",
-                Url = oldStore.Urls.First()
-            };
-
-            await SetupReplication(store, externalTask);
+            await SetupReplicationAsync(store, oldStore);
 
             var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
             Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
@@ -91,13 +86,7 @@ namespace InterversionTests
                 }
             }
 
-            var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-            {
-                Name = "MyExternalReplication",
-                Url = oldStore.Urls.First()
-            };
-
-            await SetupReplication(store, externalTask);
+            await SetupReplicationAsync(store, oldStore);
 
             Assert.True(WaitForDocument<User>(oldStore, "users/1", u => u.Name == "Egor"));
         }
@@ -123,7 +112,7 @@ namespace InterversionTests
                     await session.SaveChangesAsync();
                 }
 
-                await SetupReplication(store, oldStore);
+                await SetupReplicationAsync(store, oldStore);
 
                 var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
@@ -136,24 +125,16 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationShouldWork_NonShardedAndV54()
         {
-            var processNode = await GetServerAsync("5.4.5");
-            var dbName = GetDatabaseName();
             using (var store = GetDocumentStore())
-            using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
+            using (var oldStore = await GetDocumentStoreAsync(Server54Version))
             {
                 await InsertData(store, "$users/1");
                 await InsertData(oldStore, "");
 
                 var suffix = "$users/1";
 
-                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-                {
-                    Name = "MyExternalReplication",
-                    Url = oldStore.Urls.First()
-                };
-
-                await SetupReplication(store, externalTask);
-                await SetupReplication(oldStore, store);
+                await SetupReplicationAsync(store, oldStore);
+                await SetupReplicationAsync(oldStore, store);
 
                 await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(store, oldStore);
@@ -183,9 +164,8 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Sharding | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ReplicationWithReshardingShouldWorkFromShardedToOldServer()
         {
-            var processNode = await GetServerAsync("5.4.5");
             using (var store = Sharding.GetDocumentStore())
-            using (var oldStore = await GetStore(processNode.Url, processNode.Process))
+            using (var oldStore = await GetDocumentStoreAsync(Server54Version))
             {
                 var suffix = "$usa";
                 var id1 = $"users/1{suffix}";
@@ -201,14 +181,8 @@ namespace InterversionTests
                     await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
                     await session.SaveChangesAsync();
                 }
-                
-                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-                {
-                    Name = "MyExternalReplication",
-                    Url = oldStore.Urls.First()
-                };
 
-                await SetupReplication(store, externalTask);
+                await SetupReplicationAsync(store, oldStore);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -258,10 +232,8 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Sharding, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationWithRevisionTombstones_ShardedToOldServer()
         {
-            var processNode = await GetServerAsync("5.4.5");
-            var dbName = GetDatabaseName();
             using (var store = Sharding.GetDocumentStore())
-            using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
+            using (var oldStore = await GetDocumentStoreAsync(Server54Version))
             {
                 await InsertData(store, "$users/1");
                 await InsertData(oldStore, "");
@@ -269,14 +241,8 @@ namespace InterversionTests
                 var suffix = "$users/1";
                 var id = $"users/1{suffix}";
 
-                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-                {
-                    Name = "MyExternalReplication",
-                    Url = oldStore.Urls.First()
-                };
-
-                await SetupReplication(store, externalTask);
-                await SetupReplication(oldStore, store);
+                await SetupReplicationAsync(store, oldStore);
+                await SetupReplicationAsync(oldStore, store);
 
                 await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(store, oldStore);
@@ -290,11 +256,7 @@ namespace InterversionTests
                 }
 
                 await EnsureReplicatingAsync(store, oldStore);
-                await EnsureReplicatingAsync(store, oldStore);
-                await EnsureReplicatingAsync(store, oldStore);
 
-                await EnsureReplicatingAsync(oldStore, store);
-                await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(oldStore, store);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, location));
@@ -314,7 +276,7 @@ namespace InterversionTests
                             documentTombsCount++;
                     }
 
-                    Assert.Equal(4, revisionTombsCount); 
+                    Assert.Equal(4, revisionTombsCount);
                     Assert.Equal(1, documentTombsCount);
                 }
 
@@ -326,10 +288,8 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.Revisions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedToOldServer()
         {
-            var processNode = await GetServerAsync("5.4.5");
-            var dbName = GetDatabaseName();
             using (var store = GetDocumentStore())
-            using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
+            using (var oldStore = await GetDocumentStoreAsync(Server54Version))
             {
                 await InsertData(store, "$users/1");
                 await InsertData(oldStore, "");
@@ -337,14 +297,8 @@ namespace InterversionTests
                 var suffix = "$users/1";
                 var id = $"users/1{suffix}";
 
-                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
-                {
-                    Name = "MyExternalReplication",
-                    Url = oldStore.Urls.First()
-                };
-
-                await SetupReplication(store, externalTask);
-                await SetupReplication(oldStore, store);
+                await SetupReplicationAsync(store, oldStore);
+                await SetupReplicationAsync(oldStore, store);
 
                 await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(store, oldStore);
@@ -356,11 +310,6 @@ namespace InterversionTests
                 }
 
                 await EnsureReplicatingAsync(store, oldStore);
-                await EnsureReplicatingAsync(store, oldStore);
-                await EnsureReplicatingAsync(store, oldStore);
-
-                await EnsureReplicatingAsync(oldStore, store);
-                await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(oldStore, store);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
@@ -386,6 +335,62 @@ namespace InterversionTests
             }
         }
 
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData("5.4.109", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationFrom54XToCurrent(Options options, string version)
+        {
+            using (var source = await GetDocumentStoreAsync(version))
+            using (var destination = GetDocumentStore(options))
+            {
+                await source.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                                                 DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
+
+                await SetupReplicationAsync(source, destination);
+                await EnsureReplicatingAsync(source, destination);
+
+                await Task.Delay(3000);
+
+                var sourceStats = await GetDatabaseStatisticsAsync(source);
+                var destinationStats = await GetDatabaseStatisticsAsync(destination);
+
+                AssertStats(sourceStats, destinationStats);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData("5.4.109", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExternalReplicationBetween54XAndCurrent(Options options, string version)
+        {
+            using (var store1 = await GetDocumentStoreAsync(version))
+            using (var store2 = GetDocumentStore(options))
+            {
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                                                 DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
+
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await Task.Delay(3000);
+
+                var statsA = await GetDatabaseStatisticsAsync(store1);
+                var statsB = await GetDatabaseStatisticsAsync(store2);
+
+                AssertStats(statsA, statsB);
+            }
+        }
+
+        private static void AssertStats(DatabaseStatistics statsA, DatabaseStatistics statsB)
+        {
+            Assert.Equal(statsA.CountOfDocuments, statsB.CountOfDocuments);
+            Assert.Equal(statsA.CountOfRevisionDocuments, statsB.CountOfRevisionDocuments);
+            Assert.Equal(statsA.CountOfAttachments, statsB.CountOfAttachments);
+            Assert.Equal(statsA.CountOfCounterEntries, statsB.CountOfCounterEntries);
+            Assert.Equal(statsA.CountOfTimeSeriesSegments, statsB.CountOfTimeSeriesSegments);
+        }
+
         internal static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
         {
             var csName = $"cs-to-{dst.Database}";
@@ -407,36 +412,6 @@ namespace InterversionTests
             });
 
             return await src.Maintenance.SendAsync(op);
-        }
-
-
-        private static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore store, ExternalReplicationBase watcher)
-        {
-            var result = await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-            {
-                Name = watcher.ConnectionStringName,
-                Database = watcher.Database,
-                TopologyDiscoveryUrls = new[]
-                {
-                    watcher.Url
-                }
-            }));
-            Assert.NotNull(result.RaftCommandIndex);
-
-            IMaintenanceOperation<ModifyOngoingTaskResult> op;
-            switch (watcher)
-            {
-                case PullReplicationAsSink pull:
-                    op = new UpdatePullReplicationAsSinkOperation(pull);
-                    break;
-                case ExternalReplication ex:
-                    op = new UpdateExternalReplicationOperation(ex);
-                    break;
-                default:
-                    throw new ArgumentException($"Unrecognized type: {watcher.GetType().FullName}");
-            }
-
-            return await store.Maintenance.SendAsync(op);
         }
 
         protected async Task<DocumentStore> GetStore(string serverUrl, Process serverProcess = null, [CallerMemberName] string database = null, InterversionTestOptions options = null)
