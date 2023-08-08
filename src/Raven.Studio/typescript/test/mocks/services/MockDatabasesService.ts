@@ -66,4 +66,8 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             DatabasesStubs.expirationConfiguration()
         );
     }
+
+    withTombstonesState(dto?: TombstonesStateOnWire) {
+        return this.mockResolvedValue(this.mocks.getTombstonesState, dto, DatabasesStubs.tombstonesState());
+    }
 }
