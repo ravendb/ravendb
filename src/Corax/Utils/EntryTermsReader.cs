@@ -211,7 +211,7 @@ public unsafe struct EntryTermsReader
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
-        var termItem = Container.Get(_llt, TermId);
+        Container.Get(_llt, TermId, out var termItem);
         FieldRootPage = termItem.PageLevelMetadata;
         TermsReader.Set(Current, termItem, _dicId);
 
@@ -265,7 +265,7 @@ public unsafe struct EntryTermsReader
                         FieldRootPage = val;
                         break;
                     case StoredFieldType.Term:
-                        var termItem = Container.Get(_llt, val);
+                        Container.Get(_llt, val, out var termItem);
                         TermId = val;
                         FieldRootPage = termItem.PageLevelMetadata;
                         StoredField = termItem.ToUnmanagedSpan();

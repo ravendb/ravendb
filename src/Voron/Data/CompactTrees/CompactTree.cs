@@ -122,7 +122,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         private static void GetEncodedKey(LowLevelTransaction llt, long l, out int encodedKeyLengthInBits, out byte* encodedKeyPtr) 
         {
-            var keyItem = Container.Get(llt, l);
+            Container.Get(llt, l, out var keyItem);
             int remainderInBits = *keyItem.Address >> 4;
             var encodedKeyLen = keyItem.Length - 1;
             encodedKeyLengthInBits = encodedKeyLen * 8 - remainderInBits;

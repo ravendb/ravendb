@@ -29,7 +29,7 @@ namespace FastTests.Voron
             var id = Container.Allocate(wtx.LowLevelTransaction, containerId, expected.Length, out var space);
             expected.CopyTo(space);
 
-            var actual = Container.Get(wtx.LowLevelTransaction, id);
+            Container.Get(wtx.LowLevelTransaction, id, out var actual);
 
             Assert.Equal(expected.ToArray(), actual.ToSpan().ToArray());
         }
@@ -108,8 +108,8 @@ namespace FastTests.Voron
 
             foreach (var itemId in ids)
             {
-                var data = Container.Get(wtx.LowLevelTransaction, itemId);
-                Assert.True(data.ToSpan().Slice(0, 4).SequenceEqual(expected));
+                var data = Container.GetReadOnly(wtx.LowLevelTransaction, itemId);
+                Assert.True(data.Slice(0, 4).SequenceEqual(expected));
             }
         }
 
@@ -135,8 +135,8 @@ namespace FastTests.Voron
 
             foreach (var itemId in ids)
             {
-                var data = Container.Get(wtx.LowLevelTransaction, itemId);
-                Assert.True(data.ToSpan().Slice(0, 4).SequenceEqual(expected));
+                var data = Container.GetReadOnly(wtx.LowLevelTransaction, itemId);
+                Assert.True(data.Slice(0, 4).SequenceEqual(expected));
             }
         }
 
