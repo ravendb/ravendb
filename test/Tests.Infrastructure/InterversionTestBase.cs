@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -43,7 +42,7 @@ namespace Tests.Infrastructure
 
         private static readonly ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
 
-        protected const string Server42Version = "4.2.124-nightly-20230112-0944";
+        protected const string Server42Version = "4.2.124";
         protected const string Server54Version = "5.4.109";
 
         protected DocumentStore GetDocumentStore(
