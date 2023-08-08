@@ -130,9 +130,12 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         {
             Debug.Assert(includeCompareExchangeValues != null, "includeCompareExchangeValues != null");
 
-            foreach (var (k, v) in includeCompareExchangeValues.Results)
+            if (includeCompareExchangeValues.Results is { Count: > 0 })
             {
-                v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, RequestHandler.Database.ClusterTransactionId);
+                foreach (var (k, v) in includeCompareExchangeValues.Results)
+                {
+                    v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, RequestHandler.Database.ClusterTransactionId);
+                }
             }
         }
 
