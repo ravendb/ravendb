@@ -88,23 +88,26 @@ namespace Raven.Server.Documents.Includes
         }
 
         public long? GetAtomicGuardIndex(string key, long maxAllowedRaftId)
-            {
-            if (_serverContext == null) CreateServerContext();
-            var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, key));
+        {
+            if (_serverContext == null)
+                CreateServerContext();
 
-            if(value.Index > maxAllowedRaftId)
+            var value = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, key);
+
+            if (value.Index > maxAllowedRaftId)
                 return null; // we are seeing partially committed value, skip it
             if (value.Index < 0)
-                return null; 
+                return null;
             return value.Index;
-            }
+        }
 
         internal void Materialize(long maxAllowedRaftId)
         {
             if (_includedKeys == null || _includedKeys.Count == 0)
                 return;
 
-            if (_serverContext == null) CreateServerContext();
+            if (_serverContext == null)
+                CreateServerContext();
 
             foreach (var includedKey in _includedKeys)
             {
@@ -113,9 +116,9 @@ namespace Raven.Server.Documents.Includes
 
                 var value = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, includedKey);
 
-                if(value.Index > maxAllowedRaftId)
+                if (value.Index > maxAllowedRaftId)
                     continue; // we are seeing partially committed value, skip it
-                
+
                 if (Results == null)
                     Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
@@ -128,7 +131,7 @@ namespace Raven.Server.Documents.Includes
             if (_throwWhenServerContextIsAllocated)
                 throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
 
-            _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+            _releaseContext = _serverStore.Engine.ContextPool.AllocateOperationContext(out _serverContext);
             _serverContext.OpenReadTransaction();
         }
 

@@ -132,7 +132,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
             {
-                return conventions.Serialization.DefaultConverter.FromBlittable<T>(raw);;
+                return conventions.Serialization.DefaultConverter.FromBlittable<T>(raw);
+                ;
             }
 
             var converted = conventions.Serialization.DefaultConverter.FromBlittable<ResultHolder>(raw);

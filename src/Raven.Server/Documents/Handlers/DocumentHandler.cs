@@ -6,39 +6,16 @@
 
 using System;
 using System.Net.Http;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
-using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.Loaders;
-using Raven.Client.Http;
-using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
-using DeleteDocumentCommand = Raven.Server.Documents.TransactionMerger.Commands.DeleteDocumentCommand;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {

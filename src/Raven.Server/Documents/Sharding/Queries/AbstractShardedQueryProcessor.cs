@@ -694,7 +694,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     {
         var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, request, databaseContext, missingIncludeIdsByShard, includePaths: null,
             includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null,
-            compareExchangeValueIncludes: null, etag: null, metadataOnly);
+            compareExchangeValueIncludes: null, etag: null, metadataOnly, clusterWideTx: false);
         var missingResult = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, token);
 
         var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;

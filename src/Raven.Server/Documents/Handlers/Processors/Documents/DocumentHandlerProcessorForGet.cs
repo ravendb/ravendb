@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -11,8 +12,11 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -27,16 +31,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
 
-    protected override async ValueTask ExecuteInternalAsync(DocumentsOperationContext context)
-    {
-        using (context.OpenReadTransaction())
-        {
-            await base.ExecuteInternalAsync(context);
-        }
-    }
-
     protected override ValueTask<DocumentsByIdResult<Document>> GetDocumentsByIdImplAsync(DocumentsOperationContext context, StringValues ids, StringValues includePaths,
-        RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag)
+        RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag)
     {
         var documents = new List<Document>(ids.Count);
         var includes = new List<Document>(includePaths.Count * ids.Count);
@@ -61,11 +57,14 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (timeSeries != null)
             includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, timeSeries } });
 
-        if (compareExchangeValues.Count > 0)
+        if (compareExchangeValues.Count > 0 || clusterWideTx)
         {
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(RequestHandler.Database, compareExchangeValues);
             Disposables.Add(includeCompareExchangeValues);
         }
+
+        long lastModifiedIndex = RequestHandler.Database.RachisLogIndexNotifications.LastModifiedIndex;
+        context.OpenReadTransaction();
 
         foreach (var id in ids)
         {
@@ -76,13 +75,42 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                 document = RequestHandler.Database.DocumentsStorage.Get(context, id);
             }
 
-            if (document == null && ids.Count == 1)
+            if (document == null)
             {
-                return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
+                if (clusterWideTx)
                 {
-                    StatusCode = HttpStatusCode.NotFound,
-                    Etag = HttpCache.NotFoundResponse
-                });
+                    Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                    includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
+                    continue;
+                }
+
+                if (ids.Count == 1)
+                {
+                    return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
+                    {
+                        StatusCode = HttpStatusCode.NotFound,
+                        Etag = HttpCache.NotFoundResponse
+                    });
+                }
+            }
+            else
+            {
+                if (clusterWideTx)
+                {
+                    var changeVector = context.GetChangeVector(document.ChangeVector);
+                    if (changeVector.Contains(RequestHandler.Database.ClusterTransactionId) == false)
+                    {
+                        Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                        long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
+                        if (guardIndex != null)
+                        {
+                            var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, RequestHandler.Database.ClusterTransactionId,
+                                guardIndex.Value, changeVector);
+                            Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
+                            document.ChangeVector = cv;
+                        }
+                    }
+                }
             }
 
             documents.Add(document);
@@ -94,9 +122,19 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         }
 
         includeDocs.Fill(includes, includeMissingAsNull: false);
-        includeCompareExchangeValues?.Materialize();
+        includeCompareExchangeValues?.Materialize(lastModifiedIndex);
 
         var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
+
+        if (clusterWideTx)
+        {
+            Debug.Assert(includeCompareExchangeValues != null, "includeCompareExchangeValues != null");
+
+            foreach (var (k, v) in includeCompareExchangeValues.Results)
+            {
+                v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, RequestHandler.Database.ClusterTransactionId);
+            }
+        }
 
         return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
         {
@@ -126,6 +164,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
     {
+        context.OpenReadTransaction();
+
         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
         if (changeVector == databaseChangeVector)

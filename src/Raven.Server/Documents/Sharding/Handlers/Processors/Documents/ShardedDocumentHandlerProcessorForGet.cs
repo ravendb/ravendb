@@ -37,13 +37,13 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
     protected override CancellationToken CancellationToken => _operationCancelToken.Token;
 
     protected override async ValueTask<DocumentsByIdResult<BlittableJsonReaderObject>> GetDocumentsByIdImplAsync(TransactionOperationContext context, StringValues ids,
-        StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag)
+        StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-18754 make sure we maintain the order of returned results");
 
         string[] compareExchangeValuesAsArray = compareExchangeValues;
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
-        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly);
+        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly, clusterWideTx);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
         if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0)
@@ -71,7 +71,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
         if (result.MissingIncludes?.Count > 0)
         {
             var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, result.MissingIncludes);
-            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, missingIncludeIdsByShard, includePaths: null, includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly);
+            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, missingIncludeIdsByShard, includePaths: null, includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly, clusterWideTx);
             var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, CancellationToken);
 
             foreach (var (id, missing) in missingResult.Result.Documents)
