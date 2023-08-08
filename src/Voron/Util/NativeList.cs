@@ -13,13 +13,11 @@ public unsafe struct NativeList<T>
 {
     private ByteString _storage;
 
-    private int _count;
-
     public T* RawItems => (T*)_storage.Ptr;
     public int Capacity => _storage.Length / sizeof(T);
-    public int Count => _count;
+    public int Count;
 
-    public readonly Span<T> ToSpan() => new(_storage.Ptr, _count);
+    public readonly Span<T> ToSpan() => new(_storage.Ptr, Count);
     
     public bool IsValid => RawItems != null;
 
@@ -30,49 +28,57 @@ public unsafe struct NativeList<T>
 
     public bool TryPush(in T l)
     {
-        if (_count == Capacity)
+        if (Count == Capacity)
             return false;
 
-        RawItems[_count++] = l;
+        RawItems[Count++] = l;
         return true;
+    }
+
+    public void AddRangeUnsafe(T* items, int count)
+    {
+        Debug.Assert(Count + count <= Capacity);
+        Debug.Assert((uint)(count * sizeof(T)) > (uint)count || count == 0);
+        Unsafe.CopyBlock(RawItems + Count, items, (uint)(count * sizeof(T)));
+        Count += count;
     }
 
     public void PushUnsafe(in T l)
     {
         Debug.Assert(Count < Capacity);
-        RawItems[_count++] = l;
+        RawItems[Count++] = l;
     }
 
     public ref T AddByRefUnsafe()
     {
         Debug.Assert(Count < Capacity);
-        return ref RawItems[_count++];
+        return ref RawItems[Count++];
     }
 
 
     public void Shrink(int newSize)
     {
-        if (newSize > _count)
+        if (newSize > Count)
             throw new InvalidOperationException("The new size cannot be bigger than the current size.");
 
-        _count = newSize;
+        Count = newSize;
     }
 
     public bool TryPop(out T value)
     {
-        if (_count == 0)
+        if (Count == 0)
         {
             Unsafe.SkipInit(out value);
             return false;
         }
         
-        value = RawItems[--_count];
+        value = RawItems[--Count];
         return true;
     }
 
     public T PopUnsafe()
     {
-        return RawItems[--_count];
+        return RawItems[--Count];
     }
 
     public void Initialize(ByteStringContext ctx, int count = 16)
@@ -88,7 +94,7 @@ public unsafe struct NativeList<T>
 
         if (_storage.HasValue)
         {
-            Memory.Copy(mem.Ptr, _storage.Ptr, _count * sizeof(T));
+            Memory.Copy(mem.Ptr, _storage.Ptr, Count * sizeof(T));
             ctx.Release(ref _storage);
         }
 
@@ -109,7 +115,7 @@ public unsafe struct NativeList<T>
 
     public bool HasCapacityFor(int itemsToAdd)
     {
-        return _count + itemsToAdd < Capacity;
+        return Count + itemsToAdd < Capacity;
     }
 
     public void ResetAndEnsureCapacity(ByteStringContext ctx, int size)
@@ -118,7 +124,7 @@ public unsafe struct NativeList<T>
             Grow(ctx, size - Capacity + 1);
 
         // We will reset.
-        _count = 0;
+        Count = 0;
     }
 
     public void Dispose(ByteStringContext ctx)

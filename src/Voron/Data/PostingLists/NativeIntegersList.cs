@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Voron.Util;
 
 namespace Voron.Data.PostingLists;
@@ -41,6 +43,25 @@ public unsafe struct NativeIntegersList : IDisposable
         values.CopyTo(new Span<long>(RawItems + Count, Capacity - Count));
         Count += values.Length;
     }
+    
+    public void Add(long* values, int count)
+    {
+        if (Count + count > Capacity)
+        {
+            GrowListUnlikely(count);
+            Debug.Assert(Count + count <= Capacity);
+        }
+
+        AddUnsafe(values, count);
+    }
+
+    public void AddUnsafe(long* values, int count)
+    {
+        Debug.Assert(Count + count <= Capacity);
+        Unsafe.CopyBlock(RawItems + Count, values, (uint)(count * sizeof(long)));
+        Count += count;
+    }
+
     public void Add(long l)
     {
         if (Count == Capacity)
@@ -79,6 +100,31 @@ public unsafe struct NativeIntegersList : IDisposable
         Count = Sorting.SortAndRemoveDuplicates(RawItems, Count);
     }
 
+    public void SortAndRemoveDuplicatesAndRemovals()
+    {
+        if (Count <= 1)
+            return;
+        Sort.Run(RawItems, Count);
+        RemoveDuplicatedAndRemovals();
+    }
+    private void RemoveDuplicatedAndRemovals()
+    {
+        var outputBufferPtr = RawItems;
+
+        var bufferPtr = outputBufferPtr;
+        var bufferEndPtr = bufferPtr + Count - 1;
+        Debug.Assert((*bufferPtr & 1) == 0);
+        while (bufferPtr < bufferEndPtr)
+        {
+            outputBufferPtr += ((bufferPtr[1] & ~1) != bufferPtr[0]).ToInt32();
+            *outputBufferPtr = bufferPtr[1];
+            outputBufferPtr -= (bufferPtr[1] & 1);
+
+            bufferPtr++;
+        }
+
+        Count = (int)(outputBufferPtr - RawItems + 1);
+    }
     public int MoveTo(Span<long> matches)
     {
         var read = Math.Min(Count, matches.Length);
@@ -104,4 +150,11 @@ public unsafe struct NativeIntegersList : IDisposable
         return val;
     }
 
+    public void EnsureCapacity(int requiredSize)
+    {
+        if (requiredSize <= Capacity)
+            return;
+        
+        GrowListUnlikely(requiredSize - Capacity);
+    }
 }
