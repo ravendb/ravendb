@@ -3,10 +3,15 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
-class forceTombstonesCleanup extends commandBase {
+class forceTombstonesCleanupCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier) {
+    private readonly db: database;
+    private readonly location: databaseLocationSpecifier;
+
+    constructor(db: database, location: databaseLocationSpecifier) {
         super();
+        this.db = db;
+        this.location = location;
     }
 
     execute(): JQueryPromise<number> {
@@ -24,4 +29,4 @@ class forceTombstonesCleanup extends commandBase {
     }
 }
 
-export = forceTombstonesCleanup;
+export = forceTombstonesCleanupCommand;
