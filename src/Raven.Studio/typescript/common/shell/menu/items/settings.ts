@@ -7,6 +7,7 @@ import ClientDatabaseConfiguration from "components/pages/database/settings/clie
 import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
 import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
 import DocumentExpiration from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import Tombstones from "components/pages/database/settings/tombstones/TombstonesState";
 
 export = getSettingsMenuItem;
 
@@ -194,7 +195,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/advanced/tombstonesState',
-            moduleId: require('viewmodels/database/advanced/tombstonesState'),
+            moduleId: bridgeToReact(Tombstones, "shardedView"),
             title: 'Tombstones',
             nav: true,
             shardingMode: "singleShard",

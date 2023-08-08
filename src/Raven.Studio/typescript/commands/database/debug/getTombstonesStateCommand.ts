@@ -4,8 +4,13 @@ import database = require("models/resources/database");
 
 class getTombstonesStateCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier) {
+    private readonly db: database;
+    private readonly location: databaseLocationSpecifier;
+
+    constructor(db: database, location: databaseLocationSpecifier) {
         super();
+        this.db = db;
+        this.location = location;
     }
 
     execute(): JQueryPromise<TombstonesStateOnWire> {

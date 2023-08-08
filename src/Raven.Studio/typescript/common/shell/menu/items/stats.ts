@@ -12,7 +12,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
     const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
-            moduleId: bridgeToReact(StatisticsPage, "shardedView"),
+            moduleId: bridgeToReact(StatisticsPage, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Stats',
             nav: true,

@@ -29,6 +29,8 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
+import getTombstonesStateCommand = require("commands/database/debug/getTombstonesStateCommand");
+import forceTombstonesCleanupCommand = require("commands/database/debug/forceTombstonesCleanupCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -112,5 +114,13 @@ export default class DatabasesService {
 
     async saveExpirationConfiguration(db: database, dto: ExpirationConfiguration) {
         return new saveExpirationConfigurationCommand(db, dto).execute();
+    }
+
+    async getTombstonesState(db: database, location: databaseLocationSpecifier) {
+        return new getTombstonesStateCommand(db, location).execute();
+    }
+
+    async forceTombstonesCleanup(db: database, location: databaseLocationSpecifier) {
+        return new forceTombstonesCleanupCommand(db, location).execute();
     }
 }
