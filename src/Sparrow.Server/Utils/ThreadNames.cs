@@ -614,7 +614,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"{_db} CT Thread";
+                return $"ClstrTx {_db}";
             }
         }
     }
