@@ -200,11 +200,11 @@ public static class ThreadNames
         };
     }
 
-    public static ThreadInfo ForClusterTransactions(string threadName)
+    public static ThreadInfo ForClusterTransactions(string threadName, string databaseName)
     {
         return new ThreadInfo(threadName)
         {
-            Details = new ThreadDetails.ClusterTransaction()
+            Details = new ThreadDetails.ClusterTransaction(databaseName)
         };
     }
 
@@ -581,13 +581,15 @@ public static class ThreadNames
 
         public class ClusterTransaction : IThreadDetails
         {
-            public ClusterTransaction()
+            private readonly string _db;
+            public ClusterTransaction(string dbName)
             {
+                _db = dbName;
             }
 
             public string GetShortName()
             {
-                return "Cluster Transaction";
+                return $"{_db} CT Thread";
             }
         }
     }

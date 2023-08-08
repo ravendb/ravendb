@@ -141,6 +141,11 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void EnqueueSync(MergedTransactionCommand cmd)
+        {
+            Enqueue(cmd).GetAwaiter().GetResult();
+        }
+
         private static void ThrowTxMergerWasDisposed()
         {
             throw new ObjectDisposedException("Transaction Merger");
