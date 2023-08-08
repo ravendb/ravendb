@@ -96,8 +96,16 @@ namespace Raven.Server.Documents.Indexes
                 if (it.MoveNext() == false)
                 {
                     // we have just _one_ entry for the map, can try to optimize
-                    writer.Value.UpdateDocument(
-                        indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    if (indexItem.KnownToBeNew)
+                    {
+                        writer.Value.IndexDocument(
+                            indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    }
+                    else
+                    {
+                        writer.Value.UpdateDocument(
+                            indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    }
                     return 1;
                 }
                 else
@@ -131,7 +139,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (first)
                 {
-                    if (indexItem.SkipLuceneDelete)
+                    if (indexItem.KnownToBeNew)
                     {
                         // we skip deleting from lucene for the initial indexing run.
                         // we already know that the ids that we get here are unique,
@@ -161,7 +169,7 @@ namespace Raven.Server.Documents.Indexes
                 numberOfOutputs++;
             }
 
-            if (indexItem.SkipLuceneDelete == false && numberOfOutputs == 0)
+            if (indexItem.KnownToBeNew == false && numberOfOutputs == 0)
             {
                 // this isn't the first indexing run and we didn't have any outputs for this document.
                 // however, if the document was already indexed in the past and now it isn't, we must delete it from the index.
