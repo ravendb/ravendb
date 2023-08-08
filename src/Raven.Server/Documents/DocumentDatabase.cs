@@ -361,10 +361,12 @@ namespace Raven.Server.Documents
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 }, null);
-                var threadName = $"{Name} Cluster Transaction Thread";
+
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
-                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, threadName, _logger);
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal,
+                        ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread", Name)),
+                        _logger);
                     try
                     {
                         _hasClusterTransaction.Set();
@@ -381,7 +383,7 @@ namespace Raven.Server.Documents
                             _logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
-                }, null, ThreadNames.ForClusterTransactions("Cluster Transaction"));
+                }, null, ThreadNames.ForClusterTransactions("Cluster Transaction", Name));
 
 
 
@@ -529,7 +531,7 @@ namespace Raven.Server.Documents
                 {
                     //If we get a database shutdown while we process a cluster tx command this
                     //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                    TxMerger.Enqueue(mergedCommands).GetAwaiter().GetResult();
+                    TxMerger.EnqueueSync(mergedCommands);
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
@@ -582,7 +584,7 @@ namespace Raven.Server.Documents
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    TxMerger.Enqueue(mergedCommand).GetAwaiter().GetResult();
+                    TxMerger.EnqueueSync(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
