@@ -38,7 +38,7 @@ namespace InterversionTests
         {
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         [InlineData("4.1.7", "4.1.7", "4.1.7")]
         [InlineData("4.1.6", "4.1.6", "4.1.6")]
         [InlineData("4.1.5", "4.1.5", "4.1.5")]
@@ -52,7 +52,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         [InlineData("4.1.4", "4.1.4", "4.1.4")]
         [InlineData("4.1.3", "4.1.3", "4.1.3")]
         [InlineData("4.1.2", "4.1.2", "4.1.2")]
@@ -78,7 +78,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, v41X);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task IncrementalUpgrade()
         {
             var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
@@ -94,7 +94,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo41X, v40, v40, v41);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task UpgradeFromLatest40()
         {
             var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
@@ -108,7 +108,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, after);
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         [InlineData("4.2.0", "4.2.0", "4.2.0")]
         [InlineData("4.2.1", "4.2.1", "4.2.1")]
         public async Task UpgradeDirectlyFrom42X(params string[] initialVersions)
@@ -121,7 +121,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task UpgradeToLatest()
         {
             var latest = "4.2.119";
@@ -134,10 +134,24 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
-        [Fact]
-        public async Task UpgradeDirectlyFrom54X()
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData("5.4.5")]
+        [InlineData("5.4.109")]
+        public async Task UpgradeDirectlyFrom54X(string latest)
         {
-            var latest = "5.4.101";
+            var initialVersions = new[] { latest, latest, latest };
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version54X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData("5.2.116")]
+        public async Task UpgradeDirectlyFrom52X(string latest)
+        {
             var initialVersions = new[] { latest, latest, latest };
             var upgradeTo = new List<string>
             {
@@ -218,8 +232,7 @@ namespace InterversionTests
             }
         }
 
-
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows, Skip = "WIP")]
         public async Task ReplicationInMixedCluster_40Leader_with_two_41_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -281,8 +294,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows, Skip = "WIP")]
         public async Task ReplicationInMixedCluster_40Leader_with_one_41_node_and_two_40_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -320,8 +332,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows, Skip = "WIP")]
         public async Task ReplicationInMixedCluster_41Leader_with_two_406()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -357,8 +368,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows, Skip = "WIP")]
         public async Task MixedCluster_OutgoingReplicationFrom41To40_ShouldStopAfterUsingCounters()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -454,7 +464,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ReplicationInMixedCluster_60Leader_with_two_54()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -490,7 +500,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task SingleSubscriptionMixedClusterEnsureDocumentResend54()
         {
             var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
@@ -568,7 +578,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task SingleSubscriptionMixedClusterStartAgainFromSpecificChangeVector()
         {
             var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
@@ -639,7 +649,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task SingleSubscriptionMixedClusterV54StartAgainFromSpecificChangeVector()
         {
             var proccess541List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
@@ -710,8 +720,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.ClientApi, RavenPlatform.Windows, Skip = "WIP")]
         public async Task ClientFailoverInMixedCluster_V41Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -770,8 +779,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.ClientApi, RavenPlatform.Windows, Skip = "WIP")]
         public async Task ClientFailoverInMixedCluster_V40Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -831,8 +839,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows, Skip = "WIP")]
         public async Task SubscriptionsInMixedCluster_FailoverFrom41To40()
         {
             var batchSize = 5;
@@ -880,8 +887,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows, Skip = "WIP")]
         public async Task SubscriptionsInMixedCluster_FailoverFrom410To41()
         {
             var batchSize = 5;
@@ -933,7 +939,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows, Skip = "WIP")]
         public async Task V40Cluster_V41Client_BasicReplication()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -988,7 +994,7 @@ namespace InterversionTests
 
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Cluster, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ClusterTcpCompressionTest()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -1002,7 +1008,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Counters, RavenPlatform.Windows, Skip = "WIP")]
         public async Task V40Cluster_V41Client_Counters()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -1073,7 +1079,7 @@ namespace InterversionTests
 
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.ClusterTransactions, RavenPlatform.Windows, Skip = "WIP")]
         public async Task V40Cluster_V41Client_ClusterTransactions()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -1131,7 +1137,7 @@ namespace InterversionTests
 
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Revisions, RavenPlatform.Windows, Skip = "WIP")]
         public async Task RevisionsInMixedCluster()
         {
             var company = new Company { Name = "Company Name" };
@@ -1187,7 +1193,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows, Skip = "WIP")]
         public async Task MixedCluster_ClusterWideIdentity()
         {
 
@@ -1223,7 +1229,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Cluster, RavenPlatform.Windows, Skip = "WIP")]
         public async Task MixedCluster_CanReorderDatabaseNodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -1247,8 +1253,7 @@ namespace InterversionTests
 
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions, Skip = "WIP")]
-
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions | RavenTestCategory.Revisions, RavenPlatform.Windows, Skip = "WIP")]
         public async Task MixedCluster_DistributedRevisionsSubscription()
         {
             var uniqueRevisions = new HashSet<string>();
