@@ -148,7 +148,6 @@ namespace InterversionTests
             }
         }
 
-
         [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
@@ -215,7 +214,6 @@ namespace InterversionTests
                 Assert.Equal((0, 0, 0), import);
             }
         }
-
 
         [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
@@ -287,7 +285,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanExportFromCurrentAndImportTo54X(Options options)
         {
@@ -298,7 +296,7 @@ namespace InterversionTests
             await GetStatsAndAssertAsync(storeCurrent, store54);
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanExportFrom54XAndImportToCurrent(Options options)
         {

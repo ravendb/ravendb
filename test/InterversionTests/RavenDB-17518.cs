@@ -53,7 +53,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows| RavenTestCategory.Counters)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows)]
         public async Task ShouldNotReplicateTimeSeriesToOldServer()
         {
             const string docId = "users/1";
