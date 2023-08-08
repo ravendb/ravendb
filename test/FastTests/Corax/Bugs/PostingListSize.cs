@@ -97,8 +97,11 @@ public class PostingListSize : StorageTest
             using var tx = Env.WriteTransaction();
             var list = tx.OpenPostingList("test");
 
-            
-            list.Add(vals);
+
+            foreach (long v in vals)
+            {
+                list.Add(v);
+            }
 
             tx.Commit();
         }

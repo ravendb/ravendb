@@ -55,7 +55,7 @@ namespace FastTests.Voron.Sets
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenPostingList("test");
-                tree.Add(5);
+                tree.Add(5 << 2);
                 wtx.Commit();
             }
 
@@ -63,7 +63,7 @@ namespace FastTests.Voron.Sets
             {
                 var tree = rtx.OpenPostingList("test");
                 var values = AllValues(tree);
-                Assert.Equal(new[] { 5L }, values);
+                Assert.Equal(new[] { 5L << 2 }, values);
             }
         }
 
@@ -93,14 +93,14 @@ namespace FastTests.Voron.Sets
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenPostingList("test");
-                tree.Add(5);
+                tree.Add(5 << 2);
                 wtx.Commit();
             }
 
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenPostingList("test");
-                tree.Remove(5);
+                tree.Remove(5 << 2);
                 wtx.Commit();
             }
 
@@ -128,7 +128,7 @@ namespace FastTests.Voron.Sets
                     int j = 0;
                     while (j < buffer.Length)
                     {
-                        long valueToAdd = (long)rnd.Next(10) * int.MaxValue + rnd.Next(100000);
+                        long valueToAdd = ((long)rnd.Next(10) * int.MaxValue + rnd.Next(100000)) << 2;
                         if (!valuesInSet.Contains(valueToAdd))
                         {
                             buffer[j] = valueToAdd;
@@ -140,7 +140,10 @@ namespace FastTests.Voron.Sets
                     var valuesToAdd = buffer.Slice(0, j);
                     valuesToAdd.Sort();
 
-                    tree.Add(valuesToAdd);
+                    foreach (long v in valuesToAdd)
+                    {
+                        tree.Add(v);
+                    }
                 }
 
                 wtx.Commit();
@@ -165,7 +168,7 @@ namespace FastTests.Voron.Sets
                 var tree = wtx.OpenPostingList("test");
                 foreach (long i in _random.Take(count))
                 {
-                    tree.Add(i);
+                    tree.Add(i << 2);
                 }
 
                 wtx.Commit();
@@ -176,7 +179,7 @@ namespace FastTests.Voron.Sets
                 var tree = wtx.OpenPostingList("test");
                 foreach (long i in _random.Take(count))
                 {
-                    tree.Remove(i);
+                    tree.Remove(i << 2);
                 }
 
                 wtx.Commit();
@@ -222,7 +225,7 @@ namespace FastTests.Voron.Sets
                     var set = wtx.OpenPostingList($"Set({name})");
                     for (int i = 0; i < size; i++)
                     {
-                        var rname = (int)(uint)random.Next();
+                        var rname = (int)(uint)(random.Next() << 2 & int.MaxValue);
                         if (uniqueKeys.Add(rname))
                         {
                             inTreeKeys.Add(rname);

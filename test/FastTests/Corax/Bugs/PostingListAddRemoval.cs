@@ -33,11 +33,17 @@ public class PostingListAddRemoval : StorageTest
             {
                 if (op.Add)
                 {
-                    set.Add(op.Ids.ToArray());
+                    foreach (var it in op.Ids)
+                    {
+                        set.Add(it);
+                    }
                 }
                 else
                 {
-                    set.Remove(op.Ids.ToArray());
+                    foreach (long it in op.Ids)
+                    {
+                        set.Remove(it);
+                    }
                 }
             }
 
