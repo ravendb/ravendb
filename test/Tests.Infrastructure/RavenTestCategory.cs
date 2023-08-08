@@ -56,5 +56,6 @@ public enum RavenTestCategory : long
     Smuggler = 1L << 41,
     Lucene = 1L << 42,
     [Description("Changes API")]
-    ChangesApi = 1L << 43
+    ChangesApi = 1L << 43,
+    Interversion = 1L << 44
 }

@@ -31,7 +31,7 @@ namespace InterversionTests
         {
         }
 
-        [Theory(Skip = "TODO: Add compatible version of v4.2 when released")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows, Skip = "TODO: Add compatible version of v4.2 when released")]
         public async Task CannotReplicateTimeSeriesToV42()
         {
             var version = "4.2.101"; // todo:Add compatible version of v4.2 when released
@@ -62,13 +62,25 @@ namespace InterversionTests
             Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
         }
 
-        [Theory]
-        [InlineData("4.2.117")]
-        [InlineData("5.2.3")]
-        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows)]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV42()
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
+            string version = "4.2.117";
+            await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
+        }
 
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV52()
+        {
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
+            string version = "5.2.3";
+            await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
+        }
+
+
+        private async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
+        {
             using var oldStore = await GetDocumentStoreAsync(version);
             using var store = GetDocumentStore();
             {
@@ -90,7 +102,8 @@ namespace InterversionTests
             Assert.True(WaitForDocument<User>(oldStore, "users/1", u => u.Name == "Egor"));
         }
 
-        [Fact]
+
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer()
         {
             const string version = "5.2.3";
@@ -120,7 +133,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationShouldWork_NonShardedAndV54()
         {
             var processNode = await GetServerAsync("5.4.5");
@@ -167,7 +180,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Sharding | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ReplicationWithReshardingShouldWorkFromShardedToOldServer()
         {
             var processNode = await GetServerAsync("5.4.5");
@@ -242,7 +255,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Sharding, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationWithRevisionTombstones_ShardedToOldServer()
         {
             var processNode = await GetServerAsync("5.4.5");
@@ -310,7 +323,7 @@ namespace InterversionTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.Revisions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedToOldServer()
         {
             var processNode = await GetServerAsync("5.4.5");

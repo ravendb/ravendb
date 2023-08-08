@@ -26,11 +26,52 @@ namespace InterversionTests
         const string Server42Version = "4.2.124-nightly-20230112-0944";
         const string Server54Version = "5.4.101";
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
-        private readonly DatabaseItemType _operateOnTypes42 = ~(DatabaseItemType.TimeSeries| DatabaseItemType.ReplicationHubCertificates);
-        private readonly DatabaseRecordItemType _operateOnRecordTypes42 = ~(DatabaseRecordItemType.TimeSeries | DatabaseRecordItemType.DocumentsCompression |
-                                                                   DatabaseRecordItemType.OlapConnectionStrings | DatabaseRecordItemType.OlapEtls |
-                                                                   DatabaseRecordItemType.Analyzers | DatabaseRecordItemType.LockMode);
-        
+
+        private static readonly DatabaseItemType _operateOnTypes42 = DatabaseItemType.Documents |
+                                                                     DatabaseItemType.RevisionDocuments |
+                                                                     DatabaseItemType.Indexes |
+                                                                     DatabaseItemType.Identities |
+                                                                     DatabaseItemType.Tombstones |
+                                                                     DatabaseItemType.LegacyAttachments |
+                                                                     DatabaseItemType.Conflicts |
+                                                                     DatabaseItemType.CompareExchange |
+                                                                     DatabaseItemType.LegacyDocumentDeletions |
+                                                                     DatabaseItemType.LegacyAttachmentDeletions |
+                                                                     DatabaseItemType.DatabaseRecord |
+                                                                     DatabaseItemType.Unknown |
+                                                                     DatabaseItemType.Attachments |
+                                                                     DatabaseItemType.CounterGroups |
+                                                                     DatabaseItemType.Subscriptions |
+                                                                     DatabaseItemType.CompareExchangeTombstones;
+
+        private static readonly DatabaseRecordItemType _operateOnRecordTypes42 = DatabaseRecordItemType.ConflictSolverConfig |
+                                                                                 DatabaseRecordItemType.Settings |
+                                                                                 DatabaseRecordItemType.Revisions |
+                                                                                 DatabaseRecordItemType.Expiration |
+                                                                                 DatabaseRecordItemType.PeriodicBackups |
+                                                                                 DatabaseRecordItemType.ExternalReplications |
+                                                                                 DatabaseRecordItemType.RavenConnectionStrings |
+                                                                                 DatabaseRecordItemType.SqlConnectionStrings |
+                                                                                 DatabaseRecordItemType.RavenEtls |
+                                                                                 DatabaseRecordItemType.SqlEtls |
+                                                                                 DatabaseRecordItemType.Client |
+                                                                                 DatabaseRecordItemType.Sorters |
+                                                                                 DatabaseRecordItemType.SinkPullReplications |
+                                                                                 DatabaseRecordItemType.HubPullReplications;
+
+        private static readonly DatabaseRecordItemType _operateOnRecordTypes54 = _operateOnRecordTypes42 |
+                                                                                 DatabaseRecordItemType.TimeSeries |
+                                                                                 DatabaseRecordItemType.DocumentsCompression |
+                                                                                 DatabaseRecordItemType.Analyzers |
+                                                                                 DatabaseRecordItemType.LockMode |
+                                                                                 DatabaseRecordItemType.OlapConnectionStrings |
+                                                                                 DatabaseRecordItemType.OlapEtls |
+                                                                                 DatabaseRecordItemType.ElasticSearchConnectionStrings |
+                                                                                 DatabaseRecordItemType.ElasticSearchEtls |
+                                                                                 DatabaseRecordItemType.PostgreSQLIntegration |
+                                                                                 DatabaseRecordItemType.QueueConnectionStrings |
+                                                                                 DatabaseRecordItemType.QueueEtls;
+
         public enum ExcludeOn
         {
             Non,
@@ -42,7 +83,7 @@ namespace InterversionTests
         {
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -66,8 +107,8 @@ namespace InterversionTests
 
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes &= _operateOnTypes42;
-            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
+            exportOptions.OperateOnTypes = _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await store42.Smuggler.ExportAsync(exportOptions, file);
@@ -108,13 +149,12 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanExportFrom54XAndImportToCurrent()
         {
             var file = GetTempFileName();
             using var store54 = await GetDocumentStoreAsync(Server54Version);
             using var storeCurrent = GetDocumentStore();
-
             store54.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = store54.OpenAsyncSession())
             {
@@ -129,6 +169,7 @@ namespace InterversionTests
 
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
+            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes54;
             var exportOperation = await store54.Smuggler.ExportAsync(exportOptions, file);
             await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
@@ -155,7 +196,7 @@ namespace InterversionTests
             Assert.Equal(export, import);
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -222,7 +263,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanExportFromCurrentAndImportTo54()
         {
             var file = GetTempFileName();
@@ -271,7 +312,7 @@ namespace InterversionTests
             Assert.Equal(export, import);
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -294,8 +335,8 @@ namespace InterversionTests
             
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes &= _operateOnTypes42;
-            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
+            exportOptions.OperateOnTypes = _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await exportStore42.Smuggler.ExportAsync(exportOptions, file);
@@ -342,7 +383,7 @@ namespace InterversionTests
         }
 
         //Migrator
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         public async Task CanMigrateFrom42ToCurrent()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -379,7 +420,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanMigrateFrom54ToCurrent()
         {
             using var store54 = await GetDocumentStoreAsync(Server54Version);
@@ -416,7 +457,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -460,7 +501,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanMigrateFromCurrentTo54()
         {
             using var store54 = await GetDocumentStoreAsync(Server54Version);
@@ -504,15 +545,14 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
+        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType operateOnTypes = DatabaseItemType.None)
         {
             using var client = new HttpClient();
             var url = new Uri($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
-            var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
-            if (exclude != DatabaseItemType.None)
-                operateOnTypes &= exclude;
+            if (operateOnTypes == DatabaseItemType.None)
+                operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
 
             var configuration = new SingleDatabaseMigrationConfiguration
             {
