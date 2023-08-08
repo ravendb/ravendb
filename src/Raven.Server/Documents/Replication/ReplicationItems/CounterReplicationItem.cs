@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using Raven.Client;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
             return djv;
         }

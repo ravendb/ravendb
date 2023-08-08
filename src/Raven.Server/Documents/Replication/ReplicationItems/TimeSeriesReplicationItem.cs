@@ -2,11 +2,10 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using Nest;
+using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(From)] = From.ToString("O");
             djv[nameof(To)] = To.ToString("O");
@@ -118,7 +117,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             return djv;
