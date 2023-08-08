@@ -5,24 +5,21 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
-using NuGet.Packaging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.ServerWide.Sharding;
-using Raven.Client.Util;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -30,6 +27,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Rolling;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -203,9 +201,7 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new User(), "users/2");
                     await session.SaveChangesAsync();
                 }
-
-                WaitForUserToContinueTheTest(store);
-
+                
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 1);
                 Assert.Equal(1, val);
 
@@ -218,6 +214,62 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(3, val);
 
             }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
+        public async Task ThrowForSelectedNodeProxyCommandWhenNodeIsInRehab()
+        {
+            var name = GetDatabaseName();
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
+            var (index, dbNodes) = await CreateDatabaseInCluster(name, replicationFactor: 3, leader.WebUrl);
+
+            var dbNode = nodes.First(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag);
+            using (var store = new DocumentStore()
+            {
+                Urls = new string[] { leader.WebUrl },
+                Database = name
+            })
+            {
+                store.Initialize();
+                //take down node
+                await DisposeServerAndWaitForFinishOfDisposalAsync(dbNode);
+
+                var re = store.GetRequestExecutor(store.Database);
+                await AssertWaitForTrueAsync(() =>
+                {
+                    return Task.FromResult(re.TopologyNodes != null &&
+                                           re.TopologyNodes.Count == 3);
+                });
+
+                //wait for it to enter rehab
+                await AssertWaitForValueAsync(() =>
+                {
+                    var record = GetDatabaseRecord(store);
+                    if (record.Topology.Rehabs.Contains(dbNode.ServerStore.NodeTag))
+                        return Task.FromResult(true);
+
+                    return Task.FromResult(false);
+                }, true);
+
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new GetIndexesProgressOperation(dbNode.ServerStore.NodeTag)));
+                Assert.Contains("No connection could be made because the target machine actively refused it", error.Message);
+            }
+        }
+
+        internal class GetIndexesProgressOperation : IMaintenanceOperation<IndexProgress[]>
+        {
+            private readonly string _nodeTag;
+
+            public GetIndexesProgressOperation(string nodeTag)
+            {
+                _nodeTag = nodeTag;
+            }
+
+            public RavenCommand<IndexProgress[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetIndexesProgressCommand(_nodeTag);
+            }
+
         }
 
         [Fact]
