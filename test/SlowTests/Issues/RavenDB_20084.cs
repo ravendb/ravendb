@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -46,7 +47,7 @@ public class RavenDB_20084 : ClusterTestBase
             leaderStore.Conventions = new DocumentConventions { DisableTopologyUpdates = true };
             leaderStore.Database = databaseName;
             leaderStore.Initialize();
-            var debugInfo = new List<string> { $"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
+            var debugInfo = new ConcurrentBag<string> { $"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
 
             leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = (exception, erroredDatabaseName) =>
                 debugInfo.Add($"Failed to schedule the next activity for the idle database '{erroredDatabaseName}': {exception}");
