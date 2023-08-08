@@ -1905,7 +1905,8 @@ namespace Corax
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             
             var llt = _transaction.LowLevelTransaction;
-            var item = Container.Get(llt, containerId);
+            Container.Get(llt, containerId, out var item);
+
             Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
 
             

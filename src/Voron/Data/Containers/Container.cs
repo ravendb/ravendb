@@ -832,17 +832,18 @@ namespace Voron.Data.Containers
             return new Span<byte>(pagePointer, size);
         }
 
-        public static Item Get(LowLevelTransaction llt, long id)
+        public static void Get(LowLevelTransaction llt, long id, out Item item)
         {
             if (id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
-            
+
             var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
             var page = llt.GetPage(pageNum);
             if (page.IsOverflow)
             {
                 Debug.Assert(page.IsOverflow);
-                return new Item(page, page.DataPointer, page.OverflowSize);
+                item = new Item(page, page.DataPointer, page.OverflowSize);
+                return;
             }
 
             var container = new Container(page);
@@ -850,7 +851,35 @@ namespace Voron.Data.Containers
             Debug.Assert(itemMetadata.IsFree == false);
             byte* pagePointer = page.Pointer;
             var size = itemMetadata.Get(ref pagePointer);
-            return new Item(page, pagePointer, size);
+            item = new Item(page, pagePointer, size);
+        }
+
+        public static Span<byte> GetReadOnly(LowLevelTransaction llt, long id)
+        {
+            if (id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
+
+            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var page = llt.GetPage(pageNum);
+            if (page.IsOverflow)
+            {
+                Debug.Assert(page.IsOverflow);
+                return new Span<byte>(page.DataPointer, page.OverflowSize);
+            }
+
+            var container = new Container(page);
+            var itemMetadata = container.MetadataFor(OffsetToIndex(offset));
+            Debug.Assert(itemMetadata.IsFree == false);
+            byte* pagePointer = page.Pointer;
+            var size = itemMetadata.Get(ref pagePointer);
+            return new Span<byte>(pagePointer, size);
+        }
+
+
+        public static Item Get(LowLevelTransaction llt, long id)
+        {
+            Get(llt, id, out Item result);
+            return result;
         }
 
         public static Item MaybeGetFromSamePage(LowLevelTransaction llt, ref Page page, long id)

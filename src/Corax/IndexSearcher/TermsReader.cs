@@ -24,7 +24,7 @@ public unsafe struct TermsReader : IDisposable
     private readonly (long Key, UnmanagedSpan Term)* _cache;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _cacheScope;
     private Page _lastPage;
-    private long _dictionaryId;
+    private readonly long _dictionaryId;
 
     public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, Slice name)
     {
@@ -53,7 +53,7 @@ public unsafe struct TermsReader : IDisposable
             return false;
         }
 
-        var item = Container.Get(_llt, termContainerId);
+        Container.Get(_llt, termContainerId, out var item);
         term = item.ToUnmanagedSpan();
         return true;
     }
@@ -67,7 +67,7 @@ public unsafe struct TermsReader : IDisposable
             return false;
         }
 
-        var item = Container.Get(_llt, termContainerId);
+        Container.Get(_llt, termContainerId, out var item);
         Set(_xKeyScope.Key, item, _dictionaryId);
         term = _xKeyScope.Key.ToString();
         return true;
