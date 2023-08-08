@@ -22,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
-    public abstract class InterversionTestBase : ClusterTestBase
+    public abstract class InterversionTestBase : ReplicationTestBase
     {
         protected InterversionTestBase(ITestOutputHelper output) : base(output)
         {
@@ -42,6 +42,9 @@ namespace Tests.Infrastructure
         private readonly HashSet<Process> _testInstanceServerProcesses = new HashSet<Process>();
 
         private static readonly ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
+
+        protected const string Server42Version = "4.2.124-nightly-20230112-0944";
+        protected const string Server54Version = "5.4.109";
 
         protected DocumentStore GetDocumentStore(
             string serverVersion,
