@@ -272,4 +272,67 @@ export class DatabasesStubs {
             DeleteFrequencyInSec: 65,
         };
     }
+
+    static tombstonesState(): TombstonesStateOnWire {
+        return {
+            MinAllDocsEtag: 9223372036854776000,
+            MinAllTimeSeriesEtag: 9223372036854776000,
+            MinAllCountersEtag: 9223372036854776000,
+            Results: [
+                {
+                    Collection: "Attachments.Tombstones",
+                    Documents: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                    TimeSeries: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                    Counters: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                },
+                {
+                    Collection: "Revisions.Tombstones",
+                    Documents: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                    TimeSeries: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                    Counters: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                },
+                {
+                    Collection: "docs",
+                    Documents: {
+                        Component: "Index 'test'",
+                        Etag: 0,
+                    },
+                    TimeSeries: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                    Counters: {
+                        Component: null,
+                        Etag: 9223372036854776000,
+                    },
+                },
+            ],
+            PerSubscriptionInfo: [
+                {
+                    Identifier: "Index 'test'",
+                    Type: "Documents",
+                    Collection: "Docs",
+                    Etag: 0,
+                },
+            ],
+        };
+    }
 }

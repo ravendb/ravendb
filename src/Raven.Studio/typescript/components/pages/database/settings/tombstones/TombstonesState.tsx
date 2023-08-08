@@ -15,6 +15,8 @@ import { TombstonesStateForceCleanupConfirm } from "./TombstonesStateForceCleanu
 
 // TODO kalczur fix height
 // TODO kalczur check if useEffect is not called multiple times
+// TODO kalczur add tests
+// TODO kalczur remove ko view
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
     const { databasesService } = useServices();
@@ -70,8 +72,8 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
         <div className="content-margin">
             <div className="d-flex justify-content-between align-items-center">
                 <ButtonWithSpinner
-                    color="secondary"
                     onClick={refresh}
+                    color="primary"
                     isSpinning={asyncGetTombstonesState.status === "loading"}
                     icon="refresh"
                 >
@@ -129,6 +131,7 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
 
                         <ButtonWithSpinner
                             onClick={toggleForceCleanupConfirmVisible}
+                            color="primary"
                             isSpinning={asyncForceTombstonesCleanup.status === "loading"}
                             icon="force"
                         >
