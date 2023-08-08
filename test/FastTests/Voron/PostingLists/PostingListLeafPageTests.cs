@@ -41,7 +41,7 @@ namespace FastTests.Voron.Sets
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
-            var buf = new int[] {12, 18};
+            var buf = new int[] {12 << 2, 18 << 2};
             var start = 24;
             for (int i = 0; i < size; i++)
             {
@@ -78,7 +78,7 @@ namespace FastTests.Voron.Sets
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
-            var buf = new int[] {12, 18};
+            var buf = new int[] {12 << 2, 18 << 2};
             var start = 24;
             var list = new long[size];
             for (int i = 0; i < size; i++)
@@ -104,6 +104,10 @@ namespace FastTests.Voron.Sets
             Assert.NotEmpty(leaf.GetDebugOutput());
             
             Span<long> removals = list; // now remove
+            for (int i = 0; i < size; i++)
+            {
+                list[i] |= 1;
+            }
             fixed (long* p = removals)
             {
                 using var encoder = new FastPForEncoder(bsc);
@@ -130,7 +134,7 @@ namespace FastTests.Voron.Sets
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
-            var buf = new int[] {12, 18};
+            var buf = new int[] {12 << 2, 18 << 2};
             var start = 24;
             for (int i = 0; i < size; i++)
             {
