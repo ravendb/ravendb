@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;

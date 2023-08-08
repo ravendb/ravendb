@@ -372,6 +372,7 @@ namespace Raven.Client.Http
             {
                 _usePrivateUrls = usePrivateUrls
             };
+            conventions.ForTestingPurposes?.OnBeforeTopologyUpdate?.Invoke(executor);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }

@@ -292,10 +292,10 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <div class="timing-legend-item">
+    <div class="timing-legend-item d-flex align-items-start lh-base">
         <i data-bind="attr: { 'class': 'item-rect ' + $root.timingsGraph.getColorClass(name) }"></i>
-        <span class="name" data-bind="text: name"></span>
-        <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+        <small class="name word-break" data-bind="text: name"></small>
+        <small class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></small>
     </div>
     <div data-bind="foreach: children">
         <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">

@@ -931,6 +931,10 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 9:
                     if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
                         return CommandType.JsonPatch;
+
+                    if (*(long*)state.StringBuffer == 7018088662229411144 &&
+                        state.StringBuffer[8] == (byte)'t')
+                        return CommandType.HeartBeat;
                     break;
                 case 10:
                     if ("TimeSeries"u8.CompareConstant(state.StringBuffer))

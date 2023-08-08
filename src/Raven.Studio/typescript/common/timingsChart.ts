@@ -39,7 +39,7 @@ class timingsChart {
         const height = container.height();
         const radius = Math.min(width, height) - topPadding;
         
-        const legendWidth = 270;
+        const legendWidth = 320;
         
         this.vis = d3.select(this.selector)
             .append("svg:svg")
@@ -47,7 +47,7 @@ class timingsChart {
             .attr("height", height)
             .append("svg:g")
             .attr("id", "container")
-            .attr("transform", "translate(" + (width / 2 + legendWidth / 2) + "," + (height - 20) + ")");
+            .attr("transform", "translate(" + (width / 2 + legendWidth / 1.9) + "," + (height - topPadding/1.4) + "), scale(0.85)")
         
         const useLogScale = this.useLogScale();
         
@@ -81,12 +81,12 @@ class timingsChart {
         this.levelName = this.vis
             .append("svg:text")
             .attr("class", "levelName")
-            .attr("y", -50)
-            .text("Total");
+            .text("Total")
+            .attr("y", 30);
 
         this.levelDuration = this.vis.append("svg:text")
             .attr("class", "duration")
-            .attr("y", -8);
+            .attr("y", 0);
         
         this.vis
             .data([json])

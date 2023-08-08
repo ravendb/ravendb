@@ -139,7 +139,7 @@ internal static class BackupUtils
     public static NextBackup GetNextBackupDetails(NextBackupDetailsParameters parameters)
     {
         var nowUtc = SystemTime.UtcNow;
-        var lastFullBackupUtc = parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
+        var lastFullBackupUtc = parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
         var lastIncrementalBackupUtc = parameters.BackupStatus.LastIncrementalBackupInternal ?? parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
         var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {

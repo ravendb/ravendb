@@ -81,9 +81,10 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 throw new InvalidDataException("Response is invalid. Index is missing.");
             if (item.TryGet(nameof(CompareExchangeValue<T>.Value), out BlittableJsonReaderObject raw) == false)
                 throw new InvalidDataException("Response is invalid. Value is missing.");
+            item.TryGet(nameof(CompareExchangeValue<T>.ChangeVector), out string cv);
 
             if (raw == null)
-                return new CompareExchangeValue<T>(key, index, default);
+                return new CompareExchangeValue<T>(key, index, default, cv, metadata: null);
 
             MetadataAsDictionary metadata = null;
             if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) && bjro != null)
@@ -94,7 +95,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             }
 
             var value = DeserializeObject(raw, conventions);
-            return new CompareExchangeValue<T>(key, index, value, metadata);
+            return new CompareExchangeValue<T>(key, index, value, cv, metadata);
         }
 
         internal static T DeserializeObject(BlittableJsonReaderObject raw, DocumentConventions conventions)

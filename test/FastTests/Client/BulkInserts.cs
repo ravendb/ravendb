@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -157,7 +158,7 @@ namespace FastTests.Client
                         };
                     }
 
-                    var e = await Assert.ThrowsAsync<InvalidOperationException>(async () => { await Parallel.ForEachAsync(localList, async (element, _) => { await bulkInsert.StoreAsync(element); }); });
+                    var e = await Assert.ThrowsAsync<BulkInsertInvalidOperationException>(async () => { await Parallel.ForEachAsync(localList, async (element, _) => { await bulkInsert.StoreAsync(element); }); });
 
                     Assert.Contains("Bulk Insert store methods cannot be executed concurrently", e.Message);
                 }
