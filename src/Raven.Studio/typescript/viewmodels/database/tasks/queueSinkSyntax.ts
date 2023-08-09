@@ -28,9 +28,12 @@ put(this.Id, this)`;
     Id : this.Id, 
     FirstName : this.FirstName, 
     LastName : this.LastName, 
-    FullName : this.FirstName + ' ' + this.LastName 
+    FullName : this.FirstName + ' ' + this.LastName, 
+    "@metadata" : {
+        "@collection" : "Users"
+    }
 };
-put(this.Id, item)`;
+put(this.Id.toString(), item)`;
     
     static readonly samples: Array<sampleCode> = [
         {
