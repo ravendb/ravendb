@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -127,11 +126,14 @@ namespace Tests.Infrastructure.InterversionTest
 
         public override async Task TestClustering(List<DocumentStore> stores, string key)
         {
-            var user = new User
+            using (stores[0].SetRequestTimeout(TimeSpan.FromSeconds(60)))
             {
-                Name = "Karmel"
-            };
-            await stores[0].Operations.SendAsync(new PutCompareExchangeValueOperation<User>(key, user, 0));
+                var user = new User
+                {
+                    Name = "Karmel"
+                };
+                await stores[0].Operations.SendAsync(new PutCompareExchangeValueOperation<User>(key, user, 0));
+            }
         }
 
         public override async Task TestReplication(List<DocumentStore> stores)
