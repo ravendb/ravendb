@@ -15,7 +15,7 @@ namespace InterversionTests
         {
         }
 
-        [Fact]
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task IncomingReplicationShouldRejectIncrementalTimeSeriesFromOldServer()
         {
             const string version = "5.2.3";
