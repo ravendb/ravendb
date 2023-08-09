@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.Id:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        
+
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -750,7 +750,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     if ("Ids"u8.CompareConstant(state.StringBuffer))
                         return CommandPropertyName.Ids;
-                    
+
                     return CommandPropertyName.NoSuchProperty;
                 case 8:
                     if ("Document"u8.CompareConstant(state.StringBuffer))
@@ -932,8 +932,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                     if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
                         return CommandType.JsonPatch;
 
-                    if (*(long*)state.StringBuffer == 7018088662229411144 &&
-                        state.StringBuffer[8] == (byte)'t')
+                    if ("HeartBeat"u8.CompareConstant(state.StringBuffer))
                         return CommandType.HeartBeat;
                     break;
                 case 10:

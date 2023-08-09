@@ -98,7 +98,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                 if (clusterWideTx)
                 {
                     var changeVector = context.GetChangeVector(document.ChangeVector);
-                    if (changeVector.Contains(RequestHandler.Database.ClusterTransactionId) == false)
+                    if (changeVector.Version.Contains(RequestHandler.Database.ClusterTransactionId) == false)
                     {
                         Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
                         long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
