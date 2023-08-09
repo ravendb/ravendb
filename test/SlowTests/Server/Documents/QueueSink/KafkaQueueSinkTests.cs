@@ -150,6 +150,67 @@ namespace SlowTests.Server.Documents.QueueSink
                 Assert.Equal($"lastname{i}", fetchedUser.LastName);    
             }
         }
+        
+        [RequiresKafkaRetryFact]
+        public void SimpleScriptMultipleInsertsTwoBatches()
+        {
+            var numberOfUsers = 10;
+
+            using IProducer<string, byte[]> producer = CreateKafkaProducer();
+            
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var user = new User { Id = $"users/{i}", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
+                byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
+                var kafkaMessage = new Message<string, byte[]> { Value = userBytes };
+                producer.Produce(UsersQueueName, kafkaMessage);
+            }
+            
+            using var store = GetDocumentStore();
+            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
+
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
+            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+
+            using var session = store.OpenSession();
+
+            var users = session.Query<User>().ToList();
+            Assert.Equal(numberOfUsers, users.Count);
+
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var fetchedUser = session.Load<User>($"users/{i}");
+                Assert.NotNull(fetchedUser);
+                Assert.Equal($"users/{i}", fetchedUser.Id);
+                Assert.Equal($"firstname{i}", fetchedUser.FirstName);
+                Assert.Equal($"lastname{i}", fetchedUser.LastName);    
+            }
+            
+            etlDone.Reset();
+            
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var user = new User { Id = $"users/{i}a", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
+                byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
+                var kafkaMessage = new Message<string, byte[]> { Value = userBytes };
+                producer.Produce(UsersQueueName, kafkaMessage);
+            }
+
+            etlDone.Wait();
+            
+            var users2 = session.Query<User>().ToList();
+            Assert.Equal(20, users2.Count);
+
+            for (int i = 0; i < numberOfUsers; i++)
+            {
+                var fetchedUser = session.Load<User>($"users/{i}a");
+                Assert.NotNull(fetchedUser);
+                Assert.Equal($"users/{i}a", fetchedUser.Id);
+                Assert.Equal($"firstname{i}", fetchedUser.FirstName);
+                Assert.Equal($"lastname{i}", fetchedUser.LastName);    
+            }
+
+        }
 
         [Fact]
         public void Error_if_script_is_empty()
