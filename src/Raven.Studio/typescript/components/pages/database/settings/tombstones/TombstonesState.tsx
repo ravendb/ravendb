@@ -10,12 +10,10 @@ import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
 import { Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import useBoolean from "components/hooks/useBoolean";
-import { TombstonesStateForceCleanupConfirm } from "./TombstonesStateForceCleanupConfirm";
+import useConfirm from "components/hooks/useConfirm";
 
 // TODO kalczur fix height
 // TODO kalczur check if useEffect is not called multiple times
-// TODO kalczur add tests
 // TODO kalczur remove ko view
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
@@ -27,7 +25,9 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();
     const [subscriptionsGrid, setSubscriptionsGrid] = useState<virtualGridController<SubscriptionInfo>>();
 
-    const { value: isForceCleanupConfirmVisible, toggle: toggleForceCleanupConfirmVisible } = useBoolean(false);
+    const [ForceCleanupConfirm, confirmForceCleanup] = useConfirm({
+        message: "Do you want to force tombstones cleanup?",
+    });
 
     useEffect(() => {
         if (!collectionsGrid || asyncGetTombstonesState.status !== "success") {
@@ -45,7 +45,6 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
         if (!subscriptionsGrid || asyncGetTombstonesState.status !== "success") {
             return;
         }
-
         subscriptionsGrid.headerVisible(true);
         subscriptionsGrid.init(
             () => getSubscriptionsFetcher(asyncGetTombstonesState.result),
@@ -60,8 +59,10 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
     };
 
     const forceCleanup = async () => {
-        await asyncForceTombstonesCleanup.execute();
-        await refresh();
+        if (await confirmForceCleanup()) {
+            await asyncForceTombstonesCleanup.execute();
+            await refresh();
+        }
     };
 
     if (asyncGetTombstonesState.status === "error") {
@@ -122,15 +123,9 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
                             </div>
                         </div>
 
-                        {isForceCleanupConfirmVisible && (
-                            <TombstonesStateForceCleanupConfirm
-                                onConfirm={forceCleanup}
-                                toggle={toggleForceCleanupConfirmVisible}
-                            />
-                        )}
-
+                        <ForceCleanupConfirm />
                         <ButtonWithSpinner
-                            onClick={toggleForceCleanupConfirmVisible}
+                            onClick={forceCleanup}
                             color="primary"
                             isSpinning={asyncForceTombstonesCleanup.status === "loading"}
                             icon="force"
