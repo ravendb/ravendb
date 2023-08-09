@@ -16,6 +16,7 @@ import {
     OngoingTaskOlapEtlInfo,
     OngoingTaskPeriodicBackupInfo,
     OngoingTaskRabbitMqEtlInfo,
+    OngoingTaskRabbitMqSinkInfo,
     OngoingTaskRavenEtlInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
@@ -51,8 +52,8 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { StickyHeader } from "components/common/StickyHeader";
-import { KafkaSinkPanel } from "components/pages/database/tasks/panels/KafkaSinkPanel";
-import { RabbitMqSinkPanel } from "components/pages/database/tasks/panels/RabbitMqSinkPanel";
+import { KafkaSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/KafkaSinkPanel";
+import { RabbitMqSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/RabbitMqSinkPanel";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -617,8 +618,10 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         rabbitMqEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueEtl"
         ) as OngoingTaskRabbitMqEtlInfo[],
-        
-        //TODO: add sinks!
+        kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
+        rabbitMqSinks: filteredTasks.filter(
+            (x) => x.shared.taskType === "RabbitQueueSink"
+        ) as OngoingTaskRabbitMqSinkInfo[],
         elasticSearchEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "ElasticSearchEtl"
         ) as OngoingTaskElasticSearchEtlInfo[],
