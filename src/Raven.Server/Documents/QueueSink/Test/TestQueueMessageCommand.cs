@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.QueueSink.Test;
 
-public class TestQueueMessageCommand : PatchDocumentCommand
+public sealed class TestQueueMessageCommand : PatchDocumentCommand
 {
     private readonly BlittableJsonReaderObject _message;
 

@@ -7,7 +7,7 @@ import {
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
-} from "../shared";
+} from "../../shared/shared";
 import { OngoingTaskKafkaSinkInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -18,8 +18,9 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelSelect,
 } from "components/common/RichPanel";
-import { Collapse } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 
 type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
 
@@ -41,7 +42,7 @@ function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
 }
 
 export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
-    const { db, data } = props;
+    const { db, data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -49,26 +50,38 @@ export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editKafkaSink(data.shared.taskId)();
 
-    const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
-        editUrl,
-        props
-    );
+    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     return (
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
+                    {canEdit && (
+                        <RichPanelSelect>
+                            <Input
+                                type="checkbox"
+                                onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
+                                checked={isSelected(data.shared.taskName)}
+                            />
+                        </RichPanelSelect>
+                    )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
-                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskStatus
+                        task={data}
+                        canEdit={canEdit}
+                        onTaskOperation={onTaskOperation}
+                        isTogglingState={isTogglingState(data.shared.taskName)}
+                    />
                     <OngoingTaskActions
                         task={data}
                         canEdit={canEdit}
                         onEdit={onEdit}
-                        onDelete={onDeleteHandler}
+                        onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
+                        isDeleting={isDeleting(data.shared.taskName)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

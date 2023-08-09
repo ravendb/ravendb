@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public sealed class PatchDocumentCommand : PatchDocumentCommandBase
+    public class PatchDocumentCommand : PatchDocumentCommandBase
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
