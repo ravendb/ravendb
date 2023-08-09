@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations
         private readonly RequestExecutor _requestExecutor;
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
-        private readonly Task _additionalTask;
+        private Task _additionalTask;
         private readonly long _id;
         private TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
@@ -355,6 +355,7 @@ namespace Raven.Client.Documents.Operations
                 catch (Exception e)
                 {
                     await StopProcessingUnderLock(e).ConfigureAwait(false);
+                    _additionalTask = Task.CompletedTask; // don't await the additional task if we had an error
                 }
 
                 await _additionalTask.ConfigureAwait(false);
