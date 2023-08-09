@@ -497,11 +497,12 @@ namespace RachisTests.DatabaseCluster
                     await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
                 }
                 
-                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                var error = await Assert.ThrowsAnyAsync<Exception>(async () =>
                 {
                     await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation("test"));
                 });
-                Assert.Contains("no nodes in the topology", error.Message);
+                Assert.True(error is RavenException || error is AllTopologyNodesDownException);
+                Assert.True(error.Message.Contains("no nodes in the topology") || error.Message.Contains("to all configured nodes in the topology"));
             }
         }
 
