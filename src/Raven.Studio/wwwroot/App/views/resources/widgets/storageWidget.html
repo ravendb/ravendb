@@ -18,23 +18,30 @@
                 <div class="nodes-container nodes-storage" data-bind="foreach: nodeStats">
                     <div data-bind="attr: { class: 'nodes-item node-' + tag }">
                         <div class="nodes-item-header">
-                            <div class="node-label" data-bind="text: tag, css: { 'no-data': !hasData() }"></div>
+                            <div class="node-label margin-right-xxs" data-bind="text: tag, css: { 'no-data': !hasData() }"></div>
                         </div>
                         <div class="global-spinner spinner-sm" data-bind="visible: !hasData()"></div>
                         <div class="details-list" data-bind="foreach: mountPoints">
                             <div class="mount" data-bind="text: mountPointLabel, visible: $parent.mountPoints().length > 1"></div>
-                            <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Data"
-                                     data-bind="text: $root.sizeFormatter(ravenSize())"></div>
-                                <div class="storage-ravendb-temp-buffers" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Temporary Buffers"
-                                     data-bind="text: $root.sizeFormatter(ravenTempBuffersSize())"></div>
-                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage used"
-                                    data-bind="text: $root.sizeFormatter(usedSpace())"></div>
-                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free"
-                                    data-bind="text: $root.sizeFormatter(freeSpace())"></div>
+                            <div class="storage-legend d-flex">
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Data" >
+                                    <i class="icon-ravendb-data"></i>
+                                    <span class="m-0" data-bind="text: $root.sizeFormatter(ravenSize())"></span>
+                                </div>
+                                <div class="storage-ravendb-temp-buffers" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Temporary Buffers">
+                                    <i class="icon-waiting"></i>
+                                    <span class="m-0" data-bind="text: $root.sizeFormatter(ravenTempBuffersSize())"></span> 
+                                </div>
                                 <div class="flex-grow"></div>
-                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Total storage available"
-                                    data-bind="text: $root.sizeFormatter(totalCapacity())"></div>
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage used">
+                                    <i class="icon-storage-used"></i>
+                                    <span class="m-0" data-bind="text: $root.sizeFormatter(usedSpace())"></span>
+                                </div>
+                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Storage free">
+                                    <i class="icon-storage-free"></i>
+                                    <span class="m-0" data-bind="text: $root.sizeFormatter(freeSpace())"></span>
+                                </div>
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Total storage available" data-bind="text: $root.sizeFormatter(totalCapacity())"></div>
                             </div>
                             <div class="storage-chart" data-bind="style: { width: scaleFactor() + '%' }">
                                 <div class="storage-used d-flex align-items-center" data-bind="style: { width: usedSpacePercentage() + '%' }">
