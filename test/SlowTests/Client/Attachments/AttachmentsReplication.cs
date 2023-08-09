@@ -452,14 +452,14 @@ namespace SlowTests.Client.Attachments
                 await SetupAttachmentReplicationAsync(store1, store2);
                 await AssertAttachmentCount(store2, 2, 4);
 
-                store1.Commands().Delete("users/2", null);
-                await AssertDeleteAsync(store1, store2, "#1", 2, 3);
+                await store1.Commands().DeleteAsync("users/2", null);
+                await AssertDeleteAsync(store1, store2, "#1$users/2", 2, 3);
 
-                store1.Commands().Delete("users/1", null);
-                await AssertDeleteAsync(store1, store2, "#2", 1);
+                await store1.Commands().DeleteAsync("users/1", null);
+                await AssertDeleteAsync(store1, store2, "#2$users/1", 1);
 
-                store1.Commands().Delete("users/3", null);
-                await AssertDeleteAsync(store1, store2, "#3", 0);
+                await store1.Commands().DeleteAsync("users/3", null);
+                await AssertDeleteAsync(store1, store2, "#3$users/3", 0);
             }
         }
 
