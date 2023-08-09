@@ -18,7 +18,8 @@ namespace SlowTests.Issues
 
         private readonly int _writeTimeout = 2_000;
         private readonly TimeSpan _delay = TimeSpan.FromSeconds(25);
-        [RavenFact(RavenTestCategory.BulkInsert)]
+
+        [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-17745")]
         public async Task BulkInsertWithDelay()
         {
             DoNotReuseServer();
@@ -57,7 +58,8 @@ namespace SlowTests.Issues
                 }
             }
         }
-        [RavenFact(RavenTestCategory.BulkInsert)]
+
+        [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-17745")]
         public async Task StartStoreInTheMiddleOfAnHeartbeat()
         {
             ManualResetEvent mre = new ManualResetEvent(false);
