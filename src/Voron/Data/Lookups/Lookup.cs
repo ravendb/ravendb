@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
+using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
@@ -658,9 +657,37 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var newEntriesOffsets = state.EntriesOffsets;
         var newNumberOfEntries = state.Header->NumberOfEntries;
 
-        ushort* newEntriesOffsetsPtr = state.EntriesOffsetsPtr;
-        for (int i = newNumberOfEntries - 1; i >= state.LastSearchPosition; i--)
-            newEntriesOffsetsPtr[i] = newEntriesOffsetsPtr[i - 1];
+        ushort* newEntriesStartPtr = state.EntriesOffsetsPtr + newNumberOfEntries - 1;
+        ushort* newEntriesEndPtr = state.EntriesOffsetsPtr + state.LastSearchPosition;
+
+        if (Vector256.IsHardwareAccelerated)
+        {
+            int N256 = (Vector256<ushort>.Count - 1);
+            while (newEntriesStartPtr - Vector256<ushort>.Count >= newEntriesEndPtr)
+            {
+                var source = Vector256.Load(newEntriesStartPtr - N256 - 1);
+                Vector256.Store(source, newEntriesStartPtr - N256);
+                newEntriesStartPtr -= Vector256<ushort>.Count;
+            }
+        }
+
+        if (Vector128.IsHardwareAccelerated)
+        {
+            int N128 = (Vector128<ushort>.Count - 1);
+            while (newEntriesStartPtr - Vector128<ushort>.Count >= newEntriesEndPtr)
+            {
+                var source = Vector128.Load(newEntriesStartPtr - N128 - 1);
+                Vector128.Store(source, newEntriesStartPtr - N128);
+                newEntriesStartPtr -= Vector128<ushort>.Count;
+            }
+        }
+
+        // This will move one element at a time... the worst case scenario.
+        while (newEntriesStartPtr >= newEntriesEndPtr)
+        {
+            *newEntriesStartPtr = *(newEntriesStartPtr - 1);
+            newEntriesStartPtr--;
+        }
 
         if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
             _state.NumberOfEntries++; // we aren't counting branch entries
