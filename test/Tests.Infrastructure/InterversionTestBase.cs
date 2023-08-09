@@ -365,6 +365,50 @@ namespace Tests.Infrastructure
             return tasks.All(x => x.Result);
         }
 
+        protected async Task<string> GetLastNightlyVersion(string version)
+        {
+            return await LastRavenDbVersion("Nightly", version);
+        }
+
+        protected async Task<string> GetLastStableVersion(string version)
+        {
+            return await LastRavenDbVersion("Stable", version);
+        }
+
+        private static async Task<string> LastRavenDbVersion(string type, string version)
+        {
+            using var client = new HttpClient();
+            var url = new Uri("https://ravendb.net/wp-json/ravendb/downloads");
+            var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+            dynamic versionRespond = JsonConvert.DeserializeObject<ExpandoObject>(rawVersionRespond);
+
+            var ravenDbBuilds = ((IEnumerable<dynamic>)versionRespond.downloadsInfo.ravenDbBuilds);
+            var platform = string.Empty;
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                platform = PlatformDetails.Is32Bits ? "WindowsX86" : "WindowsX64";
+            }
+            else if (PlatformDetails.RunningOnLinux)
+            {
+                if (PlatformDetails.Is32Bits == false)
+                {
+                    platform = "LinuxX64";
+                }
+            }
+
+            if (string.IsNullOrEmpty(platform))
+            {
+                throw new InvalidOperationException("Expected to run on WindowsX86, WindowsX64 or LinuxX64");
+            }
+
+            var dynamic = ravenDbBuilds
+                .Where(x => x.platform == platform && x.branch == type && x.version.StartsWith(version)).OrderByDescending(x => x.publishedAt).FirstOrDefault();
+
+            Assert.NotNull(dynamic);
+
+            return dynamic.version;
+        }
+
         public class InterversionTestOptions
         {
             private readonly bool _frozen;
