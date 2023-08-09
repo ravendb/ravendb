@@ -1,11 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 
-namespace Corax.Queries;
+namespace Corax.Queries.Meta;
 
 internal sealed unsafe class SortHelper
 {
@@ -39,8 +36,17 @@ internal sealed unsafe class SortHelper
         long* leftEndPtr = leftPtr + leftLength;
         long* rightEndPtr = rightPtr + rightLength;
 
-        if (*leftPtr > *(rightEndPtr - 1))
-            return 0; // there is no overlap in the range
+        //We've to assert in good order, so lets check which array is "first" (lowest first item)
+        var cmp = (*leftPtr & long.MaxValue) - (*rightPtr & long.MaxValue);
+        switch (cmp)
+        {
+            //[a,....,b] [c,...,d]
+            case < 0 when (*(leftEndPtr - 1)  & long.MaxValue) < (*rightPtr & long.MaxValue):
+            //[c,...,d] [a,...,b]
+            case > 0 when (*(rightEndPtr - 1)  & long.MaxValue ) < (*leftPtr & long.MaxValue):
+                return 0;
+        }
+
 
         if (leftLength * 2 > rightLength)
         {
