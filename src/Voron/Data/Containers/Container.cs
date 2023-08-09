@@ -53,7 +53,7 @@ namespace Voron.Data.Containers
 
             public bool IsFree
             {
-                [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get => (_compactBackingStore & 0x1F) == 0;
             }
 
@@ -139,12 +139,18 @@ namespace Voron.Data.Containers
 
         public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref ItemMetadata MetadataFor(int pos)
         {
             return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer + sizeof(ItemMetadata) * pos);
-        } 
-        
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ref ItemMetadata MetadataFor()
+        {
+            return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer);
+        }
+
         public string Dump()
         {
             var sb = new StringBuilder();
@@ -312,16 +318,7 @@ namespace Voron.Data.Containers
         /// </summary>
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, long pageLevelMetadata, out Span<byte> allocatedSpace)
         {
-            // This method will return the allocated space inside the container and also the entry internal id to 
-            // address this allocation in the future.
-            
-            if(size <= 0)
-                throw new ArgumentOutOfRangeException(nameof(size));
-            
-            var rootContainer = new Container(llt.ModifyPage(containerId));
-            rootContainer.UpdateNumberOfEntries(1);
-            
-            if (size > MaxSizeInsideContainerPage)
+            long AllocateOverflowPageUnlikely(Container rootContainer, out Span<byte> allocatedSpace)
             {
                 // The space to allocate is big enough to be allocated in a dedicated overflow page.
                 // We will figure out how many pages we will need to store it.
@@ -335,8 +332,20 @@ namespace Voron.Data.Containers
                 ModifyMetadataList(llt, rootContainer, ContainerPageHeader.AllPagesOffset, add: true, overflowPage.PageNumber);
 
                 allocatedSpace = overflowPage.AsSpan(PageHeader.SizeOf, size);
-                return overflowPage.PageNumber * Constants.Storage.PageSize; 
+                return overflowPage.PageNumber * Constants.Storage.PageSize;
             }
+
+            // This method will return the allocated space inside the container and also the entry internal id to 
+            // address this allocation in the future.
+            
+            if(size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size));
+            
+            var rootContainer = new Container(llt.ModifyPage(containerId));
+            rootContainer.UpdateNumberOfEntries(1);
+            
+            if (size > MaxSizeInsideContainerPage)
+                return AllocateOverflowPageUnlikely(rootContainer, out allocatedSpace);
 
             var p = rootContainer.GetNextFreePage();
             var activePage = llt.ModifyPage(p);
@@ -347,6 +356,7 @@ namespace Voron.Data.Containers
                              // we limit the number of entries per page to ensure we always
                              // have the bottom 3 bits free, see also IndexToOffset
                              pos < 1024;
+
             if (pageMatch == false || 
                 container.HasEnoughSpaceFor(reqSize) == false)
             {
@@ -433,12 +443,9 @@ namespace Voron.Data.Containers
             int i = 0;
             for (; i < tries; i++)  
             {                
-                var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
-                Tree freeList;
-                fixed (void* pSate = freeListStateSpan)
-                {
-                    freeList = Tree.Open(llt, llt.Transaction, FreePagesTreeName, (TreeRootHeader*)pSate);
-                }
+                var freeListState = rootContainer.GetItemPtr(ContainerPageHeader.FreeListOffset, out var _);
+                
+                Tree freeList = Tree.Open(llt, llt.Transaction, FreePagesTreeName, (TreeRootHeader*)freeListState);
                 var it = freeList.Iterate(prefetch:false);
                 if (it.MoveNext() == false)
                     break;
@@ -602,16 +609,11 @@ namespace Voron.Data.Containers
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);
 
-            Tree allPages;
-            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset))
-            {
-                allPages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
-            }
-            Tree freePages;
-            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.FreeListOffset))
-            {
-                freePages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
-            }
+            var pAllPagesStatePtr = rootContainer.GetItemPtr(ContainerPageHeader.AllPagesOffset, out _);
+            Tree allPages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pAllPagesStatePtr);
+
+            var freeListStatePtr = rootContainer.GetItemPtr(ContainerPageHeader.FreeListOffset, out _);
+            Tree freePages = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)freeListStatePtr);
 
             return (allPages, freePages);
         }
@@ -620,11 +622,9 @@ namespace Voron.Data.Containers
         {
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);
-            Tree tree;
-            fixed (void* pState = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset))
-            {
-                tree = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
-            }
+            
+            var pState = rootContainer.GetItemPtr(ContainerPageHeader.AllPagesOffset, out _);
+            Tree tree = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
 
             return new AllPagesIterator(tree);
 
@@ -639,22 +639,30 @@ namespace Voron.Data.Containers
             return new Span<byte>(p, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private byte* GetItemPtr(int pos, out int size)
+        {
+            ref var item = ref MetadataFor(pos);
+            byte* p = _page.Pointer;
+            size = item.Get(ref p);
+            return p;
+        }
+
         private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, int offset, bool add, long value)
         {
-            fixed (void* pState = rootContainer.GetItem(offset))
+            var pState = rootContainer.GetItemPtr(offset, out _);
+
+            Debug.Assert(llt.IsDirtyPage(rootContainer._page.PageNumber));
+            Tree tree = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
+            value = Bits.SwapBytes(value);
+            using (Slice.External(llt.Allocator, (byte*)&value, sizeof(long), ByteStringType.Immutable, out var slice))
             {
-                Debug.Assert(llt.IsDirtyPage(rootContainer._page.PageNumber));
-                Tree tree = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
-                value = Bits.SwapBytes(value);
-                using (Slice.External(llt.Allocator, (byte*)&value, sizeof(long), ByteStringType.Immutable, out var slice))
-                {
-                    if (add)
-                        tree.DirectAdd(slice, 0, out _);
-                    else
-                        tree.Delete(slice);
-                }
-                tree.State.CopyTo((TreeRootHeader*)pState);
+                if (add)
+                    tree.DirectAdd(slice, 0, out _);
+                else
+                    tree.Delete(slice);
             }
+            tree.State.CopyTo((TreeRootHeader*)pState);
         }
 
         private bool HasEnoughSpaceFor(int reqSize)
@@ -668,11 +676,14 @@ namespace Voron.Data.Containers
         {
             var pos = 0;
             int reqSize = ComputeRequiredSize(size);
+
+            ref var metadataPtr = ref MetadataFor();
+
             ushort numberOfOffsets = Header.NumberOfOffsets;
             for (; pos < numberOfOffsets; pos++)
             {
                 // There is a delete record here, we can reuse this position.
-                if (MetadataFor(pos).IsFree)
+                if (Unsafe.Add(ref metadataPtr, pos).IsFree)
                     return (reqSize, pos);
             }
             

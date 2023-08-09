@@ -653,9 +653,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         //VerifySizeOf(ref state);
 
-        state.Header->Lower += sizeof(short);
-        var newEntriesOffsets = state.EntriesOffsets;
-        var newNumberOfEntries = state.Header->NumberOfEntries;
+        var header = state.Header;
+
+        header->Lower += sizeof(short);
+        var newNumberOfEntries = header->NumberOfEntries;
 
         ushort* newEntriesStartPtr = state.EntriesOffsetsPtr + newNumberOfEntries - 1;
         ushort* newEntriesEndPtr = state.EntriesOffsetsPtr + state.LastSearchPosition;
@@ -689,20 +690,20 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             newEntriesStartPtr--;
         }
 
-        if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+        if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
             _state.NumberOfEntries++; // we aren't counting branch entries
 
-        Debug.Assert(state.Header->FreeSpace >= requiredSize + sizeof(ushort));
+        Debug.Assert(header->FreeSpace >= requiredSize + sizeof(ushort));
 
-        state.Header->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
-        state.Header->Upper -= (ushort)requiredSize;
+        header->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
+        header->Upper -= (ushort)requiredSize;
 
         // We are going to be storing in the following format:
         // [ keySizeInBits: ushort | key: sequence<byte> | value: varint ]
-        byte* writePos = state.Page.Pointer + state.Header->Upper;
+        byte* writePos = state.Page.Pointer + header->Upper;
 
         Unsafe.CopyBlockUnaligned(writePos, entryBufferPtr, (uint)requiredSize);
-        newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
+        state.EntriesOffsetsPtr[state.LastSearchPosition] = header->Upper;
         //VerifySizeOf(ref state);
     }
 
