@@ -34,15 +34,17 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
-            
+
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
-            if (_includeAllCounters)
-                return new GetDocumentsCommand(_session.Conventions, _ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
-            
-            return new GetDocumentsCommand(_session.Conventions, _ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            var cmd = _includeAllCounters
+                ? new GetDocumentsCommand(_session.Conventions, _ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false)
+                : new GetDocumentsCommand(_session.Conventions, _ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+
+            cmd.SetTransactionMode(_session.TransactionMode);
+            return cmd;
         }
 
         public LoadOperation ById(string id)
@@ -74,21 +76,21 @@ namespace Raven.Client.Documents.Session.Operations
                 _countersToInclude = counters;
             return this;
         }
-        
+
         public LoadOperation WithRevisions(string[] revisionsByChangeVector)
         {
             if (revisionsByChangeVector != null)
                 _revisionsToIncludeByChangeVector = revisionsByChangeVector;
             return this;
         }
-        
+
         public LoadOperation WithRevisions(DateTime? revisionByDateTimeBefore)
         {
             if (revisionByDateTimeBefore != null)
                 _revisionsToIncludeByDateTimeBefore = revisionByDateTimeBefore;
             return this;
         }
-        
+
         public LoadOperation WithAllCounters()
         {
             _includeAllCounters = true;
@@ -195,7 +197,7 @@ namespace Raven.Client.Documents.Session.Operations
                 _results = result;
                 return;
             }
-            
+
             if (result == null)
             {
                 _session.RegisterMissing(_ids);
@@ -215,12 +217,14 @@ namespace Raven.Client.Documents.Session.Operations
             }
             if (_revisionsToIncludeByChangeVector != null || _revisionsToIncludeByDateTimeBefore != null)
             {
-               _session.RegisterRevisionIncludes(result.RevisionIncludes);
+                _session.RegisterRevisionIncludes(result.RevisionIncludes);
             }
 
-            if (_compareExchangeValuesToInclude != null)
+            var includingMissingAtomicGuards = _session.TransactionMode == TransactionMode.ClusterWide;
+            if (_compareExchangeValuesToInclude != null || includingMissingAtomicGuards)
             {
-                _session.GetClusterSession().RegisterCompareExchangeValues(result.CompareExchangeValueIncludes);
+                var clusterSession = _session.GetClusterSession();
+                clusterSession.RegisterCompareExchangeValues(result.CompareExchangeValueIncludes, includingMissingAtomicGuards);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
@@ -228,10 +232,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             foreach (var id in _ids)
             {
-                if(_session.DocumentsById.TryGetValue(id, out _) == false)
+                if (_session.DocumentsById.TryGetValue(id, out _) == false)
                     _session.RegisterMissing(id);
             }
-            
+
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
         }
 

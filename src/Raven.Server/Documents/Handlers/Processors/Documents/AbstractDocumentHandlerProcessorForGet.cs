@@ -14,8 +14,8 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
@@ -80,6 +80,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
             RequestHandler.AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
 
+        var txMode = RequestHandler.GetStringQueryString("txMode", required: false);
+        var clusterWideTx = txMode != null && Enum.TryParse<TransactionMode>(txMode, ignoreCase: true, out var v) && v == TransactionMode.ClusterWide;
+
         (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
         int pageSize;
         string actionName;
@@ -97,7 +100,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             var timeSeries = GetTimeSeriesToInclude();
             var compareExchangeValues = RequestHandler.GetStringValuesQueryString("cmpxchg", required: false);
 
-            responseWriteStats = await GetDocumentsByIdAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, etag);
+            responseWriteStats = await GetDocumentsByIdAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, clusterWideTx, etag);
         }
         else
         {
@@ -130,7 +133,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
             {
                 string details;
-                
+
                 if (ids.Count > 0)
                     details = CreatePerformanceHintDetails();
                 else
@@ -146,7 +149,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                     responseWriteStats.TotalDocumentsSizeInBytes);
             }
         }
-        
+
         string CreatePerformanceHintDetails()
         {
             var sb = new StringBuilder();
@@ -159,7 +162,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                     sb.Append(", ");
                 else
                     first = false;
-                    
+
                 sb.Append($"{ids[addedIdsCount++]}");
             }
 
@@ -175,9 +178,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     }
 
     protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsByIdAsync(TOperationContext context, StringValues ids, StringValues includePaths, RevisionIncludeField revisions,
-        StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag)
+        StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag)
     {
-        var result = await GetDocumentsByIdImplAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, etag);
+        var result = await GetDocumentsByIdImplAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, clusterWideTx, etag);
 
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
@@ -198,11 +201,11 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        return await WriteDocumentsByIdResultAsync(context, metadataOnly, result);
+        return await WriteDocumentsByIdResultAsync(context, metadataOnly, clusterWideTx, result);
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(
-        TOperationContext context, bool metadataOnly, DocumentsByIdResult<TDocumentType> result)
+        TOperationContext context, bool metadataOnly, bool clusterWideTx, DocumentsByIdResult<TDocumentType> result)
     {
         long numberOfResults;
         long totalDocumentsSizeInBytes;
@@ -258,7 +261,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         List<TDocumentType> includes, CancellationToken token);
 
     protected abstract ValueTask<DocumentsByIdResult<TDocumentType>> GetDocumentsByIdImplAsync(TOperationContext context, StringValues ids,
-        StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag);
+        StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag);
 
     protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsAsync(TOperationContext context, long? etag, StartsWithParams startsWith, bool metadataOnly, string changeVector)
     {

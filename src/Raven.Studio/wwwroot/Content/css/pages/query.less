@@ -256,6 +256,11 @@
 }
 
 .js-timings-container {
+    .timing-legend-item {
+        div {
+            margin-top: @gutter-xxs;
+        }
+    }
 
     &.timings {
 
@@ -264,12 +269,12 @@
                 fill: @text-emphasis;
                 text-anchor: middle;
                 font-weight: bold;
-                font-size: 28px;
+                font-size: 14px;
             }
 
             .duration {
                 fill: @text-color;
-                font-size: 20px;
+                font-size: 12px;
                 text-anchor: middle;
             }
         }
@@ -353,10 +358,12 @@
             margin-right: 10px;
             display: inline-block;
             vertical-align: middle;
+            margin-top: 3px;
         }
 
         .legend-item {
             padding-left: 20px;
+            margin-top: @gutter-xs;
 
             .name {
                 display: inline-block;

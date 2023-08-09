@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide.Commands
         public PutServerWideBackupConfigurationCommand(ServerWideBackupConfiguration configuration, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = ClusterStateMachine.ServerWideConfigurationKey.Backup;
+
+            configuration.CreatedAt ??= DateTime.UtcNow;
             Value = configuration;
         }
 

@@ -51,6 +51,30 @@ namespace Raven.Server.Documents
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) =>
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
+        
+        
+        public void EnsureDocumentId()
+        {
+            if (_metadataEnsured)
+                return;
+
+            _metadataEnsured = true;
+            DynamicJsonValue mutatedMetadata = null;
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+            {
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                mutatedMetadata = metadata.Modifications;
+            }
+            Data.Modifications = new DynamicJsonValue(Data)
+            {
+                [Constants.Documents.Metadata.Key] = (object)metadata ?? (mutatedMetadata = new DynamicJsonValue())
+            };
+            mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
+            _hash = null;
+        }
+        
         public void EnsureMetadata()
         {
             if (_metadataEnsured)

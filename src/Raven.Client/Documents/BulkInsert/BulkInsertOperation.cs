@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private static void ThrowNoDatabase()
         {
-            throw new InvalidOperationException(
+            throw new BulkInsertInvalidOperationException(
                 $"Cannot start bulk insert operation without specifying a name of a database to operate on. " +
                 $"Database name can be passed as an argument when bulk insert is being created or default database can be defined using '{nameof(DocumentStore)}.{nameof(IDocumentStore.Database)}' property.");
         }
@@ -330,6 +330,9 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task HandleErrors(string documentId, Exception e)
         {
+            if (e is BulkInsertClientException ce)
+                throw ce;
+
             BulkInsertAbortedException errorFromServer = null;
             try
             {
@@ -349,7 +352,7 @@ namespace Raven.Client.Documents.BulkInsert
         private IDisposable ConcurrencyCheck()
         {
             if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
-                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
+                throw new BulkInsertInvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
 
             return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
         }
@@ -362,7 +365,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
             else if (_inProgressCommand == CommandType.TimeSeries)
             {
-                TimeSeriesBulkInsert.ThrowAlreadyRunningTimeSeries();
+                TimeSeriesBulkInsertBase.ThrowAlreadyRunningTimeSeries();
             }
         }
 
@@ -390,7 +393,7 @@ namespace Raven.Client.Documents.BulkInsert
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new InvalidOperationException("Document id must have a non empty value");
+                throw new BulkInsertInvalidOperationException("Document id must have a non empty value");
             }
 
             if (id.EndsWith("|"))
@@ -780,7 +783,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             internal static void ThrowAlreadyRunningTimeSeries()
             {
-                throw new InvalidOperationException("There is an already running time series operation, did you forget to Dispose it?");
+                throw new BulkInsertInvalidOperationException("There is an already running time series operation, did you forget to Dispose it?");
             }
 
             public void Dispose()

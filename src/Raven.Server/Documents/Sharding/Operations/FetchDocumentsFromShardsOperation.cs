@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
@@ -30,6 +31,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly HashSet<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
+        private readonly bool _clusterWideTx;
 
         public FetchDocumentsFromShardsOperation(JsonOperationContext context,
             HttpRequest httpRequest,
@@ -41,7 +43,8 @@ namespace Raven.Server.Documents.Sharding.Operations
             HashSet<AbstractTimeSeriesRange> timeSeriesIncludes,
             string[] compareExchangeValueIncludes,
             string etag,
-            bool metadataOnly)
+            bool metadataOnly,
+            bool clusterWideTx)
         {
             _context = context;
             HttpRequest = httpRequest;
@@ -54,6 +57,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
             _metadataOnly = metadataOnly;
+            _clusterWideTx = clusterWideTx;
         }
 
         public HttpRequest HttpRequest { get; }
@@ -154,13 +158,21 @@ namespace Raven.Server.Documents.Sharding.Operations
             };
         }
 
-        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_databaseContext.ShardExecutor.Conventions, _idsByShards[shardNumber].Ids.ToArray(), _includePaths,
-            counterIncludes: _counterIncludes.Count > 0 ? _counterIncludes.ToArray() : null,
-            revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
-            revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
-            timeSeriesIncludes: _timeSeriesIncludes,
-            compareExchangeValueIncludes: _compareExchangeValueIncludes,
-            _metadataOnly);
+        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber)
+        {
+            var cmd = new GetDocumentsCommand(_databaseContext.ShardExecutor.Conventions, _idsByShards[shardNumber].Ids.ToArray(), _includePaths,
+                counterIncludes: _counterIncludes.Count > 0 ? _counterIncludes.ToArray() : null,
+                revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
+                revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
+                timeSeriesIncludes: _timeSeriesIncludes,
+                compareExchangeValueIncludes: _compareExchangeValueIncludes,
+                _metadataOnly);
+
+            if (_clusterWideTx)
+                cmd.SetTransactionMode(TransactionMode.ClusterWide);
+
+            return cmd;
+        }
     }
 
     public sealed class GetShardedDocumentsResult

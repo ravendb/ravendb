@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -11,6 +12,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         public long Index { get; internal set; }
         public T Value { get; set; }
 
+        public string ChangeVector { get; internal set; }
+        
         public IMetadataDictionary Metadata => _metadataAsDictionary ??= new MetadataAsDictionary();
 
         private IMetadataDictionary _metadataAsDictionary;
@@ -26,11 +29,18 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         IMetadataDictionary ICompareExchangeValue.Metadata => Metadata;
         bool ICompareExchangeValue.HasMetadata => HasMetadata;
 
-        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null)
+        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null) 
+            : this(key, index, value, changeVector: null, metadata)
+        {
+            
+        }
+        
+        internal CompareExchangeValue(string key, long index, T value, string changeVector, IMetadataDictionary metadata)
         {
             Key = key;
             Index = index;
             Value = value;
+            ChangeVector = changeVector;
             _metadataAsDictionary = metadata;
         }
 

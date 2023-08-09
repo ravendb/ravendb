@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -68,14 +69,21 @@ namespace Raven.Server.Background
             try
             {
                 if (_currentTask.Status == TaskStatus.Running)
-                    _currentTask.Wait(Cts.Token);
+                {
+                    var waitTimeout = TimeSpan.FromSeconds(30);
+
+                    var result = _currentTask.Wait(waitTimeout);
+
+                    if (result == false && Logger.IsInfoEnabled) 
+                        Logger.Info($"Background worker didn't manage to stop its task within {waitTimeout}");
+                }
             }
             catch (AggregateException e)
             {
-                if (e.InnerException is OperationCanceledException == false)
+                if (e.ExtractSingleInnerException() is OperationCanceledException == false)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info("Background worker of the notification center failed to stop", e);
+                        Logger.Info("Background worker failed to stop", e);
                 }
             }
 
