@@ -166,10 +166,10 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                     }
                     catch (Exception e)
                     {
-                        string msg = "Failed to create queue consumer";
+                        string msg = $"[{Name}] Failed to create queue consumer";
 
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"[{Name}] {msg}", e);
+                            _logger.Operations(msg, e);
 
                         var key = $"{Tag}/{Name}";
 
