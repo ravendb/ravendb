@@ -2,13 +2,16 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -16,6 +19,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
@@ -65,20 +69,6 @@ namespace Tests.Infrastructure
             if (options.ModifyDatabaseName != null)
                 name = options.ModifyDatabaseName(name) ?? name;
 
-            var doc = new DatabaseRecord(name)
-            {
-                Settings =
-                        {
-                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
-                        }
-            };
-
-            options.ModifyDatabaseRecord?.Invoke(doc);
-
             var store = new DocumentStore
             {
                 Urls = new[] { processNode.Url },
@@ -89,8 +79,39 @@ namespace Tests.Infrastructure
 
             store.Initialize();
 
-            if (options.CreateDatabase)
+            var settings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true",
+                [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
+                [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+            };
+
+            if (options.CreateShardedDatabase)
+            {
+                var shardingDoc = new ShardingDatabaseRecord(name)
+                {
+                    Settings = settings,
+                    Sharding = new ShardingConfiguration
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>()
+                        {
+                            { 0, new DatabaseTopology() }, { 1, new DatabaseTopology() }, { 2, new DatabaseTopology() },
+                        }
+                    }
+                };
+
+                options.ModifyDatabaseRecord?.Invoke(shardingDoc);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(shardingDoc, options.ReplicationFactor), token);
+            }
+            else if (options.CreateDatabase)
+            {
+                var doc = new DatabaseRecord(name) { Settings = settings };
+
+                options.ModifyDatabaseRecord?.Invoke(doc);
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor), token);
+            }
 
             store.AfterDispose += (sender, e) =>
             {
@@ -349,6 +370,7 @@ namespace Tests.Infrastructure
             private readonly bool _frozen;
 
             private bool _createDatabase;
+            private bool _createShardedDatabase;
             private int _replicationFactor;
             private Action<DocumentStore> _modifyDocumentStore;
             private Action<DatabaseRecord> _modifyDatabaseRecord;
@@ -418,13 +440,35 @@ namespace Tests.Infrastructure
                 }
             }
 
+            public bool CreateShardedDatabase
+            {
+                get => _createShardedDatabase;
+                set
+                {
+                    AssertNotFrozen();
+                    _createShardedDatabase = value;
+                }
+            }
+
             private void AssertNotFrozen()
             {
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
             }
         }
+
+        protected class ShardingDatabaseRecord : DatabaseRecord
+        {
+            public ShardingConfiguration Sharding;
+
+            public ShardingDatabaseRecord(string databaseName) : base(databaseName)
+            {
+            }
+        }
+
+        public sealed class ShardingConfiguration
+        {
+            public Dictionary<int, DatabaseTopology> Shards;
+        }
     }
-
-
 }
