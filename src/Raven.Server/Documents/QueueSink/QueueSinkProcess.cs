@@ -312,8 +312,6 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                 {
                     _logger.Operations(msg, e);
                 }
-
-                // TODO arekReportStopReasonToStats($"{msg} : {e}");
             }
             finally
             {
@@ -357,9 +355,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to run ETL {Name}", e);
+                    _logger.Operations($"Failed to run Queue Sink {Name}", e);
             }
-        }, null, ThreadNames.ForEtlProcess(threadName, Tag, Name));
+        }, null, ThreadNames.ForQueueSinkProcess(threadName, Tag, Name));
 
         if (_logger.IsOperationsEnabled)
             _logger.Operations($"Starting {Tag} process: '{Name}'.");
@@ -512,7 +510,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             return false;
         }
 
-        var totalAllocated = new Size(_threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes), SizeUnit.Bytes);
+        var totalAllocated = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
         _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
 
         stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
