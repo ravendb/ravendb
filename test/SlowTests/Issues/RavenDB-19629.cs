@@ -13,10 +13,11 @@ public class RavenDB_19629 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
-    public async Task CanDeleteCmpXchgValue2()
+    [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanDeleteCmpXchgValue2(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
@@ -44,10 +45,11 @@ public class RavenDB_19629 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
-    public async Task TestSessionMixture2()
+    [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task TestSessionMixture2(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
             {
@@ -75,7 +77,6 @@ public class RavenDB_19629 : RavenTestBase
             }
         }
     }
-
 
     private class User
     {
