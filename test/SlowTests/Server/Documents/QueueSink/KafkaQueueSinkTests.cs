@@ -305,8 +305,29 @@ namespace SlowTests.Server.Documents.QueueSink
             }
         }
 
-        [Fact]
-        public void CanTestScript()
+        [Theory]
+        [InlineData(
+@"
+this['@metadata']['@collection'] = 'Users';
+
+put(this.Id, this); 
+
+output('test: ' + this.Id)", "\"FirstName\":\"Joe\"")]
+        [InlineData(
+@"
+var user = { 
+    Id : this.Id,
+    FullName : this.FirstName + ' ' + this.LastName,
+    ""@metadata"" : {
+        ""@collection"" : ""Users""
+    }
+}
+
+put(this.Id, user)
+
+output('test: ' + this.Id)
+", "\"FullName\":\"Joe Doe\"")]
+        public void CanTestScript(string script, string expectedJson)
         {
             using (var store = GetDocumentStore())
             {
@@ -339,7 +360,7 @@ namespace SlowTests.Server.Documents.QueueSink
                                     {
                                         Queues = new List<string>() {"users"},
                                         Name = "users",
-                                        Script = @"this['@metadata']['@collection'] = 'Users'; put(this.Id, this); output('test output')"
+                                        Script = script
                                     }
                                 }
                             },
@@ -363,7 +384,7 @@ namespace SlowTests.Server.Documents.QueueSink
 }"
                         }, context, database);
                     
-                    Assert.Equal("test output", testResult.DebugOutput[0]);
+                    Assert.Equal("test: users/13", testResult.DebugOutput[0]);
 
                     var putdoc = (DynamicJsonArray)testResult.Actions["PutDocument"];
 
@@ -374,7 +395,7 @@ namespace SlowTests.Server.Documents.QueueSink
                     Assert.Equal("users/13", data["Id"]);
                     string json = data["Data"].ToString();
 
-                    Assert.Contains("\"FirstName\":\"Joe\"", json);
+                    Assert.Contains(expectedJson, expectedJson);
                     Assert.Contains("\"@collection\":\"Users\"", json);
                 }
             }

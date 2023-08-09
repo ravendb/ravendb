@@ -200,6 +200,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForQueueSinkProcess(string threadName, string tag, string name)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.QueueSinkProcess(tag, name)
+        };
+    }
+
     public sealed class ThreadDetails
     {
         public interface IThreadDetails
@@ -236,6 +244,23 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"Etl {_tag} {_name}";
+            }
+        }
+
+        public class QueueSinkProcess : IThreadDetails
+        {
+            private readonly string _tag;
+            private readonly string _name;
+
+            public QueueSinkProcess(string tag, string name)
+            {
+                _tag = tag;
+                _name = name;
+            }
+
+            public string GetShortName()
+            {
+                return $"QuSnk {_tag} {_name}";
             }
         }
 
