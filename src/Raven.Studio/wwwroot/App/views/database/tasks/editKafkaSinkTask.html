@@ -90,9 +90,9 @@
                                     <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
                                         <a href="#">
                                             <div class="row">
-                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
-                                                <small class="col-xs-2">Bootstrap servers:</small>
-                                                <small class="col-xs-2 o-padding-right no-padding-left text-overflow-inline-block"
+                                                <strong class="col-xs-6" data-bind="text: $data.Name"></strong>
+                                                <small class="col-xs-3">Bootstrap servers:</small>
+                                                <small class="col-xs-3 o-padding-right no-padding-left text-overflow-inline-block"
                                                        data-bind="text: $data.KafkaConnectionSettings.BootstrapServers, attr: { title: $data.KafkaConnectionSettings.BootstrapServers }">
                                                 </small>
                                             </div>
@@ -284,15 +284,15 @@
         <div class="tabs">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
-                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
-                        <i class="icon-import"></i><span>Loaded</span>
-                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
+                    <a href="#testResultsModified" role="tab" data-toggle="tab">
+                        <i class="icon-export"></i><span>Put</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
-                    <a href="#testResultsModified" role="tab" data-toggle="tab">
-                        <i class="icon-export"></i><span>Modified</span>
-                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
+                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
+                        <i class="icon-import"></i><span>Loaded</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
@@ -309,14 +309,14 @@
             </ul>
         </div>
         <div class="tab-content flex-grow">
-            <div role="tabpanel" class="tab-pane fade in active" id="testResultsLoaded">
-                <div data-bind="with: actions">
-                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
-                </div>
-            </div>
-            <div class="tab-pane fade margin-bottom" id="testResultsModified">
+            <div class="tab-pane fade in active margin-bottom" id="testResultsModified">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsLoaded">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
                 </div>
             </div>
             <div class="tab-pane fade margin-bottom" id="testResultsDeleted">

@@ -46,6 +46,9 @@ class kafkaTaskTestMode {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
+        
+        // on edit kafka view we want to show documents by default
+        this.actions.showDocumentsInModified(true);
     }
 
     initObservables() {
