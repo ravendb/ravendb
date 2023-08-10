@@ -21,8 +21,6 @@ namespace SlowTests.Server.Documents.QueueSink
     [Trait("Category", "QueueSink")]
     public abstract class QueueSinkTestBase : RavenTestBase
     {
-        private DocumentStore _src;
-
         protected QueueSinkTestBase(ITestOutputHelper output) : base(output)
         {
             QueueSuffix = Guid.NewGuid().ToString("N");
@@ -118,33 +116,6 @@ namespace SlowTests.Server.Documents.QueueSink
                 //TryGetTransformationError(databaseName, config, out var transformationError);
 
                 //Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-            }
-        }
-        
-        public override void Dispose()
-        {
-            try
-            {
-                if (_src == null)
-                    return;
-
-                if (Context.TestException == null || Context.TestOutput == null)
-                    return;
-
-                var notifications = GetQueueSinkErrorNotifications(_src).Result;
-                if (notifications.Any() == false)
-                    return;
-
-                string message = string.Join(",\n", notifications);
-                Context.TestOutput.WriteLine(message);
-            }
-            catch
-            {
-                // ignored
-            }
-            finally
-            {
-                base.Dispose();
             }
         }
 
