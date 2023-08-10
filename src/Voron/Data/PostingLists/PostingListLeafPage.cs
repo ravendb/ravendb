@@ -89,6 +89,11 @@ public readonly unsafe struct PostingListLeafPage
         tempList.Count = ReadAllEntries(tx.Allocator,tempList.RawItems, tempList.Capacity);
         Debug.Assert(tempList.Count == Header->NumberOfEntries);
         
+        // Merging between existing, additions and removals, there is one scenario where we can just concat the lists together
+        // if we have no removals and all of the new additions are *after* the existing ones. Since everything is sorted, this is
+        // a very cheap check.
+        // existing: [ 10 .. 20 ], removals: [], additions: [ 30 .. 40 ], so result should be [ 10 .. 40 ]
+        // In all other scenarios, we have to sort and remove duplicates & removals
         var needSorting = removalsCount > 0 || // any removal force sorting
                           // here we test if the first new addition is smaller than the largest existing, requiring sorting  
                           (maxAdditionsLimit > 0 && additions[0] <= tempList.RawItems[tempList.Count - 1]);

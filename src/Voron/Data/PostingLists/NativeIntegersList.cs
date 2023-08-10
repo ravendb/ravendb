@@ -105,10 +105,12 @@ public unsafe struct NativeIntegersList : IDisposable
         if (Count <= 1)
             return;
         Sort.Run(RawItems, Count);
-        RemoveDuplicatedAndRemovals();
-    }
-    private void RemoveDuplicatedAndRemovals()
-    {
+        
+        // The idea here is that we can do all of the process with no branches at all and make this 
+        // easily predictable to the CPU
+
+        // Here we rely on the fact that the removals has been set with 1 at the bottom bit
+        // so existing / additions values would always sort *before* the removals
         var outputBufferPtr = RawItems;
 
         var bufferPtr = outputBufferPtr;
@@ -116,8 +118,12 @@ public unsafe struct NativeIntegersList : IDisposable
         Debug.Assert((*bufferPtr & 1) == 0);
         while (bufferPtr < bufferEndPtr)
         {
+            // here we check equality without caring if this is removal or not, skipping moving
+            // to the next value if this it is the same entry twice
             outputBufferPtr += ((bufferPtr[1] & ~1) != bufferPtr[0]).ToInt32();
             *outputBufferPtr = bufferPtr[1];
+            // here we check if the entry is a removal, in which can we _decrement_ the position
+            // in effect, removing it
             outputBufferPtr -= (bufferPtr[1] & 1);
 
             bufferPtr++;
@@ -125,6 +131,7 @@ public unsafe struct NativeIntegersList : IDisposable
 
         Count = (int)(outputBufferPtr - RawItems + 1);
     }
+
     public int MoveTo(Span<long> matches)
     {
         var read = Math.Min(Count, matches.Length);
