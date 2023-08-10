@@ -573,6 +573,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(_internalCursor._stk[_internalCursor._pos].LastSearchPosition >= 0);
         AddToPage(ref key, value);
     }
+
+    public void AddOrSetAfterGetNext(ref TLookupKey key, long value)
+    {
+        AddToPage(ref key, value);
+    }
     
     public void Add(TLookupKey key, long value)
     {

@@ -67,6 +67,8 @@ namespace Corax
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
         private NativeIntegersList _entriesToTermsBuffer;
+        private NativeList<(long EntryId, long TermId)> _entriesForTermsAdditionsBuffer;
+        private NativeIntegersList _entriesForTermsRemovalsBuffer;
 
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
@@ -541,6 +543,8 @@ namespace Corax
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
             _tempListBuffer = new NativeIntegersList(_entriesAllocator);
             _entriesToTermsBuffer = new NativeIntegersList(_entriesAllocator);
+            _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
+            _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
         }
         
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -1701,10 +1705,9 @@ namespace Corax
             
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
-            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.Name); 
 
-            _entriesAlreadyAdded.Clear();
-         
+            ClearEntriesForTerm();
+
             if (sortedTermsBuffer.Length < termsCount)
             {
                 if (sortedTermsBuffer.Length > 0)
@@ -1806,13 +1809,51 @@ namespace Corax
                 if (indexedField.Spatial == null)
                 {
                     Debug.Assert(termContainerId > 0);
-                    InsertEntriesForTerm(entriesToTerms, termContainerId);
+                    InsertEntriesForTerm(termContainerId);
                 }
             }
+            
+            InsertEntriesForTermBulk(entriesToTermsTree, indexedField.Name);
 
             entriesForTerm.Dispose(_entriesAllocator);
 
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+        }
+
+        private void ClearEntriesForTerm()
+        {
+            _entriesAlreadyAdded.Clear();
+            _entriesForTermsRemovalsBuffer.Clear();
+            _entriesForTermsAdditionsBuffer.Clear();
+        }
+
+        private void InsertEntriesForTermBulk(Tree entriesToTermsTree, Slice name)
+        {
+            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
+            if (_entriesForTermsRemovalsBuffer.Count > 0)
+            {
+                Sort.Run(_entriesForTermsRemovalsBuffer.RawItems, _entriesForTermsRemovalsBuffer.Count);
+                entriesToTerms.InitializeCursorState();
+                for (int i = 0; i < _entriesForTermsAdditionsBuffer.Count; i++)
+                {
+                    Int64LookupKey key = _entriesForTermsRemovalsBuffer.RawItems[i];
+                    if (entriesToTerms.TryGetNextValue(ref key, out _))
+                        entriesToTerms.TryRemoveExistingValue(ref key, out _);
+                }
+            }
+
+            if (_entriesForTermsAdditionsBuffer.Count > 0)
+            {
+                _entriesForTermsAdditionsBuffer.Sort();
+                entriesToTerms.InitializeCursorState();
+                for (int i = 0; i < _entriesForTermsAdditionsBuffer.Count; i++)
+                {
+                    ref var cur = ref _entriesForTermsAdditionsBuffer.RawItems[i];
+                    Int64LookupKey key = cur.EntryId;
+                    entriesToTerms.TryGetNextValue(ref key, out _);
+                    entriesToTerms.AddOrSetAfterGetNext(ref key, cur.TermId);
+                }
+            }
         }
 
         private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
@@ -2110,10 +2151,9 @@ namespace Corax
         private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
-            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameLong); 
 
-            _entriesAlreadyAdded.Clear();
-            
+            ClearEntriesForTerm();
+
             foreach (var (term, entriesLocation) in indexedField.Longs)
             {
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
@@ -2126,7 +2166,7 @@ namespace Corax
                 if (localEntry.HasChanges == false)
                     continue;
                   
-                UpdateEntriesForTerm(entries, entriesToTerms, term);
+                UpdateEntriesForTerm(entries, term);
                 
                 long termId;
                 var hasTerm = fieldTree.TryGetValue(term, out var existing);
@@ -2149,40 +2189,46 @@ namespace Corax
                         break;
                 }
             }
+            
+            InsertEntriesForTermBulk(entriesToTermsTree,indexedField.NameLong);
         }
 
-        private void UpdateEntriesForTerm(EntriesModifications entries, Lookup<Int64LookupKey> entriesToTerms, long term)
+        private void UpdateEntriesForTerm(EntriesModifications entries, long term)
         {
             SetRange(_additionsForTerm, entries.Additions);
             SetRange(_removalsForTerm, entries.Removals);
 
-            InsertEntriesForTerm(entriesToTerms, term);
+            InsertEntriesForTerm( term);
         }
 
-        private void InsertEntriesForTerm(Lookup<Int64LookupKey> entriesToTerms, long term) 
+        private void InsertEntriesForTerm(long term)
         {
+            _entriesForTermsRemovalsBuffer.EnsureCapacity(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
             foreach (long removal in _removalsForTerm)
             {
                 // if already added, we don't need to remove it in this batch
                 if (_entriesAlreadyAdded.Contains(removal))
                     continue;
-                entriesToTerms.TryRemove(removal);
+                _entriesForTermsRemovalsBuffer.AddUnsafe(removal);
             }
 
+            if (_entriesForTermsAdditionsBuffer.HasCapacityFor(_additionsForTerm.Count) == false)
+                _entriesForTermsAdditionsBuffer.Grow(_entriesAllocator, _additionsForTerm.Count);
             foreach (long addition in _additionsForTerm)
             {
                 if (_entriesAlreadyAdded.Add(addition) == false)
                     continue;
-                entriesToTerms.Add(addition, term);
+                ref var tuple = ref _entriesForTermsAdditionsBuffer.AddByRefUnsafe();
+                tuple = (addition, term);
             }
         }
 
         private unsafe void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = _fieldsTree.LookupFor<DoubleLookupKey>(indexedField.NameDouble);
-            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(indexedField.NameDouble); 
 
-            _entriesAlreadyAdded.Clear();
+            ClearEntriesForTerm();
+
             foreach (var (term, entriesLocation) in indexedField.Doubles)
             {
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
@@ -2196,7 +2242,7 @@ namespace Corax
                 if (localEntry.HasChanges == false)
                     continue;
 
-                UpdateEntriesForTerm(entries, entriesToTerms,  BitConverter.DoubleToInt64Bits(term));
+                UpdateEntriesForTerm(entries, BitConverter.DoubleToInt64Bits(term));
                 
                 var hasTerm = fieldTree.TryGetValue(term, out var existing);
 
@@ -2219,6 +2265,8 @@ namespace Corax
                         break;
                 }
             }
+            
+            InsertEntriesForTermBulk(entriesToTermsTree,indexedField.NameDouble);
         }
         
         private bool TryEncodingToBuffer(long * additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)

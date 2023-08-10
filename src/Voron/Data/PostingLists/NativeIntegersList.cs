@@ -61,6 +61,14 @@ public unsafe struct NativeIntegersList : IDisposable
         Unsafe.CopyBlock(RawItems + Count, values, (uint)(count * sizeof(long)));
         Count += count;
     }
+    
+    
+    public void AddUnsafe(long value)
+    {
+        Debug.Assert(Count + 1 <= Capacity);
+        RawItems[Count++] = value;
+    }
+
 
     public void Add(long l)
     {

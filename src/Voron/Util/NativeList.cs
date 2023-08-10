@@ -131,4 +131,9 @@ public unsafe struct NativeList<T>
     {
         ctx.Release(ref _storage);
     }
+
+    public void Clear()
+    {
+        Count = 0;
+    }
 }
