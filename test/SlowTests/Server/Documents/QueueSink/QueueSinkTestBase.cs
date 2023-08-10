@@ -7,13 +7,10 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.QueueSink;
-using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,15 +23,6 @@ namespace SlowTests.Server.Documents.QueueSink
     {
         private DocumentStore _src;
 
-        protected static readonly BackupConfiguration DefaultBackupConfiguration;
-
-        static QueueSinkTestBase()
-        {
-            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
-            configuration.Initialize();
-
-            DefaultBackupConfiguration = configuration.Backup;
-        }
         protected QueueSinkTestBase(ITestOutputHelper output) : base(output)
         {
             QueueSuffix = Guid.NewGuid().ToString("N");
@@ -158,6 +146,15 @@ namespace SlowTests.Server.Documents.QueueSink
             {
                 base.Dispose();
             }
+        }
+
+        protected class User
+        {
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+
+            public string FullName { get; set; }
         }
     }
 }

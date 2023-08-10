@@ -21,7 +21,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
+using Confluent.Kafka.Admin;
 
 namespace SlowTests.Server.Documents.QueueSink
 {
@@ -401,6 +401,9 @@ output('test: ' + this.Id)
             }
         }
 
+        private readonly HashSet<string> _definedTopics = new HashSet<string>();
+
+
         protected void SetupKafkaQueueSink(DocumentStore store, string script, List<string> queues,
             string configurationName = null,
             string transformationName = null, Dictionary<string, string> configuration = null,
@@ -421,6 +424,11 @@ output('test: ' + this.Id)
                 Scripts = { queueSinkScript },
                 BrokerType = QueueBrokerType.Kafka
             };
+
+            foreach (var queue in queues)
+            {
+                _definedTopics.Add(queue);
+            }
 
             AddQueueSink(store, config,
                 new QueueConnectionString
@@ -447,15 +455,34 @@ output('test: ' + this.Id)
             return producer;
         }
 
-        
-    }
+        private void CleanupTopics()
+        {
+            if (_definedTopics.Count == 0 || RequiresKafkaRetryFactAttribute.CanConnect == false)
+                return;
 
-    public class User
-    {
-        public string Id { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+            var config = new AdminClientConfig { BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value };
+            var adminClient = new AdminClientBuilder(config).Build();
 
-        public string FullName { get; set; }
+            try
+            {
+                adminClient.DeleteTopicsAsync(_definedTopics).Wait();
+            }
+            catch (Exception e)
+            {
+                if (e.InnerException is DeleteTopicsException deleteEx)
+                {
+                    if (deleteEx.Results.All(x => x.Error.Code == ErrorCode.UnknownTopicOrPart)) // topic does not exist
+                        return;
+                }
+
+                throw new InvalidOperationException($"Failed to cleanup topics: {string.Join(", ", _definedTopics)}. Check inner exceptions for details", e);
+            }
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            CleanupTopics();
+        }
     }
 }
