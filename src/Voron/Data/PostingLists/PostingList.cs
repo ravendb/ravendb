@@ -628,6 +628,8 @@ namespace Voron.Data.PostingLists
                 throw new InvalidOperationException("Failed to add final to a newly created page after adding half the capacit? Should never happen");
 
             AddToParentPage(branch.First, page.PageNumber);
+            // we need to position the cursor so we'll have the _next_ addition on the new branch page, not on the root
+            FindPageFor(branch.First);
         }
         
         private void InsertToStack(PostingListCursorState newPageState)
