@@ -46,7 +46,7 @@ public class RavenDB_19629 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task TestSessionMixture2(Options options)
     {
         using (var store = GetDocumentStore(options))
