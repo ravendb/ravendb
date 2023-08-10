@@ -120,3 +120,29 @@ textarea.form-control {
 
 // Custom Utilities
 @import "../scss/layout-tools.scss";
+
+.flex-window {
+    display: flex;
+    -ms-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+
+    &.stretch {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+    }
+
+    .flex-window-head {
+        overflow-y: visible;
+    }
+
+    .flex-window-scroll {
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+        flex-grow: 1;
+    }
+}
