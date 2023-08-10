@@ -24,7 +24,6 @@ export const Default: StoryObj<typeof VirtualGrid> = {
 
 function DefaultView() {
     const [counter, setCounter] = useState<number>(0);
-
     const [gridController, setGridController] = useState<virtualGridController<SomeData>>();
 
     useEffect(() => {
