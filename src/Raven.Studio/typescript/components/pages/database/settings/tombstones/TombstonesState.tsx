@@ -12,8 +12,6 @@ import { Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/hooks/useConfirm";
 
-// TODO kalczur fix height
-// TODO kalczur check if useEffect is not called multiple times
 // TODO kalczur remove ko view
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
@@ -139,12 +137,15 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
                 <>
                     <Card className="mt-4">
                         <h3>Per Collection - Max Etags that can be deleted</h3>
-                        <VirtualGrid setGridController={setCollectionsGrid} />
+                        <div style={{ position: "relative", height: "300px" }}>
+                            <VirtualGrid setGridController={setCollectionsGrid} />
+                        </div>
                     </Card>
-
                     <Card className="mt-2">
                         <h3>Per Task - Max Etag that can be deleted</h3>
-                        <VirtualGrid setGridController={setSubscriptionsGrid} />
+                        <div style={{ position: "relative", height: "300px" }}>
+                            <VirtualGrid setGridController={setSubscriptionsGrid} />
+                        </div>
                     </Card>
                 </>
             )}

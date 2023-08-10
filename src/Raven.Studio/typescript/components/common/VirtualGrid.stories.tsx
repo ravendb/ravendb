@@ -44,20 +44,29 @@ function DefaultView() {
     }, [counter, gridController]);
 
     return (
-        <div>
-            <Button onClick={() => setCounter((x) => x + 1)}>Counter {counter}</Button>
-            <VirtualGrid<SomeData> setGridController={setGridController} />
+        <div className="p-4 flex-window stretch">
+            <div className="flex-window-head">
+                <Button onClick={() => setCounter((x) => x + 1)}>Counter {counter}</Button>
+            </div>
+
+            <div className="flex-window-scroll mt-2">
+                <div className="scroll-stretch">
+                    <div className="panel">
+                        <VirtualGrid<SomeData> setGridController={setGridController} />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
 
 const fetcher = (counter: number) => {
     return $.Deferred<pagedResult<SomeData>>().resolve({
-        items: [
-            { id: 1, name: `First count ${counter}` },
-            { id: 2, name: `Second count ${counter * 2}` },
-        ],
-        totalResultCount: 2,
+        items: new Array(30).fill(null).map((_, id) => ({
+            id,
+            name: `counter name: ${counter * id}`,
+        })),
+        totalResultCount: 30,
     });
 };
 
