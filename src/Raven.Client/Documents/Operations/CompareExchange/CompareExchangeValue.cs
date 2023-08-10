@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -13,7 +12,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         public T Value { get; set; }
 
         public string ChangeVector { get; internal set; }
-        
+
         public IMetadataDictionary Metadata => _metadataAsDictionary ??= new MetadataAsDictionary();
 
         private IMetadataDictionary _metadataAsDictionary;
@@ -29,12 +28,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         IMetadataDictionary ICompareExchangeValue.Metadata => Metadata;
         bool ICompareExchangeValue.HasMetadata => HasMetadata;
 
-        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null) 
+        public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null)
             : this(key, index, value, changeVector: null, metadata)
         {
-            
+
         }
-        
+
         internal CompareExchangeValue(string key, long index, T value, string changeVector, IMetadataDictionary metadata)
         {
             Key = key;
@@ -58,12 +57,9 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (json.TryGet(nameof(Value), out BlittableJsonReaderObject value) == false)
                 throw new InvalidOperationException("");
 
-            var cx = new CompareExchangeValue<BlittableJsonReaderObject>(key, index, value);
-            
-            if (json.TryGet(nameof(ChangeVector), out string changeVector))
-                cx.ChangeVector= changeVector;
-            
-            return cx;
+            json.TryGet(nameof(ChangeVector), out string changeVector);
+
+            return new CompareExchangeValue<BlittableJsonReaderObject>(key, index, value, changeVector, metadata: null);
         }
     }
 
