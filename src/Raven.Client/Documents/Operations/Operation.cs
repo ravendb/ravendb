@@ -266,7 +266,15 @@ namespace Raven.Client.Documents.Operations
                         StopProcessing();
                         if (_afterOperationCompleted.IsFaulted)
                         {
-                            _result.TrySetException(_afterOperationCompleted.Exception);
+                            try
+                            {
+                                // we want the exception itself and not AggregateException 
+                                _afterOperationCompleted.GetAwaiter().GetResult();
+                            }
+                            catch (Exception e)
+                            {
+                                _result.TrySetException(e);
+                            }
                             break;
                         }
 
@@ -354,9 +362,9 @@ namespace Raven.Client.Documents.Operations
                     await StopProcessingUnderLock().ConfigureAwait(false);
                     throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    await StopProcessingUnderLock(e).ConfigureAwait(false);
+                    await StopProcessingUnderLock(ex).ConfigureAwait(false);
                 }
 
                 return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
