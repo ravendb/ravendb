@@ -23,8 +23,8 @@ namespace Raven.Client.Documents.Operations
             Result = result;
         }
 
-        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag, Task additionalTask)
-            : base(requestExecutor, changes, conventions, id, nodeTag, additionalTask)
+        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag, Task afterOperationCompleted)
+            : base(requestExecutor, changes, conventions, id, nodeTag, afterOperationCompleted)
         {
             Result = result;
         }
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations
         private readonly RequestExecutor _requestExecutor;
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
-        private Task _additionalTask;
+        private readonly Task _afterOperationCompleted;
         private readonly long _id;
         private TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
@@ -54,16 +54,16 @@ namespace Raven.Client.Documents.Operations
         private bool _isProcessing;
 
         public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
-            : this(requestExecutor, changes, conventions, id, nodeTag: nodeTag, additionalTask: null)
+            : this(requestExecutor, changes, conventions, id, nodeTag: nodeTag, afterOperationCompleted: null)
         {
         }
 
-        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task additionalTask)
+        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task afterOperationCompleted)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
-            _additionalTask = additionalTask ?? Task.CompletedTask;
+            _afterOperationCompleted = afterOperationCompleted ?? Task.CompletedTask;
             _id = id;
             NodeTag = nodeTag;
 
@@ -264,9 +264,9 @@ namespace Raven.Client.Documents.Operations
                         break;
                     case OperationStatus.Faulted:
                         StopProcessing();
-                        if (_additionalTask.IsFaulted)
+                        if (_afterOperationCompleted.IsFaulted)
                         {
-                            _result.TrySetException(_additionalTask.Exception);
+                            _result.TrySetException(_afterOperationCompleted.Exception);
                             break;
                         }
 
@@ -343,8 +343,10 @@ namespace Raven.Client.Documents.Operations
                 {
 #if NET6_0_OR_GREATER
                     await result.WaitAsync(token).ConfigureAwait(false);
+                    await _afterOperationCompleted.WaitAsync(token).ConfigureAwait(false);
 #else
                     await result.WithCancellation(token).ConfigureAwait(false);
+                    await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
 #endif
                 }
                 catch (TaskCanceledException e) when (token.IsCancellationRequested)
@@ -355,10 +357,8 @@ namespace Raven.Client.Documents.Operations
                 catch (Exception e)
                 {
                     await StopProcessingUnderLock(e).ConfigureAwait(false);
-                    _additionalTask = Task.CompletedTask; // don't await the additional task if we had an error
                 }
 
-                await _additionalTask.ConfigureAwait(false);
                 return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
             }
         }
