@@ -315,14 +315,14 @@ namespace Raven.Client.Documents.Operations
             return WaitForCompletionAsync<IOperationResult>(timeout);
         }
 
-        public Task<TResult> WaitForCompletionAsync<TResult>(TimeSpan? timeout = null)
+        public async Task<TResult> WaitForCompletionAsync<TResult>(TimeSpan? timeout = null)
             where TResult : IOperationResult
         {
             if (timeout == null)
-                return WaitForCompletionAsync<TResult>(CancellationToken.None);
+                return await WaitForCompletionAsync<TResult>(CancellationToken.None).ConfigureAwait(false);
 
             using (var cts = new CancellationTokenSource(timeout.Value))
-                return WaitForCompletionAsync<TResult>(cts.Token);
+                return await WaitForCompletionAsync<TResult>(cts.Token).ConfigureAwait(false);
         }
 
         public Task<IOperationResult> WaitForCompletionAsync(CancellationToken token)
