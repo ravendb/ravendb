@@ -16,6 +16,6 @@ export const Tombstones: StoryObj<typeof TombstonesState> = {
         const { databasesService } = mockServices;
         databasesService.withTombstonesState();
 
-        return <TombstonesState db={DatabasesStubs.nonShardedClusterDatabase()} location={{ nodeTag: "A" }} />;
+        return <TombstonesState db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };

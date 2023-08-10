@@ -12,8 +12,6 @@ import { Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/hooks/useConfirm";
 
-// TODO kalczur remove ko view
-
 export default function TombstonesState({ db, location }: ShardedViewProps) {
     const { databasesService } = useServices();
 
