@@ -27,7 +27,8 @@ export function bridgeToReact(reactView: React.FC<any>, viewType: viewType, boot
     }
 }
 
-// ReactToKnockoutComponent example of use:
+// Example of using `ReactToKnockoutComponent`:
+//
 // class MyList extends ReactToKnockoutComponent<{ list: number[] }> {
 //     ref = createRef<HTMLDivElement>();
 //

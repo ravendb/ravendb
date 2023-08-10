@@ -1,5 +1,4 @@
-﻿import database from "models/resources/database";
-import React, { useEffect } from "react";
+﻿import React, { useEffect } from "react";
 import { EssentialDatabaseStatsComponent } from "./partials/EssentialDatabaseStatsComponent";
 import { useAppUrls } from "hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./partials/DetailedDatabaseStats";
