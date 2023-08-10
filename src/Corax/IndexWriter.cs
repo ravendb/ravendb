@@ -1426,6 +1426,9 @@ namespace Corax
             }
             
             _entriesAllocator.Reset();
+
+            _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
+            _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
             
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
