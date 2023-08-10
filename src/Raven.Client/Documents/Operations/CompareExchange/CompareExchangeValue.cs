@@ -58,7 +58,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (json.TryGet(nameof(Value), out BlittableJsonReaderObject value) == false)
                 throw new InvalidOperationException("");
 
-            return new CompareExchangeValue<BlittableJsonReaderObject>(key, index, value);
+            var cx = new CompareExchangeValue<BlittableJsonReaderObject>(key, index, value);
+            
+            if (json.TryGet(nameof(ChangeVector), out string changeVector))
+                cx.ChangeVector= changeVector;
+            
+            return cx;
         }
     }
 
