@@ -392,7 +392,7 @@ namespace Voron.Data.PostingLists
             encoder.Dispose();
         }
 
-        public void UpdateList(long* additions, int additionsCount, long* removals, int removalsCount, 
+        private void UpdateList(long* additions, int additionsCount, long* removals, int removalsCount, 
             FastPForEncoder encoder, ref NativeIntegersList tempList, ref FastPForDecoder decoder)
         {
             tempList.Clear();
@@ -579,6 +579,7 @@ namespace Voron.Data.PostingLists
 
             PopPage();
             ref var state = ref _stk[_pos];
+            Debug.Assert(state.IsLeaf == false);
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var parent = new PostingListBranchPage(state.Page);
             if (parent.TryAdd(_llt, separator, newPage))

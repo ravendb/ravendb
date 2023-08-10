@@ -1944,6 +1944,11 @@ namespace Corax
             _entriesToTermsBuffer.Count = _pforDecoder.Read(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Capacity);
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out long* additions, out long* removals);
 
+            // Merging between existing, additions and removals, there is one scenario where we can just concat the lists together
+            // if we have no removals and all of the new additions are *after* the existing ones. Since everything is sorted, this is
+            // a very cheap check.
+            // existing: [ 10 .. 20 ], removals: [], additions: [ 30 .. 40 ], so result should be [ 10 .. 40 ]
+            // In all other scenarios, we have to sort and remove duplicates & removals
             var needSorting = entries.Removals.Count > 0 || // any removal force sorting
                               // here we test if the first new addition is smaller than the largest existing, requiring sorting  
                               (entries.Additions.Count > 0 && additions[0] <= _entriesToTermsBuffer.RawItems[_entriesToTermsBuffer.Count - 1]);
@@ -2077,12 +2082,7 @@ namespace Corax
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out var additions, out var removals);
-            //TEMP CODE
-            for (int i = 0; i < entries.Removals.Count; i++)
-            {
-                removals[i] &= ~1;
-            }
-            
+
             var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, entries.Additions.Count, removals,
                 entries.Removals.Count, _pForEncoder, ref _tempListBuffer, ref _pforDecoder );
 
