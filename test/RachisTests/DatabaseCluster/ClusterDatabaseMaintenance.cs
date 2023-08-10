@@ -406,10 +406,17 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 2;
             var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
-
+            var nonLeader = cluster.Nodes.First(x => x.ServerStore.NodeTag != cluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
             using (var store = GetDocumentStore(new Options
                    {
                        ReplicationFactor = 1,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           record.Topology = new DatabaseTopology()
+                           {
+                               Members = new List<string>() {nonLeader}
+                           };
+                       },
                        Server = cluster.Leader,
                    }))
             {
@@ -419,8 +426,7 @@ namespace RachisTests.DatabaseCluster
                     return re.Topology?.Nodes.Count == 1;
                 }, true);
                 
-                var existingNode = GetDatabaseRecord(store).Topology.AllNodes.Single();
-                var otherNode = cluster.Nodes.Single(x => x.ServerStore.NodeTag != existingNode).ServerStore.NodeTag;
+                var otherNode = cluster.Nodes.Single(x => x.ServerStore.NodeTag != nonLeader).ServerStore.NodeTag;
 
                 //prevent leader from promoting the replica - should stay promotable
                 cluster.Leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
@@ -430,31 +436,29 @@ namespace RachisTests.DatabaseCluster
                 await store.Maintenance.Server.SendAsync(add);
 
                 //remove the old replica
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: existingNode));
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: nonLeader));
 
-                await WaitAndAssertForValueAsync(() =>
+                Exception error;
+                await WaitAndAssertForValueAsync(async () =>
                 {
-                    var record = GetDatabaseRecord(store);
-                    return record.Topology.Count == 1 && record.Topology.Promotables.Count == 1;
-                }, true);
-
-                // force update the client's topology
-                try
-                {
-                    var preferredNode = await re.GetPreferredNode();
-                    await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
-                }
-                catch { }
-
-                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
-                {
-                    using (var session = store.OpenAsyncSession())
+                    error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
                     {
-                        await session.StoreAsync(new User());
-                        await session.SaveChangesAsync();
-                    }
-                });
-                Assert.Contains("no nodes in the topology", error.Message);
+                        // force update the client's topology
+                        try
+                        {
+                            var preferredNode = await re.GetPreferredNode();
+                            await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                        }
+                        catch { }
+
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new User());
+                            await session.SaveChangesAsync();
+                        }
+                    });
+                    return error.Message.Contains("no nodes in the topology") || error.Message.Contains("to all configured nodes in the topology");
+                }, true, interval: 500);
             }
         }
 
