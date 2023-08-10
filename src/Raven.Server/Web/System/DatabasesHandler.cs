@@ -173,28 +173,28 @@ namespace Raven.Server.Web.System
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         long stampIndex;
+                        DatabaseTopology topology;
                         IEnumerable<DynamicJsonValue> dbNodes;
                         IEnumerable<DynamicJsonValue> promotables = null;
                         if (rawRecord.IsSharded)
                         {
-                            dbNodes = rawRecord.Sharding.Orchestrator.Topology.Members.Select(x =>
-                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member));
-                            
+                            topology = rawRecord.Sharding.Orchestrator.Topology;
                             stampIndex = rawRecord.Sharding.Shards.Max(x => x.Value.Stamp?.Index ?? -1);
                         }
                         else
                         {
-                            dbNodes = rawRecord.Topology.Members.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
-                                .Concat(rawRecord.Topology.Rehabs.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab)));
-
-                            if(includePromotables)
-                                promotables = rawRecord.Topology.Promotables.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable));
-
-                            stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
+                            topology = rawRecord.Topology;
+                            stampIndex = topology.Stamp?.Index ?? -1;
                         }
+
+                        dbNodes = topology.Members.Select(x =>
+                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
+                            .Concat(topology.Rehabs.Select(x =>
+                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab)));
+
+                        if (includePromotables)
+                            promotables = topology.Promotables.Select(x =>
+                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable));
 
                         context.Write(writer, new DynamicJsonValue
                         {
