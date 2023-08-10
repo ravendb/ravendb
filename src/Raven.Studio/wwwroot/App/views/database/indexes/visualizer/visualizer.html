@@ -35,9 +35,9 @@
                     </div>
                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#documentId', foreach: documents.documentIdsSearchResults">
                         <li role="presentation" data-bind="click: _.partial($root.selectDocumentId, label)">
-                            <a role="menuitem" tabindex="-1" href="#">
+                            <a role="menuitem" tabindex="-1" href="#" class="d-flex align-items-center justify-content-between gap-3">
                                 <span data-bind="text: label"></span>
-                                <i class="icon-check pull-right" data-bind="visible: alreadyAdded"></i>
+                                <i class="icon-check text-success" data-bind="visible: alreadyAdded"></i>
                             </a>
                         </li>
                     </ul>
