@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -25,6 +26,13 @@ namespace Corax.Queries.TermProviders
             _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
             _term = term;
+        }
+
+        public bool IsFillSupported => false;
+
+        public int Fill(Span<long> containers)
+        {
+            throw new NotImplementedException();
         }
 
         public void Reset()

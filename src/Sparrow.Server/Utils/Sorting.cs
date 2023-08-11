@@ -76,6 +76,8 @@ namespace Sparrow.Server.Utils
         public static unsafe int SortAndRemoveDuplicates<T>(T* bufferBasePtr, int count)
             where T : unmanaged, IBinaryNumber<T>
         {
+            if (count == 0)
+                return 0;
             Debug.Assert(count > 0);
             
             Sort.Run(bufferBasePtr, count);

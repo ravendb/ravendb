@@ -29,6 +29,13 @@ namespace Corax.Queries.TermProviders
             _tree = tree;
         }
 
+        public bool IsFillSupported { get; }
+
+        public int Fill(Span<long> containers)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Reset()
         {
             _iterator.Reset();
