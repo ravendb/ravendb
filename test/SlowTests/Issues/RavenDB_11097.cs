@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Config;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Indexes.Test;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -28,14 +29,26 @@ public class RavenDB_11097 : RavenTestBase
     private class PutTestIndexCommand : RavenCommand<object>
     {
         private readonly TestIndexParameters _payload;
-        public PutTestIndexCommand(TestIndexParameters payload)
+        private readonly int _shardNumber;
+        private readonly bool _isSharded;
+        
+        public PutTestIndexCommand(TestIndexParameters payload, bool isSharded = false, int shardNumber = 0)
         {
             _payload = payload;
+            _isSharded = isSharded;
+            _shardNumber = shardNumber;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/indexes/test";
+            if (_isSharded)
+            {
+                url = $"{node.Url}/databases/{node.Database}/indexes/test?nodeTag={node.ClusterTag}&shardNumber={_shardNumber}";
+            }
+            else
+            {
+                url = $"{node.Url}/databases/{node.Database}/indexes/test";
+            }
 
             var payloadJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_payload, ctx);
 
@@ -1221,6 +1234,58 @@ public class RavenDB_11097 : RavenTestBase
                     var cmd = new PutTestIndexCommand(payload);
                     var ex = Assert.Throws<BadRequestException>(() => commands.Execute(cmd));
                     Assert.Contains("Expected '<TestIndexName>' as index name in query, but could not find it.", ex.Message);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestShardedDatabaseWithNoDocumentsOnPickedShard()
+    {
+        var options = Options.ForMode(RavenDatabaseMode.Sharded);
+        options.ReplicationFactor = 2;
+        
+        using var store = Sharding.GetDocumentStore(options);
+        {
+            using (var session = store.OpenSession())
+            {
+                var d1 = new Dto() { Name = "CoolName", Age = 21};
+                
+                session.Store(d1);
+                session.SaveChanges();
+                
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "<TestIndexName>",
+                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { CoolName = dto.Name }" }
+                        }
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: 0);
+                    commands.Execute(cmd);
+                    var res = cmd.Result as BlittableJsonReaderObject;
+                    
+                    Assert.NotNull(res);
+                    
+                    res.TryGet(nameof(TestIndexResult.IndexEntries), out BlittableJsonReaderArray indexEntries);
+                    res.TryGet(nameof(TestIndexResult.QueryResults), out BlittableJsonReaderArray queryResults);
+                    res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                    res.TryGet(nameof(TestIndexResult.ReduceResults), out BlittableJsonReaderArray reduceResults);
+                    
+                    var indexEntriesObjectList = JsonConvert.DeserializeObject<List<Dto>>(indexEntries.ToString());
+                    var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
+                    var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
+                    var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                    
+                    Assert.Empty(indexEntriesObjectList);
+                    Assert.Empty(queryResultsObjectList);
+                    Assert.Empty(mapResultsObjectList);
+                    Assert.Empty(reduceResultsObjectList);
                 }
             }
         }

@@ -1,5 +1,4 @@
 using Raven.Client.Documents.Indexes;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Test;
 

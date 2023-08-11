@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
-using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Routing;
 
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         [RavenShardedAction("/databases/*/indexes/test", "POST")]
         public async Task TestIndex()
         {
-            using (var processor = new NotSupportedInShardingProcessor(this, $"$Database '{DatabaseName}' is a sharded database and does not support Test Indexes."))
+            using (var processor = new ShardedIndexHandlerProcessorForTestIndex(this))
                 await processor.ExecuteAsync();
         }
 
