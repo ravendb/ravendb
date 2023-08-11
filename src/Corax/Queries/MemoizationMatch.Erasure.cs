@@ -45,7 +45,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<long> FillAndRetrieve()
         {
-            return _functionTable.FillAndRetrieveFunc(_inner);
+            return _functionTable.FillAndRetrieveFunc(ref this);
         }
 
         internal sealed class FunctionTable
@@ -53,14 +53,14 @@ namespace Corax.Queries
             public readonly delegate*<ref MemoizationMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MemoizationMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref MemoizationMatch, long> CountFunc;
-            public readonly delegate*<IQueryMatch, Span<long>> FillAndRetrieveFunc;
+            public readonly delegate*<ref MemoizationMatch, Span<long>> FillAndRetrieveFunc;
 
 
             public FunctionTable(
                 delegate*<ref MemoizationMatch, Span<long>, int> fillFunc,
                 delegate*<ref MemoizationMatch, Span<long>, int, int> andWithFunc,
                 delegate*<ref MemoizationMatch, long> countFunc,
-                delegate*<IQueryMatch, Span<long>> fillAndRetrieveFunc)
+                delegate*<ref MemoizationMatch, Span<long>> fillAndRetrieveFunc)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
@@ -94,11 +94,13 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static Span<long> FillAndRetrieveFunc(IQueryMatch o)
+                static Span<long> FillAndRetrieveFunc(ref MemoizationMatch match)
                 {
-                    if (o is MemoizationMatch<TInner> inner)
+                    if (match._inner is MemoizationMatch<TInner> inner)
                     {
-                        return inner.FillAndRetrieve();
+                        var result =  inner.FillAndRetrieve();
+                        match._inner = inner;
+                        return result;
                     }
 
                     return default;
