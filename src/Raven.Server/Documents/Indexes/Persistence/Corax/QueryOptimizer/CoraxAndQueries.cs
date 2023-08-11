@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using Corax;
 using Corax.Queries;
-using Corax.Utils;
-using Sparrow.Extensions;
+using Raven.Client.Documents.Linq.Indexing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
@@ -14,7 +11,8 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
 {
     private readonly List<CoraxBooleanItem> _queryStack;
 
-    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right) : base(indexSearcher)
+    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right) :
+        base(indexSearcher)
     {
         _queryStack = new List<CoraxBooleanItem>() {left, right};
     }
@@ -23,7 +21,7 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
     {
         if (EqualsScoreFunctions(other) == false)
             return false;
-        
+
         _queryStack.AddRange(other._queryStack);
         return true;
     }
@@ -41,133 +39,111 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
                 return false;
         }
     }
-    
+
     public override IQueryMatch Materialize()
     {
-        Debug.Assert(_queryStack.Count > 0);
-        
-        IQueryMatch baseMatch = null;
         var stack = CollectionsMarshal.AsSpan(_queryStack);
-        int reduced = 0;
-        
-        _queryStack.Sort(PrioritizeSort);
-        
-        // Build a stack of termmatch at the beginning. 
-        // Opt: Maybe we can do it like MultiTermMatch in the future? It should be faster than performing BinaryMatch.
-        foreach (var query in stack)
+        var noStreaming = new CoraxQueryBuilder.StreamingOptimization();
+
+        if (ShouldPerformScan(stack, out var queryPosition))
         {
-            //Out of TermMatches in our stack
-            if (query.Operation is not (UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals))
-                break;
-
-            //We're always do TermMatch (true and NOT (X))
-            IQueryMatch second = query.Term switch
+            MultiUnaryItem[] listOfMergedUnaries = new MultiUnaryItem[stack.Length - 1];
+            int unaryPos = 0;
+            for (var it = 0; it < stack.Length; it++)
             {
-                long l => IndexSearcher.TermQuery(query.Field, l),
-                double d => IndexSearcher.TermQuery(query.Field, d),
-                _ => IndexSearcher.TermQuery(query.Field, query.TermAsString),
-            };
+                if (it == queryPosition)
+                    continue;
 
-            if (query.Operation is UnaryMatchOperation.NotEquals)
-            {
-                //This could be more expensive than scanning RAW elements. This returns ~(field.NumberOfEntries - term.NumberOfEntries). Can we set threshold around ~10% to perform SCAN maybe? 
-                if (baseMatch != null)
+                var query = stack[unaryPos];
+                if (query.Operation is UnaryMatchOperation.Between)
                 {
-                    // Instead of performing AND(TermMatch, AndNot(Exist, Term)) we can translate it into AndNot(baseMatch, Term). This way we avoid additional BinaryMatch
-                    baseMatch = IndexSearcher.AndNot(baseMatch, second);
-                    _hasBinary = true;
-                    goto Reduce;
+                    listOfMergedUnaries[unaryPos] = (query.Term, query.Term2) switch
+                    {
+                        (long l, long l2) => new MultiUnaryItem(query.Field, l, l2, query.BetweenLeft, query.BetweenRight),
+                        (double d, double d2) => new MultiUnaryItem(query.Field, d, d2, query.BetweenLeft, query.BetweenRight),
+                        (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.Field, s, s2, query.BetweenLeft, query.BetweenRight),
+                        (long l, double d) => new MultiUnaryItem(query.Field, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
+                        (double d, long l) => new MultiUnaryItem(query.Field, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
+                        _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
+                    };
+                }
+                else
+                {
+                    listOfMergedUnaries[unaryPos] = query.Term switch
+                    {
+                        long longTerm => new MultiUnaryItem(query.Field, longTerm, query.Operation),
+                        double doubleTerm => new MultiUnaryItem(query.Field, doubleTerm, query.Operation),
+                        _ => new MultiUnaryItem(IndexSearcher, query.Field, query.Term as string, query.Operation),
+                    };
                 }
 
-                //In the first place we've to do (true and NOT))
-                baseMatch = IndexSearcher.AndNot<MultiTermMatch, TermMatch>(IndexSearcher.ExistsQuery(query.Field), (TermMatch)second);
-                _hasBinary = true;
-                goto Reduce;
+                unaryPos++;
             }
 
+            return IndexSearcher.CreateMultiUnaryMatch(stack[queryPosition].Materialize(ref noStreaming), listOfMergedUnaries);
+        }
 
-            // TermMatch:
-            // This should be more complex. Should we always perform AND for TermMatch? For example there could be a case when performing RangeQueries in first place will limit our set very well so scanning would be better option.
+        IQueryMatch match = null;
+        stack.Sort(PrioritizeSort);
+        //stack.Reverse(); // we want to have BIGGEST at the very beginning to avoid filling big match multiple times
 
+        foreach (ref var query in stack)
+        {
+            var materializedQuery = query.Materialize(ref noStreaming);
+
+            match = match is null
+                ? materializedQuery
+                : IndexSearcher.And(materializedQuery, match);
+        }
+
+
+        bool ShouldPerformScan(Span<CoraxBooleanItem> queries, out int pos)
+        {
+            pos = -1;
+            if (IsBoosting)
+                return false;
             
-            if (baseMatch == null)
+            var minimumCount = long.MaxValue;
+            for (int idX = 0; idX < queries.Length; ++idX)
             {
-                baseMatch = second;
-            }
-            else
-            {
-                baseMatch = IndexSearcher.And(baseMatch, second);
-                _hasBinary = true;
-            }
-            Reduce:
-            reduced++;
-
-        }
-
-        stack = stack.Slice(reduced);
-        if (stack.Length == 0)
-            goto Return;
-
-        //We will perform a scan for the rest. We want to evaluate leftmostClause as our inner match.
-        var leftmostClause = stack[0];
-        var nextQuery = TransformCoraxBooleanItemIntoQueryMatch(leftmostClause);
-        baseMatch = baseMatch is null
-                ? nextQuery
-                : IndexSearcher.And(baseMatch, nextQuery);
-       
-
-        MultiUnaryItem[] listOfMergedUnaries = new MultiUnaryItem[stack.Length - 1];
-        for (var index = 1; index < stack.Length; index++)
-        {
-            var query = stack[index];
-            if (query.Operation is UnaryMatchOperation.Between)
-            {
-                listOfMergedUnaries[index - 1] = (query.Term, query.Term2) switch
+                ref var query = ref queries[idX];
+                if (query.Operation is UnaryMatchOperation.Equals && query.Count < minimumCount)
                 {
-                    (long l, long l2) => new MultiUnaryItem(query.Field, l, l2, query.BetweenLeft, query.BetweenRight),
-                    (double d, double d2) => new MultiUnaryItem(query.Field, d, d2, query.BetweenLeft, query.BetweenRight),
-                    (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.Field, s, s2, query.BetweenLeft, query.BetweenRight),
-                    (long l, double d) => new MultiUnaryItem(query.Field, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
-                    (double d, long l) => new MultiUnaryItem(query.Field, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
-                    _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
-                };
+                    pos = idX;
+                    minimumCount = query.Count;
+                }
             }
-            else
-            {
-                listOfMergedUnaries[index - 1] = query.Term switch
-                {
-                    long longTerm => new MultiUnaryItem(query.Field, longTerm, query.Operation),
-                    double doubleTerm => new MultiUnaryItem(query.Field, doubleTerm, query.Operation),
-                    _ => new MultiUnaryItem(IndexSearcher, query.Field, query.Term as string, query.Operation),
-                };
-            }
+
+
+            return minimumCount < 32 * 1024; // 32K items seems ok
         }
 
-        if (listOfMergedUnaries.Length > 0)
-        {
-            baseMatch = IndexSearcher.CreateMultiUnaryMatch(baseMatch ?? IndexSearcher.ExistsQuery(stack[1].Field), listOfMergedUnaries);
-        }
-
-        Return:
-        return Boosting.HasValue == false
-            ? baseMatch
-            : IndexSearcher.Boost(baseMatch, Boosting.Value);
+        return IsBoosting ? IndexSearcher.Boost(match, Boosting.Value) : match;
     }
-    
+
     private static int PrioritizeSort(CoraxBooleanItem firstUnaryItem, CoraxBooleanItem secondUnaryItem)
     {
-        if (firstUnaryItem.Operation == UnaryMatchOperation.Equals && secondUnaryItem.Operation != UnaryMatchOperation.Equals)
-            return -1;
+        switch (firstUnaryItem.Operation)
+        {
+            //After benchmarks we discover it's not better to call termmatch as first item in case when MultiTermMatch has more terms than our termmmatch's posting lists has items;
+            case UnaryMatchOperation.Equals when secondUnaryItem.Operation is not (UnaryMatchOperation.NotEquals or UnaryMatchOperation.Equals):
+                return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
+            case UnaryMatchOperation.Equals when secondUnaryItem.Operation != UnaryMatchOperation.Equals:
+                return -1;
+        }
+
         if (firstUnaryItem.Operation != UnaryMatchOperation.Equals && secondUnaryItem.Operation == UnaryMatchOperation.Equals)
             return 1;
         if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation != UnaryMatchOperation.Between)
             return -1;
         if (firstUnaryItem.Operation != UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
             return 1;
-        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
-            return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
 
-        return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
+        //This And(MultiTermMatch, MultiTermMatch) we force match with biggest amount of term in it to avoid crawling through
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+            return secondUnaryItem.Count.CompareTo(firstUnaryItem.Count);
+
+        return secondUnaryItem.Count.CompareTo(firstUnaryItem.Count);
     }
 
     public new bool IsBoosting => Boosting.HasValue;
