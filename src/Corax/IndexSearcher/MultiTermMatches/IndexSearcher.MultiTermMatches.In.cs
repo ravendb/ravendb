@@ -81,6 +81,8 @@ public partial class IndexSearcher
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
     private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false)
     {
+        const int MaximumTermMatchesHandledAsTermMatches = 4;
+        
         var canUseUnaryMatch = field.HasBoost == false;
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
@@ -116,12 +118,14 @@ public partial class IndexSearcher
         }
 
 
-        //Sort by density.
-        Array.Sort(list[..termCount], (tuple, valueTuple) => tuple.Density.CompareTo(valueTuple.Density));
-
+        //Sort by density descending. Avoid calling read on biggest multiple times.
+        Array.Sort(list[..termCount], (tuple, valueTuple) => valueTuple.Density.CompareTo(tuple.Density));
+        
+        
+        
         //UnaryMatch doesn't support boosting, when we wants to calculate ranking we've to build query like And(Term, And(...)).
         var termCountToProceed = canUseUnaryMatch
-            ? (termCount % 16)
+            ? (termCount % MaximumTermMatchesHandledAsTermMatches)
             : termCount;
         
         var binaryMatchOfTermMatches = new BinaryMatch[termCountToProceed / 2];
@@ -158,7 +162,7 @@ public partial class IndexSearcher
 
 
         //Just perform normal And.
-        if (allInTerms.Count is > 1 and <= 16 || canUseUnaryMatch == false)
+        if (allInTerms.Count is > 1 and <= MaximumTermMatchesHandledAsTermMatches || canUseUnaryMatch == false)
             return MultiTermMatch.Create(binaryMatchOfTermMatches[0]);
 
 
