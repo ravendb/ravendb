@@ -5,7 +5,7 @@ import produce from "immer";
 import React from "react";
 import { Input, Button } from "reactstrap";
 
-export type OngoingTaskFilterType = "Replication" | "ETL" | "Sink" | "BackupsAndSubscriptions";
+export type OngoingTaskFilterType = "Replication" | "ETL" | "Sink" | "Backup" | "Subscription";
 
 export interface OngoingTasksFilterCriteria {
     searchText: string;

@@ -563,8 +563,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
 function getFilterByStatusOptions(state: OngoingTasksState): InputItem<OngoingTaskFilterType>[] {
     const backupCount = state.tasks.filter((x) => x.shared.taskType === "Backup").length;
-    const subscriptionsCount = state.subscriptions.length;
-    const backupsAndSubscriptionsCount = backupCount + subscriptionsCount;
+    const subscriptionCount = state.subscriptions.length;
 
     const etlCount = state.tasks.filter((x) => x.shared.taskType.endsWith("Etl")).length;
 
@@ -575,23 +574,25 @@ function getFilterByStatusOptions(state: OngoingTasksState): InputItem<OngoingTa
     const replicationHubCount = state.replicationHubs.length;
     const replicationSinkCount = state.tasks.filter((x) => x.shared.taskType === "PullReplicationAsSink").length;
     const externalReplicationCount = state.tasks.filter((x) => x.shared.taskType === "Replication").length;
-    const replicationsCount = externalReplicationCount + replicationHubCount + replicationSinkCount;
+    const replicationCount = externalReplicationCount + replicationHubCount + replicationSinkCount;
 
-    return exhaustiveStringTuple<OngoingTaskFilterType>()("Replication", "ETL", "Sink", "BackupsAndSubscriptions").map(
+    return exhaustiveStringTuple<OngoingTaskFilterType>()("Replication", "ETL", "Sink", "Backup", "Subscription").map(
         (filterType) => {
             switch (filterType) {
                 case "Replication":
                     return {
                         label: filterType,
                         value: filterType,
-                        count: replicationsCount,
+                        count: replicationCount,
                     };
                 case "ETL":
                     return { label: filterType, value: filterType, count: etlCount };
                 case "Sink":
                     return { label: filterType, value: filterType, count: sinkCount };
-                case "BackupsAndSubscriptions":
-                    return { label: "Backups & Subscriptions", value: filterType, count: backupsAndSubscriptionsCount };
+                case "Backup":
+                    return { label: filterType, value: filterType, count: backupCount };
+                case "Subscription":
+                    return { label: filterType, value: filterType, count: subscriptionCount };
                 default:
                     assertUnreachable(filterType);
             }
@@ -622,11 +623,17 @@ function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTas
         filter.types.includes("Sink") &&
         (sharedInfo.taskType === "KafkaQueueSink" || sharedInfo.taskType === "RabbitQueueSink");
 
-    const isBackupAndSubscriptionTypeMatching =
-        filter.types.includes("BackupsAndSubscriptions") &&
-        (sharedInfo.taskType === "Backup" || sharedInfo.taskType === "Subscription");
+    const isBackupTypeMatching = filter.types.includes("Backup") && sharedInfo.taskType === "Backup";
 
-    return isReplicationTypeMatching || isETLTypeMatching || isSinkTypeMatching || isBackupAndSubscriptionTypeMatching;
+    const isSubscriptionTypeMatching = filter.types.includes("Subscription") && sharedInfo.taskType === "Subscription";
+
+    return (
+        isReplicationTypeMatching ||
+        isETLTypeMatching ||
+        isSinkTypeMatching ||
+        isBackupTypeMatching ||
+        isSubscriptionTypeMatching
+    );
 }
 
 function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCriteria) {
