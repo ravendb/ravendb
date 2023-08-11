@@ -92,8 +92,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         this.canDelay = ko.pureComputed(() => {
             const completed = this.op.isCompleted();
             const isBackup = this.op.taskType() === "DatabaseBackup";
+            const isOneTime = this.op.message().startsWith("Manual backup"); // unfortunately we don't have better way of detection as of now
             
-            return !completed && isBackup;
+            return !completed && isBackup && !isOneTime;
         });
 
         this.exportItems = ko.pureComputed(() => {
