@@ -1981,8 +1981,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 _didWork = true;
                 _firstBatchTimeout = null;
-                TestRun?.BatchCompleted.Set();
             }
+            
+            TestRun?.BatchCompleted.Set();
 
             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
             batchCompletedAction?.Invoke((Name, didWork));

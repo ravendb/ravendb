@@ -42,87 +42,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/indexes/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task TestIndex()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Input");
-
-                var testIndexParameters = JsonDeserializationServer.TestIndexParameters(input);
-                var testIndexDefinition = testIndexParameters.IndexDefinition;
-                var query = testIndexParameters.Query;
-                var queryParameters = testIndexParameters.QueryParameters;
-                int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
-                int waitForNonStaleResultsTimeoutInSec = testIndexParameters.WaitForNonStaleResultsTimeoutInSec ?? 15;
-
-                const int documentsPerIndexUpperLimit = 10_000;
-                const int documentsPerIndexLowerLimit = 1;
-
-                const string testIndexName = "<TestIndexName>";
-                
-                if (testIndexParameters.IndexDefinition is null)
-                    throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
-
-                if (maxDocumentsPerIndex > documentsPerIndexUpperLimit || maxDocumentsPerIndex < documentsPerIndexLowerLimit)
-                    throw new BadRequestException($"Number of documents to process cannot be bigger than {documentsPerIndexUpperLimit} or less than {documentsPerIndexLowerLimit}.");
-
-                if (testIndexDefinition.Type.IsJavaScript() == false)
-                {
-                    // C# index without admin authorization
-                    if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
-                        throw new UnauthorizedAccessException($"Testing C# indexes requires admin privileges.");
-                }
-
-                var temporaryIndexName = Guid.NewGuid().ToString("N");
-                
-                testIndexDefinition.Name = temporaryIndexName;
-
-                query ??= $"from index '{testIndexName}'";
-                
-                query = query.Replace(testIndexName, temporaryIndexName);
-                
-                var djv = new DynamicJsonValue() { [nameof(IndexQueryServerSide.Query)] = query, [nameof(IndexQueryServerSide.QueryParameters)] = queryParameters };
-
-                var queryAsBlittable = context.ReadObject(djv, "test-index-query");
-
-                using var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query");
-                
-                var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
-
-                if (indexQueryServerSide.Metadata.IndexName != temporaryIndexName)
-                    throw new BadRequestException($"Expected '{testIndexName}' as index name in query, but could not find it.");
-                
-                using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
-                {
-                    index.Start();
-
-                    var timespanToWaitForProcessing = TimeSpan.FromSeconds(waitForNonStaleResultsTimeoutInSec);
-                    index.TestRun.WaitForProcessingOfSampleDocs(timespanToWaitForProcessing);
-                    
-                    using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
-                    using (var queryContext = QueryOperationContext.Allocate(Database))
-                    {
-                        indexQueryServerSide.WaitForNonStaleResults = false;
-
-                        var entries = await index.IndexEntries(indexQueryServerSide, queryContext, ignoreLimit: false, token);
-                        var mapResults = index.TestRun.MapResults;
-                        var reduceResults = index.TestRun.ReduceResults;
-                        var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
-                        var hasDynamicFields = index.Definition.HasDynamicFields;
-
-                        var result = new TestIndexResult()
-                        {
-                            IndexEntries = entries.Results,
-                            QueryResults = queryResults.Results,
-                            MapResults = mapResults,
-                            HasDynamicFields = hasDynamicFields,
-                            ReduceResults = reduceResults,
-                            IsStale = queryResults.IsStale,
-                            IndexType = testIndexDefinition.Type
-                        };
-
-                        await result.WriteTestIndexResultAsync(ResponseBodyStream(), context);
-                    }
-                }
-            }
+            using (var processor = new AdminIndexHandlerProcessorForTestIndex(this))
+                await processor.ExecuteAsync();
         }
         
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
