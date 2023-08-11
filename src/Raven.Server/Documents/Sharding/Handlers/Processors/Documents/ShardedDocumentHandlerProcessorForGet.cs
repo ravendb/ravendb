@@ -47,7 +47,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
         if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0 
-                           && shardedReadResult.Result?.CompareExchangeValueIncludes.Count == 0)
+                           && (shardedReadResult.Result?.CompareExchangeValueIncludes == null || shardedReadResult.Result?.CompareExchangeValueIncludes.Count == 0))
         {
             return new DocumentsByIdResult<BlittableJsonReaderObject>
             {
