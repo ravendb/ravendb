@@ -410,6 +410,11 @@ namespace SlowTests.Issues
                     Assert.NotEqual(resultEtag, stats.ResultEtag);
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    session.Advanced.Clear();
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);
                 }
             }
@@ -507,7 +512,7 @@ select incl(c)"
                     Assert.NotEqual(resultEtag, stats.ResultEtag);
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
-                    Assert.Equal("Bydgoszcz", value1.Value.City);
+                    Assert.Equal("Torun", value1.Value.City);
                 }
             }
         }
@@ -583,6 +588,11 @@ select incl(c)"
                     Assert.Equal(1, companies.Count);
                     Assert.True(stats.DurationInMs >= 0); // not from cache
                     Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    session.Advanced.Clear();
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);
@@ -661,6 +671,11 @@ select incl(c)"
                     Assert.Equal(1, companies.Count);
                     Assert.True(stats.DurationInMs >= 0); // not from cache
                     Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    session.Advanced.Clear();
 
                     value1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);
@@ -763,6 +778,11 @@ select incl(c)"
                     Assert.Equal(1, companies.Count);
                     Assert.True(stats.DurationInMs >= 0); // not from cache
                     Assert.NotEqual(resultEtag, stats.ResultEtag);
+
+                    value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
+                    Assert.Equal("Torun", value1.Value.City);
+
+                    session.Advanced.Clear();
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);

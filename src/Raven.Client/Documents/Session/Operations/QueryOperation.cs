@@ -172,8 +172,12 @@ namespace Raven.Client.Documents.Session.Operations
                     _session.RegisterTimeSeries(
                         queryResult.TimeSeriesIncludes);
                 }
+
                 if (queryResult.CompareExchangeValueIncludes != null)
-                    _session.GetClusterSession().RegisterCompareExchangeValues(queryResult.CompareExchangeValueIncludes, includingMissingAtomicGuards: false);
+                {
+                    var clusterSession = _session.GetClusterSession();
+                    clusterSession.RegisterCompareExchangeIncludes(queryResult.CompareExchangeValueIncludes, includingMissingAtomicGuards: false);
+                }
 
                 if (queryResult.RevisionIncludes != null) 
                     _session.RegisterRevisionIncludes(queryResult.RevisionIncludes);

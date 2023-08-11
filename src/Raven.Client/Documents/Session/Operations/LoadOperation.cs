@@ -224,7 +224,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_compareExchangeValuesToInclude != null || includingMissingAtomicGuards)
             {
                 var clusterSession = _session.GetClusterSession();
-                clusterSession.RegisterCompareExchangeValues(result.CompareExchangeValueIncludes, includingMissingAtomicGuards);
+                clusterSession.RegisterCompareExchangeIncludes(result.CompareExchangeValueIncludes, includingMissingAtomicGuards);
             }
 
             foreach (var document in GetDocumentsFromResult(result))

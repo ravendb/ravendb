@@ -31,7 +31,9 @@ namespace Raven.Client.Documents.Session
     {
         internal readonly InMemoryDocumentSessionOperations _session;
 
-        private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, CompareExchangeSessionValue> _state = new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeIncludes = new(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, string> _missingDocumentsToAtomicGuardIndex;
 
@@ -99,6 +101,7 @@ namespace Raven.Client.Documents.Session
         public void Clear()
         {
             _state.Clear();
+            _compareExchangeIncludes.Clear();
         }
 
         protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
@@ -229,7 +232,7 @@ namespace Raven.Client.Documents.Session
             return value;
         }
 
-        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values, bool includingMissingAtomicGuards)
+        internal void RegisterCompareExchangeIncludes(BlittableJsonReaderObject values, bool includingMissingAtomicGuards)
         {
             if (_session.NoTracking)
                 return;
@@ -244,8 +247,8 @@ namespace Raven.Client.Documents.Session
                     var value = propertyDetails.Value as BlittableJsonReaderObject;
 
                     var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
-                    if(includingMissingAtomicGuards  &&
-                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) && 
+                    if (includingMissingAtomicGuards &&
+                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) &&
                         val.ChangeVector != null)
                     {
                         _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -253,7 +256,7 @@ namespace Raven.Client.Documents.Session
                     }
                     else
                     {
-                        RegisterCompareExchangeValue(val);
+                        RegisterCompareExchangeInclude(val);
                     }
                 }
             }
@@ -263,11 +266,12 @@ namespace Raven.Client.Documents.Session
         {
             Debug.Assert(value != null, "value != null");
 
-            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.InvariantCultureIgnoreCase))
-                throw new InvalidOperationException($"'{value.Key}' is an atomic guard and you cannot load it via the session");
+            AssertNotAtomicGuard(value);
 
             if (_session.NoTracking)
                 return new CompareExchangeSessionValue(value);
+
+            _compareExchangeIncludes.Remove(value.Key);
 
             if (_state.TryGetValue(value.Key, out var sessionValue) == false)
                 return _state[value.Key] = new CompareExchangeSessionValue(value);
@@ -277,12 +281,36 @@ namespace Raven.Client.Documents.Session
             return sessionValue;
         }
 
+        internal void RegisterCompareExchangeInclude(CompareExchangeValue<BlittableJsonReaderObject> value)
+        {
+            Debug.Assert(value != null, "value != null");
+
+            AssertNotAtomicGuard(value);
+
+            if (_session.NoTracking)
+                return;
+
+            _compareExchangeIncludes[value.Key] = value;
+        }
+
+        private static void AssertNotAtomicGuard(CompareExchangeValue<BlittableJsonReaderObject> value)
+        {
+            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"'{value.Key}' is an atomic guard and you cannot load it via the session");
+        }
+
         private bool TryGetCompareExchangeValueFromSession(string key, out CompareExchangeSessionValue value)
         {
-            if (_state.TryGetValue(key, out value) == false || value == null)
-                return false;
+            if (_state.TryGetValue(key, out value) && value != null)
+                return true;
 
-            return true;
+            if (_compareExchangeIncludes.TryGetValue(key, out var includeValue) && includeValue != null)
+            {
+                value = RegisterCompareExchangeValue(includeValue);
+                return true;
+            }
+
+            return false;
         }
 
         internal void PrepareCompareExchangeEntities(InMemoryDocumentSessionOperations.SaveChangesData result)
