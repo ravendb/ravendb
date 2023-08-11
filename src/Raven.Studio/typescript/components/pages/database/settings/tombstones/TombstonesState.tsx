@@ -8,9 +8,12 @@ import textColumn from "widgets/virtualGrid/columns/textColumn";
 import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
-import { Card } from "reactstrap";
+import { Alert, Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/hooks/useConfirm";
+import { FlexGrow } from "components/common/FlexGrow";
+import { AboutViewHeading } from "components/common/AboutView";
+import { Icon } from "components/common/Icon";
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
     const { databasesService } = useServices();
@@ -21,8 +24,25 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();
     const [subscriptionsGrid, setSubscriptionsGrid] = useState<virtualGridController<SubscriptionInfo>>();
 
+    const tombstonesAlert = () => (
+        <Alert color="info" className="mb-0">
+            <p>
+                By default, tombstones cleanup is scheduled to be carried out by the server every 5 minutes, unless
+                configured otherwise.
+            </p>
+            <p className="mb-0">
+                Upon clicking <strong>Force Cleanup</strong>, the action will be executed immediately - any tombstone
+                that can be removed will be deleted.
+            </p>
+        </Alert>
+    );
+
     const [ForceCleanupConfirm, confirmForceCleanup] = useConfirm({
-        message: "Do you want to force tombstones cleanup?",
+        title: "Do you want to force tombstones cleanup?",
+        message: tombstonesAlert(),
+        icon: "force",
+        confirmText: "Force cleanup",
+        actionColor: "warning",
     });
 
     useEffect(() => {
@@ -67,7 +87,8 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
 
     return (
         <div className="content-margin">
-            <div className="d-flex justify-content-between align-items-center">
+            <AboutViewHeading title="Tombstones" icon="revisions-bin" />
+            <div className="d-flex align-items-start gap-3 flex-wrap">
                 <ButtonWithSpinner
                     onClick={refresh}
                     color="primary"
@@ -76,71 +97,74 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
                 >
                     Refresh
                 </ButtonWithSpinner>
-
                 {asyncGetTombstonesState.status === "success" && (
                     <>
-                        <div>
-                            <div className="text-muted info-block">
-                                <div className="text-center">
-                                    <small>Minimum all document Etags:</small>
-                                </div>
-                                <div className="text-center">
-                                    <small>
-                                        <strong>{formatEtag(asyncGetTombstonesState.result.MinAllDocsEtag)}</strong>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="text-muted info-block">
-                                <div className="text-center">
-                                    <small>Minimum all timeseries Etags:</small>
-                                </div>
-                                <div className="text-center">
-                                    <small>
-                                        <strong>
-                                            {formatEtag(asyncGetTombstonesState.result.MinAllTimeSeriesEtag)}
-                                        </strong>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-muted info-block">
-                                <div className="text-center">
-                                    <small>Minimum all counter Etags:</small>
-                                </div>
-                                <div className="text-center">
-                                    <small>
-                                        <strong>{formatEtag(asyncGetTombstonesState.result.MinAllCountersEtag)}</strong>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
                         <ForceCleanupConfirm />
                         <ButtonWithSpinner
                             onClick={forceCleanup}
-                            color="primary"
+                            color="warning"
                             isSpinning={asyncForceTombstonesCleanup.status === "loading"}
                             icon="force"
                         >
                             Force cleanup
                         </ButtonWithSpinner>
+                        <FlexGrow />
+                        <div className="d-flex gap-3 flex-wrap">
+                            <div>
+                                <div className="card p-2 border-radius-xs vstack">
+                                    <small className="small-label">
+                                        <Icon icon="document" />
+                                        Minimum all document Etags
+                                    </small>
+                                    <h5 className="mt-1 mb-0">
+                                        <strong>{formatEtag(asyncGetTombstonesState.result.MinAllDocsEtag)}</strong>
+                                    </h5>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="card p-2 border-radius-xs vstack">
+                                    <small className="small-label">
+                                        <Icon icon="timeseries" />
+                                        Minimum all timeseries Etags
+                                    </small>
+                                    <h5 className="mt-1 mb-0">
+                                        <strong>
+                                            {formatEtag(asyncGetTombstonesState.result.MinAllTimeSeriesEtag)}
+                                        </strong>
+                                    </h5>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="card p-2 border-radius-xs vstack">
+                                    <small className="small-label">
+                                        <Icon icon="new-counter" />
+                                        Minimum all counter Etags
+                                    </small>
+                                    <h5 className="mt-1 mb-0">
+                                        <strong>{formatEtag(asyncGetTombstonesState.result.MinAllCountersEtag)}</strong>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
                     </>
                 )}
             </div>
             {asyncGetTombstonesState.status === "success" && (
                 <>
-                    <Card className="mt-4">
-                        <h3>Per Collection - Max Etags that can be deleted</h3>
+                    <h3 className="mt-3">
+                        <Icon icon="documents" />
+                        Per Collection - Max Etags that can be deleted
+                    </h3>
+                    <Card className="mt-3 rounded-3">
                         <div style={{ position: "relative", height: "300px" }}>
                             <VirtualGrid setGridController={setCollectionsGrid} />
                         </div>
                     </Card>
-                    <Card className="mt-2">
-                        <h3>Per Task - Max Etag that can be deleted</h3>
+                    <h3 className="mt-5">
+                        <Icon icon="tasks" />
+                        Per Task - Max Etag that can be deleted
+                    </h3>
+                    <Card className="mt-3 rounded-3">
                         <div style={{ position: "relative", height: "300px" }}>
                             <VirtualGrid setGridController={setSubscriptionsGrid} />
                         </div>

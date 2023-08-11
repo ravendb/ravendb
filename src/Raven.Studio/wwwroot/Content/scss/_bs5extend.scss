@@ -185,6 +185,10 @@
     border-radius: $gutter-xs;
 }
 
+.border-radius-xxs {
+    border-radius: $gutter-xxs;
+}
+
 .table-inner-border {
     tr {
         td {
@@ -323,4 +327,17 @@ select {
     color: $input-color;
     background-color: $input-bg;
     border: $input-border-width solid $input-border-color;
+}
+
+// rounded corners for virtual grid
+.virtual-grid {
+    border-radius: $gutter-xs;
+    .viewport {
+        border-radius: $gutter-xxs;
+    }
+}
+
+// remove padding top from modal footer
+.modal-footer {
+    padding-top: 0;
 }

@@ -1141,6 +1141,7 @@ $badge-border-radius: $border-radius !default;
 // scss-docs-start modal-variables
 $modal-inner-padding: $spacer !default;
 
+$modal-footer-border-width: 0 !default;
 $modal-footer-margin-between: 0.5rem !default;
 
 $modal-dialog-margin: 0.5rem !default;
@@ -1184,8 +1185,8 @@ $modal-scale-transform: scale(1.02) !default;
 
 // scss-docs-start alert-variables
 $alert-padding-y: $spacer-xs !default;
-$alert-padding-x: $spacer !default;
-$alert-margin-bottom: 1rem !default;
+$alert-padding-x: $spacer-sm !default;
+$alert-margin-bottom: 0 !default;
 $alert-border-radius: $border-radius !default;
 $alert-link-font-weight: $font-weight-bold !default;
 $alert-border-width: $border-width !default;
