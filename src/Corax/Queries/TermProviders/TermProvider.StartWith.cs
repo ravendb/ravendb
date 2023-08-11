@@ -33,6 +33,13 @@ namespace Corax.Queries.TermProviders
             Reset();
         }
 
+        public bool IsFillSupported { get; }
+
+        public int Fill(Span<long> containers)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Reset()
         {
             if (default(TLookupIterator).IsForward)
