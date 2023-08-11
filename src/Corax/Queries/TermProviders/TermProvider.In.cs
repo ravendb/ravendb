@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -21,6 +22,12 @@ namespace Corax.Queries.TermProviders
             _searcher = searcher;
             _terms = terms;
             _termIndex = -1;
+        }
+
+        public bool IsFillSupported { get; }
+        public int Fill(Span<long> containers)
+        {
+            throw new NotImplementedException();
         }
 
         public void Reset() => _termIndex = -1;

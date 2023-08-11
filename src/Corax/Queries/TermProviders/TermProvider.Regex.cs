@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using Corax.Mappings;
@@ -27,6 +28,13 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
         _field = field;
     }
 
+
+    public bool IsFillSupported { get; }
+
+    public int Fill(Span<long> containers)
+    {
+        throw new NotImplementedException();
+    }
 
     public void Reset()
     {

@@ -30,7 +30,7 @@ namespace Corax;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
-    private readonly Transaction _transaction;
+    internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
     private readonly IndexFieldsMapping _fieldMapping;

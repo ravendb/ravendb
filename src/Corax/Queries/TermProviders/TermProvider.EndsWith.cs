@@ -28,6 +28,13 @@ namespace Corax.Queries.TermProviders
             _endsWith = endsWith;
         }
 
+        public bool IsFillSupported => false;
+
+        public int Fill(Span<long> containers)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Reset()
         {            
             _iterator = _tree.Iterate<TLookupIterator>();
