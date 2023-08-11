@@ -134,13 +134,7 @@ public partial class IndexSearcher
         double termRatioToWholeCollection = 1;
         if (field.HasBoost)
         {
-            var totalTerms = tree.NumberOfEntries;
-            var totalSum = _metadataTree.Read(field.TermLengthSumName)?.Reader.ReadLittleEndianInt64() ?? totalTerms;
-            
-            if (totalTerms == 0 || totalSum == 0)
-                termRatioToWholeCollection = 1;
-            else
-                termRatioToWholeCollection = term.Decoded().Length /  (totalSum / (double)totalTerms);
+            termRatioToWholeCollection = GetTermRatioToWholeCollection(field, term, tree);
         }
 
         var matches = TermQuery(field, value, termRatioToWholeCollection);
@@ -149,6 +143,29 @@ public partial class IndexSearcher
         matches.Term = Encoding.UTF8.GetString(term.Decoded());
         #endif
         return matches;
+    }
+
+    private double GetTermRatioToWholeCollection(in FieldMetadata field, CompactKey term, CompactTree tree)
+    {
+        double termRatioToWholeCollection;
+        var totalTerms = tree.NumberOfEntries;
+        var totalSum = _metadataTree.Read(field.TermLengthSumName)?.Reader.ReadLittleEndianInt64() ?? totalTerms;
+
+        if (totalTerms == 0 || totalSum == 0)
+            termRatioToWholeCollection = 1;
+        else
+            termRatioToWholeCollection = term.Decoded().Length / (totalSum / (double)totalTerms);
+        return termRatioToWholeCollection;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal TermMatch TermQuery(in FieldMetadata field, long containerId, CompactKey term, CompactTree tree)
+    {
+        var termRatioToWholeCollection = 1D;
+        if (field.HasBoost)
+            termRatioToWholeCollection = GetTermRatioToWholeCollection(field, term, tree);
+
+        return TermQuery(field, containerId, termRatioToWholeCollection);
     }
     
     internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
