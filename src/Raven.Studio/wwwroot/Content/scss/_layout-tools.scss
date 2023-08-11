@@ -226,3 +226,7 @@ $directions: ("top", "right", "bottom", "left");
         background-color: $primary;
     }
 }
+
+::-webkit-scrollbar-corner {
+    background-color: transparent;
+}
