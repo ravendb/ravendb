@@ -6,11 +6,11 @@ namespace Voron.Data.Lookups
 {
     public interface ILookupIterator
     {
-        bool IsForward { get; }
+        bool IsForward { get { return false; } }
         
         void Init<T>(T parent);
         void Reset();
-        int Fill(Span<long> results);
+        int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true);
         bool Skip(long count);
         bool MoveNext(out long value);
         bool MoveNext<TLookupKey>(out TLookupKey key, out long value);
@@ -24,11 +24,13 @@ namespace Voron.Data.Lookups
         {
             private Lookup<TLookupKey> _tree;
             private IteratorCursorState _cursor;
+            private bool _isFinished;
 
             public ForwardIterator()
             {
                 _tree = null;
                 _cursor = new IteratorCursorState { _pos = -1 };
+                _isFinished = false;
             }
 
             public bool IsForward => true;
@@ -82,6 +84,7 @@ namespace Voron.Data.Lookups
 
             public void Reset()
             {
+                _isFinished = false;
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
 
                 ref var cState = ref _cursor;
@@ -120,9 +123,9 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            public int Fill(Span<long> results)
+            public int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true)
             {
-                if (_cursor._pos < 0)
+                if (_cursor._pos < 0 || _isFinished)
                     return 0;
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
@@ -134,6 +137,12 @@ namespace Voron.Data.Lookups
                         for (int i = 0; i < read; i++)
                         {
                             results[i] = GetValue(ref state, state.LastSearchPosition++);
+                            
+                            if (results[i] == lastId)
+                            {
+                                _isFinished = true;
+                                return includeMax ? i + 1 : i;
+                            }
                         }
                         return read;
                     }
@@ -209,7 +218,7 @@ namespace Voron.Data.Lookups
         {
             private Lookup<TLookupKey> _tree;
             private IteratorCursorState _cursor;
-
+            private bool _isFinished;
             public bool IsForward => false;
 
             public void Init<T>(T tree)
@@ -220,6 +229,7 @@ namespace Voron.Data.Lookups
                 }
                 _tree = (Lookup<TLookupKey>)(object)tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
+                _isFinished = false;
             }
 
             public void Seek<T>(T key)
@@ -264,7 +274,8 @@ namespace Voron.Data.Lookups
             public void Reset()
             {
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
-
+                _isFinished = false;
+                
                 ref var cState = ref _cursor;
                 ref var state = ref cState._stk[cState._pos];
 
@@ -282,7 +293,7 @@ namespace Voron.Data.Lookups
                 state.LastSearchPosition = state.Header->NumberOfEntries - 1;
             }
             
-            public int Fill(Span<long> results)
+            public int Fill(Span<long> results, long lastTermId = long.MaxValue, bool includeMax = true)
             {
                 if (_cursor._pos < 0)
                     return 0;
@@ -297,6 +308,13 @@ namespace Voron.Data.Lookups
                         {
                             int curPos = state.LastSearchPosition--;
                             results[read++] = GetValue(ref state, curPos);
+
+                            if (results[read - 1] == lastTermId)
+                            {
+                                _isFinished = true;
+                                return includeMax ? read : read - 1;
+                            }
+
                         }
                         return read;
                     }

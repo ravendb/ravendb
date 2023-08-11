@@ -66,7 +66,8 @@ namespace Voron.Data.CompactTrees
             }
 
             public bool Skip(long count) => _it.Skip(count);
-            public int Fill(Span<long> matches) => _it.Fill(matches);
+            
+            public int Fill(Span<long> matches, long lastTermId = long.MaxValue, bool includeMax = true) => _it.Fill(matches, lastTermId, includeMax);
 
             public bool MoveNext(out long v) => _it.MoveNext(out v);
             

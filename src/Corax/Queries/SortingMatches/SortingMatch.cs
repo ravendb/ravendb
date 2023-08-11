@@ -85,6 +85,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             throw new NotImplementedException();
         }
 
+        public int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true)
+        {
+            throw new NotImplementedException();
+        }
+
         public int Fill(Span<long> results)
         {
             throw new NotImplementedException();
@@ -126,11 +131,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             throw new NotImplementedException();
         }
 
-        public int Fill(Span<long> results)
+        public int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true)
         {
             throw new NotImplementedException();
         }
-
+        
         public bool Skip(long count)
         {
             throw new NotImplementedException();

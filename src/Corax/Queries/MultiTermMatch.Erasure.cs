@@ -50,6 +50,7 @@ namespace Corax.Queries
         }
 
         string DebugView => Inspect().ToString();
+ //       public bool RequireSorting => _inner.DoNotSortResults()
 
         internal sealed class FunctionTable
         {
@@ -141,6 +142,12 @@ namespace Corax.Queries
             {
                 Unsafe.SkipInit(out term);
                 return false;
+            }
+
+            public bool IsFillSupported { get; }
+            public int Fill(Span<long> containers)
+            {
+                throw new NotImplementedException();
             }
 
             public void Reset(){}
