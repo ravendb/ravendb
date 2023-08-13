@@ -299,7 +299,7 @@ namespace Voron.Data.Lookups
             
             public int Fill(Span<long> results, long lastTermId = long.MaxValue, bool includeMax = true)
             {
-                if (_cursor._pos < 0)
+                if (_cursor._pos < 0 || _isFinished)
                     return 0;
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)

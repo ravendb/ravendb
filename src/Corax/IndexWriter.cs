@@ -523,6 +523,7 @@ namespace Corax
 
         private void Init()
         {
+            Debug.Assert(_transaction.LowLevelTransaction.Flags == TransactionFlags.ReadWrite);
             _compactKeyScope = new(_transaction.LowLevelTransaction);
             _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoredFieldsSlice);
