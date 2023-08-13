@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Operations;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -47,10 +48,13 @@ namespace SlowTests.Sharding.Client.Operations
             for (int i = 0; i < 10; i++)
             {
                 var id = $"users/{i}${_suffix}";
-                var conflictsResolution = await store.Maintenance.SendAsync(new GetSuggestConflictResolutionOperation(id));
-                Assert.NotNull(conflictsResolution);
-                Assert.NotNull(conflictsResolution.Document);
-                Assert.NotNull(conflictsResolution.Metadata);
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var conflictsResolution = await store.Maintenance.SendAsync(ctx, new GetSuggestConflictResolutionOperation(id));
+                    Assert.NotNull(conflictsResolution);
+                    Assert.NotNull(conflictsResolution.Document);
+                    Assert.NotNull(conflictsResolution.Metadata);
+                }
             }
         }
 
@@ -81,10 +85,13 @@ namespace SlowTests.Sharding.Client.Operations
             for (int i = 0; i < 10; i++)
             {
                 var id = $"users/{i}${_suffix}";
-                var conflictsResolution = await store.Maintenance.SendAsync(new GetSuggestConflictResolutionOperation(id));
-                Assert.NotNull(conflictsResolution);
-                Assert.NotNull(conflictsResolution.Document);
-                Assert.NotNull(conflictsResolution.Metadata);
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var conflictsResolution = await store.Maintenance.SendAsync(ctx, new GetSuggestConflictResolutionOperation(id));
+                    Assert.NotNull(conflictsResolution);
+                    Assert.NotNull(conflictsResolution.Document);
+                    Assert.NotNull(conflictsResolution.Metadata);
+                }
             }
         }
 

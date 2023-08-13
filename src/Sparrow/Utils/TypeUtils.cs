@@ -1,16 +1,13 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using CsvHelper;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Utils;
 
-namespace Raven.Server.Utils
+namespace Sparrow.Utils
 {
-    
     public static class TypeUtils
     {
         private struct VisitedResetBehavior : IResetSupport<HashSet<object>>
@@ -22,7 +19,7 @@ namespace Raven.Server.Utils
         }
 
         private static readonly ObjectPool<HashSet<object>,VisitedResetBehavior> VisitedHashsets = 
-            new ObjectPool<HashSet<object>, VisitedResetBehavior>(() => new HashSet<object>(Sparrow.Utils.ReferenceEqualityComparer.Default));
+            new ObjectPool<HashSet<object>, VisitedResetBehavior>(() => new HashSet<object>(ReferenceEqualityComparer.Default));
 
         //detect if an object is a blittable or has any blittable objects somewhere in its object hierarchy
         public static bool ContainsBlittableObject(this object obj)
@@ -71,6 +68,7 @@ namespace Raven.Server.Utils
                 return false;
             }
 
+#if NETCOREAPP2_1_OR_GREATER
             if (obj is ITuple tuple)
             {
                 for (int i = 0; i < tuple.Length; i++)
@@ -83,6 +81,7 @@ namespace Raven.Server.Utils
 
                 return false;
             }
+#endif
 
             if (type.IsClass || type.IsUserDefinedStruct())
             {
@@ -109,6 +108,12 @@ namespace Raven.Server.Utils
             }
 
             return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsUserDefinedStruct(this Type type)
+        {
+            return type.IsValueType && !type.IsPrimitive && !type.IsEnum;
         }
     }
 }
