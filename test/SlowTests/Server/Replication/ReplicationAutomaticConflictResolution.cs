@@ -296,12 +296,12 @@ return out;
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker1");
+                    }, "marker1$users/2");
 
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForDocument(slave, "marker1"));
+                Assert.True(WaitForDocument(slave, "marker1$users/2"));
 
                 using (var session = slave.OpenSession())
                 {
@@ -323,12 +323,13 @@ return out;
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker2");
+                    }, "marker2$users/1");
 
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForDocument(slave, "marker2"));
+                Assert.True(WaitForDocument(slave, "marker2$users/1"));
+
                 using (var session = slave.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");
