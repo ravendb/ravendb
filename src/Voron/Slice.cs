@@ -322,7 +322,6 @@ namespace Voron
         }
 
         public readonly Span<byte> AsSpan()
-        
         {
             return new Span<byte>(Content.Ptr, Size);
         }

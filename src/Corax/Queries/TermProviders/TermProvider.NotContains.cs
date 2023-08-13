@@ -44,7 +44,7 @@ namespace Corax.Queries.TermProviders
         public bool Next(out TermMatch term)
         {
             var contains = _term.Decoded();
-            while (_iterator.MoveNext(out var key, out var _))
+            while (_iterator.MoveNext(out var key, out _, out _))
             {
                 var termSlice = key.Decoded();
                 if (termSlice.Contains(contains))

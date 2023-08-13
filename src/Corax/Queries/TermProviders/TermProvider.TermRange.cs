@@ -28,7 +28,6 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     private bool _isEmpty;
     private bool _shouldIncludeLastTerm;
     private long _endContainerId;
-    private bool _isFinished;
 
     public TermRangeProvider(IndexSearcher indexSearcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
     {
@@ -55,20 +54,21 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     {
         CompactKey key;
         ReadOnlySpan<byte> termSlice;
-        bool shouldInclude;
         
-        
+        var startKey = _isForward ? _low : _high;
+        var finalKey = _isForward ? _high : _low;
+
         if (ShouldSeek())
         {
-            _iterator.Seek(_isForward ? _low : _high);
-            if (_iterator.MoveNext(out key, out long _) == false)
+            _iterator.Seek(startKey);
+            if (_iterator.MoveNext(out key, out _, out _) == false)
             {
                 _isEmpty = true;
                 return; //empty set, we will go out of range immediately 
 }
 
             termSlice = key.Decoded();
-            shouldInclude = _isForward switch
+            var shouldInclude = _isForward switch
             {
                 false when typeof(THigh) == typeof(Range.Exclusive) && termSlice.SequenceCompareTo(_high.AsSpan()) >= 0 => false,
                 false when typeof(THigh) == typeof(Range.Inclusive) && _high.Options != SliceOptions.AfterAllKeys &&
@@ -81,7 +81,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
             if (shouldInclude == false)
             {
-                if (_iterator.MoveNext(out key, out long _) == false)
+                if (_iterator.MoveNext(out key, out _, out _) == false)
                 {
                     _isEmpty = true;
                     return; //empty set, we will go out of range immediately
@@ -106,8 +106,8 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
         }
 
 
-        _iterator.Seek(_isForward ? _high : _low);
-        if (_iterator.MoveNext(out key, out _endContainerId) == false)
+        _iterator.Seek(finalKey);
+        if (_iterator.MoveNext(out key, out _endContainerId, out var hasPreviousValue) == false)
         {
             _skipRangeCheck = true; //we are out of item anyway that means we can accept all items
             _endContainerId = long.MaxValue;
@@ -115,21 +115,29 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
         }
 
         termSlice = key.Decoded();
+        var finalCmp = termSlice.SequenceCompareTo(finalKey.AsSpan());
+
         _shouldIncludeLastTerm = _isForward switch
         {
-            false when typeof(TLow) == typeof(Range.Exclusive) && termSlice.SequenceCompareTo(_low.AsSpan()) < 0 => false,
-            false when typeof(TLow) == typeof(Range.Inclusive) && termSlice.SequenceCompareTo(_low.AsSpan()) <= 0 => false,
-            true when typeof(THigh) == typeof(Range.Exclusive) && termSlice.SequenceCompareTo(_high.AsSpan()) > 0 => false,
-            true when typeof(THigh) == typeof(Range.Inclusive) && _high.Options != SliceOptions.AfterAllKeys &&
-                       termSlice.SequenceCompareTo(_high.AsSpan()) >= 0 => false,
+            false when typeof(TLow) == typeof(Range.Exclusive) && finalCmp <= 0 => false,
+            false when typeof(TLow) == typeof(Range.Inclusive) && finalCmp < 0 => false,
+            true when typeof(THigh) == typeof(Range.Exclusive) && finalCmp >= 0 => false,
+            true when typeof(THigh) == typeof(Range.Inclusive) && _high.Options != SliceOptions.AfterAllKeys && finalCmp > 0 => false,
             _ => true
         };
+        if(_shouldIncludeLastTerm == false && hasPreviousValue == false)
+        {
+            _isEmpty = true;
+        }
     }
 
     public bool IsFillSupported => true;
 
     public int Fill(Span<long> containers)
     {
+        if (_isEmpty)
+            return 0;
+
         return _iterator.Fill(containers, _endContainerId, _shouldIncludeLastTerm);
     }
 
@@ -155,13 +163,13 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Next(out TermMatch term)
     {
-        if (_isEmpty || _iterator.MoveNext(out var termId) == false || _isFinished)
+        if (_isEmpty || _iterator.MoveNext(out var termId) == false)
             goto ReturnEmpty;
 
 
         if (termId == _endContainerId)
         {
-            _isFinished = true;
+            _isEmpty = true;
             
             if (_shouldIncludeLastTerm == false)
                 goto ReturnEmpty;

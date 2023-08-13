@@ -23,7 +23,6 @@ namespace Corax.Queries.TermProviders
         private readonly bool _skipRangeCheck;
         private long _lastTermId = -1;
         private bool _includeLastTerm = true;
-        private bool _isFinished;
         private bool _isEmpty;
 
         public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
@@ -50,8 +49,11 @@ namespace Corax.Queries.TermProviders
 
         private void PrepareKeys()
         {
-            _iterator.Seek(_iterator.IsForward ? _low : _high);
-            if (_iterator.MoveNext(out TVal key, out var termId) == false)
+            TVal startKey = _iterator.IsForward ? _low : _high;
+            TVal finalKey = _iterator.IsForward ? _high : _low;
+
+            _iterator.Seek(startKey);
+            if (_iterator.MoveNext(out TVal key, out _, out _) == false)
             {
                 _isEmpty = true;
                 return;
@@ -67,7 +69,7 @@ namespace Corax.Queries.TermProviders
 
             if (skipFirst)
             {
-                if (_iterator.MoveNext(out key, out termId) == false)
+                if (_iterator.MoveNext(out key, out _, out _) == false)
                 {
                     _isEmpty = true;
                     return;
@@ -83,8 +85,8 @@ namespace Corax.Queries.TermProviders
                 return; // to the end
             
             //Now seek to the last key
-            _iterator.Seek(_iterator.IsForward ? _high : _low);
-            if (_iterator.MoveNext(out key, out _lastTermId) == false)
+            _iterator.Seek(finalKey);
+            if (_iterator.MoveNext(out key, out _lastTermId, out var hasPreviousValue) == false)
             {
                 _includeLastTerm = false;
                 return;
@@ -128,14 +130,19 @@ namespace Corax.Queries.TermProviders
         
         public bool Next(out TermMatch term)
         {
+            if (_isEmpty)
+            {
+                term = default;
+                return false;
+            }
             bool hasNext = _iterator.MoveNext(out var termId);
-            if (hasNext == false || _isFinished)
+            if (hasNext == false)
                 goto Empty;
 
 
             if (termId == _lastTermId)
             {
-                _isFinished = true;
+                _isEmpty = true;
                 if (_includeLastTerm == false)
                     goto Empty;
             }

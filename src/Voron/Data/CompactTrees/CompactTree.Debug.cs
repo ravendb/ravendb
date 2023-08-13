@@ -49,7 +49,7 @@ unsafe partial class CompactTree
 
         var prevKeyStorage = new byte[4096];
         Span<byte> prevKey = prevKeyStorage.AsSpan();
-        while (it.MoveNext(out var compactKey, out var v))
+        while (it.MoveNext(out var compactKey, out var v, out _))
         {
             var key = compactKey.Decoded();
             if (prevKey.SequenceCompareTo(key) > 0)

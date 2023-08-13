@@ -39,7 +39,7 @@ namespace Corax.Queries.TermProviders
 
         public bool Next(out TermMatch term)
         {
-            while (_iterator.MoveNext(out var key, out var _))
+            while (_iterator.MoveNext(out var key, out _, out _))
             {
                 term = _searcher.TermQuery(_field, key, _tree);
                 return true;
@@ -51,7 +51,7 @@ namespace Corax.Queries.TermProviders
 
         public bool GetNextTerm(out ReadOnlySpan<byte> term)
         {
-            while (_iterator.MoveNext(out var compactKey, out var _))
+            while (_iterator.MoveNext(out var compactKey, out _, out _))
             {
                 var key = compactKey.Decoded();
                 int termSize = key.Length;

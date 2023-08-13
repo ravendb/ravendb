@@ -191,7 +191,7 @@ namespace Corax.Queries
 
                     byte lastByte = ngram[^1];
 
-                    while (iter.MoveNext(out var gramCompactKey, out var _))
+                    while (iter.MoveNext(out var gramCompactKey, out _, out _))
                     {
                         var gramKey = gramCompactKey.Decoded();
                         if (gramKey[ngram.Length - 1] > lastByte)

@@ -44,7 +44,7 @@ namespace Corax.Queries
         public bool Next(out TermMatch term)
         {
             var suffix = _endsWith.Decoded();
-            while (_iterator.MoveNext(out var key, out var _))
+            while (_iterator.MoveNext(out var key, out _, out _))
             {
                 var termSlice = key.Decoded();
                 if (termSlice.EndsWith(suffix))
