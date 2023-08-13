@@ -7,13 +7,12 @@ namespace Voron.Data.Lookups
     public interface ILookupIterator
     {
         bool IsForward { get { return false; } }
-        
         void Init<T>(T parent);
         void Reset();
         int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true);
         bool Skip(long count);
         bool MoveNext(out long value);
-        bool MoveNext<TLookupKey>(out TLookupKey key, out long value);
+        bool MoveNext<TLookupKey>(out TLookupKey key, out long value, out bool hasPreviousValue);
         void Seek<TLookupKey>(TLookupKey key);
     }
 
@@ -81,7 +80,7 @@ namespace Voron.Data.Lookups
 
                 return true;
             }
-
+            
             public void Reset()
             {
                 _isFinished = false;
@@ -181,7 +180,7 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            public bool MoveNext<T>(out T key, out long value)
+            public bool MoveNext<T>(out T key, out long value, out bool hasPreviousValue)
             {
                 if (typeof(T) != typeof(TLookupKey))
                 {
@@ -192,6 +191,7 @@ namespace Voron.Data.Lookups
                 {
                     key = default;
                     value = default;
+                    hasPreviousValue = false;
                     return false;
                 }
 
@@ -204,15 +204,35 @@ namespace Voron.Data.Lookups
                         GetKeyAndValue(ref  state, state.LastSearchPosition, out var keyData, out value);
                         key = (T)(object)TLookupKey.FromLong<TLookupKey>(keyData);
                         state.LastSearchPosition++;
+                        hasPreviousValue = HasPreviousValue();
                         return true;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
                     {
                         key = default;
                         value = default;
+                        hasPreviousValue = false;
                         return false;
                     }
                 }
+            }
+
+            private bool HasPreviousValue()
+            {
+                ref var state = ref _cursor._stk[_cursor._pos];
+                if (state.LastSearchPosition > 1)
+                {
+                    return true;
+                }
+
+                // need to check if we have parent page with prior values
+                for (int i = _cursor._pos - 2; i >= 0; i--)
+                {
+                    if (_cursor._stk[i].LastSearchPosition > 0)
+                        return true;
+                }
+
+                return false;
             }
         }
     
@@ -271,7 +291,6 @@ namespace Voron.Data.Lookups
 
                 return true;
             }
-
 
             public void Reset()
             {
@@ -355,7 +374,7 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            public bool MoveNext<T>(out T key, out long value)
+            public bool MoveNext<T>(out T key, out long value, out bool hasPreviousValue)
             {
                 if (typeof(T) != typeof(TLookupKey))
                 {
@@ -366,6 +385,7 @@ namespace Voron.Data.Lookups
                 {
                     value = default;
                     key = default;
+                    hasPreviousValue = false;
                     return false;
                 }
                 ref var state = ref _cursor._stk[_cursor._pos];
@@ -378,15 +398,36 @@ namespace Voron.Data.Lookups
                         key = (T)(object)TLookupKey.FromLong<TLookupKey>(keyData);
 
                         state.LastSearchPosition--;
+                        hasPreviousValue = HasPreviousValue();
                         return true;
                     }
                     if (_tree.GoToPreviousPage(ref _cursor) == false)
                     {
                         key = default;
                         value = default;
+                        hasPreviousValue = false;
                         return false;
                     }
                 }
+            }
+            
+            
+            private bool HasPreviousValue()
+            {
+                ref var state = ref _cursor._stk[_cursor._pos];
+                if (state.LastSearchPosition + 1< state.Header->NumberOfEntries)
+                {
+                    return true;
+                }
+
+                for (int i = _cursor._pos - 2; i >= 0; i--)
+                {
+                    ref var cur = ref _cursor._stk[i];
+                    if (cur.LastSearchPosition + 1 < cur.Header->NumberOfEntries)
+                        return true;
+                }
+
+                return false;
             }
         }
 

@@ -55,7 +55,7 @@ namespace Corax.Queries.TermProviders
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term)
         {
-            if (_iterator.MoveNext(out var compactKey, out var _) == false)
+            if (_iterator.MoveNext(out var compactKey, out _, out _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;

@@ -44,7 +44,7 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
 
     public bool Next(out TermMatch term)
     {
-        while (_iterator.MoveNext(out var compactKey, out var _))
+        while (_iterator.MoveNext(out var compactKey, out _, out _))
         {
             var key = compactKey.Decoded();
             if (_regex.IsMatch(Encoding.UTF8.GetString(key)) == false)

@@ -66,7 +66,7 @@ public class CompactTreeTests : StorageTest
             var it = tree.Iterate();
             it.Reset();
             var items = new List<(string, long)>();
-            while (it.MoveNext(out var key, out var v))
+            while (it.MoveNext(out var key, out var v, out _))
             {
                 items.Add((key.ToString(), v));
             }
@@ -160,7 +160,7 @@ public class CompactTreeTests : StorageTest
             it.Reset();
             var expected = new List<(string, long)> { ("one", 10), ("three", 3), ("two", 2), };
             var items = new List<(string, long)>();
-            while (it.MoveNext(out var key, out var v))
+            while (it.MoveNext(out var key, out var v, out _))
             {
                 items.Add((key.ToString(), v));
             }

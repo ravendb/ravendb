@@ -138,7 +138,6 @@ public class StreamingOptimization_DataTests : RavenTestBase
             (false, OrderingType.Double) => linqResults.OrderByDescending(i => i.DoubleValue),
             _ => throw new ArgumentOutOfRangeException()
         };
-        
         Assert.Equal(linqResults.Select(i => i.Id), serverResults.Select(i => i.Id));
     }
 
