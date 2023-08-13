@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests.Voron;
-using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax.Bugs;
+namespace SlowTests.Issues;
 
 public class RavenDB_19361 : StorageTest
 {
@@ -24,7 +22,7 @@ public class RavenDB_19361 : StorageTest
             {
                 for (int j = 0; j < 128 +1; j++)
                 {
-                    set.Add(j + 1);
+                    set.Add((j + 1) << 2);
                 }
             }
             wtx.Commit();
@@ -36,7 +34,7 @@ public class RavenDB_19361 : StorageTest
             Assert.Equal(128 + 1, set.State.NumberOfEntries);
         }
     }
-    
+
     [Fact]
     public void ProperRemovals()
     {
@@ -47,23 +45,24 @@ public class RavenDB_19361 : StorageTest
 
             for (int j = 0; j < 128 * 4; j++)
             {
-                mem.Add(j + 1);
-                set.Add(j + 1);
+                mem.Add((j + 1) << 2);
+                set.Add((j + 1) << 2);
             }
+
             wtx.Commit();
         }
-        
+
         using (var wtx = Env.WriteTransaction())
         {
             var set = wtx.OpenPostingList("test");
 
-            set.Add(10_000);
-            mem.Add(10_000);
-            
-            set.Remove(10_000);
-            mem.Remove(10_000);
-            set.Remove(20_000);
-            mem.Remove(20_000);
+            set.Add(10_000 << 2);
+            mem.Add(10_000 << 2);
+
+            set.Remove(10_000 << 2);
+            mem.Remove(10_000 << 2);
+            set.Remove(20_000 << 2);
+            mem.Remove(20_000 << 2);
 
             wtx.Commit();
         }
