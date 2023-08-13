@@ -266,15 +266,8 @@ namespace Raven.Client.Documents.Operations
                         StopProcessing();
                         if (_afterOperationCompleted.IsFaulted)
                         {
-                            try
-                            {
-                                // we want the exception itself and not AggregateException 
-                                _afterOperationCompleted.GetAwaiter().GetResult();
-                            }
-                            catch (Exception e)
-                            {
-                                _result.TrySetException(e);
-                            }
+                            // we want the exception itself and not AggregateException
+                            _result.TrySetException(_afterOperationCompleted.Exception.ExtractSingleInnerException());
                             break;
                         }
 
