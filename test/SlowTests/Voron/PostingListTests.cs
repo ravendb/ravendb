@@ -23,7 +23,7 @@ public class PostingListTests : StorageTest
         long s = 0;
         for (int i = 0; i < Size; i++)
         {
-            s += diff[random.Next(diff.Length)];
+            s += diff[random.Next(diff.Length)] << 2;
             _data.Add(s);
         }
 
