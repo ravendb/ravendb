@@ -64,6 +64,7 @@ namespace Corax.Queries
             _inner = inner;
             _isBoosting = field.HasBoost;
 
+            _current = QueryMatch.Start;
             if (_inner.IsFillSupported && _isBoosting == false)
                 _termReader = new(indexSearcher);
             else
@@ -74,7 +75,6 @@ namespace Corax.Queries
             }
             
             _context = context;
-            _current = QueryMatch.Start;
             _currentIdx = QueryMatch.Start;
             _totalResults = totalResults;
             _confidence = confidence;
