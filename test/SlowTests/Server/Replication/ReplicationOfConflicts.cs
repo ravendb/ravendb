@@ -61,11 +61,11 @@ namespace SlowTests.Server.Replication
                 }
 
                 Assert.True(WaitForDocument(store1, "foo/bar"));
-
-                var resolvedConflicts = (await store1.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
+                using var ctx = JsonOperationContext.ShortTermSingleUse();
+                var resolvedConflicts = (await store1.Maintenance.SendAsync(ctx, new GetResolvedRevisionsOperation())).Results.ToList();
                 Assert.Equal(1, resolvedConflicts.Count);
 
-                var resolvedConflicts2 = (await store2.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
+                var resolvedConflicts2 = (await store2.Maintenance.SendAsync(ctx, new GetResolvedRevisionsOperation())).Results.ToList();
                 Assert.Equal(1, resolvedConflicts2.Count);
 
                 Assert.Empty(store1.Commands().GetConflictsFor("foo/bar"));

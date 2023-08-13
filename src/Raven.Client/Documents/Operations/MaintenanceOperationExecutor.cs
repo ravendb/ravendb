@@ -6,6 +6,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -81,6 +82,11 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
+        public TResult Send<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation)
+        {
+            return AsyncHelpers.RunSync(() => SendAsync(context, operation));
+        }
+
         public async Task SendAsync(IMaintenanceOperation operation, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
@@ -97,11 +103,28 @@ namespace Raven.Client.Documents.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(RequestExecutor.Conventions, context);
+
                 ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+#if DEBUG
+                if (command.Result.ContainsBlittableObject())
+                {
+                    throw new InvalidOperationException("The return type is unmanaged, please use the overload with the context");
+                }
+#endif
                 return command.Result;
             }
+        }
+
+        public async Task<TResult> SendAsync<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation, CancellationToken token = default)
+        {
+            var command = operation.GetCommand(RequestExecutor.Conventions, context);
+
+            ApplyNodeTagAndShardNumberToCommandIfSet(command);
+
+            await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+            return command.Result;
         }
 
         public Operation Send(IMaintenanceOperation<OperationIdResult> operation)

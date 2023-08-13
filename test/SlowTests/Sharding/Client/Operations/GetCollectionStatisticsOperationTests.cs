@@ -80,18 +80,18 @@ namespace SlowTests.Sharding.Client.Operations
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var collectionStats = store.Maintenance.Send(new GetCollectionOperation(context, collectionName: "Users", start: 0, pageSize: 2));
+                    var collectionStats = store.Maintenance.Send(context, new GetCollectionOperation(collectionName: "Users", start: 0, pageSize: 2));
                     Assert.Equal(2, collectionStats.Results.Length);
                     var list = collectionStats.Results.Select(x => ((BlittableJsonReaderObject)x).GetMetadata().GetId()).ToList();
                     Assert.All(list, id => id.Contains("users"));
 
                     if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                     {
-                        collectionStats = store.Maintenance.Send(new GetCollectionOperation(context, "Users", collectionStats.ContinuationToken));
+                        collectionStats = store.Maintenance.Send(context, new GetCollectionOperation("Users", collectionStats.ContinuationToken));
                     }
                     else
                     {
-                        collectionStats = store.Maintenance.Send(new GetCollectionOperation(context, "Users", 2, 1));
+                        collectionStats = store.Maintenance.Send(context, new GetCollectionOperation("Users", 2, 1));
                     }
 
                     Assert.Equal(1, collectionStats.Results.Length);
@@ -103,42 +103,37 @@ namespace SlowTests.Sharding.Client.Operations
         private class GetCollectionOperation : IMaintenanceOperation<CollectionResult>
         {
             private readonly string _continuation;
-            private readonly JsonOperationContext _context;
             private readonly string _collectionName;
             private readonly int? _start;
             private readonly int? _pageSize;
 
-            public GetCollectionOperation(JsonOperationContext context, string collectionName, int start, int pageSize)
+            public GetCollectionOperation(string collectionName, int start, int pageSize)
             {
-                _context = context;
                 _collectionName = collectionName;
                 _start = start;
                 _pageSize = pageSize;
             }
 
-            public GetCollectionOperation(JsonOperationContext context, string collectionName, string continuation)
+            public GetCollectionOperation(string collectionName, string continuation)
             {
-                _context = context;
                 _collectionName = collectionName;
                 _continuation = continuation;
             }
 
             public RavenCommand<CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new GetCollectionCommand(_context, _collectionName, _start, _pageSize, _continuation);
+                return new GetCollectionCommand(_collectionName, _start, _pageSize, _continuation);
             }
 
             private class GetCollectionCommand : RavenCommand<CollectionResult>
             {
                 private readonly string _continuation;
-                private readonly JsonOperationContext _context;
                 private readonly string _collectionName;
                 private readonly int? _start;
                 private readonly int? _pageSize;
 
-                public GetCollectionCommand(JsonOperationContext context, string collectionName, int? start, int? pageSize, string continuation)
+                public GetCollectionCommand(string collectionName, int? start, int? pageSize, string continuation)
                 {
-                    _context = context;
                     _collectionName = collectionName;
                     _start = start;
                     _pageSize = pageSize;
@@ -174,9 +169,9 @@ namespace SlowTests.Sharding.Client.Operations
                     
                     var arrayResult = JsonDeserializationClient.BlittableArrayResult(response);
 
-                    Result = new CollectionResult()
+                    Result = new CollectionResult
                     {
-                        Results = arrayResult.Results.Clone(_context),
+                        Results = arrayResult.Results,
                         ContinuationToken = arrayResult.ContinuationToken
                     };
                 }

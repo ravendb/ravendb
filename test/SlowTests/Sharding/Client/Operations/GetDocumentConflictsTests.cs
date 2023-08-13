@@ -208,7 +208,8 @@ namespace SlowTests.Sharding.Client.Operations
                         var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id).ToList();
                         Assert.Equal(2, conflicts.Count); // 2 conflicts per doc
 
-                        var documentConflicts = await store.Maintenance.SendAsync(new GetDocumentConflictsOperation(docId: id));
+                        using var ctx = JsonOperationContext.ShortTermSingleUse();
+                        var documentConflicts = await store.Maintenance.SendAsync(ctx, new GetDocumentConflictsOperation(docId: id));
                         Assert.Equal(2, documentConflicts.Results.Length);
                     }
                 }
@@ -242,8 +243,11 @@ namespace SlowTests.Sharding.Client.Operations
             for (int i = 0; i < 10; i++)
             {
                 var id = $"users/{i}${_suffix}";
-                var documentConflicts = await store.Maintenance.SendAsync(new GetDocumentConflictsOperation(docId: id));
-                Assert.Equal(2, documentConflicts.Results.Length);
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var documentConflicts = await store.Maintenance.SendAsync(ctx, new GetDocumentConflictsOperation(docId: id));
+                    Assert.Equal(2, documentConflicts.Results.Length);
+                }
             }
         }
 
