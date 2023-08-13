@@ -85,6 +85,8 @@ namespace Voron.Data.Lookups
             public void Reset()
             {
                 _isFinished = false;
+                _cursor._len = 0;
+                _cursor._pos = -1;
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
 
                 ref var cState = ref _cursor;
@@ -273,6 +275,8 @@ namespace Voron.Data.Lookups
 
             public void Reset()
             {
+                _cursor._len = 0;
+                _cursor._pos = -1;
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
                 _isFinished = false;
                 
