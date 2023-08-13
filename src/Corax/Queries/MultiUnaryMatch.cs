@@ -41,9 +41,9 @@ public unsafe struct MultiUnaryItem
         Any
     }
 
-    private readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerLeft;
-    private readonly delegate*<long, long, bool> _longComparerLeft;
-    private readonly delegate*<double, double, bool> _doubleComparerLeft;
+    private delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerLeft;
+    private delegate*<long, long, bool> _longComparerLeft;
+    private delegate*<double, double, bool> _doubleComparerLeft;
 
 
     private readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerRight;
@@ -59,80 +59,61 @@ public unsafe struct MultiUnaryItem
         Unsafe.SkipInit(out LongValueRight);
         Unsafe.SkipInit(out SliceValueRight);
 
-        Mode = UnaryMode.Any;
+        Mode = leftOperation == UnaryMatchOperation.NotEquals || rightOperation == UnaryMatchOperation.NotEquals ? UnaryMode.All : UnaryMode.Any;
+        
         Binding = binding;
         Type = dataType;
-        this.IsBetween = isBetween;
+        IsBetween = isBetween;
         LeftSideOperation = leftOperation;
         RightSideOperation = rightOperation;
-        
-        switch (leftOperation)
+
+        SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft);
+        SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight);
+
+        void SelectComparers(UnaryMatchOperation operation, 
+            out delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> byteComparerLeft,
+            out delegate*<long, long, bool> longComparerLeft,
+            out delegate*<double, double, bool> doubleComparerLeft)
         {
-            case UnaryMatchOperation.LessThan:
-                _byteComparerLeft = &LessThanMatchComparer.Compare;
-                _longComparerLeft = &LessThanMatchComparer.Compare<long>;
-                _doubleComparerLeft = &LessThanMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.LessThanOrEqual:
-                _byteComparerLeft = &LessThanOrEqualMatchComparer.Compare;
-                _longComparerLeft = &LessThanOrEqualMatchComparer.Compare<long>;
-                _doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.GreaterThan:
-                _byteComparerLeft = &GreaterThanMatchComparer.Compare;
-                _longComparerLeft = &GreaterThanMatchComparer.Compare<long>;
-                _doubleComparerLeft = &GreaterThanMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.GreaterThanOrEqual:
-                _byteComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
-                _longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<long>;
-                _doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<double>;
-                break;
-
-            case UnaryMatchOperation.NotEquals:
-                Mode = UnaryMode.All;
-                _byteComparerLeft = &NotEqualsMatchComparer.Compare;
-                _longComparerLeft = &NotEqualsMatchComparer.Compare<long>;
-                _doubleComparerLeft = &NotEqualsMatchComparer.Compare<double>;
-                break;
-            default:
-                throw new Exception("Unsupported type of operation");
-        }
-
-        switch (rightOperation)
-        {
-            case UnaryMatchOperation.LessThan:
-                _byteComparerRight = &LessThanMatchComparer.Compare;
-                _longComparerRight = &LessThanMatchComparer.Compare<long>;
-                _doubleComparerRight = &LessThanMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.LessThanOrEqual:
-                _byteComparerRight = &LessThanOrEqualMatchComparer.Compare;
-                _longComparerRight = &LessThanOrEqualMatchComparer.Compare<long>;
-                _doubleComparerRight = &LessThanOrEqualMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.GreaterThan:
-                _byteComparerRight = &GreaterThanMatchComparer.Compare;
-                _longComparerRight = &GreaterThanMatchComparer.Compare<long>;
-                _doubleComparerRight = &GreaterThanMatchComparer.Compare<double>;
-                break;
-            case UnaryMatchOperation.GreaterThanOrEqual:
-                _byteComparerRight = &GreaterThanOrEqualMatchComparer.Compare;
-                _longComparerRight = &GreaterThanOrEqualMatchComparer.Compare<long>;
-                _doubleComparerRight = &GreaterThanOrEqualMatchComparer.Compare<double>;
-                break;
-
-            case UnaryMatchOperation.NotEquals:
-                Mode = UnaryMode.All;
-                _byteComparerRight = &NotEqualsMatchComparer.Compare;
-                _longComparerRight = &NotEqualsMatchComparer.Compare<long>;
-                _doubleComparerRight = &NotEqualsMatchComparer.Compare<double>;
-                break;
-            default:
-                _byteComparerRight = &EmptyComparer.Compare;
-                _longComparerRight = &EmptyComparer.Compare<long>;
-                _doubleComparerRight = &EmptyComparer.Compare<double>;
-                break;
+            switch (operation)
+            {
+                case UnaryMatchOperation.LessThan:
+                    byteComparerLeft = &LessThanMatchComparer.Compare;
+                    longComparerLeft = &LessThanMatchComparer.Compare<long>;
+                    doubleComparerLeft = &LessThanMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.LessThanOrEqual:
+                    byteComparerLeft = &LessThanOrEqualMatchComparer.Compare;
+                    longComparerLeft = &LessThanOrEqualMatchComparer.Compare<long>;
+                    doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.GreaterThan:
+                    byteComparerLeft = &GreaterThanMatchComparer.Compare;
+                    longComparerLeft = &GreaterThanMatchComparer.Compare<long>;
+                    doubleComparerLeft = &GreaterThanMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.GreaterThanOrEqual:
+                    byteComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
+                    longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<long>;
+                    doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.NotEquals:
+                    byteComparerLeft = &NotEqualsMatchComparer.Compare;
+                    longComparerLeft = &NotEqualsMatchComparer.Compare<long>;
+                    doubleComparerLeft = &NotEqualsMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.Equals:
+                    byteComparerLeft = &EqualsMatchComparer.Compare;
+                    longComparerLeft = &EqualsMatchComparer.Compare<long>;
+                    doubleComparerLeft = &EqualsMatchComparer.Compare<double>;
+                    break;
+                case UnaryMatchOperation.Between:
+                case UnaryMatchOperation.NotBetween:
+                case UnaryMatchOperation.AllIn:
+                case UnaryMatchOperation.Unknown:
+                default:
+                    throw new Exception("Unsupported type of operation: " + operation);
+            }
         }
     }
 
@@ -306,6 +287,27 @@ public unsafe struct MultiUnaryItem
             throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
         }
     }
+    
+    internal sealed class EqualsMatchComparer
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+        {
+            return sy.SequenceCompareTo(sx) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static bool Compare<T>(T sx, T sy) where T : unmanaged
+        {
+            if (typeof(T) == typeof(long))
+                return ((long)(object)sy - (long)(object)sx) == 0;
+            if (typeof(T) == typeof(double))
+                return ((double)(object)sy - (double)(object)sx) == 0;
+
+            throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
+        }
+    }
+
 
     internal sealed class EmptyComparer
     {
