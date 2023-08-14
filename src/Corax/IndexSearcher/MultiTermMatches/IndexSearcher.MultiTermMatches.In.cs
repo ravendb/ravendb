@@ -81,7 +81,7 @@ public partial class IndexSearcher
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
     private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false)
     {
-        const int MaximumTermMatchesHandledAsTermMatches = 4;
+        const int maximumTermMatchesHandledAsTermMatches = 4;
         
         var canUseUnaryMatch = field.HasBoost == false;
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -96,10 +96,10 @@ public partial class IndexSearcher
         //Since comparing lists is expensive, we will try to reduce the set of likely candidates as much as possible.
         //Therefore, we check the density of elements present in the tree.
         //In the future, this can be optimized by adding some values at which it makes sense to skip And and go directly into checking.
-        TermQueryItem[] list = new TermQueryItem[allInTerms.Count];
-
-        var termCount = 0;
+        TermQueryItem[] queryTerms = new TermQueryItem[allInTerms.Count];
+        var termsCount = 0;
         var llt = _transaction.LowLevelTransaction;
+
         foreach (var item in allInTerms)
         {
             Slice itemSlice = typeof(TTerm) == typeof(string) ? EncodeAndApplyAnalyzer(field, (string)(object)item) : (Slice)(object)item;
@@ -114,32 +114,31 @@ public partial class IndexSearcher
 
             var itemKey = llt.AcquireCompactKey();
             itemKey.Set(itemSlice.AsReadOnlySpan());
-            list[termCount++] = new TermQueryItem(itemKey, amount);
+            queryTerms[termsCount++] = new TermQueryItem(itemKey, amount);
         }
-
-
-        //Sort by density descending. Avoid calling read on biggest multiple times.
-        Array.Sort(list[..termCount], (tuple, valueTuple) => valueTuple.Density.CompareTo(tuple.Density));
-        
         
         
         //UnaryMatch doesn't support boosting, when we wants to calculate ranking we've to build query like And(Term, And(...)).
-        var termCountToProceed = canUseUnaryMatch
-            ? (termCount % MaximumTermMatchesHandledAsTermMatches)
-            : termCount;
-        
-        var binaryMatchOfTermMatches = new BinaryMatch[termCountToProceed / 2];
-        for (int i = 0; i < termCountToProceed / 2; i++)
+        var termMatchCount = (canUseUnaryMatch, termsCount) switch
         {
-            var term1 = TermQuery(field, list[i * 2].Item, terms);
-            var term2 = TermQuery(field, list[i * 2 + 1].Item, terms);
+            (false, _) => termsCount,
+            (true, >= maximumTermMatchesHandledAsTermMatches) => maximumTermMatchesHandledAsTermMatches,
+            (true, _) => termsCount
+        };
+        
+        
+        var binaryMatchOfTermMatches = new BinaryMatch[termMatchCount / 2];
+        for (int i = 0; i < termMatchCount / 2; i++)
+        {
+            var term1 = TermQuery(field, queryTerms[i * 2].Item, terms);
+            var term2 = TermQuery(field, queryTerms[i * 2 + 1].Item, terms);
             binaryMatchOfTermMatches[i] = And(term1, term2);
         }
 
-        if (termCountToProceed % 2 == 1)
+        if (termMatchCount % 2 == 1)
         {
             // We need even values to make the last work. 
-            var term = TermQuery(field, list[^1].Item, terms);
+            var term = TermQuery(field, queryTerms[^1].Item, terms);
             binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term);
         }
 
@@ -162,16 +161,12 @@ public partial class IndexSearcher
 
 
         //Just perform normal And.
-        if (allInTerms.Count is > 1 and <= MaximumTermMatchesHandledAsTermMatches || canUseUnaryMatch == false)
+        if (termsCount == termMatchCount)
             return MultiTermMatch.Create(binaryMatchOfTermMatches[0]);
 
 
-        //We don't have to check previous items. We have to check if those entries contain the rest of them.
-        list = list[16..];
-
-        // BinarySearch requires sorted array.
-        Array.Sort(list, ((item, inItem) => item.Item.Compare(inItem.Item)));
-        return UnaryQuery(binaryMatchOfTermMatches[0], field, list, UnaryMatchOperation.AllIn, -1);
+        queryTerms = queryTerms[maximumTermMatchesHandledAsTermMatches..];
+        return UnaryQuery(binaryMatchOfTermMatches[0], field, queryTerms, UnaryMatchOperation.AllIn, -1);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
