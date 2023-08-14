@@ -114,15 +114,15 @@
                 <pre class="margin-top export-messages"><code data-bind="text: messagesJoined"></code></pre>
             </div>
             <div class="clearfix margin-top margin-top-sm">
-            <div class="toggle pull-left" data-bind="visible: detailsVisible() && !operationFailed()">
-                <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
-                <label for="smuggler-monitoring">
-                    Monitoring (tail -f)
-                </label>
-            </div>
-            <button class="pull-right btn btn-default btn-sm" data-bind="click: copyLogs, visible: detailsVisible()">
-                <i class="icon-copy-to-clipboard"></i> Copy details to clipboard
-            </button>
+                <div class="toggle pull-left" data-bind="visible: detailsVisible() && !operationFailed()">
+                    <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
+                    <label for="smuggler-monitoring">
+                        Monitoring (tail -f)
+                    </label>
+                </div>
+                <button class="pull-right btn btn-default btn-sm" data-bind="click: copyLogs, visible: detailsVisible()">
+                    <i class="icon-copy-to-clipboard"></i> Copy details to clipboard
+                </button>
             </div>
         </div>
         <div class="modal-footer">
