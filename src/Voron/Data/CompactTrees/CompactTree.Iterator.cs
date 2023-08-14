@@ -72,7 +72,7 @@ namespace Voron.Data.CompactTrees
             public bool MoveNext(out long v) => _it.MoveNext(out v);
             
             
-            public bool MoveNext(out CompactKey key,out long v, out bool hasPreviousValue)
+            public bool MoveNext(out CompactKey key, out long v, out bool hasPreviousValue)
             {
                 if (_it.MoveNext(out CompactKeyLookup keyData, out v, out hasPreviousValue) == false)
                 {

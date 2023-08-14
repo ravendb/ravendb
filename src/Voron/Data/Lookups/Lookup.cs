@@ -1067,6 +1067,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Array.Resize(ref cstate._stk, cstate._stk.Length * 2); // but let's be safe
 
         ref var state = ref cstate._stk[++cstate._pos];
+        state.LastSearchPosition = 0;
         state.Page = _llt.GetPage(nextPage);
         cstate._len++;
     }
