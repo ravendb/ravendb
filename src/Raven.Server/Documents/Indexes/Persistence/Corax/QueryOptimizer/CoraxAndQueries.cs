@@ -54,7 +54,7 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
                 if (it == queryPosition)
                     continue;
 
-                var query = stack[unaryPos];
+                var query = stack[it];
                 if (query.Operation is UnaryMatchOperation.Between)
                 {
                     listOfMergedUnaries[unaryPos] = (query.Term, query.Term2) switch
