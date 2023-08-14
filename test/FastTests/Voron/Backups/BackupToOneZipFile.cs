@@ -12,6 +12,7 @@ using Xunit;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Backups
 {
@@ -20,8 +21,7 @@ namespace FastTests.Voron.Backups
         public BackupToOneZipFile(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact(Skip = "Should add database record to backup and restore")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport, Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {
             var tempFileName = NewDataPath(forceCreateDir: true);
