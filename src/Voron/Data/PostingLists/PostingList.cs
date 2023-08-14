@@ -248,7 +248,7 @@ namespace Voron.Data.PostingLists
             public Iterator(PostingList parent)
             {
                 _parent = parent;
-
+                _it = new PostingListLeafPage.Iterator(parent._llt.Allocator);
                 SeekSmallest();
             }
 
@@ -259,7 +259,7 @@ namespace Voron.Data.PostingLists
                 var state = _parent.FindSmallestValue();
 
                 var leafPage = new PostingListLeafPage(state->Page);
-                _it = leafPage.GetIterator(_parent._llt.Allocator);
+                leafPage.SetIterator(ref _it);
                 return _parent.State.NumberOfEntries > 0;
             }
 
@@ -269,7 +269,7 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new PostingListLeafPage(state.Page);
 
-                _it = leafPage.GetIterator(_parent._llt.Allocator);
+                leafPage.SetIterator(ref _it);
                 return _it.SkipHint(from);
             }
 
@@ -320,7 +320,7 @@ namespace Voron.Data.PostingLists
                                 parent._stk[parent._pos].LastSearchPosition = -1;
                                 continue;
                             }
-                            _it = new PostingListLeafPage(page).GetIterator(_parent._llt.Allocator);
+                            new PostingListLeafPage(page).SetIterator(ref _it);
                             break;
                         }
                     }                        

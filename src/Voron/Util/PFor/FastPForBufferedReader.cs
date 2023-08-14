@@ -29,7 +29,14 @@ public unsafe struct FastPForBufferedReader : IDisposable
     {
         _usedBuffer = 0;
         _bufferIdx = 0;
-        Decoder.Init(p, len);
+        if (len > 0)
+        {
+            Decoder.Init(p, len);
+        }
+        else
+        {
+            Decoder.MarkInvalid();
+        }
     }
     
     public FastPForBufferedReader(ByteStringContext allocator, byte* p, int len)

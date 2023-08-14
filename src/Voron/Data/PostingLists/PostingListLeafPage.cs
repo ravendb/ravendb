@@ -155,10 +155,12 @@ public readonly unsafe struct PostingListLeafPage
     public struct Iterator
     {
         private FastPForBufferedReader _reader;
+        
+        public void Init(byte* start, int sizeUsed) => _reader.Init(start, sizeUsed);
 
-        public Iterator(ByteStringContext allocator ,byte* start, int sizeUsed)
+        public Iterator(ByteStringContext allocator)
         {
-            _reader = new FastPForBufferedReader(allocator, start, sizeUsed);
+            _reader = new FastPForBufferedReader(allocator);
         }
 
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
@@ -243,9 +245,9 @@ public readonly unsafe struct PostingListLeafPage
         return buf.Take(Header->NumberOfEntries).ToList();
     }
 
-    public Iterator GetIterator(ByteStringContext allocator)
+    public void SetIterator(ref Iterator it)
     {
-        return new Iterator(allocator, _page.DataPointer, Header->SizeUsed);
+        it.Init(_page.DataPointer, Header->SizeUsed);
     }
 
     public static void Merge(
