@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
@@ -1238,14 +1239,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void TestShardedDatabase()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task TestShardedDatabase(Options options)
     {
-        var options = Options.ForMode(RavenDatabaseMode.Sharded);
-        options.ReplicationFactor = 2;
-        
-        using var store = Sharding.GetDocumentStore(options);
+        using var store = GetDocumentStore(options);
         {
             using (var session = store.OpenSession())
             {
@@ -1259,6 +1257,8 @@ public class RavenDB_11097 : RavenTestBase
                 
                 session.SaveChanges();
                 
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, d1.Id);
+                
                 using (var commands = store.Commands())
                 {
                     var payload = new TestIndexParameters()
@@ -1270,7 +1270,7 @@ public class RavenDB_11097 : RavenTestBase
                         }
                     };
 
-                    var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: 2);
+                    var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: shardNumber);
                     commands.Execute(cmd);
                     var res = cmd.Result as BlittableJsonReaderObject;
                     
@@ -1295,13 +1295,10 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void TestShardedDatabaseWithNoDocumentsOnPickedShard()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public async Task TestShardedDatabaseWithNoDocumentsOnPickedShard(Options options)
     {
-        var options = Options.ForMode(RavenDatabaseMode.Sharded);
-        options.ReplicationFactor = 2;
-        
         using var store = Sharding.GetDocumentStore(options);
         {
             using (var session = store.OpenSession())
@@ -1311,6 +1308,15 @@ public class RavenDB_11097 : RavenTestBase
                 session.Store(d1);
                 
                 session.SaveChanges();
+                
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, d1.Id);
+                
+                var nextShard = shardNumber switch
+                {
+                    0 => 1,
+                    1 => 2,
+                    _ => 0
+                };
                 
                 using (var commands = store.Commands())
                 {
@@ -1323,7 +1329,7 @@ public class RavenDB_11097 : RavenTestBase
                         }
                     };
 
-                    var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: 0);
+                    var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: nextShard);
                     commands.Execute(cmd);
                     var res = cmd.Result as BlittableJsonReaderObject;
                     
