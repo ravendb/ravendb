@@ -253,6 +253,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private NativeIntegersList _smallPostListIds;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
         private readonly PageLocator _pageLocator;
+        private bool _hasSmallListReader;
+
 
         public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TDirection it, long min, long max)
         {
@@ -280,7 +282,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 int currentIdx = 0;
                 // here we resume the *previous* operation
-                if (_smallListReader.IsValid)
+                if (_hasSmallListReader)
                 {
                     ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                 }
@@ -313,7 +315,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                             var start = FastPForDecoder.ReadStart(item.Address + offset);
                             if(start > _max)
                                 continue;
-                            _smallListReader = new FastPForBufferedReader(_llt.Allocator, item.Address + offset, item.Length - offset);
+                            if (_smallListReader.IsValid == false)
+                            {
+                                _smallListReader = new FastPForBufferedReader(_llt.Allocator);
+                            }
+
+                            _hasSmallListReader = true;
+                            _smallListReader.Init(item.Address + offset, item.Length - offset);
                             ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                             break;
                         case TermIdMask.PostingList:
@@ -372,8 +380,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(pSortedIds + currentIdx, read), read);
                 if (read == 0)
                 {
-                    _smallListReader.Dispose();
-                    _smallListReader = default;
+                    _hasSmallListReader = false;
                     break;
                 }
                 if (pSortedIds[currentIdx + read - 1] < _min)
@@ -384,6 +391,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         public void Dispose()
         {
+            _smallListReader.Dispose();
             _smallPostListIds.Dispose();
             _containerItemsScope.Dispose();
             _itBufferScope.Dispose();
