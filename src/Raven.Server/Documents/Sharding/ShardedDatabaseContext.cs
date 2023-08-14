@@ -238,6 +238,8 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => _databaseShutdown.Dispose());
 
+            exceptionAggregator.Execute(() => NotificationCenter.Dispose());
+
             exceptionAggregator.ThrowIfNeeded();
         }
     }

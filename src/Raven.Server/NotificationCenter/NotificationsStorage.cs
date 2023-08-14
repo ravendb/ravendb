@@ -422,5 +422,14 @@ namespace Raven.Server.NotificationCenter
                 tx.Commit();
             }
         }
+
+        public void DeleteStorageFor<T>(TransactionOperationContext<T> ctx, string database) where T : RavenTransaction
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+
+            var tableName = GetTableName(database);
+            ctx.Transaction.InnerTransaction.DeleteTable(tableName);
+        }
     }
 }
