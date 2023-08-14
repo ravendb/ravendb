@@ -100,13 +100,17 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int FillWithReader(Span<long> buffer)
         {
-            return _termReader.Read(ref this, buffer);
+            int results = _termReader.Read(ref this, buffer);
+            if(results == 0)
+                _termReader.Dispose();
+            return results;
         }
 
         private unsafe struct MultiTermReader
         {
             private PostingList.Iterator _postListIt;
             private FastPForBufferedReader _smallListReader;
+            private bool _hasSmallListRead;
             private readonly long _max;
             private readonly IndexSearcher _searcher;
             private readonly ByteStringContext _allocator;
@@ -141,6 +145,7 @@ namespace Corax.Queries
             {
                 match._inner.Reset();
                 _smallPostListIds.Clear();
+                _smallListReader.Dispose();
                 _postListIt = default;
                 _smallListReader = default;
             }
@@ -152,7 +157,7 @@ namespace Corax.Queries
                 {
                     int currentIdx = 0;
                     // here we resume the *previous* operation
-                    if (_smallListReader.IsValid)
+                    if (_hasSmallListRead)
                     {
                         postingListCalls++;
                         ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
@@ -188,7 +193,12 @@ namespace Corax.Queries
                                 var start = FastPForDecoder.ReadStart(item.Address + offset);
                                 if (start > _max)
                                     continue;
-                                _smallListReader = new FastPForBufferedReader(_allocator, item.Address + offset, item.Length - offset);
+                                if (_smallListReader.IsValid == false)
+                                {
+                                    _smallListReader = new FastPForBufferedReader(_allocator);
+                                }
+                                _smallListReader.Init(item.Address + offset, item.Length - offset);
+                                _hasSmallListRead = true;
                                 postingListCalls++;
                                 ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                                 break;
@@ -252,8 +262,7 @@ namespace Corax.Queries
                     EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(pSortedIds + currentIdx, read), read);
                     if (read == 0)
                     {
-                        _smallListReader.Dispose();
-                        _smallListReader = default;
+                        _hasSmallListRead = false;
                         break;
                     }
 
@@ -263,6 +272,7 @@ namespace Corax.Queries
 
             public void Dispose()
             {
+                _smallListReader.Dispose();
                 _smallPostListIds.Dispose();
                 _containerItemsScope.Dispose();
                 _itBufferScope.Dispose();

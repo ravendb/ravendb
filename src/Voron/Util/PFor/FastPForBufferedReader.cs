@@ -17,6 +17,20 @@ public unsafe struct FastPForBufferedReader : IDisposable
     private const int InternalBufferSize = 256;
 
     public bool IsValid => Decoder.IsValid;
+
+    public FastPForBufferedReader(ByteStringContext allocator)
+    {
+        _allocator = allocator;
+        Decoder = new FastPForDecoder(_allocator);
+        _buffer = null;
+    }
+
+    public void Init(byte* p, int len)
+    {
+        _usedBuffer = 0;
+        _bufferIdx = 0;
+        Decoder.Init(p, len);
+    }
     
     public FastPForBufferedReader(ByteStringContext allocator, byte* p, int len)
     {
