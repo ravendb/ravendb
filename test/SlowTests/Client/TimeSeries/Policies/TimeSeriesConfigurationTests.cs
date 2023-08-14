@@ -25,7 +25,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         public TimeSeriesConfigurationTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanConfigureTimeSeries(Options options)
@@ -499,7 +499,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                     session.SaveChanges();
                 }
-                
+
                 var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/KARMEL"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
@@ -1135,7 +1135,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
-                
+
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel", "Heartrate")?
@@ -1332,7 +1332,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                     session.SaveChanges();
                 }
-                
+
                 var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1419,8 +1419,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                             RawPolicy = raw,
                             Policies = new List<TimeSeriesPolicy>
                             {
-                                p1
-                                ,p2,p3,p4
+                                p1,p2,p3,p4
                             }
                         },
                     },
@@ -1442,16 +1441,16 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                     session.SaveChanges();
 
-                    session.Store(new User { Name = "Karmel" }, "marker");
+                    session.Store(new User { Name = "Karmel" }, "marker$users/karmel");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker$users/karmel", null, TimeSpan.FromSeconds(15));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await Task.Delay(config.PolicyCheckFrequency.Value * 3);
-                
+
                 foreach (var node in cluster.Nodes)
                 {
                     using (var nodeStore = GetDocumentStore(new Options(options)
@@ -1528,7 +1527,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await Task.Delay(config.PolicyCheckFrequency.Value * 3);
-                
+
                 foreach (var node in cluster.Nodes)
                 {
                     using (var nodeStore = GetDocumentStore(new Options(options)
@@ -1946,7 +1945,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     tsf.Delete(baseline, baseline.AddDays(29));
                     session.SaveChanges();
                 }
-                
+
                 await SetupReplicationAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store2);
 
