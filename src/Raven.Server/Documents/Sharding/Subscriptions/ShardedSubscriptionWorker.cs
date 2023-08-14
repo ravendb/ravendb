@@ -158,23 +158,19 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         protected override async Task TrySetRedirectNodeOnConnectToServerAsync()
         {
-            using (_databaseContext.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
+            if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
             {
-                if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
+                var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentState, _state.SubscriptionState, null);
+                if (node == null || _shardRequestExecutor == null)
+                    return;
+
+                if (_shardRequestExecutor.TopologyNodes == null)
                 {
-                    var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentState, _state.SubscriptionState, null);
-                    if (node == null || _shardRequestExecutor == null)
-                        return;
-
-                    if (_shardRequestExecutor.TopologyNodes == null)
-                    {
-                        _redirectNode = (await _shardRequestExecutor.GetRequestedNode(node)).Node;
-                        return;
-                    }
-
-                    _redirectNode = _shardRequestExecutor.TopologyNodes.FirstOrDefault(x => x.ClusterTag == node);
+                    _redirectNode = (await _shardRequestExecutor.GetRequestedNode(node)).Node;
+                    return;
                 }
+
+                _redirectNode = _shardRequestExecutor.TopologyNodes.FirstOrDefault(x => x.ClusterTag == node);
             }
         }
     }
