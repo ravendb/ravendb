@@ -904,7 +904,9 @@ namespace Raven.Server.Documents.Revisions
                 lastRevisionToDelete = revision;
             }
 
-
+            // If the last revision you got to remove is the last (newest) revision of the document and it is 'Delete Revision',
+            // and the doc still has revisions in addition to it,
+            // then don't delete it, so the previous revisions that remained wont become orphan.
             if (lastRevisionToDelete != null)
             {
                 var remained = revisionsPreviousCount - deleted;
