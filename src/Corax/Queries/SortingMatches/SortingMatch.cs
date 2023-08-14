@@ -315,7 +315,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                             var start = FastPForDecoder.ReadStart(item.Address + offset);
                             if(start > _max)
                                 continue;
-                            if (_smallListReader.IsValid == false)
+                            if (_smallListReader.WasInitialized == false)
                             {
                                 _smallListReader = new FastPForBufferedReader(_llt.Allocator);
                             }
