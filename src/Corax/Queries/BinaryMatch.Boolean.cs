@@ -7,6 +7,7 @@ using System.Threading;
 using System.Xml.Linq;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron.Data.PostingLists;
 
 namespace Corax.Queries
 {
@@ -45,11 +46,10 @@ namespace Corax.Queries
 
                         resultsSpan = resultsSpan.Slice(results);
                     }
-
+                    
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (match._doNotSortResults == false && 
-                        iterations >= 1 || inner.GetType() == typeof(SpatialMatch))
+                    if (match._doNotSortResults == false && iterations >= 1 || inner is SpatialMatch)
                     {
                         if (totalResults > 0)
                         {
@@ -58,10 +58,32 @@ namespace Corax.Queries
                     }
 
                     if (totalResults == 0)
+                    {
+                        match._memoizedOuter?.Dispose();
+                        match._memoizedOuter = null;
                         return 0;
-
+                    }
+                    
                     match._token.ThrowIfCancellationRequested();
-                    totalResults = outer.AndWith(matches, totalResults);
+                    
+                    // if on the first run, we got more than the matches buffer, we'll need to call AndWith multiple times
+                    // which can be really expensive, instead, let's memoize the outer and remember that 
+                    if (resultsSpan.Length == matches.Length && iterations == 1 && match._memoizedOuter is null)
+                    {
+                        match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._ctx, match._outer);
+                        match._memoizedOuter.SortingRequired();
+                    }
+
+                    if (match._memoizedOuter != null)
+                    {
+                        Span<long> results = match._memoizedOuter.FillAndRetrieve();
+                        totalResults = MergeHelper.And(matches, matches[..totalResults], results);
+                    }
+                    else
+                    {
+                        totalResults = outer.AndWith(matches, totalResults);
+                    }
+
                     if (totalResults != 0)
                         return totalResults;
                 }

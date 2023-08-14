@@ -30,6 +30,12 @@ namespace Corax.Queries
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
         
         private bool _doNotSortResults;
+        private bool _sortingRequired;
+
+        public void SortingRequired()
+        {
+            _sortingRequired = true;
+        }
 
         public bool DoNotSortResults()
         {
@@ -91,7 +97,7 @@ namespace Corax.Queries
                 // We will use multiple rounds to get the whole buffer.
                 iterations++;
 
-                // We havent finished and probably we will need to expand the temporary buffer.
+                // We haven't finished and probably we will need to expand the temporary buffer.
                 int bufferUsedItems = count + read;
                 if (bufferUsedItems > Buffer.Length * 3 / 4)
                 {
@@ -107,8 +113,8 @@ namespace Corax.Queries
             End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-            if (_doNotSortResults == false &&
-                iterations > 1 && count > 1)
+            if (_doNotSortResults == false && iterations > 1 && count > 1 || 
+                _sortingRequired)
             {
                 // We need to sort and remove duplicates.
                 count = Sorting.SortAndRemoveDuplicates(Buffer[..count]);
