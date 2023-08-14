@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -152,6 +154,28 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             // for sharded worker we throw the real exception
             throw ex;
+        }
+
+        protected override async Task TrySetRedirectNodeOnConnectToServerAsync()
+        {
+            using (_databaseContext.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
+                {
+                    var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentState, _state.SubscriptionState, null);
+                    if (node == null || _shardRequestExecutor == null)
+                        return;
+
+                    if (_shardRequestExecutor.TopologyNodes == null)
+                    {
+                        _redirectNode = (await _shardRequestExecutor.GetRequestedNode(node)).Node;
+                        return;
+                    }
+
+                    _redirectNode = _shardRequestExecutor.TopologyNodes.FirstOrDefault(x => x.ClusterTag == node);
+                }
+            }
         }
     }
 }

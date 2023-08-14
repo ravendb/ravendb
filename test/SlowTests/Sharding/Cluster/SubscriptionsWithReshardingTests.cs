@@ -1302,17 +1302,16 @@ namespace SlowTests.Sharding.Cluster
                     }
                 });
 
-
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "foo$users/1-A");
+                    session.Store(new User() {Age = 0}, "foo$users/1-A");
 
                     for (int i = 0; i < 20; i++)
                     {
-                        session.Store(new User(), NextId);
+                        session.Store(new User() { Age = 0 }, NextId);
                     }
 
-                    session.Store(new User(), "foo$users/8-A");
+                    session.Store(new User() { Age = 0 }, "foo$users/8-A");
 
                     session.SaveChanges();
                 }
@@ -1347,16 +1346,16 @@ namespace SlowTests.Sharding.Cluster
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "bar$users/1-A");
-                    session.Store(new User(), "users/1-A");
+                    session.Store(new User() { Age = 1 }, "bar$users/1-A");
+                    session.Store(new User() { Age = 1 }, "users/1-A");
 
                     for (int i = 0; i < 20; i++)
                     {
-                        session.Store(new User(), NextId);
+                        session.Store(new User() { Age = 1 }, NextId);
                     }
 
-                    session.Store(new User(), "bar$users/8-A");
-                    session.Store(new User(), "users/8-A");
+                    session.Store(new User() { Age = 1 }, "bar$users/8-A");
+                    session.Store(new User() { Age = 1 }, "users/8-A");
 
                     session.SaveChanges();
                 }
@@ -1371,16 +1370,16 @@ namespace SlowTests.Sharding.Cluster
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "baz$users/1-A");
-                    session.Store(new User(), "users/1-A");
+                    session.Store(new User() { Age = 2 }, "baz$users/1-A");
+                    session.Store(new User() { Age = 2 }, "users/1-A");
 
                     for (int i = 0; i < 20; i++)
                     {
-                        session.Store(new User(), NextId);
+                        session.Store(new User() { Age = 2 }, NextId);
                     }
 
-                    session.Store(new User(), "baz$users/8-A");
-                    session.Store(new User(), "users/8-A");
+                    session.Store(new User() { Age = 2 }, "baz$users/8-A");
+                    session.Store(new User() { Age = 2 }, "users/8-A");
 
 
                     session.SaveChanges();
