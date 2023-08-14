@@ -342,7 +342,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
 
-            await ExecuteClusterTransactions(database);
+            ExecuteClusterTransactions(database);
         }
 
         protected Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
@@ -552,7 +552,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
         }
 
-        private async Task ExecuteClusterTransactions(DocumentDatabase database)
+        private void ExecuteClusterTransactions(DocumentDatabase database)
         {
             long totalExecutedCommands = 0;
 
@@ -565,7 +565,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 using (serverContext.OpenReadTransaction())
                 {
                     // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
-                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                    var executed = database.ExecuteClusterTransaction(serverContext, batchSize: 1);
                     if (executed.BatchSize == 0)
                         break;
 

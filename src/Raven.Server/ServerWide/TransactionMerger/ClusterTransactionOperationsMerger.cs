@@ -29,11 +29,6 @@ public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOper
     {
     }
 
-    public void EnqueueSync(MergedTransactionCommand<ClusterOperationContext, ClusterTransaction> cmd)
-    {
-        Enqueue(cmd).GetAwaiter().GetResult();
-    }
-
     public Task Enqueue(Func<ClusterOperationContext, long> executeFunc)
     {
         var cmd = new ExecutableMergedCommand(executeFunc);
