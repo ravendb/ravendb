@@ -24,16 +24,15 @@ namespace Corax.Queries.TermProviders
             _iterator.Reset();
         }
 
-        public bool IsFillSupported { get; }
+        public bool IsFillSupported => true;
 
         public int Fill(Span<long> containers)
         {
-            throw new NotImplementedException();
+            return _iterator.Fill(containers);
         }
 
         public void Reset()
         {            
-            _iterator = _tree.Iterate<TLookupIterator>();
             _iterator.Reset();
         }
 
