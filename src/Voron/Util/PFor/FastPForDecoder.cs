@@ -36,6 +36,12 @@ public unsafe struct FastPForDecoder : IDisposable
         _exceptions = (uint*)_buffer.Ptr;
     }
 
+    public void MarkInvalid()
+    {
+        _input = null;
+        _end = null;
+    }
+    
     public void Init( byte* input, int size)
     {
         if (size <= sizeof(PForHeader)) throw new ArgumentOutOfRangeException(nameof(size));
