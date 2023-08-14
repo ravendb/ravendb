@@ -72,6 +72,7 @@ using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using Raven.Server.Documents.Handlers.Processors;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
                 });
-                _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
+                _hasClusterTransaction = new ManualResetEventSlim(false);
                 IdentityPartsSeparator = '/';
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
                 _proxyRequestExecutor = CreateRequestExecutor();
@@ -440,12 +441,15 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                _clusterTransactionsTask = Task.Run(async () =>
+                _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal,
+                        ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread", Name)),
+                        _logger);
                     try
                     {
                         _hasClusterTransaction.Set();
-                        await ExecuteClusterTransactionTask();
+                        ExecuteClusterTransaction();
                     }
                     catch (OperationCanceledException)
                     {
@@ -458,7 +462,8 @@ namespace Raven.Server.Documents
                             _logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
-                }, DatabaseShutdown);
+                }, null, ThreadNames.ForClusterTransactions("Cluster Transaction", Name));
+
                 _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
                 IoChanges.OnIoChange += CheckWriteRateAndNotifyIfNecessary;
             }
@@ -492,7 +497,7 @@ namespace Raven.Server.Documents
             return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
 
-        private readonly AsyncManualResetEvent _hasClusterTransaction;
+        private readonly ManualResetEventSlim _hasClusterTransaction;
         public readonly DatabaseMetricCacher MetricCacher;
 
         public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
@@ -511,7 +516,7 @@ namespace Raven.Server.Documents
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
         public bool IsEncrypted => MasterKey != null;
 
-        private Task _clusterTransactionsTask;
+        private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
 
@@ -529,18 +534,18 @@ namespace Raven.Server.Documents
             StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
         };
 
-        private async Task ExecuteClusterTransactionTask()
+        private void ExecuteClusterTransaction()
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
             {
                 var topology = ServerStore.LoadDatabaseTopology(Name);
                 if (topology.Promotables.Contains(ServerStore.NodeTag))
                 {
-                    await Task.Delay(1000, DatabaseShutdown);
+                    DatabaseShutdown.WaitHandle.WaitOne(1000);
                     continue;
                 }
 
-                await _hasClusterTransaction.WaitAsync(DatabaseShutdown);
+                _hasClusterTransaction.Wait(DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -552,7 +557,7 @@ namespace Raven.Server.Documents
                     using (context.OpenReadTransaction())
                     {
                         var batchSize = Configuration.Cluster.MaxClusterTransactionsBatchSize;
-                        var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
+                        var executed = ExecuteClusterTransaction(context, batchSize);
                         if (executed.BatchSize == batchSize)
                         {
                             // we might have more to execute
@@ -611,7 +616,7 @@ namespace Raven.Server.Documents
             return batchCollector;
         }
 
-        public async Task<(long BatchSize, long CommandsCount)> ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
+        public (long BatchSize, long CommandsCount) ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
             using var batchCollector = CollectCommandsBatch(context, batchSize);
             Stopwatch stopwatch = null;
@@ -645,7 +650,7 @@ namespace Raven.Server.Documents
                     {
                         //If we get a database shutdown while we process a cluster tx command this
                         //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                        await TxMerger.Enqueue(mergedCommands);
+                        TxMerger.EnqueueSync(mergedCommands);
                         batchCollector.AllCommandsBeenProcessed = true;
                     }
                     catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
@@ -653,7 +658,7 @@ namespace Raven.Server.Documents
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
 
-                        if (await ExecuteClusterTransactionOneByOne(batch))
+                        if (ExecuteClusterTransactionOneByOne(batch))
                             batchCollector.AllCommandsBeenProcessed = true;
                     }
                 }
@@ -693,7 +698,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        private bool ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             for (int i = 0; i < batch.Count; i++)
             {
@@ -702,7 +707,7 @@ namespace Raven.Server.Documents
                 var mergedCommand = new ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    await TxMerger.Enqueue(mergedCommand);
+                    TxMerger.EnqueueSync(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
@@ -722,7 +727,7 @@ namespace Raven.Server.Documents
                         $"{Name}/ClusterTransaction",
                         new ExceptionDetails(e)));
 
-                    await Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown);
+                    DatabaseShutdown.WaitHandle.WaitOne(_clusterTransactionDelayOnFailure);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
                     return false;
                 }
@@ -1010,29 +1015,16 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
 
-            var clusterTransactionsTask = _clusterTransactionsTask;
-            if (clusterTransactionsTask != null)
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
+            exceptionAggregator.Execute(() =>
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
-                exceptionAggregator.Execute(() =>
-                {
-                    try
-                    {
-                        clusterTransactionsTask.Wait();
-                    }
-                    catch (AggregateException e)
-                    {
-                        if (e.ExtractSingleInnerException() is TaskCanceledException)
-                        {
-                            // _clusterTransactionsTask might be TaskCanceled in case we dispose right after Initialize
-                            return;
-                        }
+                var clusterTransactions = _clusterTransactionsThread;
+                _clusterTransactionsThread = null;
 
-                        throw;
-                    }
-                });
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
-            }
+                if (clusterTransactions != null && PoolOfThreads.LongRunningWork.Current != clusterTransactions)
+                    clusterTransactions.Join(int.MaxValue);
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
