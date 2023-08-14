@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Server.Compression;
 using Voron;
@@ -434,14 +435,27 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return HasMultipleTermsInField(fieldMetadata.FieldName);
     }
-    
+
+    //TODO PERFORMANCE
+    private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
     private bool HasMultipleTermsInField(Slice fieldName)
     {
         if (_metadataTree is null)
             return false;
+
+        _hasMultipleTermsInFieldCache ??= new(SliceComparer.Instance);
+
+        ref var field = ref CollectionsMarshal.GetValueRefOrAddDefault(_hasMultipleTermsInFieldCache, fieldName, out bool exists);
+        
+        if (exists)
+            return field;
         
         using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
-        return it.Seek(fieldName) && SliceComparer.Equals(it.CurrentKey, fieldName);
+        var hasField = it.Seek(fieldName);
+        exists = hasField && SliceComparer.Equals(it.CurrentKey, fieldName);
+        _hasMultipleTermsInFieldCache[fieldName] = exists;
+        
+        return exists;
     }
 
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()

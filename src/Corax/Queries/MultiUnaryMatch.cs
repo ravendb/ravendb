@@ -386,40 +386,60 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
 
-    public int Fill(Span<long> matches)
+    public unsafe int Fill(Span<long> matches)
     {
         var read = _inner.Fill(matches);
         if (read == 0)
             return 0;
-        var comparerFieldsRootPages = new long[_comparers.Length];
+        
+        var comparerFieldsRootPages =  _comparers.Length > 128 ? new long[_comparers.Length] : stackalloc long[_comparers.Length];
         for (int i = 0; i < _comparers.Length; i++)
         {
             long fieldRoot = _searcher.FieldCache.GetLookupRootPage(_comparers[i].Binding.FieldName);
-            comparerFieldsRootPages[i] = fieldRoot;
+            ref var comparerFieldsRootPage = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), i);
+            comparerFieldsRootPage = fieldRoot;
         }
 
         Page lastPage = default;
 
         int currentIdx = 0;
+        Span<bool> comparerMatches = _comparers.Length > 128 ? new bool[_comparers.Length] : stackalloc bool[_comparers.Length];
+        Span<bool> allAccepted = _comparers.Length > 128 ? new bool[_comparers.Length] : stackalloc bool[_comparers.Length];
+        allAccepted.Fill(true);
+        
         for (int i = 0; i < read; ++i)
         {
+            comparerMatches.Fill(false);
+
             int comparerId = 0;
             for (; comparerId < _comparers.Length; ++comparerId)
             {
-                long fieldsRootPage = comparerFieldsRootPages[comparerId];
+                ref var comparerMatched = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerMatches), comparerId);
+                ref var comparer = ref Unsafe.Add(ref MemoryMarshal.GetReference(_comparers.AsSpan()), comparerId);
                 var reader = _searcher.GetEntryTermsReader(matches[i], ref lastPage);
+                
                 while (reader.MoveNext())
                 {
-                    if(reader.FieldRootPage != fieldsRootPage)
+                    if(reader.FieldRootPage != Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), comparerId))
                         continue;
-                    var comparer = _comparers[comparerId];
-                    if (IsAcceptedForIterator(comparer, in reader) == false)
+                    if (comparerMatched) 
+                        break;
+                    
+                    var result = IsAcceptedForIterator(comparer, in reader);
+                    if (result)
                     {
-                        goto NotMatch;
+                        comparerMatched = true;
+                        break;
                     }
+                        
+                    if (_searcher.HasMultipleTermsInField(_comparers[comparerId].Binding) == false)
+                        goto NotMatch;
                 }
             }
-            matches[currentIdx++] = matches[i];
+            
+            if (comparerMatches.SequenceCompareTo(allAccepted) == 0) // if field(s) doesn't exists that doesn't mean the document is valid for us.
+                matches[currentIdx++] = matches[i];
+            
             NotMatch: ; // the ; so we have a label for the goto
         }
 
