@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -123,6 +124,57 @@ public class CompactTreeTests : StorageTest
         }
     }
 
+    [Fact]
+    public void CanProperlyResetIterator()
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor(nameof(CanProperlyResetIterator));
+            tree.Add("aaaa", 1 << 2);
+            tree.Add("aaab", 2 << 2);
+            tree.Add("dddd", 3 << 2);
+            tree.Add("eeee", 4 << 2);
+
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var compactTreeFor = rtx.CompactTreeFor(nameof(CanProperlyResetIterator));
+            var forwardIterator = compactTreeFor.Iterate();
+            forwardIterator.Seek("dddd");
+            forwardIterator.Reset();
+            List<string> keys = new();
+            while (forwardIterator.MoveNext(out CompactKey compactKey, out long _, out _))
+            {
+                keys.Add(compactKey.ToString());
+            }
+
+            Assert.Contains("aaaa", keys);
+            Assert.Contains("aaab", keys);
+            Assert.Contains("dddd", keys);
+            Assert.Contains("eeee", keys);
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            //backward
+            var compactTreeFor = rtx.CompactTreeFor(nameof(CanProperlyResetIterator));
+            var backwardIterator = compactTreeFor.Iterate<Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>();
+            backwardIterator.Seek("aaab");
+            backwardIterator.Reset();
+            List<string> keys = new();
+            while (backwardIterator.MoveNext(out CompactKey compactKey, out long _, out _))
+                keys.Add(compactKey.ToString());
+            
+            Assert.Contains("aaaa", keys);
+            Assert.Contains("aaab", keys);
+            Assert.Contains("dddd", keys);
+            Assert.Contains("eeee", keys);
+        }
+
+}
+    
     [Fact]
     public void CanAddIterateAndRemove()
     {
