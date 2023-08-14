@@ -46,7 +46,5 @@ internal sealed class TestIndexCommand : RavenCommand<BlittableJsonReaderObject>
         }
 
         Result = response.Clone(context);
-        
-        //Result = _documentConventions.Serialization.DefaultConverter.FromBlittable<TestIndexResult>(response);
     }
 }
