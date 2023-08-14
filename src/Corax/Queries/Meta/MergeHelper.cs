@@ -24,7 +24,7 @@ namespace Corax.Queries
         /// dst and left *may* be the same thing, we can assume that dst is at least as large as the smallest of those
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             if (Avx2.IsSupported)
                 return AndVectorized(dst, dstLength, left, leftLength, right, rightLength);

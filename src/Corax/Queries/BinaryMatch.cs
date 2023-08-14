@@ -17,6 +17,7 @@ namespace Corax.Queries
 
         private TInner _inner;
         private TOuter _outer;
+        private MemoizationMatchProvider<TOuter> _memoizedOuter;
         private ByteStringContext _ctx;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
