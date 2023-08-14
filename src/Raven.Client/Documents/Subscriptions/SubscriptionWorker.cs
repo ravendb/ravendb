@@ -13,6 +13,7 @@
 #endif
 
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 
@@ -44,5 +45,11 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         protected override SubscriptionBatch<T> CreateEmptyBatch() => new SubscriptionBatch<T>(_subscriptionLocalRequestExecutor, _store, _dbName, _logger);
+
+        protected override Task TrySetRedirectNodeOnConnectToServerAsync()
+        {
+            // no-op
+            return Task.CompletedTask;
+        }
     }
 }

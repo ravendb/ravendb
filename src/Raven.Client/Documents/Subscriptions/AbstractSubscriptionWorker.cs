@@ -194,6 +194,8 @@ namespace Raven.Client.Documents.Subscriptions
 
             var requestExecutor = GetRequestExecutor();
 
+            await TrySetRedirectNodeOnConnectToServerAsync().ConfigureAwait(false);
+
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 TcpConnectionInfo tcpInfo;
@@ -1017,6 +1019,8 @@ namespace Raven.Client.Documents.Subscriptions
         protected abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
 
         protected abstract TBatch CreateEmptyBatch();
+
+        protected abstract Task TrySetRedirectNodeOnConnectToServerAsync();
 
         public event Action<AbstractSubscriptionWorker<TBatch, TType>> OnDisposed = delegate { };
 
