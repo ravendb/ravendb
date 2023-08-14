@@ -1554,6 +1554,7 @@ namespace Raven.Server.ServerWide
 
                         if (databaseRecord.Sharding.Shards.Count == 0)
                         {
+                            serverStore.NotificationCenter.Storage.DeleteStorageFor(context, shardedDatabaseName);
                             DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
                             NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                                 DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);

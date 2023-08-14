@@ -144,9 +144,12 @@ namespace Raven.Server.Documents
                             }
                             else
                             {
-                                using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out var _))
+                                using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out _))
                                 {
                                 }
+
+                                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += 
+                                    _ => _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
                             }
                         }
                         else
