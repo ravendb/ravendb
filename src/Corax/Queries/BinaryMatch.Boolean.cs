@@ -66,9 +66,9 @@ namespace Corax.Queries
                     
                     match._token.ThrowIfCancellationRequested();
                     
-                    // if on the first run, we got more than the matches buffer, we'll need to call AndWith multiple times
+                    // We got more than the matches buffer, we'll need to call AndWith multiple times
                     // which can be really expensive, instead, let's memoize the outer and remember that 
-                    if (resultsSpan.Length == matches.Length && iterations == 1 && match._memoizedOuter is null)
+                    if (resultsSpan.Length == 0 && match._memoizedOuter is null)
                     {
                         match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._ctx, match._outer);
                         match._memoizedOuter.SortingRequired();
