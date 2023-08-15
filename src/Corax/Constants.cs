@@ -6,6 +6,9 @@ namespace Corax
 {
     public static class Constants
     {
+        public const string BeforeAllKeys = "BeforeAllKeys-a8e5f221-613e-4eae-9962-2689e7c44506";
+        public const string AfterAllKeys = "AfterAllKeys-3622a0bb-1cf4-4200-b830-5e937d57ac99";
+        
         public const string NullValue = "NULL_VALUE";
         public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
         
