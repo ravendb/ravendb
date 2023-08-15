@@ -143,12 +143,8 @@ namespace Corax.Queries
             var value = ((TermQueryItem[])(object)match._value);
             var requiredSizeOfBitset = value.Length / sizeof(byte) + (value.Length % sizeof(byte) == 0 ? 0 : 1);
             byte* bitsetBuffer = stackalloc byte[requiredSizeOfBitset];
-            var bitsetBufferAsSpan = new Span<byte>(bitsetBuffer, requiredSizeOfBitset);
-
             var bitset = new PtrBitVector(bitsetBuffer, requiredSizeOfBitset);
-            
             var searcher = match._searcher;
-            var field = match._field;
             var currentMatches = matches;
             int totalResults = 0;
             int storeIdx = 0;
@@ -197,20 +193,7 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             void CheckAndSet(ReadOnlySpan<byte> readFromEntry, bool isNull = false)
             {
-                int index;
-                if (isNull)
-                {
-                    index = BinarySearch(value, Constants.NullValueSlice.AsSpan());
-                }
-                else
-                {
-                    using (searcher.ApplyAnalyzer(field, readFromEntry, out var analyzedTerm))
-                    {
-
-                        index = BinarySearch(value, analyzedTerm.AsSpan());
-                    }
-                        
-                }
+                int index = BinarySearch(value, isNull ? Constants.NullValueSlice.AsSpan() : readFromEntry);
                 if (index >= 0)
                     bitset.Set(index);
             }
