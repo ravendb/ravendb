@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Corax.Queries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Server.Utils.Stats;
 
@@ -37,6 +38,16 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Paging;
         }
 
+        private QueryInspectionNode _queryPlan;
+        public void SetQueryPlan(QueryInspectionNode plan)
+        {
+            _queryPlan = plan;
+            if (_base != null)
+            {
+                _base.QueryPlan = plan;
+            }
+        }
+
         public QueryTimingsScope(bool start = true) : base(null, start)
         {
         }
@@ -59,8 +70,15 @@ namespace Raven.Server.Documents.Queries.Timings
                     timings.Timings ??= new SortedDictionary<string, QueryTimings>();
 
                     timings.Timings[scope.Key] = scope.Value.ToTimings();
+
+                    if (scope.Value._queryPlan != null)
+                    {
+                        timings.QueryPlan ??= scope.Value._queryPlan;
+                    }
                 }
             }
+
+            timings.QueryPlan ??= _queryPlan;
 
             return timings;
         }

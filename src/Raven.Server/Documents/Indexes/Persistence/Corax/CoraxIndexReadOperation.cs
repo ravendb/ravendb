@@ -587,6 +587,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out orderByFields)) is null)
                                 yield break;
                         }
+
+                        queryTimings?.SetQueryPlan(queryMatch.Inspect());
                     }
                     finally
                     {
