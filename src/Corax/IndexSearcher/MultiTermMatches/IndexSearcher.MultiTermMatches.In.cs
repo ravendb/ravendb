@@ -11,6 +11,7 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
+    private static readonly Comparison<TermQueryItem> CompareTermQueryItemKeys = (item, queryItem) => item.Item.Compare(queryItem.Item);
     /// <summary>
     /// Test API only
     /// </summary>
@@ -165,7 +166,8 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(binaryMatchOfTermMatches[0]);
 
 
-        queryTerms = queryTerms[maximumTermMatchesHandledAsTermMatches..];
+        queryTerms = queryTerms[termMatchCount..];
+        queryTerms.AsSpan().Sort(CompareTermQueryItemKeys);
         return UnaryQuery(binaryMatchOfTermMatches[0], field, queryTerms, UnaryMatchOperation.AllIn, -1);
     }
     
