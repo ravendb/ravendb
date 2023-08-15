@@ -298,18 +298,39 @@ public static class CoraxQueryBuilder
 
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
-                            right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                            if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
+                            {
+                                right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                                TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged,
+                                    ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
+                                return indexSearcher.AndNot(right, left, token: builderParameters.Token);
+                            }
 
-                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
+                            if (@where.Right is TrueExpression)
+                                return right; // true and not... optimization
+                            
+                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
+                                return merged;
 
-                            return indexSearcher.AndNot(right, left, token: builderParameters.Token);
+                            return indexSearcher.And(left, right);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
-                            right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                            if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
+                            {
+                                right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                                TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
+                                return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+                            }
 
-                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
-                            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+                            if (@where.Left is TrueExpression)
+                                return right; // true and not... optimization
+
+                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
+                                return merged;
+
+                            return indexSearcher.And(left, right);
+
 
                         default:
                             left = ToCoraxQuery(builderParameters, @where.Left, ref streamingOptimization, exact);
@@ -455,55 +476,7 @@ public static class CoraxQueryBuilder
 
         if (expression is InExpression ie)
         {
-            builderParameters.BuildSteps?.Add($"In: {expression.Type} - {ie}");
-
-            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, ie.Source, metadata);
-
-            CoraxHighlightingTermIndex highlightingTerm = null;
-            if (builderParameters.HighlightingTerms != null)
-            {
-                highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
-                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
-            }
-
-            exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
-            if (exact && builderParameters.Metadata.IsDynamic)
-            {
-                fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
-                if (builderParameters.HighlightingTerms != null)
-                {
-                    highlightingTerm.DynamicFieldName = fieldName;
-                    builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
-                }
-            }
-
-            var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
-                builderParameters.DynamicFields, exact: exact);
-
-            if (ie.All)
-            {
-                var uniqueMatches = new HashSet<string>();
-                foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
-                {
-                    if (exact && builderParameters.Metadata.IsDynamic)
-                        fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-
-                    uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
-                }
-
-                return indexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
-            }
-
-            var matches = new List<string>();
-            foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
-            {
-                matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
-            }
-
-            if (highlightingTerm != null)
-                highlightingTerm.Values = matches;
-            
-            return indexSearcher.InQuery(fieldMetadata, matches);
+            return HandleIn(builderParameters, ie, exact);
         }
 
         if (expression is TrueExpression)
@@ -550,6 +523,88 @@ public static class CoraxQueryBuilder
         }
 
         throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
+    }
+
+    private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)
+    {
+        builderParameters.BuildSteps?.Add($"In: {ie.Type} - {ie}");
+
+        QueryMetadata metadata = builderParameters.Metadata;
+        BlittableJsonReaderObject queryParameters = builderParameters.QueryParameters;
+        var allocator = builderParameters.Allocator;
+
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, ie.Source, metadata);
+
+        CoraxHighlightingTermIndex highlightingTerm = null;
+        if (builderParameters.HighlightingTerms != null)
+        {
+            highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
+            builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
+        }
+
+        exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
+        if (exact && builderParameters.Metadata.IsDynamic)
+        {
+            fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
+            if (builderParameters.HighlightingTerms != null)
+            {
+                highlightingTerm.DynamicFieldName = fieldName;
+                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
+            }
+        }
+
+        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping, builderParameters.FieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields, exact: exact);
+
+        if (ie.All)
+        {
+            var uniqueMatches = new HashSet<string>();
+            foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
+            {
+                if (exact && builderParameters.Metadata.IsDynamic)
+                    fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+
+                uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+            }
+
+            return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
+        }
+
+        var matches = new List<string>();
+        foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
+        {
+            matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+        }
+
+        if (highlightingTerm != null)
+            highlightingTerm.Values = matches;
+
+        return builderParameters.IndexSearcher.InQuery(fieldMetadata, matches);
+    }
+
+    private static bool TryUseNegatedQuery(Parameters builderParameters, NegatedExpression ne1, out IQueryMatch match, bool exact)
+    {
+        if (ne1.Expression is not MethodExpression inner)
+            goto NoOpt;
+        
+        var methodName = inner.Name.Value;
+        var methodType = QueryMethod.GetMethodType(methodName);
+        
+        switch (methodType)
+        {
+            case MethodType.StartsWith:
+                match = HandleStartsWith(builderParameters, inner,  exact, ref builderParameters.StreamingDisabled, negated: true);
+                return true;
+            case MethodType.EndsWith:
+                match = HandleEndsWith(builderParameters, inner,  exact, ref builderParameters.StreamingDisabled, negated: true);
+                return true;
+            default:
+                goto NoOpt;
+        }
+        
+        NoOpt:
+        match = null;
+        return false;
     }
 
     public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression)
@@ -726,7 +781,8 @@ public static class CoraxQueryBuilder
         
     }
 
-    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
+    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
+        bool negated = false)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -763,11 +819,12 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.StartsWith) 
-            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, token: builderParameters.Token) 
-            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, token: builderParameters.Token);
+            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated) 
+            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, isNegated: negated);
     }
 
-    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
+    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
+        bool negated = false)
     {
         var indexSearcher = builderParameters.IndexSearcher;
         var metadata = builderParameters.Metadata;
@@ -807,8 +864,8 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.EndsWith) 
-            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, token: builderParameters.Token) 
-            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, token: builderParameters.Token);
+            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated) 
+            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, isNegated: negated);
     }
 
     private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact)

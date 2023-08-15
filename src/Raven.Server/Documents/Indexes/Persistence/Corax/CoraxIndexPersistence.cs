@@ -99,27 +99,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         _converter?.Dispose();
     }
 
-    #region LuceneMethods
-
-    public override bool HasWriter { get; }
-
-    public override void CleanWritersIfNeeded()
-    {
-        // lucene method
-    }
-
-    public override void Clean(IndexCleanup mode)
-    {
-        // lucene method
-    }
-
-    private const int IndexingCompressionMaxTestDocuments = 10000;
-
-
-    public override void Initialize(StorageEnvironment environment)
-    {
-    }
-
     public override bool RequireOnBeforeExecuteIndexing()
     {
         var contextPool = _index._contextPool;
@@ -160,7 +139,8 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             queryContext.OpenReadTransaction();
 
             using var tx = indexContext.OpenWriteTransaction();
-
+            
+            
             // We are creating a new converter because converters get tied through their accessors to the structure, and since on Map-Reduce indexes
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
             var converter = CreateConverter(_index);
@@ -175,11 +155,31 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
             PersistentDictionary.ReplaceIfBetter(llt, enumerator, testEnumerator, defaultDictionary);
-
             tx.Commit();
         }
     }
+    
+    #region LuceneMethods
 
+    public override bool HasWriter { get; }
+
+    public override void CleanWritersIfNeeded()
+    {
+        // lucene method
+    }
+
+    public override void Clean(IndexCleanup mode)
+    {
+        // lucene method
+    }
+
+    private const int IndexingCompressionMaxTestDocuments = 10000;
+
+
+    public override void Initialize(StorageEnvironment environment)
+    {
+    }
+    
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
     {
         //lucene method
