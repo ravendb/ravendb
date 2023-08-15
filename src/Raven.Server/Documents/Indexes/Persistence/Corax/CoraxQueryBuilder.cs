@@ -292,7 +292,7 @@ public static class CoraxQueryBuilder
                             left = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
                             right = ToCoraxQuery(builderParameters, ne2.Expression, ref builderParameters.StreamingDisabled, exact);
 
-                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled, true);
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled, true);
 
                             return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right), token: builderParameters.Token);
 
@@ -300,7 +300,7 @@ public static class CoraxQueryBuilder
                             left = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
                             right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
 
-                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
 
                             return indexSearcher.AndNot(right, left, token: builderParameters.Token);
 
@@ -308,7 +308,7 @@ public static class CoraxQueryBuilder
                             left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
                             right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
 
-                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled, true);
                             return indexSearcher.AndNot(left, right, token: builderParameters.Token);
 
                         default:
@@ -318,7 +318,7 @@ public static class CoraxQueryBuilder
                             if (left is CoraxBooleanItem cbi && streamingOptimization.TrySetAsStreamingField(cbi))
                                 left = cbi.Materialize(ref streamingOptimization); 
                             
-                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
+                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
                                 return merged;
 
                             // When we do not optimize this node for streaming operation:.
@@ -340,11 +340,11 @@ public static class CoraxQueryBuilder
                     builderParameters.BuildSteps?.Add(
                         $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
-                    var match = new CoraxOrQueries(indexSearcher);
+                    var match = new CoraxOrQueries(indexSearcher, builderParameters);
                     if (match.TryAddItem(left) && match.TryAddItem(right))
                         return match;
 
-                    TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var _, ref builderParameters.StreamingDisabled, true);
+                    TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out var _, ref builderParameters.StreamingDisabled, true);
 
                     return indexSearcher.Or(left, right, token: builderParameters.Token);
                 }
@@ -609,7 +609,7 @@ public static class CoraxQueryBuilder
         return null;
     }
 
-    private static bool TryMergeTwoNodesForAnd(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, ref IQueryMatch lhs, ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, ref StreamingOptimization streamingOptimization, bool requiredMaterialization = false)
+    private static bool TryMergeTwoNodesForAnd(IndexSearcher indexSearcher, Parameters parameters, ref IQueryMatch lhs, ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, ref StreamingOptimization streamingOptimization, bool requiredMaterialization = false)
     {
         merged = null;
         switch (lhs, rhs, requiredMaterialization)
@@ -647,7 +647,7 @@ public static class CoraxQueryBuilder
             case (CoraxBooleanItem lhsBq, CoraxBooleanItem rhsBq, false):
                 if (CoraxBooleanItem.CanBeMergedForAnd(lhsBq, rhsBq))
                 {
-                    merged = new CoraxAndQueries(indexSearcher, allEntries, lhsBq, rhsBq);
+                    merged = new CoraxAndQueries(indexSearcher, parameters, lhsBq, rhsBq);
                     return true;
                 }
 
@@ -763,8 +763,8 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.StartsWith) 
-            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true) 
-            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString);
+            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, token: builderParameters.Token) 
+            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, token: builderParameters.Token);
     }
 
     private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
@@ -807,8 +807,8 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.EndsWith) 
-            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true) 
-            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString);
+            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, token: builderParameters.Token) 
+            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, token: builderParameters.Token);
     }
 
     private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact)
@@ -951,7 +951,7 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
         
-        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator);
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Token);
         
         /*
          * Here we need to deal with value that comes from the user, which means that we
@@ -1114,7 +1114,7 @@ public static class CoraxQueryBuilder
 
         //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
 
-        return builderParameters.IndexSearcher.SpatialQuery(fieldMetadata, distanceErrorPct, shape, spatialField.GetContext(), operation);
+        return builderParameters.IndexSearcher.SpatialQuery(fieldMetadata, distanceErrorPct, shape, spatialField.GetContext(), operation, token: builderParameters.Token);
     }
 
     private static IQueryMatch HandleRegex(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization)
@@ -1137,8 +1137,8 @@ public static class CoraxQueryBuilder
             builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.Regex) 
-            ? builderParameters.IndexSearcher.RegexQuery(fieldMetadata, builderParameters.Factories.GetRegexFactory(valueAsString), streamingOptimization.Forward, streamingEnabled: true) 
-            : builderParameters.IndexSearcher.RegexQuery(fieldMetadata, builderParameters.Factories.GetRegexFactory(valueAsString));
+            ? builderParameters.IndexSearcher.RegexQuery(fieldMetadata, builderParameters.Factories.GetRegexFactory(valueAsString), streamingOptimization.Forward, streamingEnabled: true, token: builderParameters.Token) 
+            : builderParameters.IndexSearcher.RegexQuery(fieldMetadata, builderParameters.Factories.GetRegexFactory(valueAsString), token: builderParameters.Token);
 
         bool IsStringFamily(object value)
         {

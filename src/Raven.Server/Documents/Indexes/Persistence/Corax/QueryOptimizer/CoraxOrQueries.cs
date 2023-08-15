@@ -13,7 +13,7 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
     private Dictionary<FieldMetadata, List<string>> _termMatchesList; 
     private List<IQueryMatch> _complexMatches;
 
-    public CoraxOrQueries(IndexSearcher indexSearcher) : base(indexSearcher)
+    public CoraxOrQueries(IndexSearcher indexSearcher, CoraxQueryBuilder.Parameters parameters) : base(indexSearcher, parameters)
     {
     }
 

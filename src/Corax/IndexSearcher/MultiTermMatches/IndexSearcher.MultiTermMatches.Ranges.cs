@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
@@ -14,22 +15,22 @@ namespace Corax;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false, bool forward = true, bool streamingEnabled = false) {
+    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default) {
         if (typeof(TValue) == typeof(long))
         {
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y)
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y>
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //(x, y>
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated, forward, streamingEnabled, token: token),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
@@ -39,16 +40,16 @@ public partial class IndexSearcher
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y)
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y>
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled, token: token),
 
                 //(x, y>
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated, forward, streamingEnabled, token: token),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
 
             };
@@ -63,19 +64,19 @@ public partial class IndexSearcher
             {
                 // (x, y)
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, isNegated, forward, streamingEnabled),
+                    leftValue, rightValue, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y)
                 (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, isNegated, forward, streamingEnabled),
+                    leftValue, rightValue, isNegated, forward, streamingEnabled, token: token),
 
                 //<x, y>
                 (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(
-                    field, leftValue, rightValue, isNegated, forward, streamingEnabled),
+                    field, leftValue, rightValue, isNegated, forward, streamingEnabled, token: token),
 
                 //(x, y>
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field,
-                    leftValue, rightValue, isNegated, forward, streamingEnabled),
+                    leftValue, rightValue, isNegated, forward, streamingEnabled, token: token),
 
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
@@ -85,19 +86,19 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreaterThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false)
+    public MultiTermMatch GreaterThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default)
     {
-        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled);
+        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled, token: token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreatThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false)
+    public MultiTermMatch GreatThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default)
     {
-        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled);
+        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled, token: token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false)
+    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
@@ -105,50 +106,50 @@ public partial class IndexSearcher
         if (typeof(TValue) == typeof(long))
         {
             
-            return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, isNegated, forward, streamingEnabled, token: token);
         }
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, isNegated, forward, streamingEnabled, token: token);
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys,  isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys,  isNegated, forward, streamingEnabled, token: token);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false)
-        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled);
+    public MultiTermMatch LessThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default)
+        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated, forward, streamingEnabled, token: token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false)
-        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, isNegated, forward, streamingEnabled);
+    public MultiTermMatch LessThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false, bool forward = true, bool streamingEnabled = false, CancellationToken token = default)
+        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, isNegated, forward, streamingEnabled, token: token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value,
-        bool isNegated, bool forward, bool streamingEnabled)
+        bool isNegated, bool forward, bool streamingEnabled, CancellationToken token)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
         if (typeof(TValue) == typeof(long))
-            return RangeBuilder<TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, isNegated, forward, streamingEnabled, token: token);
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, isNegated, forward, streamingEnabled, token: token);
         
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, isNegated, forward, streamingEnabled);
+            return RangeBuilder<TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, isNegated, forward, streamingEnabled, token: token);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
     
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high, bool isNegated, bool forward, bool streamingEnabled)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high, bool isNegated, bool forward, bool streamingEnabled, CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -160,14 +161,14 @@ public partial class IndexSearcher
             ? MultiTermMatch.Create(
                 new MultiTermMatch<TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>>(this,
                     field, _transaction.Allocator,
-                    new TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>(this, terms, field, low, high), streamingEnabled))
+                    new TermRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>(this, terms, field, low, high), streamingEnabled, token: token))
             : MultiTermMatch.Create(
                 new MultiTermMatch<TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>>(this,
                     field, _transaction.Allocator,
-                    new TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high), streamingEnabled));
+                    new TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high), streamingEnabled, token: token));
     }
 
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool isNegated, bool forward, bool streamingEnabled)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool isNegated, bool forward, bool streamingEnabled, CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -179,11 +180,11 @@ public partial class IndexSearcher
         var set = _fieldsTree?.LookupFor<Int64LookupKey>(field.FieldName);
 
         return forward 
-            ? MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>>(this, field, _transaction.Allocator, new TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high), streamingEnabled)) 
-            : MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>>(this, field, _transaction.Allocator, new TermNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high), streamingEnabled));
+            ? MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>>(this, field, _transaction.Allocator, new TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high), streamingEnabled, token: token)) 
+            : MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>>(this, field, _transaction.Allocator, new TermNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high), streamingEnabled, token: token));
     }
 
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool isNegated, bool forward, bool streamingEnabled)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool isNegated, bool forward, bool streamingEnabled, CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -196,9 +197,9 @@ public partial class IndexSearcher
         var set = _fieldsTree?.LookupFor<DoubleLookupKey>(field.FieldName); 
         return forward
             ? MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>>(this, field,
-                _transaction.Allocator, new TermNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high), streamingEnabled))
+                _transaction.Allocator, new TermNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high), streamingEnabled, token: token))
             : MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<DoubleLookupKey>.BackwardIterator, TLow, THigh, DoubleLookupKey>>(this, field,
                 _transaction.Allocator,
-                new TermNumericRangeProvider<Lookup<DoubleLookupKey>.BackwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high), streamingEnabled));
+                new TermNumericRangeProvider<Lookup<DoubleLookupKey>.BackwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high), streamingEnabled, token: token));
     }
 }
