@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Sparrow.Extensions;
 using Voron.Data.Lookups;
@@ -158,7 +159,7 @@ namespace Corax.Queries.TermProviders
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{GetType().Name}",
+            return new QueryInspectionNode($"TermNumericRangeProvider<{typeof(TLookupIterator).Name}, {typeof(TLow).Name}, {typeof(THigh).Name}, {typeof(TVal).Name}>",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },

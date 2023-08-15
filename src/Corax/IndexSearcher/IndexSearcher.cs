@@ -144,6 +144,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term is null)
             return default;
 
+        if (ReferenceEquals(term, Constants.BeforeAllKeys))
+            return Slices.BeforeAllKeys;
+        
+        if (ReferenceEquals(term, Constants.AfterAllKeys))
+            return Slices.AfterAllKeys;
+
         if (term.Length == 0 || term == Constants.EmptyString)
             return Constants.EmptyStringSlice;
 

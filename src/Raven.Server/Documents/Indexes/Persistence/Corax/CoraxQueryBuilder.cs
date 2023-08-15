@@ -207,7 +207,6 @@ public static class CoraxQueryBuilder
             IQueryMatch coraxQuery;
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
-            var allEntries = indexSearcher.Memoize(indexSearcher.AllEntries());
             sortMetadata = GetSortMetadata(builderParameters);
             var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost);
             
@@ -216,9 +215,23 @@ public static class CoraxQueryBuilder
                 coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
                 coraxQuery = MaterializeWhenNeeded(coraxQuery, ref streamingOptimization);
             }
-            else
+            // just one item, with known field types
+            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy])
             {
-                coraxQuery = allEntries.Replay();
+                // We have no where clause and we have a single order by field? 
+                // Can just scan over the relevant index
+                streamingOptimization.WhereClauseItemMatched = true;
+                coraxQuery =  sortBy.FieldType switch
+                {
+                     MatchCompareFieldType.Integer => indexSearcher.BetweenQuery(sortBy.Field, long.MinValue, long.MaxValue, forward: sortBy.Ascending, streamingEnabled: true),
+                     MatchCompareFieldType.Floating => indexSearcher.BetweenQuery(sortBy.Field, double.MinValue, double.MaxValue, forward: sortBy.Ascending, streamingEnabled: true),
+                     MatchCompareFieldType.Sequence => indexSearcher.BetweenQuery(sortBy.Field, Constants.BeforeAllKeys, Constants.AfterAllKeys, forward: sortBy.Ascending, streamingEnabled: true),
+                     _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
+                };
+            }
+            else 
+            {
+                coraxQuery = indexSearcher.Memoize(indexSearcher.AllEntries()).Replay();
             }
 
 

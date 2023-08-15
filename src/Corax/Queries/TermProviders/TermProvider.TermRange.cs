@@ -185,8 +185,13 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{GetType().Name}",
-            parameters: new Dictionary<string, string>() {{"Field", _field.ToString()}, {"Low", _low.ToString()}, {"High", _high.ToString()}});
+        return new QueryInspectionNode($"TermRangeProvider<{typeof(TLookupIterator).Name}, {typeof(TLow).Name}, {typeof(THigh).Name}>",
+            parameters: new Dictionary<string, string>()
+            {
+                { "Field", _field.ToString() },
+                { "Low", _low.ToString()},
+                { "High", _high.ToString()}
+            });
     }
 
     public string DebugView => Inspect().ToString();
