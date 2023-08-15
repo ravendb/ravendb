@@ -412,9 +412,9 @@ namespace Voron.Impl.Scratch
             {
                 var pages = new List<PageFromScratchBuffer>();
 
-                foreach (var key in _parent._allocatedPages.Keys)
+                foreach (var keyValue in _parent._allocatedPages.ToArray())
                 {
-                    if (_parent._allocatedPages.TryGetValue(key, out var pageFromScratchBuffer) == false)
+                    if (_parent._allocatedPages.TryGetValue(keyValue.Key, out var pageFromScratchBuffer) == false)
                         continue;
 
                     if (pageFromScratchBuffer == null)
