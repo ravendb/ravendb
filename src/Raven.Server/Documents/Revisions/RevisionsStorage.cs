@@ -300,8 +300,15 @@ namespace Raven.Server.Documents.Revisions
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate))
                     return false;
 
-                if (docConfiguration == ConflictConfiguration.Default || docConfiguration.Disabled)
+                if (docConfiguration == ConflictConfiguration.Default || docConfiguration == _emptyConfiguration || docConfiguration.Disabled)
                     return false;
+
+                // if (docConfiguration.MinimumRevisionsToKeep == 0)
+                //     return false;
+                //
+                // if (docConfiguration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue &&
+                //     _database.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > docConfiguration.MinimumRevisionAgeToKeep.Value.Ticks)
+                //     return false;
             }
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
@@ -643,8 +650,8 @@ namespace Raven.Server.Documents.Revisions
             var result = new DeleteOldRevisionsResult();
             result.PreviousCount = GetRevisionsCount(context, lowerIdPrefix);
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
-                return result;
+            // if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+            //     return result;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return result;
