@@ -499,7 +499,7 @@ namespace SlowTests.Sharding.Replication
                     TimeSpan.FromSeconds(60)));
             }
         }
-        
+
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         [RavenExternalReplication(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         [RavenExternalReplication(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
@@ -552,7 +552,7 @@ namespace SlowTests.Sharding.Replication
                     }
 
                     return taskStatus?.DestinationUrl;
-                    
+
                     MaintenanceOperationExecutor GetExecutor(MaintenanceOperationExecutor executor)
                     {
                         if (source.DatabaseMode == RavenDatabaseMode.Sharded)
@@ -618,6 +618,7 @@ namespace SlowTests.Sharding.Replication
 
                 using (var session = dst.OpenSession())
                 {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
                     session.Store(new User { Name = "Karmel" }, "users/2$users/1");
                     session.SaveChanges();
                 }
@@ -658,7 +659,7 @@ namespace SlowTests.Sharding.Replication
                 {
                     await Replication.EnsureNoReplicationLoopAsync(source.DatabaseMode, server, src.Database);
                 }
-                
+
                 foreach (var server in dstNodes)
                 {
                     await Replication.EnsureNoReplicationLoopAsync(destination.DatabaseMode, server, dst.Database);
