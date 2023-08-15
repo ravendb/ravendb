@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
@@ -17,9 +18,9 @@ public partial class IndexSearcher
     /// </summary>
     public MultiTermMatch InQuery(string field, List<string> inTerms) => InQuery(FieldMetadataBuilder(field), inTerms);
 
-    public MultiTermMatch InQuery(in FieldMetadata field, List<string> inTerms) => InQuery<string>(in field, inTerms);
+    public MultiTermMatch InQuery(in FieldMetadata field, List<string> inTerms, in CancellationToken token = default) => InQuery<string>(in field, inTerms, token);
     
-    private MultiTermMatch InQuery<TTermType>(in FieldMetadata field, List<TTermType> inTerms)
+    private MultiTermMatch InQuery<TTermType>(in FieldMetadata field, List<TTermType> inTerms, CancellationToken token)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
@@ -44,9 +45,9 @@ public partial class IndexSearcher
             {
                 // We need even values to make the last work. 
                 if (typeof(TTermType) == typeof(string))
-                    stack[^1] = Or(stack[^1], TermQuery(field, (string)(object)inTerms[^1], terms));
+                    stack[^1] = Or(stack[^1], TermQuery(field, (string)(object)inTerms[^1], terms), token);
                 else
-                    stack[^1] = Or(stack[^1], TermQuery(field, (Slice)(object)inTerms[^1], terms));
+                    stack[^1] = Or(stack[^1], TermQuery(field, (Slice)(object)inTerms[^1], terms), token);
             }
 
             int currentTerms = stack.Length;
@@ -56,7 +57,7 @@ public partial class IndexSearcher
                 int excessTerms = currentTerms % 2;
 
                 for (int i = 0; i < termsToProcess; i++)
-                    stack[i] = Or(stack[i * 2], stack[i * 2 + 1]);
+                    stack[i] = Or(stack[i * 2], stack[i * 2 + 1], token);
 
                 if (excessTerms != 0)
                     stack[termsToProcess - 1] = Or(stack[termsToProcess - 1], stack[currentTerms - 1]);
@@ -67,20 +68,20 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(stack[0]);
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(this, field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms), streamingEnabled: false));
+        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(this, field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms), streamingEnabled: false, token: token));
     }
 
-    public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms) => AllInQuery(FieldMetadataBuilder(field), allInTerms);
+    public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms, in CancellationToken token = default) => AllInQuery(FieldMetadataBuilder(field), allInTerms, token: token);
 
-    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<string> allInTerms, bool skipEmptyItems = false) =>
-        AllInQuery<string>(field, allInTerms, skipEmptyItems);
+    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<string> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) =>
+        AllInQuery<string>(field, allInTerms, skipEmptyItems, token);
 
-    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<Slice> allInTerms, bool skipEmptyItems = false) => AllInQuery<Slice>(field, allInTerms, skipEmptyItems);
+    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<Slice> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) => AllInQuery<Slice>(field, allInTerms, skipEmptyItems, token);
 
     //Unlike the In operation, this one requires us to check all entries in a given entry.
     //However, building a query with And can quickly lead to a Stackoverflow Exception.
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
-    private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false)
+    private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false, in CancellationToken cancellationToken = default)
     {
         const int maximumTermMatchesHandledAsTermMatches = 4;
         
@@ -133,14 +134,14 @@ public partial class IndexSearcher
         {
             var term1 = TermQuery(field, queryTerms[i * 2].Item, terms);
             var term2 = TermQuery(field, queryTerms[i * 2 + 1].Item, terms);
-            binaryMatchOfTermMatches[i] = And(term1, term2);
+            binaryMatchOfTermMatches[i] = And(term1, term2, cancellationToken);
         }
 
         if (termMatchCount % 2 == 1)
         {
             // We need even values to make the last work. 
             var term = TermQuery(field, queryTerms[^1].Item, terms);
-            binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term);
+            binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term, cancellationToken);
         }
 
         
@@ -168,7 +169,7 @@ public partial class IndexSearcher
 
         queryTerms = queryTerms[termMatchCount..];
         queryTerms.AsSpan().Sort(CompareTermQueryItemKeys);
-        return UnaryQuery(binaryMatchOfTermMatches[0], field, queryTerms, UnaryMatchOperation.AllIn, -1);
+        return UnaryQuery(binaryMatchOfTermMatches[0], field, queryTerms, UnaryMatchOperation.AllIn, -1, cancellationToken);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

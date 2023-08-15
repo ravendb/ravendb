@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
@@ -12,7 +13,7 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false)
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, in CancellationToken token = default)
         where TTermProvider : struct, ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -37,10 +38,10 @@ public partial class IndexSearcher
             seekKey.Set(seekTerm.AsReadOnlySpan());
         }
         
-        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled: streamingEnabled));
+        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled: streamingEnabled, token: token));
     }
 
-    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, string term, bool streamingEnabled)
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, string term, bool streamingEnabled, CancellationToken token)
         where TTermProvider : struct, ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -58,7 +59,7 @@ public partial class IndexSearcher
             seekKey.Set(seekTerm.AsReadOnlySpan());
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled));
+        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled, token: token));
     }
 
     private bool TryRewriteTermWhenPerformingBackwardStreaming<TTermProvider>(bool streamingEnabled, Slice termSlice, out Slice termForSeek)

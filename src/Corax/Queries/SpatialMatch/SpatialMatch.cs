@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
@@ -26,6 +27,7 @@ public sealed class SpatialMatch : IQueryMatch
     private TermMatch _currentMatch;
     private readonly ByteStringContext _allocator;
     private readonly Utils.Spatial.SpatialRelation _spatialRelation;
+    private readonly CancellationToken _token;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
@@ -33,7 +35,7 @@ public sealed class SpatialMatch : IQueryMatch
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
-        double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation)
+        double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation, CancellationToken token)
     {
         _indexSearcher = indexSearcher;
         _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
@@ -43,6 +45,7 @@ public sealed class SpatialMatch : IQueryMatch
         _tree = tree;
         _allocator = allocator;
         _spatialRelation = spatialRelation;
+        _token = token;
         _termGenerator = spatialRelation == Utils.Spatial.SpatialRelation.Disjoint 
             ? SpatialUtils.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
@@ -146,6 +149,9 @@ public sealed class SpatialMatch : IQueryMatch
         var currentIdx = 0;
         for (int i = 0; i < matches; ++i)
         {
+            if (i % 1024 == 0)
+                _token.ThrowIfCancellationRequested();
+            
             var termsReader = _indexSearcher.GetEntryTermsReader(buffer[i], ref _lastPage);
             while (termsReader.MoveNextSpatial())
             {

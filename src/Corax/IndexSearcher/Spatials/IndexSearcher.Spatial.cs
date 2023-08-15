@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
@@ -9,7 +10,7 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SpatialQuery(FieldMetadata field, double error, IShape shape, SpatialContext spatialContext, Utils.Spatial.SpatialRelation spatialRelation, bool isNegated = false)
+    public IQueryMatch SpatialQuery(FieldMetadata field, double error, IShape shape, SpatialContext spatialContext, Utils.Spatial.SpatialRelation spatialRelation, bool isNegated = false, in CancellationToken token = default)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
@@ -18,7 +19,7 @@ public partial class IndexSearcher
             return TermMatch.CreateEmpty(this, Allocator);
         }
 
-        var match = new SpatialMatch(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation);
+        var match = new SpatialMatch(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation, token);
         if (isNegated)
         {
             return AndNot(AllEntries(), match);

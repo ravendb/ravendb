@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
@@ -13,7 +14,7 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SearchQuery(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator)
+    public IQueryMatch SearchQuery(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, in CancellationToken cancellationToken = default)
     {
         AssertFieldIsSearched();
         var searchAnalyzer = field.IsDynamic
@@ -56,9 +57,9 @@ public partial class IndexSearcher
                 var query = termType switch
                 {
                     Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException($"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
-                    Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm),
-                    Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm),
-                    Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm),
+                    Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm, token: cancellationToken),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
@@ -70,8 +71,8 @@ public partial class IndexSearcher
             
                 searchQuery = @operator switch
                 {
-                    Constants.Search.Operator.Or => Or(searchQuery, query),
-                    Constants.Search.Operator.And => And(searchQuery, query),
+                    Constants.Search.Operator.Or => Or(searchQuery, query, token: cancellationToken),
+                    Constants.Search.Operator.And => And(searchQuery, query, token: cancellationToken),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
             }
@@ -83,8 +84,8 @@ public partial class IndexSearcher
         {
             var termMatchesQuery = @operator switch
             {
-                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), skipEmptyItems: true),
-                Constants.Search.Operator.Or => InQuery(field, termMatches),
+                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), skipEmptyItems: true, token: cancellationToken),
+                Constants.Search.Operator.Or => InQuery(field, termMatches, token: cancellationToken),
                 _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
             };
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Utils;
 using Sparrow;
@@ -22,7 +23,7 @@ namespace Corax.Queries
         where TTermProvider : ITermProvider
     {
         private const int InitialFrequencyHolders = 64;
-
+        private readonly CancellationToken _token;
         private readonly bool _isBoosting;
         private long _totalResults;
         private long _current;
@@ -59,11 +60,11 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _confidence;
 
         public MultiTermMatch(IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled,
-            long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low)
+            long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default)
         {
             _inner = inner;
             _isBoosting = field.HasBoost;
-
+            _token = token;
             _current = QueryMatch.Start;
             if (_inner.IsFillSupported && _isBoosting == false)
                 _termReader = new(indexSearcher);
@@ -222,6 +223,7 @@ namespace Corax.Queries
 
             private void RefillBuffers(ref MultiTermMatch<TTermProvider> provider)
             {
+                provider._token.ThrowIfCancellationRequested();
                 _smallPostListIds.Clear();
                 _bufferIdx = 0;
                 _bufferCount = 0;
@@ -298,6 +300,7 @@ namespace Corax.Queries
 
                 if (read == 0)
                 {
+                    _token.ThrowIfCancellationRequested();
                     AddTermToBm25();
                     if (_inner.Next(out _currentTerm) == false)
                     {
@@ -358,6 +361,7 @@ namespace Corax.Queries
             //ensure we're not out of range
             while (results.Length > 0 && Fill(localMatches.Slice(0, results.Length)) is var read and > 0)
             {
+                _token.ThrowIfCancellationRequested();
                 var common = MergeHelper.And(results, localMatches.Slice(0, read), incomingMatches.Slice(0, matches));
                 results = results.Slice(common);
                 currentMatchCount += common;
@@ -402,6 +406,7 @@ namespace Corax.Queries
             int totalSize = 0;
             while (totalSize < buffer.Length && hasData)
             {
+                _token.ThrowIfCancellationRequested();
                 actualMatches.CopyTo(tmp);
                 var read = _currentTerm.AndWith(tmp, matches);
                 if (read != 0)

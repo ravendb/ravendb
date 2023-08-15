@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 
 namespace Corax.Queries
@@ -10,11 +11,12 @@ namespace Corax.Queries
     {
         private readonly FunctionTable _functionTable;
         private IQueryMatch _inner;
-
-        internal UnaryMatch(IQueryMatch match, FunctionTable functionTable)
+        private CancellationToken _token;
+        internal UnaryMatch(IQueryMatch match, FunctionTable functionTable, CancellationToken token)
         {
             _inner = match;
             _functionTable = functionTable;
+            _token = token;
         }
 
         public bool IsBoosting => _inner.IsBoosting;
@@ -31,12 +33,14 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
+            _token.ThrowIfCancellationRequested();
             return _functionTable.FillFunc(ref this, buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
+            _token.ThrowIfCancellationRequested();
             return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
 
@@ -98,10 +102,10 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UnaryMatch Create<TInner, TValueType>(in UnaryMatch<TInner, TValueType> query)
+        public static UnaryMatch Create<TInner, TValueType>(in UnaryMatch<TInner, TValueType> query, CancellationToken token)
             where TInner : IQueryMatch
         {
-            return new UnaryMatch(query, StaticFunctionCache<TInner, TValueType>.FunctionTable);
+            return new UnaryMatch(query, StaticFunctionCache<TInner, TValueType>.FunctionTable, token);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
