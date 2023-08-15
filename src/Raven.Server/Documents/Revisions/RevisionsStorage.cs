@@ -632,6 +632,7 @@ namespace Raven.Server.Documents.Revisions
             public bool HasMore;
             public long PreviousCount;
             public long Remaining;
+            public int Skip;
         }
 
         private DeleteOldRevisionsResult DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
@@ -667,7 +668,7 @@ namespace Raven.Server.Documents.Revisions
                     configuration, result.PreviousCount, result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete);
+            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result);
 
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -699,7 +700,7 @@ namespace Raven.Server.Documents.Revisions
                 var result = new DeleteOldRevisionsResult();
                 var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, skipForceCreated, result);
                 var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-                var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete);
+                var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete, result);
                 moreWork |= result.HasMore;
                 IncrementCountOfRevisions(context, prefixSlice, -deleted);
             }
@@ -834,13 +835,10 @@ namespace Raven.Server.Documents.Revisions
                 numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
             }
 
-            var first = true;
-            var skip = 0;
-
             while (true)
             {
                 var ended = true;
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip, startsWith: true))
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
                 {
                     if (numberOfRevisionsToDelete <= deleted)
                         break;
@@ -856,11 +854,6 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     yield return revision;
-                    if (first)
-                    {
-                        first = false;
-                        skip++;
-                    }
 
                     deleted++;
 
@@ -879,7 +872,8 @@ namespace Raven.Server.Documents.Revisions
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
             string changeVector, long lastModifiedTicks, long revisionsPreviousCount, 
-            IEnumerable<Document> revisionsToRemove)
+            IEnumerable<Document> revisionsToRemove,
+            DeleteOldRevisionsResult result)
         {
             var writeTables = new Dictionary<string, Table>();
             long maxEtagDeleted = 0;
@@ -894,6 +888,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     lastRevisionToDelete = revision;
                     first = false;
+                    result.Skip++;
                     continue;
                 }
 
@@ -1149,13 +1144,11 @@ namespace Raven.Server.Documents.Revisions
                 handlingFlags, databaseTime, documentDeleted);
 
             result.HasMore = false;
-            var skip = 0;
-            var first = true;
 
             while (true)
             {
                 var ended = true;
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip, startsWith: true))
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
                 {
                     if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
                     {
@@ -1174,16 +1167,11 @@ namespace Raven.Server.Documents.Revisions
                     if (state.ShouldDelete(revision) == false)
                     {
                         revision.Dispose();
-                        skip++;
+                        result.Skip++;
                         continue;
                     }
 
                     yield return revision;
-                    if (first)
-                    {
-                        first = false;
-                        skip++;
-                    }
                     ended = false;
                     break;
                 }
@@ -1217,14 +1205,12 @@ namespace Raven.Server.Documents.Revisions
             long? maxDeletesUponUpdate, bool skipForceCreated, DeleteOldRevisionsResult result)
         {
             var deleted = 0L;
-            var skip = 0;
-            var first = true;
 
             while (true)
             {
                 var ended = true;
 
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip, startsWith: true))
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
                 {
                     if (maxDeletesUponUpdate.HasValue && deleted >= maxDeletesUponUpdate.Value)
                     {
@@ -1238,16 +1224,11 @@ namespace Raven.Server.Documents.Revisions
                     if (skipForceCreated && revision.Flags.Contain(DocumentFlags.ForceCreated))
                     {
                         revision.Dispose();
-                        skip++;
+                        result.Skip++;
                         continue;
                     }
 
                     yield return revision;
-                    if (first)
-                    {
-                        first = false;
-                        skip++;
-                    }
 
                     deleted++;
 
