@@ -82,6 +82,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         
         MismatchedReferenceLoad,
 
-        BlockingTombstones
+        BlockingTombstones,
+        LowServerLimits
+
     }
 }
