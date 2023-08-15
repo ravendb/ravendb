@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using Sparrow.Json.Parsing;
 
 namespace Corax.Queries
 {
-    public sealed class QueryInspectionNode
+    public sealed class QueryInspectionNode : IDynamicJson
     {
         public readonly string Operation;
         public readonly Dictionary<string, string> Parameters;
@@ -16,6 +18,32 @@ namespace Corax.Queries
             Children = children ?? new List<QueryInspectionNode>();
         }
 
+        public DynamicJsonValue ToJson()
+        {
+            var children = new DynamicJsonArray();
+            if (Children != null)
+            {
+                foreach (QueryInspectionNode child in Children)
+                {
+                    children.Add(child.ToJson());
+                }
+            }
+            var parameters = new DynamicJsonValue();
+            if (Parameters != null)
+            {
+                foreach (var (k,v) in Parameters)
+                {
+                    parameters[k] = v;
+                }
+            }
+            return new DynamicJsonValue
+            {
+                [nameof(Operation)] = Operation,
+                [nameof(Children)] = children,
+                [nameof(Parameters)] = parameters
+            };
+        }
+        
         public static QueryInspectionNode NotInitializedInspectionNode(string nameOperation) => new($"Not initialized: {nameOperation}");
 
         public override string ToString()

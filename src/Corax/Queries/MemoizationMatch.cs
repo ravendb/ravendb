@@ -75,7 +75,6 @@ namespace Corax.Queries
                 children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
-                    { "BufferSize", _inner.Buffer.Length.ToString() },
                     { nameof(IsBoosting), IsBoosting.ToString() },
                     { nameof(Count), $"{Count} [{Confidence}]" }
                 });

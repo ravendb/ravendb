@@ -873,6 +873,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.Timings));
                 writer.WriteQueryTimings(context, result.Timings);
+                if (result.Timings.QueryPlan is IDynamicJson j)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(result.Timings.QueryPlan));
+                    var value = j.ToJson();
+                    writer.WriteObject(context.ReadObject(value, nameof(result.Timings.QueryPlan)));
+                }
             }
 
             if (partial == false)
