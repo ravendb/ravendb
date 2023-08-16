@@ -45,7 +45,9 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<long> FillAndRetrieve()
         {
+#pragma warning disable CS9084 // Struct member returns 'this' or other instance members by reference
             return _functionTable.FillAndRetrieveFunc(ref this);
+#pragma warning restore CS9084 // Struct member returns 'this' or other instance members by reference
         }
 
         internal sealed class FunctionTable
