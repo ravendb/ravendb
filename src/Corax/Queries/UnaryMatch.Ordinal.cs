@@ -137,12 +137,13 @@ namespace Corax.Queries
             return -1;
         }
 
-        [SkipLocalsInit]
         private static unsafe int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
         {
             var value = ((TermQueryItem[])(object)match._value);
             var requiredSizeOfBitset = value.Length / sizeof(byte) + (value.Length % sizeof(byte) == 0 ? 0 : 1);
             byte* bitsetBuffer = stackalloc byte[requiredSizeOfBitset];
+            new Span<byte>(bitsetBuffer, requiredSizeOfBitset).Clear();
+            
             var bitset = new PtrBitVector(bitsetBuffer, requiredSizeOfBitset);
             var searcher = match._searcher;
             var currentMatches = matches;
