@@ -841,6 +841,13 @@ namespace Raven.Client.Documents.Indexes
                 Out('M');
                 return node;
             }
+            if (Equals(node.Value, default(DateTime)))
+            {
+                Out("default(");
+                Out(typeof(DateTime).ToString());
+                Out(')');
+                return node;
+            }
             Out(s);
             return node;
         }
@@ -852,8 +859,6 @@ namespace Raven.Client.Documents.Indexes
 
             StringExtensions.EscapeString(_out, value);
         }
-
-
 
         private void OutLiteral(char c)
         {
