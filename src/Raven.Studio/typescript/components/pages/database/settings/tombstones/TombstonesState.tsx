@@ -14,6 +14,7 @@ import useConfirm from "components/hooks/useConfirm";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
+import TombstonesAlert from "components/pages/database/settings/tombstones/TombstonesAlert";
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
     const { databasesService } = useServices();
@@ -24,22 +25,9 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();
     const [subscriptionsGrid, setSubscriptionsGrid] = useState<virtualGridController<SubscriptionInfo>>();
 
-    const tombstonesAlert = () => (
-        <Alert color="info" className="mb-0">
-            <p>
-                By default, tombstones cleanup is scheduled to be carried out by the server every 5 minutes, unless
-                configured otherwise.
-            </p>
-            <p className="mb-0">
-                Upon clicking <strong>Force Cleanup</strong>, the action will be executed immediately - any tombstone
-                that can be removed will be deleted.
-            </p>
-        </Alert>
-    );
-
     const [ForceCleanupConfirm, confirmForceCleanup] = useConfirm({
         title: "Do you want to force tombstones cleanup?",
-        message: tombstonesAlert(),
+        message: <TombstonesAlert />,
         icon: "force",
         confirmText: "Force cleanup",
         actionColor: "warning",

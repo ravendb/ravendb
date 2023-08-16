@@ -7,9 +7,9 @@ import IconName from "typings/server/icons";
 interface UseConfirmProps {
     message?: ReactNode;
     title: string;
-    icon?: IconName;
+    icon: IconName;
     confirmText?: string;
-    actionColor?: "primary" | "secondary" | "success" | "info" | "warning" | "danger" | "node" | "shard";
+    actionColor: "primary" | "secondary" | "success" | "info" | "warning" | "danger" | "node" | "shard";
 }
 
 const useConfirm = (props: UseConfirmProps): [() => React.JSX.Element, () => Promise<unknown>] => {
@@ -62,7 +62,7 @@ function ConfirmationModal({
             toggle={onCancel}
             wrapClassName="bs5"
             centered
-            contentClassName={`modal-border bulge-${actionColor ?? "secondary"}`}
+            contentClassName={`modal-border bulge-${actionColor}`}
         >
             <ModalBody className="vstack gap-4 position-relative">
                 <div className="text-center">
@@ -79,7 +79,7 @@ function ConfirmationModal({
                     Cancel
                 </Button>
                 <Button color={actionColor} onClick={onConfirm} className="rounded-pill">
-                    {icon && <Icon icon={icon} />}
+                    <Icon icon={icon} />
                     {confirmText ?? "Yes"}
                 </Button>
             </ModalFooter>
