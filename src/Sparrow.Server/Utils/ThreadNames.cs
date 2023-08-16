@@ -199,7 +199,13 @@ public static class ThreadNames
             Details = new ThreadDetails.PullReplicationAsSink(destinationDatabase, destinationUrl)
         };
     }
-
+    public static ThreadInfo ForClusterTransactions(string threadName, string databaseName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ClusterTransaction(databaseName)
+        };
+    }
     public static ThreadInfo ForQueueSinkProcess(string threadName, string tag, string name)
     {
         return new ThreadInfo(threadName)
@@ -593,6 +599,20 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"PllRepSnk {_destinationDatabase} at {_destinationUrl}";
+            }
+        }
+
+        public class ClusterTransaction : IThreadDetails
+        {
+            private readonly string _db;
+            public ClusterTransaction(string dbName)
+            {
+                _db = dbName;
+            }
+
+            public string GetShortName()
+            {
+                return $"ClstrTx {_db}";
             }
         }
     }

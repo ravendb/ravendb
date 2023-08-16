@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -29,6 +30,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         protected Reader Reader;
 
         private List<IDisposable> _garbage;
+        private bool _disposed;
+
+        protected ReplicationBatchItem()
+        {
+        }
 
         public abstract long AssertChangeVectorSize();
 
@@ -183,6 +189,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             if (_isDisposed)
                 return;
 
+            _isDisposed = true;
+
             InnerDispose();
 
             if (_garbage is { Count: > 0 })
@@ -190,8 +198,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 foreach (var disposable in _garbage)
                     disposable.Dispose();
             }
-
-            _isDisposed = true;
         }
 
         [DoesNotReturn]

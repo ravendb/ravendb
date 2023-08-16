@@ -9,6 +9,7 @@ public sealed class ResendItem : IDynamicJson
     public long Batch;
     public string ChangeVector;
     public SubscriptionType Type;
+    public long SubscriptionId;
 
     public DynamicJsonValue ToJson()
     {
@@ -17,7 +18,8 @@ public sealed class ResendItem : IDynamicJson
             [nameof(Id)] = Id,
             [nameof(Batch)] = Batch,
             [nameof(ChangeVector)] = ChangeVector,
-            [nameof(Type)] = Type.ToString()
+            [nameof(Type)] = Type.ToString(),
+            [nameof(SubscriptionId)] = SubscriptionId
         };
     }
 }

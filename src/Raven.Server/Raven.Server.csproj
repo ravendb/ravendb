@@ -158,6 +158,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.7.0" />
+    <PackageReference Include="CloudNative.CloudEvents" Version="2.7.0" />    
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.7.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.7.0" />
     <PackageReference Include="Confluent.Kafka" Version="2.2.0" />
@@ -174,6 +175,8 @@
     <PackageReference Include="librdkafka.redist" Version="2.2.0" />
     <PackageReference Include="Lucene.Net" Version="3.0.60009" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60009" />
+    <PackageReference Include="Lucene.Net" Version="3.0.54010" />
+    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54010" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.6.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.6.0" />
@@ -194,6 +197,7 @@
     <PackageReference Include="NuGet.Protocol" Version="6.7.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.110" />
     <PackageReference Include="Parquet.Net" Version="4.15.0" />
+    <PackageReference Include="Parquet.Net" Version="3.10.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">

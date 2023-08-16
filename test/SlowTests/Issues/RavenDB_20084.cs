@@ -1,37 +1,26 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Amazon.S3.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using XunitLogger;
 
 namespace SlowTests.Issues;
 
 public class RavenDB_20084 : ClusterTestBase
 {
-    private readonly ITestOutputHelper _output;
-
     public RavenDB_20084(ITestOutputHelper output) : base(output)
     {
-        _output = output;
     }
 
     [Fact]
@@ -47,38 +36,41 @@ public class RavenDB_20084 : ClusterTestBase
             customSettings: new Dictionary<string, string>()
             {
                 [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1"
+                [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1",
             });
 
         await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
 
-        using (var leaderStore = new DocumentStore
-               {
-                   Urls = new[] { leaderServer.WebUrl }, Conventions = new DocumentConventions { DisableTopologyUpdates = true }, Database = databaseName
-               })
+        using (var leaderStore = new DocumentStore())
         {
+            leaderStore.Urls = new[] { leaderServer.WebUrl };
+            leaderStore.Conventions = new DocumentConventions { DisableTopologyUpdates = true };
+            leaderStore.Database = databaseName;
             leaderStore.Initialize();
-            var debugInfo = new List<string>();
-            debugInfo.Add($"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
+            var debugInfo = new ConcurrentBag<string> { $"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
+
+            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = (exception, erroredDatabaseName) =>
+                debugInfo.Add($"Failed to schedule the next activity for the idle database '{erroredDatabaseName}': {exception}");
 
             // Populating the database and forcibly transitioning it to an idle state
             await Backup.FillClusterDatabaseWithRandomDataAsync(databaseSizeInMb: 1, leaderStore, clusterSize);
 
-            var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", incrementalBackupFrequency: $"*/{backupIntervalInMinutes} * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
+            var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1",
+                incrementalBackupFrequency: $"*/{backupIntervalInMinutes} * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
             var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore);
 
             var onGoingTaskBackup = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-            Assert.True(onGoingTaskBackup is { LastFullBackup: { } });
+            Assert.True(onGoingTaskBackup is { LastFullBackup: not null });
             var expectedTime = onGoingTaskBackup.NextBackup.DateTime;
-            
+
             leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
             leaderServer.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
-            
+
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
                 // Ensuring the database is in an idle state
-                WaitForValue( () => leaderServer.ServerStore.IdleDatabases.Count, 
+                WaitForValue(() => leaderServer.ServerStore.IdleDatabases.Count,
                     expectedVal: 1,
                     timeout: Convert.ToInt32(TimeSpan.FromMinutes(5).TotalMilliseconds),
                     interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
@@ -107,6 +99,8 @@ public class RavenDB_20084 : ClusterTestBase
                                 return false;
                             }
 
+                            debugInfo.Add($"Successfully extracted Databases array from context, array.Length = '{array.Length}'");
+
                             if (((BlittableJsonReaderObject)array[0]).TryGet("BackupInfo", out BlittableJsonReaderObject backupInfo) == false)
                             {
                                 debugInfo.Add("Unable to get BackupInfo from Database");
@@ -121,12 +115,16 @@ public class RavenDB_20084 : ClusterTestBase
                                 return false;
                             }
 
+                            debugInfo.Add("Successfully extracted BackupInfo from Database");
+
                             if (backupInfo.TryGet("LastBackup", out lastBackupTime) == false)
                             {
                                 debugInfo.Add("Unable to get LastBackup from BackupInfo");
                                 debugInfo.Add(backupInfo.ToString());
                                 return false;
                             }
+
+                            debugInfo.Add($"Successfully extracted LastBackup from Database: {lastBackupTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
                         }
                         catch (Exception e)
                         {
@@ -136,14 +134,27 @@ public class RavenDB_20084 : ClusterTestBase
                         return lastBackupTime >= expectedTime;
                     },
                     expectedVal: true,
-                    timeout: Convert.ToInt32(TimeSpan.FromMinutes(5).TotalMilliseconds),
+                    timeout: Convert.ToInt32(TimeSpan.FromMinutes(3).TotalMilliseconds),
                     interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
 
                 debugInfo.Add($"'lastBackupTime': {lastBackupTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
                 debugInfo.Add($"'expectedTime':   {expectedTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
 
-                Assert.True(lastBackupTime >= expectedTime,$"lastBackupTime >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
-                Assert.True(leaderServer.ServerStore.IdleDatabases.Count == 1, $"leaderServer.ServerStore.IdleDatabases.Count == 1: Count is {leaderServer.ServerStore.IdleDatabases.Count}{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
+                var backupInfoUpdated = lastBackupTime >= expectedTime;
+                if (backupInfoUpdated == false)
+                {
+                    var response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/databases/idle");
+                    debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/databases/idle");
+                    debugInfo.Add(response.Content.ReadAsStringAsync().Result);
+
+                    response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
+                    debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
+                    debugInfo.Add(response.Content.ReadAsStringAsync().Result);
+                }
+
+                Assert.True(backupInfoUpdated, $"lastBackupTime >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
+                Assert.True(leaderServer.ServerStore.IdleDatabases.Count == 1,
+                    $"leaderServer.ServerStore.IdleDatabases.Count == 1: Count is {leaderServer.ServerStore.IdleDatabases.Count}{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
 
                 // Verifying that the cluster storage contains the same value for consistency
                 var operation = new GetPeriodicBackupStatusOperation(taskId);
@@ -157,8 +168,10 @@ public class RavenDB_20084 : ClusterTestBase
                     ? backupStatus.LastIncrementalBackupInternal
                     : backupStatus.LastFullBackupInternal;
 
-                Assert.True(lastBackupTimeInClusterStorage >= expectedTime, $"lastBackupTimeInClusterStorage >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
-                Assert.True(lastInternalBackupTimeInClusterStorage >= expectedTime, $"lastInternalBackupTimeInClusterStorage >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
+                Assert.True(lastBackupTimeInClusterStorage >= expectedTime,
+                    $"lastBackupTimeInClusterStorage >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
+                Assert.True(lastInternalBackupTimeInClusterStorage >= expectedTime,
+                    $"lastInternalBackupTimeInClusterStorage >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
             }
         }
     }

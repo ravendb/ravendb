@@ -135,6 +135,11 @@ namespace Raven.Server.Documents.TransactionMerger
             }
         }
 
+        public void EnqueueSync(MergedTransactionCommand<TOperationContext, TTransaction> cmd)
+        {
+            Enqueue(cmd).GetAwaiter().GetResult();
+        }
+
         [DoesNotReturn]
         private static void ThrowTxMergerWasDisposed()
         {

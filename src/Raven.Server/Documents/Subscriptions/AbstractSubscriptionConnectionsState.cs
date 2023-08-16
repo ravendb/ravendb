@@ -62,7 +62,8 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
                     Type = (SubscriptionType)item.Key[prefixSlice.Size],
                     Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
                     ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
-                    Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId))
+                    Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId)),
+                    SubscriptionId = id
                 };
             }
         }

@@ -24,6 +24,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\bench\Indexing.Benchmark\Indexing.Benchmark.csproj" />
     <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />

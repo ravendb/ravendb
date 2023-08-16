@@ -675,7 +675,7 @@ return oldestDoc;"
 
         }
 
-        [Theory (Skip = "Until RavenDB-20823")]
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Include_ForceCreated_AlwaysOn_EnforceConfig_InCaseOf_PurgeOnDelete(bool deleteAlsoForceCreated)
@@ -947,8 +947,8 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Theory (Skip = "Until RavenDB-20823")]
-        [InlineData(false)]
+        [Theory]
+        [InlineData(false)] 
         [InlineData(true)]
         public async Task DocWithRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete(bool disableConfiguration)
         {
@@ -1028,7 +1028,7 @@ return oldestDoc;"
              */
         }
 
-        [Fact (Skip = "Until RavenDB-20823")]
+        [Fact]
         public async Task DocWithForceCreatedRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete()
         {
             using var store = GetDocumentStore();
@@ -1068,7 +1068,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact (Skip = "Until RavenDB-20823")]
+        [Fact]
         public async Task RevivedDocumentShouldHaveTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();

@@ -860,7 +860,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields));
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields), context);
             }
         }
 
@@ -1718,7 +1718,7 @@ namespace Raven.Server.Documents
                     var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
 
-                    if (shouldVersion)
+                    if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
                     {
                         var localChangeVector = context.GetChangeVector(local.Document.ChangeVector);
                         if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data, localChangeVector, collectionName))
@@ -2707,6 +2707,14 @@ namespace Raven.Server.Documents
             }
 
             return result;
+        }
+
+        public bool Exists(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerDocumentId))
+            {
+                return GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: false, tvr: out _);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

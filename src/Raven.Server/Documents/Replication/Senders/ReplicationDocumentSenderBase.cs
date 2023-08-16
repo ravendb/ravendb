@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, replicationSupportedFeatures.RevisionTombstonesWithId);
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
-            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(DocumentReplicationItem.From);
+            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(x => DocumentReplicationItem.From(x, ctx));
             var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
             var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, replicationSupportedFeatures.CaseInsensitiveCounters);
             var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);

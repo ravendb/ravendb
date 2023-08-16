@@ -10,10 +10,15 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
+using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -89,6 +94,27 @@ public abstract class AbstractSubscriptionStorage
 #pragma warning disable CS0618
         return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
 #pragma warning restore CS0618
+    }
+
+    
+    public static IEnumerable<ResendItem> GetResendItemsForDatabase(ClusterOperationContext context, string database)
+    {
+        var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var dbNamePrefix);
+        {
+            foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(dbNamePrefix, Slices.Empty, 0))
+            {
+                yield return new ResendItem
+                {
+                    Type = (SubscriptionType)item.Key[dbNamePrefix.Size + sizeof(long) + sizeof(byte)],
+                    Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key,
+                        dbNamePrefix.Size + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte)),
+                    ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
+                    Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId)),
+                    SubscriptionId = item.Value.Reader.ReadLongWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, dbNamePrefix.Size)
+                };
+            }
+        }
     }
 
     public long GetAllSubscriptionsCount()

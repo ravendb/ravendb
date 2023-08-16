@@ -41,24 +41,28 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     initialState.Skip = new Reference<long>();
                 }
 
-                var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
-                    {
-                        if (string.IsNullOrEmpty(state.StartsWith) == false)
-                        {
-                            return RequestHandler.Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes, 
-                                state.StartAfter,
-                                state.LastIteratedEtag == null ? state.Start : 0, // if we iterated already some docs then we pass 0 as Start and rely on state.Skip
-                                state.Take,
-                                state.Skip);
-                        }
+                var documentsEnumerator = new
+                    TransactionForgetAboutDocumentEnumerator(new
+                        PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
+                            {
+                                if (string.IsNullOrEmpty(state.StartsWith) == false)
+                                {
+                                    return RequestHandler.Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes,
+                                        state.StartAfter,
+                                        state.LastIteratedEtag == null
+                                            ? state.Start
+                                            : 0, // if we iterated already some docs then we pass 0 as Start and rely on state.Skip
+                                        state.Take,
+                                        state.Skip);
+                                }
 
-                        if (state.LastIteratedEtag != null)
-                            return RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take,
-                                skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
+                                if (state.LastIteratedEtag != null)
+                                    return RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take,
+                                        skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
 
-                        return RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
-                    },
-                    initialState);
+                                return RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
+                            },
+                            initialState), context);
 
                 if (HttpContext.Request.IsFromOrchestrator())
                 {

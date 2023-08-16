@@ -2,12 +2,15 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -15,6 +18,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
@@ -67,20 +71,6 @@ namespace Tests.Infrastructure
             if (options.ModifyDatabaseName != null)
                 name = options.ModifyDatabaseName(name) ?? name;
 
-            var doc = new DatabaseRecord(name)
-            {
-                Settings =
-                        {
-                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
-                        }
-            };
-
-            options.ModifyDatabaseRecord?.Invoke(doc);
-
             var store = new DocumentStore
             {
                 Urls = new[] { processNode.Url },
@@ -91,8 +81,39 @@ namespace Tests.Infrastructure
 
             store.Initialize();
 
-            if (options.CreateDatabase)
+            var settings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true",
+                [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
+                [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+            };
+
+            if (options.CreateShardedDatabase)
+            {
+                var shardingDoc = new ShardingDatabaseRecord(name)
+                {
+                    Settings = settings,
+                    Sharding = new ShardingConfiguration
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>()
+                        {
+                            { 0, new DatabaseTopology() }, { 1, new DatabaseTopology() }, { 2, new DatabaseTopology() },
+                        }
+                    }
+                };
+
+                options.ModifyDatabaseRecord?.Invoke(shardingDoc);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(shardingDoc, options.ReplicationFactor), token);
+            }
+            else if (options.CreateDatabase)
+            {
+                var doc = new DatabaseRecord(name) { Settings = settings };
+
+                options.ModifyDatabaseRecord?.Invoke(doc);
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor), token);
+            }
 
             store.AfterDispose += (sender, e) =>
             {
@@ -346,11 +367,56 @@ namespace Tests.Infrastructure
             return tasks.All(x => x.Result);
         }
 
+        protected async Task<string> GetLastNightlyVersion(string version)
+        {
+            return await LastRavenDbVersion("Nightly", version);
+        }
+
+        protected async Task<string> GetLastStableVersion(string version)
+        {
+            return await LastRavenDbVersion("Stable", version);
+        }
+
+        private static async Task<string> LastRavenDbVersion(string type, string version)
+        {
+            using var client = new HttpClient();
+            var url = new Uri("https://ravendb.net/wp-json/ravendb/downloads");
+            var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+            dynamic versionRespond = JsonConvert.DeserializeObject<ExpandoObject>(rawVersionRespond);
+
+            var ravenDbBuilds = ((IEnumerable<dynamic>)versionRespond.downloadsInfo.ravenDbBuilds);
+            var platform = string.Empty;
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                platform = PlatformDetails.Is32Bits ? "WindowsX86" : "WindowsX64";
+            }
+            else if (PlatformDetails.RunningOnLinux)
+            {
+                if (PlatformDetails.Is32Bits == false)
+                {
+                    platform = "LinuxX64";
+                }
+            }
+
+            if (string.IsNullOrEmpty(platform))
+            {
+                throw new InvalidOperationException("Expected to run on WindowsX86, WindowsX64 or LinuxX64");
+            }
+
+            var dynamic = ravenDbBuilds
+                .Where(x => x.platform == platform && x.branch == type && x.version.StartsWith(version)).OrderByDescending(x => x.publishedAt).FirstOrDefault();
+
+            Assert.NotNull(dynamic);
+
+            return dynamic.version;
+        }
+
         public class InterversionTestOptions
         {
             private readonly bool _frozen;
 
             private bool _createDatabase;
+            private bool _createShardedDatabase;
             private int _replicationFactor;
             private Action<DocumentStore> _modifyDocumentStore;
             private Action<DatabaseRecord> _modifyDatabaseRecord;
@@ -420,13 +486,35 @@ namespace Tests.Infrastructure
                 }
             }
 
+            public bool CreateShardedDatabase
+            {
+                get => _createShardedDatabase;
+                set
+                {
+                    AssertNotFrozen();
+                    _createShardedDatabase = value;
+                }
+            }
+
             private void AssertNotFrozen()
             {
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
             }
         }
+
+        protected class ShardingDatabaseRecord : DatabaseRecord
+        {
+            public ShardingConfiguration Sharding;
+
+            public ShardingDatabaseRecord(string databaseName) : base(databaseName)
+            {
+            }
+        }
+
+        public sealed class ShardingConfiguration
+        {
+            public Dictionary<int, DatabaseTopology> Shards;
+        }
     }
-
-
 }
