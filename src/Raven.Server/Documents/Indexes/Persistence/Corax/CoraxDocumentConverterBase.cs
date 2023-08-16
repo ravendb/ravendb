@@ -77,8 +77,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-
-        CompoundFields = index.GetIndexDefinition().CompoundFields;
+        
         Scope = new();
         _knownFieldsForReaders = new(() =>
         {
@@ -91,6 +90,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 throw new IndexAnalyzerException(e);
             }
         });
+        
+        CompoundFields = index.GetIndexDefinition().CompoundFields;
+        if (CompoundFields != null)
+        {
+            foreach (string[] compoundField in CompoundFields)
+            {
+                if (compoundField.Length != 2)
+                {
+                    throw new NotSupportedException("CompoundField must have exactly 2 elements, but got: " + string.Join(",", compoundField));
+                }
+            }
+        }
     }
     
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
@@ -202,7 +213,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 unsafe
                 {
                     char item = (char)value;
-                    builder.Write(fieldId, path, new ReadOnlySpan<byte>(&item, 1));
+                    builder.Write(fieldId, path, new ReadOnlySpan<byte>(&item, sizeof(char)));
                 }
 
                 break;

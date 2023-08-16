@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
 using Parquet.Meta;
@@ -9,6 +10,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Server.Utils;
+using ZstdSharp.Unsafe;
 using Constants = Raven.Client.Constants;
 using Encoding = System.Text.Encoding;
 
@@ -25,6 +27,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 {
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
+    private byte[] _compoundFieldsBuffer;
 
     public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, bool canContainSourceDocumentId = false) : base(index, storeValue, indexImplicitNull: index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
@@ -97,18 +100,10 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         return true;
         
         
-        unsafe void HandleCompoundFields()
+        void HandleCompoundFields()
         {
-            // edge cases:
-            // total size > max key size
-            // string too big?
-            // some fields are missing
-            // numeric data - long
-            // numeric data - double
-            // what if we have multiple items?
-
+            _compoundFieldsBuffer ??= new byte[128];
             var baseLine = _index.Definition.IndexFields.Count;
-            Span<byte> buffer = stackalloc byte[Voron.Global.Constants.CompactTree.MaximumKeySize];
             for (int i = 0; i < CompoundFields.Count; i++)
             {
                 int index = 0;
@@ -119,26 +114,118 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                     ValueType valueType = GetValueType(v);
                     switch (valueType)
                     {
+                        case ValueType.EmptyString:
+                        case ValueType.DynamicNull:
+                        case ValueType.Null:
+                            // for nulls, we put no value and it will sort at the beginning
+                            break;
+                        case ValueType.Enum:
                         case ValueType.String:
-                            index += Encoding.UTF8.GetBytes((string)v, buffer[index..]);
+                            string s = v.ToString();
+                            EnsureHasSpace(Encoding.UTF8.GetMaxByteCount(s.Length));
+                            index += Encoding.UTF8.GetBytes(s, _compoundFieldsBuffer.AsSpan()[index..]);
                             break;
                         case ValueType.LazyString:
                             var lazyStringValue = ((LazyStringValue)v);
-                            lazyStringValue.AsSpan().CopyTo(buffer[index..]);
+                            EnsureHasSpace(lazyStringValue.Length);
+                            lazyStringValue.AsSpan().CopyTo(_compoundFieldsBuffer.AsSpan()[index..]);
                             index += lazyStringValue.Length;
                             break;
+                        case ValueType.LazyCompressedString:
+                            v = ((LazyCompressedStringValue)v).ToLazyStringValue();
+                            goto case ValueType.LazyString;
                         case ValueType.DateTime:
-                            var ticks = ((DateTime)v).Ticks;
-                            BitConverter.TryWriteBytes(buffer[index..], Bits.SwapBytes(ticks));
-                            index += sizeof(long);
+                            AppendLong(((DateTime)v).Ticks);
                             break;
+                        case ValueType.DateTimeOffset:
+                            AppendLong(((DateTimeOffset)v).Ticks);
+                            break;
+                        case ValueType.DateOnly:
+                            AppendLong(((DateOnly)v).ToDateTime(TimeOnly.MinValue).Ticks);
+                            break;
+                        case ValueType.TimeOnly:
+                            AppendLong(((TimeOnly)v).Ticks);
+                            break;
+                        case ValueType.TimeSpan:
+                            AppendLong(((TimeSpan)v).Ticks);
+                            break;
+                        case ValueType.Convertible:
+                            v = Convert.ToDouble(v);
+                            goto case ValueType.Double;
+                        case ValueType.Boolean:
+                            EnsureHasSpace(1);
+                            _compoundFieldsBuffer[index++] = (bool)v ? (byte)1 : (byte)0;
+                            break;
+                        case ValueType.Numeric:
+                            var l = v switch
+                            {
+                                long ll => ll,
+                                ulong ul => (long)ul,
+                                int ii => ii,
+                                short ss => ss,
+                                ushort us => us,
+                                byte b => b,
+                                sbyte sb => sb,
+                                _ => Convert.ToInt64(v)
+                            };
+                            AppendLong(l);
+                            break;
+                        case ValueType.Char:
+                            EnsureHasSpace(sizeof(char));
+                            BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], (char)v);
+                            index += sizeof(char);
+                            break;
+                        case ValueType.Double:
+                            var d = v switch
+                            {
+                                LazyNumberValue ldv => ldv.ToDouble(CultureInfo.InvariantCulture),
+                                double dd => dd,
+                                float f => f,
+                                decimal m => (double)m,
+                                _ => Convert.ToDouble(v)
+                            };
+                            AppendLong(DoubleToSortableLong(d));
+                            break;
+                        default:
+                            throw new NotSupportedException(
+                                $"Unable to create compound index with value of type: {valueType} ({v}) for compound field: {string.Join(",", CompoundFields[i])}");
                     }
-                    buffer[index++] = SpecialChars.RecordSeparator;
+                    _compoundFieldsBuffer[index++] = SpecialChars.RecordSeparator;
                 }
 
                 var fieldId = baseLine + i;
-                builder.Write( fieldId, buffer[..index]);
+                builder.Write( fieldId, _compoundFieldsBuffer.AsSpan()[..index]);
+
+                long DoubleToSortableLong(double val)
+                {
+                    long f = BitConverter.DoubleToInt64Bits(val);
+                    if (f < 0)
+                        f ^= 0x7fffffffffffffffL;
+                    return f;
+                }
+                void EnsureHasSpace(int additionalSize)
+                {
+                    if (additionalSize + index < _compoundFieldsBuffer.Length)
+                        return;
+
+                    var newSize = Bits.PowerOf2(additionalSize + index + 1);
+                    Array.Resize(ref _compoundFieldsBuffer, newSize);
+                }
+
+                void AppendLong(long l)
+                {
+                    EnsureHasSpace(sizeof(long));
+                    BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], Bits.SwapBytes(l));
+                    index += sizeof(long);
+                }
+            }
+
+            if (_compoundFieldsBuffer.Length > 64 * 1024)
+            {
+                // let's ensure that we aren't holding on to really big buffers forever
+                _compoundFieldsBuffer = null;
             }
         }
+        
     }
 }
