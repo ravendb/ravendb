@@ -105,6 +105,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexState? State { get; set; }
 
         /// <summary>
+        /// Expert: List of compound fields that Corax can use to optimize certain queries
+        /// </summary>
+        public List<string[]> CompoundFields { get; set; }
+
+        /// <summary>
         /// Index deployment mode
         /// </summary>
         public IndexDeploymentMode? DeploymentMode { get; set; }
@@ -153,6 +158,7 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            CompoundFields = new List<string[]>();
             Configuration = new IndexConfiguration();
         }
 
@@ -176,7 +182,8 @@ namespace Raven.Client.Documents.Indexes
                     State = State,
                     OutputReduceToCollection = OutputReduceToCollection,
                     PatternForOutputReduceToCollectionReferences = PatternReferencesCollectionName,
-                    PatternReferencesCollectionName = PatternReferencesCollectionName
+                    PatternReferencesCollectionName = PatternReferencesCollectionName,
+                    CompoundFields = CompoundFields
                 };
 
                 if (PatternForOutputReduceToCollectionReferences != null)

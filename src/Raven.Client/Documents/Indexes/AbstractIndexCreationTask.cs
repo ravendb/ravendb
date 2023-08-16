@@ -304,7 +304,8 @@ namespace Raven.Client.Documents.Indexes
                 LockMode = LockMode,
                 Priority = Priority,
                 State = State,
-                DeploymentMode = DeploymentMode
+                DeploymentMode = DeploymentMode,
+                CompoundFields = CompoundFields,                
             }.ToIndexDefinition(Conventions);
 
             return indexDefinition;

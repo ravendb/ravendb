@@ -1367,6 +1367,24 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
+            if (indexDefinition.CompoundFields is { Count: > 0 })
+            {
+                writer.WritePropertyName(nameof(indexDefinition.CompoundFields));
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var fields in indexDefinition.CompoundFields)
+                {
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    first = false;
+                    writer.WriteArrayValue(fields);
+                }
+                writer.WriteEndArray();
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(indexDefinition.AdditionalSources));
             writer.WriteStartObject();
             isFirstInternal = true;

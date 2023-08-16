@@ -42,6 +42,17 @@ namespace Raven.Client.Documents.Indexes
             set => _additionalSources = value;
         }
 
+        /// <summary>
+        /// Expert:
+        /// List of compound fields that can be used by the Corax indexing engine to
+        /// optimize certain queries. Has no effect on Lucene indexes. 
+        /// </summary>
+        public List<string[]> CompoundFields
+        {
+            get => _compoundFields ??= new List<string[]>();
+            set => _compoundFields = value;
+        }
+
         public HashSet<AdditionalAssembly> AdditionalAssemblies
         {
             get => _additionalAssemblies ??= new HashSet<AdditionalAssembly>();
@@ -304,6 +315,9 @@ namespace Raven.Client.Documents.Indexes
         [JsonIgnore]
         private IndexConfiguration _configuration;
 
+        [JsonIgnore]
+        private List<string[]> _compoundFields;
+
         /// <summary>
         /// Provide a cached version of the index hash code, which is used when generating
         /// the index etag.
@@ -533,6 +547,7 @@ namespace Raven.Client.Documents.Indexes
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
             definition.DeploymentMode = DeploymentMode;
             definition.ClusterState = (ClusterState == null) ? null : new IndexDefinitionClusterState(ClusterState);
+            definition.CompoundFields = CompoundFields;
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;

@@ -295,6 +295,12 @@ namespace Sparrow.Json
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes), converterExpression);
                     }
                 }
+                
+                if (propertyType == typeof(List<string[]>))
+                {
+                    var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToListOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
+                    return Expression.Call(method, json, Expression.Constant(propertyName));
+                }
 
                 var isReadOnlyListOfStrings = propertyType == typeof(IReadOnlyList<string>);
                 if (propertyType == typeof(List<string>) || propertyType == typeof(HashSet<string>) || isReadOnlyListOfStrings)
@@ -306,7 +312,6 @@ namespace Sparrow.Json
                     method = method.MakeGenericMethod(propertyType);
                     return Expression.Call(method, json, Expression.Constant(propertyName));
                 }
-
                 if (genericTypeDefinition == typeof(List<>) || genericTypeDefinition == typeof(IReadOnlyList<>))
                 {
                     var valueType = propertyType.GenericTypeArguments[0];
@@ -339,6 +344,7 @@ namespace Sparrow.Json
                 var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToArrayOfDouble), BindingFlags.NonPublic | BindingFlags.Static);
                 return Expression.Call(method, json, Expression.Constant(propertyName));
             }
+
             if (propertyType.IsArray)
             {
                 var valueType = propertyType.GetElementType();
@@ -775,6 +781,28 @@ namespace Sparrow.Json
             }
             return dic;
         }
+        
+        private static List<string[]> ToListOfStringArray(BlittableJsonReaderObject json, string name)
+        {
+            var collection = new List<string[]>();
+
+            if (json.TryGet(name, out BlittableJsonReaderArray jsonList) == false || jsonList == null)
+                return collection;
+
+            foreach (BlittableJsonReaderArray jsonArray in jsonList)
+            {
+                var items = new string[jsonArray.Length];
+                for (int i = 0; i < jsonArray.Length; i++)
+                {
+                    items[i] = jsonArray[i].ToString();
+                }
+                collection.Add(items);
+            }
+            
+
+            return collection;
+        }
+
 
         private static TCollection ToCollectionOfString<TCollection>(BlittableJsonReaderObject json, string name)
             where TCollection : ICollection<string>, new()

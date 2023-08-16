@@ -100,6 +100,16 @@ namespace Raven.Server.Extensions
             foreach (var additionalAssembly in definition.AdditionalAssemblies)
                 additionalAssemblies.Add(additionalAssembly.ToJson());
 
+            if (definition.CompoundFields != null)
+            {
+                var compoundFields = new DynamicJsonArray();
+                foreach (string[] compoundField in definition.CompoundFields)
+                {
+                    compoundFields.Add(new DynamicJsonArray(compoundField));
+                }
+                result[nameof(IndexDefinition.CompoundFields)] = compoundFields;
+            }
+
             result[nameof(IndexDefinition.AdditionalAssemblies)] = new DynamicJsonArray(additionalAssemblies);
 
             return result;

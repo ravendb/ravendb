@@ -27,7 +27,13 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            CompoundFields = new List<string[]>();
         }
+
+        /// <summary>
+        /// Expert: List of compound fields that Corax can use to optimize certain queries
+        /// </summary>
+        public List<string[]> CompoundFields { get; set; }
 
         public override bool IsMapReduce => Reduce != null;
 
