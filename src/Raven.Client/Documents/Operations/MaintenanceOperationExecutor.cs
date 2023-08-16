@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public TResult Send<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation)
+        internal TResult Send<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation)
         {
             return AsyncHelpers.RunSync(() => SendAsync(context, operation));
         }
@@ -117,7 +117,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation, CancellationToken token = default)
+        internal async Task<TResult> SendAsync<TResult>(JsonOperationContext context, IMaintenanceOperation<TResult> operation, CancellationToken token = default)
         {
             var command = operation.GetCommand(RequestExecutor.Conventions, context);
 
