@@ -11,18 +11,19 @@ import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import IconName from "typings/server/icons";
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 
 type operationType = "pause" | "disable" | "start";
 
 interface IndexGroup {
     title: string | ReactNode;
     indexes: IndexInfo[];
-    destinationStatus?: Raven.Client.Documents.Indexes.IndexRunningStatus;
+    destinationStatus?: IndexRunningStatus;
 }
 
 interface IndexInfo {
     name: string;
-    currentStatus: Raven.Client.Documents.Indexes.IndexRunningStatus;
+    currentStatus: IndexRunningStatus;
 }
 
 interface AffectedIndexesGrouped {
@@ -156,7 +157,7 @@ function getColorForType(type: operationType) {
     }
 }
 
-function getStatusIcon(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+function getStatusIcon(status: IndexRunningStatus) {
     switch (status) {
         case "Disabled":
             return "stop";
@@ -168,7 +169,7 @@ function getStatusIcon(status: Raven.Client.Documents.Indexes.IndexRunningStatus
             return "index";
     }
 }
-function getStatusColor(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+function getStatusColor(status: IndexRunningStatus) {
     switch (status) {
         case "Disabled":
             return "danger";
@@ -273,12 +274,14 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
         case "start": {
             const affectedIndexGrouped: AffectedIndexesGrouped = indexes.reduce(
                 (accumulator: AffectedIndexesGrouped, currentValue: IndexSharedInfo) => {
-                    if (currentValue.nodesInfo.some((x) => x.details?.status === "Paused")) {
+                    if (currentValue.nodesInfo.every((x) => x.details?.status === "Paused")) {
                         accumulator.resuming.push({ name: currentValue.name, currentStatus: "Paused" });
-                    } else if (currentValue.nodesInfo.some((x) => x.details?.status === "Disabled")) {
-                        accumulator.enabling.push({ name: currentValue.name, currentStatus: "Disabled" });
                     } else {
-                        accumulator.skipping.push({ name: currentValue.name, currentStatus: "Running" });
+                        if (currentValue.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+                            accumulator.enabling.push({ name: currentValue.name, currentStatus: "Disabled" });
+                        } else {
+                            accumulator.enabling.push({ name: currentValue.name, currentStatus: "Running" });
+                        }
                     }
 
                     return accumulator;
@@ -286,7 +289,6 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     enabling: [],
                     resuming: [],
-                    skipping: [],
                 }
             );
             return [
@@ -309,10 +311,6 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                     indexes: affectedIndexGrouped.resuming,
 
                     destinationStatus: "Running",
-                },
-                {
-                    title: "Skipping already running indexes",
-                    indexes: affectedIndexGrouped.skipping,
                 },
             ];
         }

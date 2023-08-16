@@ -307,15 +307,11 @@ export function useIndexesPage(database: database, stale: boolean) {
                         const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
                             ?.status;
 
-                        if (indexStatus !== "Disabled" && indexStatus !== "Paused") {
-                            continue;
-                        }
-
-                        if (indexStatus === "Disabled") {
+                        if (indexStatus === "Paused") {
                             startRequests.push(
-                                indexesService.enable(index, database, location).then(() => {
+                                indexesService.resume(index, database, location).then(() => {
                                     dispatch({
-                                        type: "EnableIndexing",
+                                        type: "ResumeIndexing",
                                         indexName: index.name,
                                         location,
                                     });
@@ -323,9 +319,9 @@ export function useIndexesPage(database: database, stale: boolean) {
                             );
                         } else {
                             startRequests.push(
-                                indexesService.resume(index, database, location).then(() => {
+                                indexesService.enable(index, database, location).then(() => {
                                     dispatch({
-                                        type: "ResumeIndexing",
+                                        type: "EnableIndexing",
                                         indexName: index.name,
                                         location,
                                     });
