@@ -1,12 +1,16 @@
 using System;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
+using Parquet.Meta;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
+using Sparrow.Binary;
+using Sparrow.Server.Utils;
 using Constants = Raven.Client.Constants;
+using Encoding = System.Text.Encoding;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -50,6 +54,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         if (boostedValue != null)
             builder.Boost(boostedValue.Boost);
 
+        if (CompoundFields != null)
+            HandleCompoundFields();
+
         bool hasFields = false;
         foreach (var property in accessor.GetProperties(documentToProcess))
         {
@@ -88,5 +95,50 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         builder.Write(0, string.Empty, id.AsSpan());
         
         return true;
+        
+        
+        unsafe void HandleCompoundFields()
+        {
+            // edge cases:
+            // total size > max key size
+            // string too big?
+            // some fields are missing
+            // numeric data - long
+            // numeric data - double
+            // what if we have multiple items?
+
+            var baseLine = _index.Definition.IndexFields.Count;
+            Span<byte> buffer = stackalloc byte[Voron.Global.Constants.CompactTree.MaximumKeySize];
+            for (int i = 0; i < CompoundFields.Count; i++)
+            {
+                int index = 0;
+                var fields = CompoundFields[i];
+                for (int j = 0; j < fields.Length; j++)
+                {
+                    object v = accessor.GetValue(fields[j], doc);
+                    ValueType valueType = GetValueType(v);
+                    switch (valueType)
+                    {
+                        case ValueType.String:
+                            index += Encoding.UTF8.GetBytes((string)v, buffer[index..]);
+                            break;
+                        case ValueType.LazyString:
+                            var lazyStringValue = ((LazyStringValue)v);
+                            lazyStringValue.AsSpan().CopyTo(buffer[index..]);
+                            index += lazyStringValue.Length;
+                            break;
+                        case ValueType.DateTime:
+                            var ticks = ((DateTime)v).Ticks;
+                            BitConverter.TryWriteBytes(buffer[index..], Bits.SwapBytes(ticks));
+                            index += sizeof(long);
+                            break;
+                    }
+                    buffer[index++] = SpecialChars.RecordSeparator;
+                }
+
+                var fieldId = baseLine + i;
+                builder.Write( fieldId, buffer[..index]);
+            }
+        }
     }
 }
