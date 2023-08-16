@@ -10,7 +10,6 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Voron;
-using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
@@ -88,30 +87,6 @@ namespace Corax.Queries
 
             return storeIdx;
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static int BinarySearch(TermQueryItem[] item, CompactKey value)
-        {
-            int l = 0;
-            int r = item.Length - 1;
-            while (l <= r)
-            {
-                var pivot = (l + r) >> 1;
-                switch (item[pivot].Item.Compare(value))
-                {
-                    case 0:
-                        return pivot;
-                    case < 0:
-                        l = pivot + 1;
-                        break;
-                    default:
-                        r = pivot - 1;
-                        break;
-                }
-            }
-
-            return -1;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static int BinarySearch(TermQueryItem[] item, ReadOnlySpan<byte> value)
@@ -137,13 +112,15 @@ namespace Corax.Queries
             return -1;
         }
 
-        private static unsafe int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        [SkipLocalsInit]
+        private static int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
         {
             var value = ((TermQueryItem[])(object)match._value);
             var requiredSizeOfBitset = value.Length / sizeof(byte) + (value.Length % sizeof(byte) == 0 ? 0 : 1);
-            byte* bitsetBuffer = stackalloc byte[requiredSizeOfBitset];
-            new Span<byte>(bitsetBuffer, requiredSizeOfBitset).Clear();
             
+            //We're skipping init here since we will do it below (only when Inner match has values).
+            byte* bitsetBuffer = stackalloc byte[requiredSizeOfBitset];
+
             var bitset = new PtrBitVector(bitsetBuffer, requiredSizeOfBitset);
             var searcher = match._searcher;
             var currentMatches = matches;
@@ -166,6 +143,7 @@ namespace Corax.Queries
              
                 for (int i = 0; i < results; i++)
                 {
+                    Unsafe.InitBlock(bitsetBuffer, 0, (uint)requiredSizeOfBitset);
                     var reader = searcher.GetEntryTermsReader(freeMemory[i], ref lastPage);
 
                     while (reader.MoveNext())

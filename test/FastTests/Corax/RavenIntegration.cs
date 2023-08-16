@@ -639,6 +639,25 @@ public class RavenIntegration : RavenTestBase
         entriesCount = await AssertWaitForValueAsync(async () => (int) (await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName))).EntriesCount, count / 2);
         Assert.Equal(count / 2, entriesCount);
     }
+
+    [Fact]
+    public void AllInUnaryMatchWillDetectEachDocumentSeparately()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var session = store.OpenSession();
+        session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+        session.Store(new FanoutDto()
+        {
+            Data = new (){1,2,3,4,5}
+        });
+        session.SaveChanges();
+        session.Store(new FanoutDto(){Data = new(){1,2,3,4}});
+        session.Store(new FanoutDto(){Data = new(){1,2,3,4}});
+        session.SaveChanges();
+
+        var result = session.Advanced.DocumentQuery<FanoutDto>().ContainsAll(i => i.Data, new[] {1, 2, 3, 4, 5}).ToList();
+        Assert.Equal(1, result.Count);
+    }
     
     private class FanoutIndex : AbstractIndexCreationTask<FanoutDto>
     {
