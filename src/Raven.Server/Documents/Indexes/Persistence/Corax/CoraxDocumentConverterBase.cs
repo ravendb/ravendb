@@ -24,6 +24,8 @@ using System.Diagnostics;
 using Corax.Mappings;
 using Raven.Client.Exceptions.Corax;
 using System.Diagnostics.CodeAnalysis;
+using Voron.Data.CompactTrees;
+using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -47,6 +49,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
     private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
+    public List<string[]> CompoundFields;
 
     protected abstract bool SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
@@ -55,6 +58,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         object sourceDocument)
         where TBuilder : IndexWriter.IIndexEntryBuilder;
 
+    [SkipLocalsInit]
     public bool SetDocument<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
@@ -63,15 +67,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
+
         return SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
+
     }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
-        Allocator = new ByteStringContext(SharedMultipleUseFlag.None);       
-        
+        Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        CompoundFields = index.GetIndexDefinition().CompoundFields;
         Scope = new();
         _knownFieldsForReaders = new(() =>
         {

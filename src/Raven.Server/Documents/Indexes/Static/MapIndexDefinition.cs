@@ -46,14 +46,24 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 it.Id = idX++;
             }
-            
-            
+
             foreach (var outputField in outputFields)
             {
                 if (definition.Fields.ContainsKey(outputField))
                     continue;
 
                 result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields, idX++));
+            }
+
+            if (definition.CompoundFields != null)
+            {
+                foreach (string[] field in definition.CompoundFields)
+                {
+                    var name = $"compound({string.Join(",",field)})";
+                    var indexField = IndexField.Create(name, new IndexFieldOptions(), allFields, idX++);
+                    indexField.Indexing = FieldIndexing.No; // handled separately
+                    result.Add(indexField);
+                }
             }
 
             return result.ToArray();
