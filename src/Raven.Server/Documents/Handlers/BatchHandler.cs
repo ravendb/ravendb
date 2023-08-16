@@ -23,6 +23,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
@@ -95,18 +96,17 @@ namespace Raven.Server.Documents.Handlers
                     ValidateCommandForClusterWideTransaction(command, disableAtomicDocumentWrites);
                     var raftRequestId = GetRaftRequestIdFromQuery();
 
-                    using (Database.ClusterTransactionWaiter.CreateTask(id: raftRequestId))
-                    {
-                        // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
-                        // Because in any case the user will get a raft index to wait upon on his next request.
-                        var options = new ClusterTransactionOptions(taskId: raftRequestId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
+                    // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
+                    // Because in any case the user will get a raft index to wait upon on his next request.
+                    var options =
+                        new ClusterTransactionOptions(taskId: raftRequestId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
                         {
                             WaitForIndexesTimeout = waitForIndexesTimeout,
                             WaitForIndexThrow = waitForIndexThrow,
                             SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
                         };
-                        await HandleClusterTransaction(context, command, options, raftRequestId);
-                    }
+                    await HandleClusterTransaction(context, command, options, raftRequestId);
+
                     return;
                 }
 
@@ -246,7 +246,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
 
-                await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+                using (Database.ClusterTransactionWaiter.CreateTask(id: options.TaskId, index))
+                    await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+
                 var lastModified = Database.Time.GetUtcNow();
                 GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified, options.DisableAtomicDocumentWrites, array);
             }
@@ -658,6 +660,8 @@ namespace Raven.Server.Documents.Handlers
                 Replies.Clear();
                 Options.Clear();
 
+                long lastIndexInBatch = 0L;
+
                 foreach (var command in _batch)
                 {
                     Replies.Add(command.Index, new DynamicJsonArray());
@@ -805,7 +809,14 @@ namespace Raven.Server.Documents.Handlers
                     {
                         context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
                     }
+
+                    lastIndexInBatch = long.Max(lastIndexInBatch, command.Index);
                 }
+
+                // set last cluster transaction index (persistent)
+                var lastClusterTxIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(context.Transaction.InnerTransaction);
+                if(lastIndexInBatch > lastClusterTxIndex)
+                    Database.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, lastIndexInBatch);
 
                 return Reply.Count;
             }

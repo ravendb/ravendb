@@ -12,7 +12,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public string FullVersion { get; set; }
 
-        public string GetCleanedFullVersion()
+        internal string GetCleanedFullVersion()
         {
             if (IsNightlyOrDev(BuildVersion) == false)
                 return FullVersion;
