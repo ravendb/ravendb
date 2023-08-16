@@ -4012,7 +4012,10 @@ namespace Raven.Server.ServerWide
 
             foreach (var databaseName in command.Value.DatabaseNames)
             {
-                var key = "db/" + databaseName;
+                //if this is a shard database, we need to change the sharded database record
+                var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out string recordDatabaseName, out int shardNumber);
+                
+                var key = "db/" + recordDatabaseName;
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     var oldDatabaseRecord = ReadInternal(context, out _, valueNameLowered);
@@ -4058,7 +4061,10 @@ namespace Raven.Server.ServerWide
                                 throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: {databaseName}");
                             }
 
-                            var topology = rawDatabaseRecord.Topology;
+                            if(isShard && rawDatabaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
+                                throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for shard {shardNumber} in database {databaseName} because this shard does not belong to the database");
+
+                            var topology = isShard ? rawDatabaseRecord.Sharding.Shards[shardNumber] : rawDatabaseRecord.Topology;
                             if (topology == null)
                                 continue;
 
@@ -4068,10 +4074,21 @@ namespace Raven.Server.ServerWide
 
                             topology.DynamicNodesDistribution = enable;
 
-                            oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                            if (isShard)
                             {
-                                [nameof(DatabaseRecord.Topology)] = topology.ToJson()
-                            };
+                                rawDatabaseRecord.Sharding.Raw.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderObject shards);
+                                shards.Modifications = new DynamicJsonValue(shards)
+                                {
+                                    [shardNumber.ToString()] = topology.ToJson()
+                                };
+                            }
+                            else
+                            {
+                                oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
+                                {
+                                    [nameof(DatabaseRecord.Topology)] = topology.ToJson()
+                                };
+                            }
 
                             break;
 
@@ -4082,7 +4099,7 @@ namespace Raven.Server.ServerWide
                     using (oldDatabaseRecord)
                     {
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName, null));
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: recordDatabaseName, null));
                     }
                 }
             }
