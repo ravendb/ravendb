@@ -15,7 +15,6 @@ namespace SlowTests.Issues
 {
     public class RavenDB_16659 :RavenTestBase
     {
-        private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 30000;
 
         public RavenDB_16659(ITestOutputHelper output) : base(output)
         {
@@ -23,6 +22,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeleteDatabaseDuringRestore()
         {
+            DoNotReuseServer();
             var mre = new ManualResetEventSlim();
             var backupPath = NewDataPath();
             
@@ -51,13 +51,13 @@ namespace SlowTests.Issues
                     RestoreBackupOperation restoreOperation =
                         new RestoreBackupOperation(new RestoreBackupConfiguration
                             {BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName });
-                    Server.ServerStore.ForTestingPurposesOnly().AfterSavingDatabaseRecored += () => mre.Set();
+                    Server.ServerStore.ForTestingPurposesOnly().RestoreDatabaseAfterSavingDatabaseRecord += () => mre.Set();
                     
                     var op  = await store.Maintenance.Server.SendAsync(restoreOperation);
                     mre.Wait();
                     
                     var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true)));
-                    Assert.Contains($"Can't delete database {databaseName} while restore is in progress.", e.Message);
+                    Assert.Contains($"Can't delete database '{databaseName}' while the restore process is in progress.", e.Message);
                     await op.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 }
                 finally

@@ -3552,7 +3552,7 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
-            internal Action AfterSavingDatabaseRecored;
+            internal Action RestoreDatabaseAfterSavingDatabaseRecord;
         }
         
         public readonly MemoryCache QueryClauseCache;

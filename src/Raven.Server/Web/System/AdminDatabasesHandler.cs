@@ -712,7 +712,9 @@ namespace Raven.Server.Web.System
                                 continue;
 
                             if (rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
-                                throw new InvalidOperationException($"Can't delete database {databaseName} while restore is in progress.");
+                                throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
+                                                                    $"process is in progress. In order to delete the database, " +
+                                                                    $"you can cancel it from node {rawRecord.Topology.Members[0]}");
 
                             switch (rawRecord.LockMode)
                             {
