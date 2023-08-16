@@ -219,6 +219,7 @@ namespace Raven.Server.Web.System
             var shardNumber = GetIntValueQueryString("shardNumber", required: false);
             var nodes = GetStringValuesQueryString("node", required: false);
             var replicationFactor = GetIntValueQueryString("replicationFactor", required: false);
+            var dynamicNodeDistribution = GetBoolValueQueryString("dynamicNodeDistribution", required: false);
             var raftRequestId = GetRaftRequestIdFromQuery();
             
             if (ShardHelper.IsShardName(database))
@@ -307,6 +308,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"Replication factor {replicationFactor.Value} cannot exceed the number of nodes in the cluster {clusterTopology.AllNodes.Count}.");
 
                 newShardTopology.ReplicationFactor = replicationFactor ?? (nodesList.Count > 0 ? nodesList.Count : databaseRecord.Sharding.Shards.ElementAt(0).Value.ReplicationFactor);
+                newShardTopology.DynamicNodesDistribution = dynamicNodeDistribution ?? databaseRecord.Sharding.Shards.ElementAt(0).Value.DynamicNodesDistribution;
 
                 var nodeToInstanceCount = new Dictionary<string, int>();
                 foreach (var node in clusterTopology.AllNodes.Keys)

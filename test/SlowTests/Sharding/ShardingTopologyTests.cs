@@ -22,6 +22,48 @@ namespace SlowTests.Sharding
         {
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task CanToggleDynamicNodeDistributionForShardDatabase()
+        {
+            var options = Sharding.GetOptionsForCluster(Server, shards: 1, shardReplicationFactor: 1, orchestratorReplicationFactor: 3, dynamicNodeDistribution: true);
+            using (var store = GetDocumentStore(options))
+            {
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, nodes: new[] {Server.ServerStore.NodeTag},
+                    dynamicNodeDistribution: false));
+                var newShard = res.ShardNumber;
+
+                var record = GetDatabaseRecord(store);
+                Assert.Equal(false, record.Sharding.Shards[res.ShardNumber].DynamicNodesDistribution);
+
+                await store.Maintenance.Server.SendAsync(new SetDatabaseDynamicDistributionOperation(ShardHelper.ToShardName(store.Database, newShard),
+                    allowDynamicDistribution: true));
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[newShard].DynamicNodesDistribution;
+                }, true);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public Task DynamicNodeDistributionDefaultsToOtherShardsSetting()
+        {
+            //create db with one shard that has dynamic node distribution enabled
+            var options = Sharding.GetOptionsForCluster(Server, shards: 1, shardReplicationFactor: 1, orchestratorReplicationFactor: 3, dynamicNodeDistribution: true);
+            using (var store = GetDocumentStore(options))
+            {
+                //do not provide dynamic node distribution for new shard creation
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, nodes: new[] { Server.ServerStore.NodeTag }));
+                
+                //new shard will have it enabled
+                var record = GetDatabaseRecord(store);
+                Assert.Equal(true, record.Sharding.Shards[res.ShardNumber].DynamicNodesDistribution);
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task EnsureCantDeleteShardFromDatabaseWhileItHasBuckets()
         {

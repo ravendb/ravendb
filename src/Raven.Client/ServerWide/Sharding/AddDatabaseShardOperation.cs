@@ -16,27 +16,29 @@ namespace Raven.Client.ServerWide.Sharding
         private readonly int? _shardNumber;
         private readonly string[] _nodes;
         private readonly int? _replicationFactor;
+        private readonly bool? _dynamicNodeDistribution;
 
-        public AddDatabaseShardOperation(string databaseName, int? shardNumber = null)
+        public AddDatabaseShardOperation(string databaseName, int? shardNumber = null, bool? dynamicNodeDistribution = null)
         {
             ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
             _shardNumber = shardNumber;
+            _dynamicNodeDistribution = dynamicNodeDistribution;
         }
 
-        public AddDatabaseShardOperation(string databaseName, string[] nodes, int? shardNumber = null) : this(databaseName, shardNumber)
+        public AddDatabaseShardOperation(string databaseName, string[] nodes, int? shardNumber = null, bool? dynamicNodeDistribution = null) : this(databaseName, shardNumber, dynamicNodeDistribution)
         {
             _nodes = nodes;
         }
 
-        public AddDatabaseShardOperation(string databaseName, int? replicationFactor, int? shardNumber = null) : this(databaseName, shardNumber)
+        public AddDatabaseShardOperation(string databaseName, int? replicationFactor, int? shardNumber = null, bool? dynamicNodeDistribution = null) : this(databaseName, shardNumber, dynamicNodeDistribution)
         {
             _replicationFactor = replicationFactor;
         }
 
         public RavenCommand<AddDatabaseShardResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddDatabaseShardCommand(_databaseName, _shardNumber, _nodes, _replicationFactor);
+            return new AddDatabaseShardCommand(_databaseName, _shardNumber, _nodes, _replicationFactor, _dynamicNodeDistribution);
         }
 
         internal sealed class AddDatabaseShardCommand : RavenCommand<AddDatabaseShardResult>, IRaftCommand
@@ -45,13 +47,15 @@ namespace Raven.Client.ServerWide.Sharding
             private readonly int? _shardNumber;
             private readonly string[] _nodes;
             private readonly int? _replicationFactor;
+            private readonly bool? _dynamicNodeDistribution;
 
-            public AddDatabaseShardCommand(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
+            public AddDatabaseShardCommand(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null, bool? dynamicNodeDistribution = null)
             {
                 _databaseName = databaseName;
                 _shardNumber = shardNumber;
                 _nodes = nodes;
                 _replicationFactor = replicationFactor;
+                _dynamicNodeDistribution = dynamicNodeDistribution;
             }
 
             public override bool IsReadRequest => false;
@@ -65,6 +69,9 @@ namespace Raven.Client.ServerWide.Sharding
 
                 if (_replicationFactor.HasValue)
                     sb.Append($"&replicationFactor={_replicationFactor}");
+
+                if( _dynamicNodeDistribution.HasValue)
+                    sb.Append($"&dynamicNodeDistribution={_dynamicNodeDistribution.Value}");
 
                 if (_nodes?.Length > 0)
                 {

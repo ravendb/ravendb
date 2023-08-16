@@ -832,13 +832,10 @@ namespace Raven.Server.Web.System
                 throw licenseLimit;
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new[] { name }, enable == false, $"{raftRequestId}");
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+            var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new[] { name }, enable == false, $"{raftRequestId}");
+            await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                NoContentStatus();
-            }
+            NoContentStatus();
         }
 
         private async Task ToggleDisableDatabases(bool disable)
