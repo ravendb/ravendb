@@ -41,11 +41,11 @@ namespace Raven.Server.Documents.Replication.Senders
 
         public static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket)
         {
-            var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
+            var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
             var tombs = documentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
             var conflicts = documentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = documentsStorage.RevisionsStorage;
-            var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
+            var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
             var attachments = documentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1);
             var counters = documentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
             var timeSeries = documentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);

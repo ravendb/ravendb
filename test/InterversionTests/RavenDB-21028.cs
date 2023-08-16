@@ -15,14 +15,14 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Subscriptions | RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanUse54ClientWith60Subscription()
         {
             var options = InterversionTestOptions.Default;
             await CanUse54ClientWith60SubscriptionInternal(options);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Subscriptions | RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanUse54ClientWith60ShardedSubscription()
         {
             var options = new InterversionTestOptions() { CreateShardedDatabase = true, ReplicationFactor = 1 };
