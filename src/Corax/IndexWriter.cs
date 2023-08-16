@@ -1182,27 +1182,26 @@ namespace Corax
             }
         }
 
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
             out Slice slice)
         {
-            ulong hash = 0;
-            int length = value.Length;
-            if (length > Constants.Terms.MaxLength)
-            {
-                int hashStartingPoint = Constants.Terms.MaxLength - 2 * sizeof(ulong);
-                hash = Hashing.XXHash64.Calculate(value.Slice(hashStartingPoint));
-
-                Span<byte> localValue = stackalloc byte[Constants.Terms.MaxLength];
-                value.Slice(0, Constants.Terms.MaxLength).CopyTo(localValue);
-                int hexSize = Numbers.FillAsHex(localValue.Slice(hashStartingPoint), hash);
-                Debug.Assert(Constants.Terms.MaxLength == hashStartingPoint + hexSize, "Constants.Terms.MaxLength == hashStartingPoint + hexSize");
-
-                return Slice.From(context, localValue, ByteStringType.Mutable, out slice);
-            }
-            else
-            {
+            if (value.Length < Constants.Terms.MaxLength)
                 return Slice.From(context, value, ByteStringType.Mutable, out slice);
-            }
+
+            return UnlikelyCreateLargeTerm(context, value, out slice);
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope UnlikelyCreateLargeTerm(ByteStringContext context, ReadOnlySpan<byte> value, out Slice slice)
+        {
+            int hashStartingPoint = Constants.Terms.MaxLength - 2 * sizeof(ulong);
+            ulong hash = Hashing.XXHash64.Calculate(value.Slice(hashStartingPoint));
+
+            Span<byte> localValue = stackalloc byte[Constants.Terms.MaxLength];
+            value.Slice(0, Constants.Terms.MaxLength).CopyTo(localValue);
+            int hexSize = Numbers.FillAsHex(localValue.Slice(hashStartingPoint), hash);
+            Debug.Assert(Constants.Terms.MaxLength == hashStartingPoint + hexSize, "Constants.Terms.MaxLength == hashStartingPoint + hexSize");
+
+            return Slice.From(context, localValue, ByteStringType.Mutable, out slice);
         }
 
         private void ProcessDeletes()
