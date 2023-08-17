@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Jint;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.Patch
 
             using (DocumentIdWorker.GetLower(context.Allocator, id, out Slice lowerId))
             {
-                _database.DocumentsStorage.DocumentPut.ValidateId(context, lowerId);
+                _database.DocumentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put);
             }
 
             var originalDocument = GetCurrentDocument(context, id);

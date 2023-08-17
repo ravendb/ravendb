@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Background
 {
@@ -53,14 +54,31 @@ namespace Raven.Server.Documents.Sharding.Background
                         {
                             _token.ThrowIfCancellationRequested();
 
-                            if (bucketStats.NumberOfDocuments == 0)
+                            if (bucketStats.Size == 0)
                                 continue;
-                            
+
                             bucket = bucketStats.Bucket;
-                            
+
                             // this bucket already been migrated
-                            if(configuration.BucketMigrations.ContainsKey(bucket))
+                            if (configuration.BucketMigrations.ContainsKey(bucket))
                                 continue;
+
+                            if (bucketStats.NumberOfDocuments == 0)
+                            {
+                                var foundTombstone = false;
+                                foreach (var tombstone in _database.ShardedDocumentsStorage.RetrieveTombstonesByBucketFrom(context, bucket, 0))
+                                {
+                                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "handle DeletedTimeSeriesRange?");
+
+                                    if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+                                        continue;
+
+                                    foundTombstone = true;
+                                }
+
+                                if (foundTombstone == false)
+                                    continue;
+                            }
 
                             moveToShard = range.ShardNumber;
                             found = true;
