@@ -21,7 +21,15 @@ class getOngoingTasksCommand extends commandBase {
             ...this.location
         };
 
-        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args, this.db);
+        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args, this.db, result => {
+            // since in 6.0 property OngoingTasksList was renamed to OngoingTasks
+            // we unify format here to support mixed clusters
+            if ("OngoingTasksList" in result) {
+                result.OngoingTasks = result.OngoingTasksList;
+            }
+            
+            return result;
+        });
     }
 }
 
