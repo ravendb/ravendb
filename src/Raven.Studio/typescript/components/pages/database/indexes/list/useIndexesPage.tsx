@@ -30,10 +30,13 @@ import collection from "models/database/documents/collection";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
-import IndexChange = Raven.Client.Documents.Changes.IndexChange;
 import { InputItem } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+
+type IndexEvent =
+    | Raven.Client.Documents.Changes.IndexChange
+    | Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
@@ -48,7 +51,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const { indexesService } = useServices();
     const eventsCollector = useEventsCollector();
-    const { databaseChangesApi } = useChanges();
+    const { databaseChangesApi, serverNotifications } = useChanges();
 
     const [resetIndexName, setResetIndexName] = useState<string>(null);
 
@@ -151,10 +154,10 @@ export function useIndexesPage(database: database, stale: boolean) {
         Promise.all(tasks).finally(() => throttledProgressRefresh.current());
     }, []);
 
-    const currentProcessor = useRef<(e: IndexChange) => void>();
+    const currentProcessor = useRef<(e: IndexEvent) => void>();
 
     useEffect(() => {
-        currentProcessor.current = (e: Raven.Client.Documents.Changes.IndexChange) => {
+        currentProcessor.current = (e: IndexEvent) => {
             if (!filter.autoRefresh || resettingIndex) {
                 return;
             }
@@ -168,15 +171,35 @@ export function useIndexesPage(database: database, stale: boolean) {
         };
     }, [filter.autoRefresh, resettingIndex]);
 
+    const handleDatabaseChanges = useCallback(
+        (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => {
+            if (e.ChangeType !== "RemoveNode" && e.ChangeType !== "Update") {
+                return;
+            }
+
+            dispatch({
+                type: "LocationsLoaded",
+                locations: database.getLocations(),
+            });
+
+            currentProcessor.current(e);
+        },
+        [database]
+    );
+
     useEffect(() => {
-        if (databaseChangesApi) {
-            const watch = databaseChangesApi.watchAllIndexes((e) => currentProcessor.current(e));
+        if (databaseChangesApi && serverNotifications) {
+            const watchAllIndexes = databaseChangesApi.watchAllIndexes((e) => currentProcessor.current(e));
+            const watchAllDatabaseChanges = serverNotifications.watchAllDatabaseChanges((e) =>
+                handleDatabaseChanges(e)
+            );
 
             return () => {
-                watch.off();
+                watchAllIndexes.off();
+                watchAllDatabaseChanges.off();
             };
         }
-    }, [databaseChangesApi]);
+    }, [database, databaseChangesApi, handleDatabaseChanges, serverNotifications]);
 
     const highlightUsed = useRef<boolean>(false);
 
