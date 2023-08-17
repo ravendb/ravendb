@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -506,5 +508,20 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         *(long*)(buffer.Ptr + sizeof(int)) = Bits.SwapBytes(etag);
 
         return scope;
+    }
+
+    public override void ValidateId(Slice lowerId, DocumentChangeTypes type)
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "need to make sure we check that for counters/TS/etc...");
+        var config = _documentDatabase.ShardingConfiguration;
+        var bucket = ShardHelper.GetBucketFor(config, lowerId);
+        var shard = ShardHelper.GetShardNumberFor(config, bucket);
+        if (shard != _documentDatabase.ShardNumber)
+        {
+            if (_documentDatabase.ForTestingPurposes != null && _documentDatabase.ForTestingPurposes.EnableWritesToTheWrongShard)
+                return;
+
+            throw new ShardMismatchException($"Document '{lowerId}' belongs to bucket '{bucket}' on shard #{shard}, but {type} operation was performed on shard #{_documentDatabase.ShardNumber}.");
+        }
     }
 }

@@ -95,11 +95,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public virtual void ValidateId(DocumentsOperationContext context, Slice lowerId, DocumentFlags documentFlags = DocumentFlags.None)
-        {
-
-        }
-
         public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
             string expectedChangeVector,
             BlittableJsonReaderObject document,
@@ -130,7 +125,8 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                ValidateId(context, lowerId, newFlags);
+                if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
+                    _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
@@ -161,10 +157,10 @@ namespace Raven.Server.Documents
                     // anything else - must match exactly
 
                     oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
-                    
+
                     if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                         ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
-                    
+
                     if (oldChangeVectorForClusterTransactionIndexCheck == null)
                     {
                         compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVector);

@@ -1548,6 +1548,9 @@ namespace Raven.Server.Documents
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
             DocumentFlags newFlags = DocumentFlags.None)
         {
+            if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
+                ValidateId(lowerId, operationType: DocumentChangeTypes.Delete);
+
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
             var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
@@ -1769,6 +1772,11 @@ namespace Raven.Server.Documents
                     Etag = etag
                 };
             }
+        }
+
+        public virtual void ValidateId(Slice lowerId, DocumentChangeTypes operationType)
+        {
+
         }
 
         [DoesNotReturn]
