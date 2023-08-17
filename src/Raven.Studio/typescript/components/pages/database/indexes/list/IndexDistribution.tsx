@@ -101,20 +101,22 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
     const items = (
         <>
-            {index.nodesInfo.map((nodeInfo) => {
-                const key = indexNodeInfoKey(nodeInfo);
-                return (
-                    <ItemWithTooltip
-                        key={key}
-                        nodeInfo={nodeInfo}
-                        sharded={sharded}
-                        index={index}
-                        globalIndexingStatus={globalIndexingStatus}
-                        showStaleReason={showStaleReason}
-                        openFaulty={openFaulty}
-                    />
-                );
-            })}
+            {[...index.nodesInfo]
+                .sort((l, r) => l.location.shardNumber - r.location.shardNumber)
+                .map((nodeInfo) => {
+                    const key = indexNodeInfoKey(nodeInfo);
+                    return (
+                        <ItemWithTooltip
+                            key={key}
+                            nodeInfo={nodeInfo}
+                            sharded={sharded}
+                            index={index}
+                            globalIndexingStatus={globalIndexingStatus}
+                            showStaleReason={showStaleReason}
+                            openFaulty={openFaulty}
+                        />
+                    );
+                })}
         </>
     );
 
