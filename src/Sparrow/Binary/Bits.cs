@@ -460,5 +460,15 @@ namespace Sparrow.Binary
             //       For reference this is equivalent to [ 0x80 >> (idx % (int)BitsPerByte) ]
             return (byte)(0x80 >> (idx & (BitVector.BitsPerByte - 1)));
         }
+        
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static  long DoubleToSortableLong(double val)
+        {
+            long f = BitConverter.DoubleToInt64Bits(val);
+            if (f < 0)
+                f ^= 0x7fffffffffffffffL;
+            return f;
+        }
     }
 }

@@ -111,6 +111,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 for (int j = 0; j < fields.Length; j++)
                 {
                     object v = accessor.GetValue(fields[j], doc);
+                    var indexFieldId = _index.Definition.IndexFields[fields[j]].Id;
+
                     ValueType valueType = GetValueType(v);
                     switch (valueType)
                     {
@@ -121,15 +123,17 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                             break;
                         case ValueType.Enum:
                         case ValueType.String:
+                        {
                             string s = v.ToString();
-                            EnsureHasSpace(Encoding.UTF8.GetMaxByteCount(s.Length));
-                            index += Encoding.UTF8.GetBytes(s, _compoundFieldsBuffer.AsSpan()[index..]);
+                            var buffer = EnsureHasSpace(Encoding.UTF8.GetMaxByteCount(s.Length));
+                            var bytes = Encoding.UTF8.GetBytes(s, buffer[index..]);
+                            index += AppendAnalyzedTerm(buffer.Slice(index, bytes), indexFieldId);
                             break;
+                        }
                         case ValueType.LazyString:
                             var lazyStringValue = ((LazyStringValue)v);
                             EnsureHasSpace(lazyStringValue.Length);
-                            lazyStringValue.AsSpan().CopyTo(_compoundFieldsBuffer.AsSpan()[index..]);
-                            index += lazyStringValue.Length;
+                            index += AppendAnalyzedTerm(lazyStringValue.AsSpan(), indexFieldId);
                             break;
                         case ValueType.LazyCompressedString:
                             v = ((LazyCompressedStringValue)v).ToLazyStringValue();
@@ -184,32 +188,36 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                                 decimal m => (double)m,
                                 _ => Convert.ToDouble(v)
                             };
-                            AppendLong(DoubleToSortableLong(d));
+                            AppendLong(Bits.DoubleToSortableLong(d));
                             break;
                         default:
                             throw new NotSupportedException(
                                 $"Unable to create compound index with value of type: {valueType} ({v}) for compound field: {string.Join(",", CompoundFields[i])}");
                     }
                     _compoundFieldsBuffer[index++] = SpecialChars.RecordSeparator;
+
                 }
 
                 var fieldId = baseLine + i;
                 builder.Write( fieldId, _compoundFieldsBuffer.AsSpan()[..index]);
 
-                long DoubleToSortableLong(double val)
+                int AppendAnalyzedTerm(Span<byte> term, int indexFieldId)
                 {
-                    long f = BitConverter.DoubleToInt64Bits(val);
-                    if (f < 0)
-                        f ^= 0x7fffffffffffffffL;
-                    return f;
+                    var analyzedTerm = builder.AnalyzeSingleTerm(indexFieldId, term);
+                    var buffer = EnsureHasSpace(analyzedTerm.Length - term.Length); // just in case the analyze is _larger_
+                    analyzedTerm.CopyTo(buffer[index..]);
+                    return analyzedTerm.Length;
                 }
-                void EnsureHasSpace(int additionalSize)
-                {
-                    if (additionalSize + index < _compoundFieldsBuffer.Length)
-                        return;
 
-                    var newSize = Bits.PowerOf2(additionalSize + index + 1);
-                    Array.Resize(ref _compoundFieldsBuffer, newSize);
+                Span<byte> EnsureHasSpace(int additionalSize)
+                {
+                    if (additionalSize + index >= _compoundFieldsBuffer.Length)
+                    {
+                        var newSize = Bits.PowerOf2(additionalSize + index + 1);
+                        Array.Resize(ref _compoundFieldsBuffer, newSize);
+                    }
+
+                    return _compoundFieldsBuffer;
                 }
 
                 void AppendLong(long l)
