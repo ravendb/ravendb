@@ -199,7 +199,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 watchAllDatabaseChanges.off();
             };
         }
-    }, [database, databaseChangesApi, handleDatabaseChanges, serverNotifications]);
+    }, [databaseChangesApi, handleDatabaseChanges, serverNotifications]);
 
     const highlightUsed = useRef<boolean>(false);
 

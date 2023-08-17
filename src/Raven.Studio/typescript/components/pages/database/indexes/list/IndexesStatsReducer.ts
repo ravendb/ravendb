@@ -194,7 +194,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
         case "ProgressLoaded": {
             const incomingLocation = action.location;
             const progress = action.progress;
-            
+
             return produce(state, (draft) => {
                 draft.indexes.forEach((index) => {
                     const itemToUpdate = index.nodesInfo.find((x) =>
