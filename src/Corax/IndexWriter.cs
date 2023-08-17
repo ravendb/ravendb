@@ -559,6 +559,7 @@ namespace Corax
         public interface IIndexEntryBuilder
         {
             void Boost(float boost);
+            ReadOnlySpan<byte> AnalyzeSingleTerm(int fieldId, ReadOnlySpan<byte> value);
             void WriteNull(int fieldId, string path);
             void Write(int fieldId, ReadOnlySpan<byte> value);
             void Write(int fieldId, string path, ReadOnlySpan<byte> value);
@@ -634,24 +635,28 @@ namespace Corax
                     ExactInsert(field, value);
             }
 
+            public ReadOnlySpan<byte> AnalyzeSingleTerm(int fieldId, ReadOnlySpan<byte> value)
+            {
+                var field = GetField(fieldId, null);
+                AnalyzeTerm(field, value, field.Analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens);
+                if (tokens.Length == 0)
+                    return ReadOnlySpan<byte>.Empty;
+                if (tokens.Length > 1)
+                    ThrowTooManyTokens(tokens, value);
+
+                return wordsBuffer.Slice(tokens[0].Offset, (int)tokens[0].Length);
+                
+
+                void ThrowTooManyTokens( Span<Token> tokens, ReadOnlySpan<byte> v)
+                {
+                    throw new InvalidOperationException("Expected to get a single token from term, but got: " + tokens.Length + ", tokens: " +
+                                                        Encoding.UTF8.GetString(v));
+                }
+            }
+            
             void AnalyzeInsert(IndexedField field, ReadOnlySpan<byte> value)
             {
-                var analyzer = field.Analyzer;
-                if (value.Length > _parent._encodingBufferHandler.Length)
-                {
-                    analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                    if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
-                        _parent.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
-                }
-
-                Span<byte> wordsBuffer = _parent._encodingBufferHandler;
-                Span<Token> tokens = _parent._tokensBufferHandler;
-                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
-
-                if (tokens.Length > 1)
-                {
-                    field.HasMultipleTermsPerField = true;
-                }
+                AnalyzeTerm(field, value, field.Analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens);
 
                 for (int i = 0; i < tokens.Length; i++)
                 {
@@ -662,6 +667,25 @@ namespace Corax
 
                     var word = new Span<byte>(_parent._encodingBufferHandler, token.Offset, (int)token.Length);
                     ExactInsert(field, word);
+                }
+            }
+
+            private void AnalyzeTerm(IndexedField field, ReadOnlySpan<byte> value, Analyzer analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens)
+            {
+                if (value.Length > _parent._encodingBufferHandler.Length)
+                {
+                    analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+                    if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
+                        _parent.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
+                }
+
+                wordsBuffer = _parent._encodingBufferHandler;
+                tokens = _parent._tokensBufferHandler;
+                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
+
+                if (tokens.Length > 1)
+                {
+                    field.HasMultipleTermsPerField = true;
                 }
             }
 

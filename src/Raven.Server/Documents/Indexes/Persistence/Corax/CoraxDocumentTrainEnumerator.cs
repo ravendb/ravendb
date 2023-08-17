@@ -33,6 +33,11 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             
         }
 
+        public ReadOnlySpan<byte> AnalyzeSingleTerm(int fieldId, ReadOnlySpan<byte> value)
+        {
+            return value; // not applicable 
+        }
+
         public void WriteNull(int fieldId, string path)
         {
             _allocator.From(global::Corax.Constants.NullValueSlice.AsSpan(), out var b);

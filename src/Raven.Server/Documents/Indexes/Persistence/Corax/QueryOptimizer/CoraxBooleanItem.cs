@@ -4,7 +4,11 @@ using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Raven.Server.Documents.Queries;
+using Sparrow.Binary;
 using Sparrow.Extensions;
+using Sparrow.Server.Binary;
+using Sparrow.Server.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
@@ -103,6 +107,92 @@ public struct CoraxBooleanItem : IQueryMatch
         BetweenRight = right;
         BetweenLeft = left;
     }
+    
+    public IQueryMatch OptimizeCompoundField(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
+    {
+        switch (Operation)
+        {
+            case UnaryMatchOperation.Equals:
+            {
+                Slice startWith = GetStartWithTermWithSeparator();
+                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true);
+            }
+            case  UnaryMatchOperation.NotEquals:
+                // match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
+              //  break;
+            default:
+                throw new NotSupportedException();
+        
+                // IQueryMatch baseMatch;
+                // bool streamingEnabled = streamingOptimization.WhereClauseItemMatched;
+                // bool forwardIterator = (streamingOptimization is {WhereClauseItemMatched: true, Forward: false}) == false;
+                //
+                // if (Operation is UnaryMatchOperation.Between)
+                // {
+                //     baseMatch = (Term, Term2) switch
+                //     {
+                //         (long l, long l2) => _indexSearcher.BetweenQuery(Field, l, l2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
+                //         (double d, double d2) => _indexSearcher.BetweenQuery(Field, d, d2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
+                //         (string s, string s2) => _indexSearcher.BetweenQuery(Field, s, s2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
+                //         (long l, double d) => _indexSearcher.BetweenQuery(Field, Convert.ToDouble(l), d, leftSide: BetweenLeft, rightSide: BetweenRight, false,  forwardIterator, streamingEnabled),
+                //         (double d, long l) => _indexSearcher.BetweenQuery(Field, d, Convert.ToDouble(l), leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
+                //         _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
+                //     };
+                // }
+                // else
+                // {
+                //     baseMatch = (Operation, Term) switch
+                //     {
+                //         (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //
+                //         (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //
+                //         (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //
+                //
+                //         (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
+                //         _ => throw new ArgumentException("This is only Greater*/Less* Query part")
+                //     };
+                // }
+                //
+                // return baseMatch;
+        }
+    }
+    
+    
+    Slice GetStartWithTermWithSeparator()
+    {
+        var t = Term;
+        if (t is double d)
+        {
+            t = Bits.DoubleToSortableLong(d);
+        }
+        if (t is long l)
+        {        
+            _indexSearcher.Allocator.Allocate(sizeof(long) + 1, out var bs);
+            Span<byte> buffer = bs.ToSpan();
+            BitConverter.TryWriteBytes(buffer, Bits.SwapBytes(l));
+            buffer[sizeof(long)] = SpecialChars.RecordSeparator;
+            return new Slice(bs);
+        }
+
+        var term = _indexSearcher.EncodeAndApplyAnalyzer(Field, TermAsString, true).AsSpan();
+        _indexSearcher.Allocator.Allocate(term.Length + 1, out var output);
+
+        Span<byte> prefix = output.ToSpan();
+        term.CopyTo(prefix);
+        prefix[term.Length] = SpecialChars.RecordSeparator;
+        return new Slice(output);
+    }
+
     
     public IQueryMatch Materialize(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
     {
