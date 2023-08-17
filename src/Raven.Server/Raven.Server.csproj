@@ -202,6 +202,7 @@
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="System.Reflection.Metadata" Version="7.0.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="7.0.1" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.7.2" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">
