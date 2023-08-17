@@ -114,6 +114,9 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(UnmanagedSpan item)
         {
+            if (item.Length == 0)
+                return 0;
+            
             return (int)Hashing.Marvin32.CalculateInline(item.Address, item.Length);
         }
     }

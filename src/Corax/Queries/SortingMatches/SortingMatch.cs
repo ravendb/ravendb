@@ -400,7 +400,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
     private static void SortUsingIndex<TEntryComparer, TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches)
         where TDirection : struct, ILookupIterator
-        where TEntryComparer : struct, IEntryComparer
+        where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
@@ -413,10 +413,19 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
+        var totalRead = 0;
         var reader = GetReader(ref match, allMatches[0], allMatches[^1]);
         while (match._results.Count < maxResults)
         {
             match._cancellationToken.ThrowIfCancellationRequested();
+            if (totalRead > allMatches.Length * 2)
+            {
+                // if we scanned through the index more than twice the amount of records of the query, but still
+                // didn't find enough to fill the page size, we'll fall back to normal sorting, instead of using the
+                // index method. That would prevent degenerate cases.
+                SortResults<TEntryComparer>(ref match, allMatches);
+                return;
+            }
 
             var read = reader.Read(sortedIdBuffer);
             if (read == 0)
