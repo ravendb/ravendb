@@ -73,6 +73,11 @@ interface ActionResumeIndexing {
     type: "ResumeIndexing";
 }
 
+interface ActionLocationsLoaded {
+    locations: databaseLocationSpecifier[];
+    type: "LocationsLoaded";
+}
+
 type IndexesStatsReducerAction =
     | ActionDeleteIndexes
     | ActionStatsLoaded
@@ -84,7 +89,8 @@ type IndexesStatsReducerAction =
     | ActionResumeIndexing
     | ActionResetIndex
     | ActionDisableIndexing
-    | ActionEnableIndexing;
+    | ActionEnableIndexing
+    | ActionLocationsLoaded;
 
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
@@ -188,7 +194,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
         case "ProgressLoaded": {
             const incomingLocation = action.location;
             const progress = action.progress;
-
+            
             return produce(state, (draft) => {
                 draft.indexes.forEach((index) => {
                     const itemToUpdate = index.nodesInfo.find((x) =>
@@ -248,11 +254,14 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     if (existingShardedInfo) {
                         // container already exists, just update node stats
 
+                        const nodeInfo = mapToIndexNodeInfo(stat, incomingLocation);
                         const findIdx = existingShardedInfo.nodesInfo.findIndex((x) =>
                             databaseLocationComparator(x.location, incomingLocation)
                         );
-                        if (findIdx !== -1) {
-                            const nodeInfo = mapToIndexNodeInfo(stat, incomingLocation);
+
+                        if (findIdx === -1) {
+                            existingShardedInfo.nodesInfo.push(nodeInfo);
+                        } else {
                             nodeInfo.progress = existingShardedInfo.nodesInfo[findIdx].progress;
                             existingShardedInfo.nodesInfo.splice(findIdx, 1, nodeInfo);
                         }
@@ -338,6 +347,27 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         if (nodeInfo.progress) {
                             nodeInfo.progress.global.processed = 0;
                         }
+                    }
+                }
+            });
+        case "LocationsLoaded":
+            return produce(state, (draft) => {
+                draft.locations = action.locations;
+
+                const allNodeInfoLocations = draft.indexes.map((x) => x.nodesInfo.map((y) => y.location)).flat();
+                const uniqueNodeInfoLocations = _.uniqWith(allNodeInfoLocations, databaseLocationComparator);
+
+                for (const uniqueNodeInfoLocation of uniqueNodeInfoLocations) {
+                    const existingNodeInfoLocations = draft.locations.find((currentLocation) =>
+                        databaseLocationComparator(currentLocation, uniqueNodeInfoLocation)
+                    );
+
+                    if (!existingNodeInfoLocations) {
+                        draft.indexes.forEach((index) => {
+                            index.nodesInfo = index.nodesInfo.filter(
+                                (x) => !databaseLocationComparator(x.location, uniqueNodeInfoLocation)
+                            );
+                        });
                     }
                 }
             });
