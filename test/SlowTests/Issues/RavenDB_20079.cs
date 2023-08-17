@@ -28,9 +28,9 @@ public class RavenDB_20079 : RavenTestBase
         public class Result
         {
             public DateTime DefaultDateTime { get; set; }
-            public DateTime DateTimeMinValue { get; set; }
-            public DateTime DateTime { get; set; }
-            public string DateTimeString { get; set; }
+            public TimeOnly DefaultTimeOnly { get; set; }
+            public DateOnly DefaultDateOnly { get; set; }
+            public DateTimeOffset DefaultDateTimeOffset { get; set; }
         }
         public TestIndex()
         {
@@ -38,9 +38,9 @@ public class RavenDB_20079 : RavenTestBase
                 select new Result
                 {
                     DefaultDateTime = default,
-                    DateTimeMinValue = DateTime.MinValue,
-                    DateTime = new DateTime(2023, 08, 16, 12,12,12),
-                    DateTimeString = "2012-09-17T22:02:51.4021600"
+                    DefaultTimeOnly = default,
+                    DefaultDateOnly = default,
+                    DefaultDateTimeOffset = default
                 };
             
             StoreAllFields(FieldStorage.Yes);
