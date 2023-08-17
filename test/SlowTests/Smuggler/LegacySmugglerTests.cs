@@ -273,14 +273,15 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database); // set default configuration with 'MinimumRevisionsToKeep=5'
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
-                Assert.Equal(7, stats.CountOfRevisionDocuments);
+                Assert.Equal(6, stats.CountOfRevisionDocuments); // 1 of the doc "Raven/Versioning/DefaultConfiguration", and 5 revisions of the deleted doc "test" 
+                                                                                // (which had originally 6 revisions, but the last was deleted in the import because default configuration has 'MinimumRevisionsToKeep=5')
                 Assert.Equal(2, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
@@ -295,7 +296,7 @@ namespace SlowTests.Smuggler
                     Assert.Null(test);
 
                     var revisions = session.Advanced.Revisions.GetFor<User>("test");
-                    Assert.Equal(6, revisions.Count);
+                    Assert.Equal(5, revisions.Count);  // the number of the revisions shrinked to be 5 in the import because the default revisions config
 
                     var metadata = session.Advanced.GetMetadataFor(revisions[0]);
                     Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.DeleteRevision}", metadata.GetString(Constants.Documents.Metadata.Flags));
