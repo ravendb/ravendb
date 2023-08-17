@@ -102,6 +102,7 @@ namespace Raven.Client.Documents.Session
         {
             _state.Clear();
             _compareExchangeIncludes.Clear();
+            _missingDocumentsToAtomicGuardIndex?.Clear();
         }
 
         protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
