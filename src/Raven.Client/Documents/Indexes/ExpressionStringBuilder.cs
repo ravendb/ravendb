@@ -848,6 +848,13 @@ namespace Raven.Client.Documents.Indexes
                 Out(')');
                 return node;
             }
+            if (node.Value is DateTimeOffset dateTimeOffset && dateTimeOffset.Equals(default))
+            {
+                Out("default(");
+                Out(typeof(DateTimeOffset).ToString());
+                Out(')');
+                return node;
+            }
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
             if (node.Value is DateOnly dateOnly && dateOnly.Equals(default))
             {
@@ -860,13 +867,6 @@ namespace Raven.Client.Documents.Indexes
             {
                 Out("default(");
                 Out(typeof(TimeOnly).ToString());
-                Out(')');
-                return node;
-            }
-            if (node.Value is DateTimeOffset dateTimeOffset && dateTimeOffset.Equals(default))
-            {
-                Out("default(");
-                Out(typeof(DateTimeOffset).ToString());
                 Out(')');
                 return node;
             }
