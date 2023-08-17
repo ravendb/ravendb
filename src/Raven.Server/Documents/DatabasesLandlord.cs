@@ -147,9 +147,7 @@ namespace Raven.Server.Documents
                                 using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out _))
                                 {
                                 }
-
-                                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += 
-                                    _ => _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
+                                _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
                             }
                         }
                         else
