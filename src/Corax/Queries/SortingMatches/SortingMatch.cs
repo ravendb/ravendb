@@ -442,6 +442,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 }
                 break;
             }
+
+            totalRead += read;
             var sortedIds = sortedIdBuffer[..read];
             var indexes = indexesBuffer[..read];
             // we effectively permute the indexes as well as the sortedIds to get a sorted list to compare
