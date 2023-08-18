@@ -81,6 +81,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -495,6 +496,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RavenEtlTestScriptResult));
             scripter.AddType(typeof(EtlType));
             scripter.AddType(typeof(EtlTaskPerformanceStats));
+            
+            // ongoing tasks - Queue Sink
+
+            scripter.AddType(typeof(QueueSinkTaskPerformanceStats));
+            scripter.AddType(typeof(QueueSinkPerformanceOperation));
 
             // ongoing tasks - SQL ETL
             scripter.AddType(typeof(OngoingTaskSqlEtl));

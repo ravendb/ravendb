@@ -48,6 +48,21 @@ export default class TaskUtils {
         }
     }
 
+    static queueTypeToStudioType(
+        brokerType: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType
+    ): StudioQueueSinkType {
+        switch (brokerType) {
+            case "Kafka":
+                return "KafkaQueueSink";
+            case "RabbitMq":
+                return "RabbitQueueSink";
+            case "None":
+                return null;
+            default:
+                assertUnreachable(brokerType);
+        }
+    }
+
     static studioTaskTypeToTaskType(type: StudioTaskType): OngoingTaskType {
         if (type === "KafkaQueueEtl" || type === "RabbitQueueEtl") {
             return "QueueEtl";

@@ -376,7 +376,7 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOM
 
 type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "AggregatedBatchesInfo";
 
-type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType;
+type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType | StudioQueueSinkType;
 
 interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
     StartedAsDate: Date;
@@ -393,6 +393,14 @@ interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.E
     HasErrors: boolean;
     HasLoadErrors: boolean;
     HasTransformErrors: boolean;
+}
+
+interface QueueSinkPerformanceBaseWithCache extends Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    HasErrors: boolean;
+    HasScriptErrors: boolean;
+    Type: StudioQueueSinkType;
 }
 
 interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {
@@ -862,6 +870,8 @@ type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationA
     "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
     
 type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
+
+type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
 
 type TaskDestinationType = "Collection" | "Table" | "Queue" | "Topic" | "Index";
 
