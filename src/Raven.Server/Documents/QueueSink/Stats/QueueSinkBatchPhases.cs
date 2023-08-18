@@ -2,7 +2,7 @@
 
 public class QueueSinkBatchPhases
 {
-    public const string Pull = "PullMessages";
+    public const string QueueReading = "QueueReading";
 
     public const string ScriptProcessing = "ScriptProcessing";
 }

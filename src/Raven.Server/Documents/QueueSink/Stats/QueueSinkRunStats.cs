@@ -7,13 +7,13 @@ public class QueueSinkRunStats
 {
     public Size CurrentlyAllocated;
 
-    public int NumberOfPulledMessages;
+    public int NumberOfReadMessages;
 
     public int NumberOfProcessedMessages;
 
-    public int ScriptErrorCount;
+    public int ReadErrorCount;
+
+    public int ScriptProcessingErrorCount;
 
     public string BatchPullStopReason;
-
-    public bool? SuccessfullyProcessed;
 }

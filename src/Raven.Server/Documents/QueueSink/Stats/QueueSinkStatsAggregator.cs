@@ -9,17 +9,24 @@ namespace Raven.Server.Documents.QueueSink.Stats;
 
 public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, QueueSinkStatsScope>
 {
+    private readonly IStatsAggregator _lastStats;
     private volatile QueueSinkPerformanceStats _performanceStats;
 
     public QueueSinkStatsAggregator(int id, IStatsAggregator lastStats) : base(id, lastStats)
     {
+        _lastStats = lastStats;
+    }
+
+    public void Start()
+    {
+        SetStartTime(_lastStats);
     }
 
     public override QueueSinkStatsScope CreateScope()
     {
         Debug.Assert(Scope == null);
 
-        return Scope = new QueueSinkStatsScope(Stats);
+        return Scope = new QueueSinkStatsScope(Stats, start: false);
     }
 
     public QueueSinkPerformanceStats ToPerformanceStats()
@@ -62,13 +69,14 @@ public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, Queue
             Id = Id,
             Started = StartTime,
             Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
-            Details = Scope.ToQueueSinkPerformanceOperation("Queue Sink"),
-            NumberOfPulledMessages = Stats.NumberOfPulledMessages,
+            Details = Scope.ToQueueSinkPerformanceOperation("Consume"),
+            NumberOfReadMessages = Stats.NumberOfReadMessages,
             NumberOfProcessedMessages = Stats.NumberOfProcessedMessages,
-            ScriptErrorCount = Stats.ScriptErrorCount,
-            SuccessfullyProcessed = Stats.SuccessfullyProcessed,
+            ReadErrorCount = Stats.ReadErrorCount,
+            ScriptProcessingErrorCount = Stats.ScriptProcessingErrorCount,
             BatchPullStopReason = Stats.BatchPullStopReason,
             CurrentlyAllocated = new Size(Stats.CurrentlyAllocated.GetValue(SizeUnit.Bytes)),
+            SuccessfullyProcessed = Stats.ReadErrorCount == 0 && Stats.ScriptProcessingErrorCount == 0,
         };
     }
 }

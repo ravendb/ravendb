@@ -28,6 +28,7 @@ using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.QueueSink;
 
@@ -183,36 +184,43 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                 }
 
                 var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-                _lastStats = statsAggregator;
-
-                AddPerformanceStats(statsAggregator);
 
                 using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var stats = statsAggregator.CreateScope())
                 {
                     var messages = new List<BlittableJsonReaderObject>();
 
-                    using (var pullScope = stats.For(QueueSinkBatchPhases.Pull, start: false))
+                    using (var readScope = stats.For(QueueSinkBatchPhases.QueueReading, start: false))
                     {
+                        var batchStarted = false;
+
                         while (true)
                         {
                             try
                             {
-                                var message = messages.Count == 0
-                                    ? _consumer.Consume(CancellationToken)
-                                    : _consumer.Consume(TimeSpan.Zero);
+                                var message = batchStarted
+                                    ? _consumer.Consume(TimeSpan.Zero)
+                                    : _consumer.Consume(CancellationToken);
 
                                 if (message is null)
                                     break;
 
-                                if (pullScope.IsRunning == false)
-                                    pullScope.Start();
+                                if (batchStarted == false)
+                                {
+                                    statsAggregator.Start();
+                                    stats.Start();
+                                    readScope.Start();
+
+                                    AddPerformanceStats(statsAggregator);
+                                }
+
+                                batchStarted = true;
 
                                 var json = context.Sync.ReadForMemory(new MemoryStream(message), "queue-message");
 
                                 messages.Add(json);
 
-                                pullScope.RecordPulledMessage();
+                                readScope.RecordReadMessage();
 
                                 if (CanContinueBatch(stats, messages.Count, context) == false)
                                     break;
@@ -228,9 +236,14 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                 if (_logger.IsOperationsEnabled)
                                     _logger.Operations(msg, e);
 
+                                readScope.RecordReadError();
                                 Statistics.RecordConsumeError(e.Message);
 
-                                EnterFallbackMode();
+                                if (batchStarted == false)
+                                {
+                                    // failed to consume any message, let's do the fallback then
+                                    EnterFallbackMode();
+                                }
                             }
                         }
                     }
@@ -267,13 +280,11 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                 {
                                     var msg = "Failed to process consumed message by the script.";
 
-                                    if (_logger.IsOperationsEnabled)
-                                    {
+                                    if (_logger.IsOperationsEnabled) 
                                         _logger.Operations(msg, e);
-                                    }
-
+                                    
+                                    scriptProcessingScope.RecordScriptProcessingError();
                                     Statistics.RecordScriptExecutionError(e);
-                                    scriptProcessingScope.RecordScriptError();
                                 }
                             }
 
@@ -323,6 +334,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
     private void AddPerformanceStats(QueueSinkStatsAggregator stats)
     {
+        _lastStats = stats;
+
         _lastQueueSinkStats.Enqueue(stats);
 
         while (_lastQueueSinkStats.Count > 25)
@@ -424,6 +437,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
         if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
             longRunningWork.Join(int.MaxValue);
+
+        _consumer?.Dispose();
+        _consumer = null;
     }
 
     private void HandleScriptParseException(Exception e)

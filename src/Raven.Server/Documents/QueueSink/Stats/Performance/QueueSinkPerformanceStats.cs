@@ -20,7 +20,7 @@ public class QueueSinkPerformanceStats
 
     public QueueSinkPerformanceOperation Details { get; set; }
 
-    public int NumberOfPulledMessages{ get; set; }
+    public int NumberOfReadMessages{ get; set; }
 
     public int NumberOfProcessedMessages { get; set; }
 
@@ -28,7 +28,9 @@ public class QueueSinkPerformanceStats
     
     public string BatchPullStopReason { get; set; }
 
-    public int ScriptErrorCount { get; set; }
+    public int ScriptProcessingErrorCount { get; set; }
+
+    public int ReadErrorCount { get; set; }
 
     public bool? SuccessfullyProcessed { get; set; }
 }
