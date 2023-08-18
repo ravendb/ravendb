@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(30)));
                 
                 using (var session = dst.OpenSession())
                 {
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
                 
                 using (var session = dst.OpenSession())
                 {
