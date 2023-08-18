@@ -25,39 +25,11 @@ namespace InterversionTests
     {
         const string Server42Version = "4.2.124-nightly-20230112-0944";
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
-
-        private static readonly DatabaseItemType _operateOnTypes42 = DatabaseItemType.Documents |
-                                                                     DatabaseItemType.RevisionDocuments |
-                                                                     DatabaseItemType.Indexes |
-                                                                     DatabaseItemType.Identities |
-                                                                     DatabaseItemType.Tombstones |
-                                                                     DatabaseItemType.LegacyAttachments |
-                                                                     DatabaseItemType.Conflicts |
-                                                                     DatabaseItemType.CompareExchange |
-                                                                     DatabaseItemType.LegacyDocumentDeletions |
-                                                                     DatabaseItemType.LegacyAttachmentDeletions |
-                                                                     DatabaseItemType.DatabaseRecord |
-                                                                     DatabaseItemType.Unknown |
-                                                                     DatabaseItemType.Attachments |
-                                                                     DatabaseItemType.CounterGroups |
-                                                                     DatabaseItemType.Subscriptions |
-                                                                     DatabaseItemType.CompareExchangeTombstones;
-
-        private static readonly DatabaseRecordItemType _operateOnRecordTypes42 = DatabaseRecordItemType.ConflictSolverConfig |
-                                                                                 DatabaseRecordItemType.Settings |
-                                                                                 DatabaseRecordItemType.Revisions |
-                                                                                 DatabaseRecordItemType.Expiration |
-                                                                                 DatabaseRecordItemType.PeriodicBackups |
-                                                                                 DatabaseRecordItemType.ExternalReplications |
-                                                                                 DatabaseRecordItemType.RavenConnectionStrings |
-                                                                                 DatabaseRecordItemType.SqlConnectionStrings |
-                                                                                 DatabaseRecordItemType.RavenEtls |
-                                                                                 DatabaseRecordItemType.SqlEtls |
-                                                                                 DatabaseRecordItemType.Client |
-                                                                                 DatabaseRecordItemType.Sorters |
-                                                                                 DatabaseRecordItemType.SinkPullReplications |
-                                                                                 DatabaseRecordItemType.HubPullReplications;
-
+        private readonly DatabaseItemType _operateOnTypes42 = ~(DatabaseItemType.TimeSeries| DatabaseItemType.ReplicationHubCertificates);
+        private readonly DatabaseRecordItemType _operateOnRecordTypes42 = ~(DatabaseRecordItemType.TimeSeries | DatabaseRecordItemType.DocumentsCompression |
+                                                                   DatabaseRecordItemType.OlapConnectionStrings | DatabaseRecordItemType.OlapEtls |
+                                                                   DatabaseRecordItemType.Analyzers | DatabaseRecordItemType.LockMode);
+        
         public enum ExcludeOn
         {
             Non,
@@ -69,7 +41,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -93,8 +65,8 @@ namespace InterversionTests
 
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes = _operateOnTypes42;
-            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
+            exportOptions.OperateOnTypes &= _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await store42.Smuggler.ExportAsync(exportOptions, file);
@@ -135,7 +107,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -202,7 +174,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -225,8 +197,8 @@ namespace InterversionTests
             
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes = _operateOnTypes42;
-            exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
+            exportOptions.OperateOnTypes &= _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await exportStore42.Smuggler.ExportAsync(exportOptions, file);
@@ -273,7 +245,7 @@ namespace InterversionTests
         }
 
         //Migrator
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task CanMigrateFrom42ToCurrent()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -310,7 +282,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -355,14 +327,15 @@ namespace InterversionTests
         }
 
         
-        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
             var url = new Uri($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
-            if (operateOnTypes == DatabaseItemType.None)
-                operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
+            var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
+            if (exclude != DatabaseItemType.None)
+                operateOnTypes &= exclude;
 
             var configuration = new SingleDatabaseMigrationConfiguration
             {

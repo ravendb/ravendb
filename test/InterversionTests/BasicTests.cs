@@ -16,7 +16,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task Test()
         {
             var getStoreTask407 = GetDocumentStoreAsync("4.0.7");
@@ -29,7 +29,7 @@ namespace InterversionTests
             AssertStore(GetDocumentStore());
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Theory]
         [InlineData("5.2.3")]
         [InlineData("5.3.0-nightly-20211107-0402")]
         public async Task SubscriptionTest(string version)

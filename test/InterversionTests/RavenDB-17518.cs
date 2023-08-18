@@ -18,7 +18,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task ShouldNotReplicateCountersToOldServer()
         {
             const string docId = "users/1";
@@ -54,7 +54,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task ShouldNotReplicateTimeSeriesToOldServer()
         {
             const string docId = "users/1";
@@ -90,7 +90,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task ShouldNotReplicateCounterTombstonesToOldServer()
         {
             const string docId = "users/1";
@@ -149,7 +149,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact( RavenPlatform.Windows | RavenPlatform.Linux)]
+
+        [Fact]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer2()
         {
             const string version = "5.2.3";

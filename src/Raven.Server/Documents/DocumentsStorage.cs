@@ -2614,14 +2614,6 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public bool Exists(DocumentsOperationContext context, string id)
-        {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerDocumentId))
-            {
-                return GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: false, tvr: out _);
-            }
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long TableValueToEtag(int index, ref TableValueReader tvr)
         {

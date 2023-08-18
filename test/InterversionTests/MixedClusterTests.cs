@@ -13,7 +13,9 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -25,7 +27,6 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
 using Sparrow.Json;
 using Sparrow.Server;
-using Tests.Infrastructure;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,7 +39,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData("4.1.7", "4.1.7", "4.1.7")]
         [InlineData("4.1.6", "4.1.6", "4.1.6")]
         [InlineData("4.1.5", "4.1.5", "4.1.5")]
@@ -52,7 +53,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData("4.1.4", "4.1.4", "4.1.4")]
         [InlineData("4.1.3", "4.1.3", "4.1.3")]
         [InlineData("4.1.2", "4.1.2", "4.1.2")]
@@ -78,7 +79,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, v41X);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task IncrementalUpgrade()
         {
             var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
@@ -94,7 +95,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo41X, v40, v40, v41);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task UpgradeFromLatest40()
         {
             var initialVersions = new[] { "4.0.11", "4.0.11", "4.0.11" };
@@ -108,7 +109,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, after);
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [Theory]
         [InlineData("4.2.0", "4.2.0", "4.2.0")]
         [InlineData("4.2.1", "4.2.1", "4.2.1")]
         public async Task UpgradeDirectlyFrom42X(params string[] initialVersions)
@@ -121,7 +122,7 @@ namespace InterversionTests
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [Fact]
         public async Task UpgradeToLatest()
         {
             var latest = "4.2.119";
@@ -131,16 +132,6 @@ namespace InterversionTests
                 "current"
             };
             var suit = new Version41X(this);
-            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
-        }
-
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
-        [InlineData("5.2.116")]
-        public async Task UpgradeDirectlyFrom52X(string latest)
-        {
-            var initialVersions = new[] { latest, latest, latest };
-            var upgradeTo = new List<string> { "current" };
-            var suit = new Version52X(this);
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
@@ -206,7 +197,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+
+        [Fact(Skip = "WIP")]
         public async Task ReplicationInMixedCluster_40Leader_with_two_41_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -268,7 +260,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task ReplicationInMixedCluster_40Leader_with_one_41_node_and_two_40_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -306,7 +299,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task ReplicationInMixedCluster_41Leader_with_two_406()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -342,7 +336,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task MixedCluster_OutgoingReplicationFrom41To40_ShouldStopAfterUsingCounters()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -438,7 +433,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public async Task SingleSubscriptionMixedClusterEnsureAcknowledgeFallsBackToV52Behavior_RavenDB_17764()
         {
             var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
@@ -516,7 +511,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public async Task SingleSubscriptionMixedClusterStartAgainFromSpecificChangeVector()
         {
             var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
@@ -587,7 +582,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task ClientFailoverInMixedCluster_V41Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -646,7 +642,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task ClientFailoverInMixedCluster_V40Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -706,7 +703,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task SubscriptionsInMixedCluster_FailoverFrom41To40()
         {
             var batchSize = 5;
@@ -754,7 +752,8 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task SubscriptionsInMixedCluster_FailoverFrom410To41()
         {
             var batchSize = 5;
@@ -806,7 +805,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_BasicReplication()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -861,11 +860,11 @@ namespace InterversionTests
 
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public async Task ClusterTcpCompressionTest()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var (leader, peers, local) = await CreateMixedCluster(new[] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
+            var (leader, peers, local) = await CreateMixedCluster(new [] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
             await UpgradeServerAsync("current", peers[0]);
             var database = GetDatabaseName();
             var (disposable, stores) = await GetStores(database, peers);
@@ -875,7 +874,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_Counters()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -946,7 +945,7 @@ namespace InterversionTests
 
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_ClusterTransactions()
         {
             var nodeA = await GetServerAsync("4.0.7");
@@ -1004,7 +1003,7 @@ namespace InterversionTests
 
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task RevisionsInMixedCluster()
         {
             var company = new Company { Name = "Company Name" };
@@ -1060,7 +1059,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task MixedCluster_ClusterWideIdentity()
         {
 
@@ -1096,7 +1095,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
         public async Task MixedCluster_CanReorderDatabaseNodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -1120,7 +1119,8 @@ namespace InterversionTests
 
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "WIP")]
+        [Fact(Skip = "WIP")]
+
         public async Task MixedCluster_DistributedRevisionsSubscription()
         {
             var uniqueRevisions = new HashSet<string>();

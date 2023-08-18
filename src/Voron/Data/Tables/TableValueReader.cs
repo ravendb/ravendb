@@ -68,13 +68,6 @@ namespace Voron.Data.Tables
             return Encoding.UTF8.GetString(read + bytesToSkip, size - bytesToSkip);
         }
 
-        public long ReadLongWithPrefix(int index, int bytesToSkip)
-        {
-            byte* read = Read(index, out var size1);
-            long l = *(long*)(read + bytesToSkip);
-            return l;
-        }
-
         public byte* Read(int index, out int size)
         {
             var hasNext = index + 1 < Count;

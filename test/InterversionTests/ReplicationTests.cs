@@ -22,7 +22,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "TODO: Add compatible version of v4.2 when released")]
+        [Theory(Skip = "TODO: Add compatible version of v4.2 when released")]
         public async Task CannotReplicateTimeSeriesToV42()
         {
             var version = "4.2.101"; // todo:Add compatible version of v4.2 when released
@@ -53,24 +53,13 @@ namespace InterversionTests
             Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
-        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV42()
+        [Theory]
+        [InlineData("4.2.117")]
+        [InlineData("5.2.3")]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
-            string version = "4.2.117";
-            await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
-        }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
-        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV52()
-        {
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
-            string version = "5.2.3";
-            await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
-        }
-
-        private async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
-        {
             using var oldStore = await GetDocumentStoreAsync(version);
             using var store = GetDocumentStore();
             {
@@ -92,8 +81,7 @@ namespace InterversionTests
             Assert.True(WaitForDocument<User>(oldStore, "users/1", u => u.Name == "Egor"));
         }
 
-
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer()
         {
             const string version = "5.2.3";
