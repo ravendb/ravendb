@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Blittable;
-using MongoDB.Bson;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
-using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -92,9 +88,13 @@ namespace SlowTests.Issues
 
                 var database = await GetDatabase(store.Database);
 
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
-                Assert.True(outcome, reason);
+                var performanceHints = WaitForValue(() =>
+                {
+                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
+                    return database.NotificationCenter.GetPerformanceHintCount();
+                }, 1);
 
+                Assert.Equal(1, performanceHints);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
@@ -139,8 +139,13 @@ namespace SlowTests.Issues
 
                 var database = await GetDatabase(store.Database);
 
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
-                Assert.True(outcome, reason);
+                var performanceHints = WaitForValue(() =>
+                {
+                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
+                    return database.NotificationCenter.GetPerformanceHintCount();
+                }, 1);
+
+                Assert.Equal(1, performanceHints);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
@@ -209,9 +214,13 @@ namespace SlowTests.Issues
                 }
                 var database = await GetDatabase(store.Database);
 
-                string reason;
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
-                Assert.True(outcome, reason);
+                var performanceHints = WaitForValue(() =>
+                {
+                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
+                    return database.NotificationCenter.GetPerformanceHintCount();
+                }, 1);
+
+                Assert.Equal(1, performanceHints);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
@@ -252,8 +261,14 @@ namespace SlowTests.Issues
                 }
 
                 var database = await GetDatabase(store.Database);
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
-                Assert.True(outcome, reason);
+
+                var performanceHints = WaitForValue(() =>
+                {
+                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
+                    return database.NotificationCenter.GetPerformanceHintCount();
+                }, 1);
+
+                Assert.Equal(1, performanceHints);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
