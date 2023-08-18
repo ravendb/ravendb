@@ -27,7 +27,8 @@ namespace Voron
         private PageData* _cache;
         private ByteString _cacheMemory;
 
-        private int _andMask;
+        private const uint CacheSize = 1024;
+        private const uint CacheMask = CacheSize - 1;
 
         public void Release()
         {
@@ -39,44 +40,37 @@ namespace Voron
             _cache = null;
         }
 
-        public void Renew(LowLevelTransaction tx, int cacheSize)
+        public void Renew(LowLevelTransaction tx)
         {
             Debug.Assert(tx != null);
-            Debug.Assert(cacheSize > 0);
-            Debug.Assert(cacheSize <= 1024);
-
-            if (!Bits.IsPowerOfTwo(cacheSize))
-                cacheSize = Bits.PowerOf2(cacheSize);
-
-            int shiftRight = Bits.CeilLog2(cacheSize);
-            _andMask = (int) (0xFFFFFFFF >> (sizeof(uint) * 8 - shiftRight));
 
             _tx = tx;
 
-            tx.Allocator.Allocate(cacheSize * sizeof(PageData), out _cacheMemory);
+            tx.Allocator.Allocate((int)CacheSize * sizeof(PageData), out _cacheMemory);
             _cache = (PageData*)_cacheMemory.Ptr;
 
-            for (var i = 0; i < cacheSize; i++)
+            for (var i = 0; i < CacheSize; i++)
             {
                 _cache[i].PageNumber = Invalid;
             }
         }
 
-        public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
+        public PageLocator(LowLevelTransaction tx)
         {
-            Renew(tx, cacheSize);
+            Renew(tx);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetReadOnlyPage(long pageNumber, out Page page)
         {
-            var position = pageNumber & _andMask;
+            Debug.Assert(pageNumber != Invalid);
 
-            PageData* node = &_cache[position];
-            if (node->PageNumber == pageNumber && node->PageNumber != Invalid)
+            ref var node = ref _cache[pageNumber & CacheMask];
+
+            if (node.PageNumber == pageNumber && node.PageNumber != Invalid)
             {
-                page = node->Page;
+                page = node.Page;
                 return true;
             }
 
@@ -87,13 +81,13 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetWritablePage(long pageNumber, out Page page)
         {
-            var position = pageNumber & _andMask;
+            Debug.Assert(pageNumber != Invalid);
 
-            PageData* node = &_cache[position];
+            ref var node = ref _cache[pageNumber & CacheMask];
 
-            if (node->IsWritable && node->PageNumber == pageNumber && node->PageNumber != Invalid)
+            if (node.IsWritable && node.PageNumber == pageNumber && node.PageNumber != Invalid)
             {
-                page = node->Page;
+                page = node.Page;
                 return true;
             }
 
@@ -104,41 +98,37 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(long pageNumber)
         {
-            var position = pageNumber & _andMask;
+            ref var node = ref _cache[pageNumber & CacheMask];
 
-            if (_cache[position].PageNumber == pageNumber)
+            if (node.PageNumber == pageNumber)
             {
-                _cache[position].PageNumber = Invalid;
+                node.PageNumber = Invalid;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetReadable(long pageNumber, Page page)
         {
-            var position = pageNumber & _andMask;
+            ref var node = ref _cache[pageNumber & CacheMask];
 
-            PageData* node = &_cache[position];
-
-            if (node->PageNumber != pageNumber)
+            if (node.PageNumber != pageNumber)
             {
-                node->PageNumber = pageNumber;
-                node->Page = page;
-                node->IsWritable = false;
+                node.PageNumber = pageNumber;
+                node.Page = page;
+                node.IsWritable = false;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetWritable(long pageNumber, Page page)
         {
-            var position = pageNumber & _andMask;
+            ref var node = ref _cache[pageNumber & CacheMask];
 
-            PageData* node = &_cache[position];
-
-            if (node->PageNumber != pageNumber || node->IsWritable == false)
+            if (node.PageNumber != pageNumber || node.IsWritable == false)
             {
-                node->PageNumber = pageNumber;
-                node->Page = page;
-                node->IsWritable = true;
+                node.PageNumber = pageNumber;
+                node.Page = page;
+                node.IsWritable = true;
             }
         }
     }
