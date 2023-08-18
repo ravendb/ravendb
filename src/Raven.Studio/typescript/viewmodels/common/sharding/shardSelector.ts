@@ -5,8 +5,10 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 class shardSelector extends dialogViewModelBase {
 
     private readonly currentNode: KnockoutObservable<string>;
+    private readonly canClose: boolean;
     private readonly shards: shard[];
     private readonly onShardSelected: (shard: shard, nodeTag: string) => void;
+    private readonly onClose: () => void;
 
     private shardNodes: KnockoutComputed<string[]>;
     
@@ -17,10 +19,12 @@ class shardSelector extends dialogViewModelBase {
     
     view = require("views/common/sharding/shardSelector.html");
     
-    constructor(shards: shard[], onShardSelected: (shard: shard, nodeTag: string) => void) {
+    constructor(shards: shard[], onShardSelected: (shard: shard, nodeTag: string) => void, onClose?: () => void) {
         super();
         
         this.currentNode = clusterTopologyManager.default.localNodeTag;
+        this.canClose = !!onClose;
+        this.onClose = onClose;
         
         this.shards = shards;
         this.onShardSelected = onShardSelected;
@@ -53,6 +57,10 @@ class shardSelector extends dialogViewModelBase {
 
     changeShard(shard: shard) {
         this.form.shard(shard);
+    }
+    
+    closeClicked() {
+        this.onClose();
     }
     
     private maybeChangeNodeTag() {

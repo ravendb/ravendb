@@ -68,7 +68,8 @@ class shardingContext extends viewModelBase {
     }
 
     changeScope() {
-        this.resetView(true);
+        const onClose = () => this.shardSelector(null);
+        this.shardSelector(new shardSelector(this.shards(), (db, nodeTag) => this.onShardSelected(db, nodeTag), onClose));
     }
 
     private onShardSelected(db: shard, nodeTag: string): void {
@@ -98,12 +99,12 @@ class shardingContext extends viewModelBase {
         return true;
     }
 
-    resetView(forceShardSelection = false) {
+    resetView() {
         const activeDatabase = this.activeDatabase();
 
         this.effectiveLocation(null);
         
-        if (this.supportsDatabase(activeDatabase) && !forceShardSelection) {
+        if (this.supportsDatabase(activeDatabase)) {
             this.onChangeHandler(activeDatabase, null);
         } else {
             this.shardSelector(new shardSelector(this.shards(), (db, nodeTag) => this.onShardSelected(db, nodeTag)));
