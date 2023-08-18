@@ -267,6 +267,39 @@ namespace FastTests.Sparrow
             Assert.NotEqual(expected, result);
         }
 
+        [Fact]
+        public unsafe void EnsureZeroLengthStringIsAValidHash()
+        {
+            byte[] zeroLength = Array.Empty<byte>();
+            byte[] nonZeroLength = "abcd"u8.ToArray();
+
+            fixed (byte* zeroPtr = zeroLength)
+            fixed (byte* nonZeroPtr = nonZeroLength)
+            {
+                uint zeroHash = Hashing.XXHash32.Calculate(zeroLength);
+                Assert.Equal(zeroHash, Hashing.XXHash32.Calculate(zeroPtr, 0));
+                Assert.Equal(zeroHash, Hashing.XXHash32.Calculate(nonZeroLength, 0));
+                Assert.Equal(zeroHash, Hashing.XXHash32.Calculate(nonZeroPtr, 0));
+
+                ulong zeroHashLong = Hashing.XXHash64.Calculate(zeroLength);
+                Assert.Equal(zeroHashLong, Hashing.XXHash64.Calculate(zeroPtr, 0));
+                Assert.Equal(zeroHashLong, Hashing.XXHash64.Calculate(nonZeroLength, 0));
+                Assert.Equal(zeroHashLong, Hashing.XXHash64.Calculate(nonZeroPtr, 0));
+
+                var zeroHash128 = Hashing.Metro128.Calculate(zeroLength);
+                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(zeroPtr, 0));
+                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(nonZeroLength, 0));
+                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(nonZeroPtr, 0));
+
+                var marvinHash = Hashing.Marvin32.Calculate(zeroLength);
+                Assert.Equal(marvinHash, Hashing.Marvin32.CalculateInline(zeroPtr, 0));
+                Assert.Equal(marvinHash, Hashing.Marvin32.CalculateInline(nonZeroPtr, 0));
+                Assert.Equal(marvinHash, Hashing.Marvin32.CalculateInline(new List<int>()));
+            }
+        }
+
+
+
 
         public static IEnumerable<object[]> BufferSize
         {
