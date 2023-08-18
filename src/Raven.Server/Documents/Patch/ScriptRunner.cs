@@ -1092,7 +1092,7 @@ namespace Raven.Server.Documents.Patch
                     if (_database is ShardedDocumentDatabase)
                         id = GenerateIdForShard(id);
 
-                    var put = _database.DocumentsStorage.Put(
+                    var putResult = _database.DocumentsStorage.Put(
                         _docsCtx,
                         id,
                         _docsCtx.GetLazyString(changeVector),
@@ -1101,19 +1101,21 @@ namespace Raven.Server.Documents.Patch
                         nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
                     );
 
+                    _database.HugeDocuments.AddIfDocIsHuge(putResult.Id, reader.Size);
+
                     if (DebugMode)
                     {
                         DebugActions.PutDocument.Add(new DynamicJsonValue
                         {
-                            ["Id"] = put.Id,
+                            ["Id"] = putResult.Id,
                             ["Data"] = reader
                         });
                     }
 
-                    if (RefreshOriginalDocument == false && string.Equals(put.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                    if (RefreshOriginalDocument == false && string.Equals(putResult.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
                         RefreshOriginalDocument = true;
 
-                    return put.Id;
+                    return putResult.Id;
                 }
                 finally
                 {

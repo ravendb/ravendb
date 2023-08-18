@@ -19,7 +19,7 @@ class queueSinkSyntax extends dialogViewModelBase {
 
     copySample(sampleTitle: string) {
         const sampleText = queueSinkSyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard");
     }
 
     private static assignCollectionCode = `this['@metadata']['@collection'] = 'Users'; 

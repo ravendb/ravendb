@@ -860,7 +860,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields));
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields), context);
             }
         }
 

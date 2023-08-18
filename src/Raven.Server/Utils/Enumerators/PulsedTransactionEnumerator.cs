@@ -44,9 +44,6 @@ namespace Raven.Server.Utils.Enumerators
                 _innerEnumerator = _getEnumerator != null ? _getEnumerator(_state) : _getEnumerable(_state).GetEnumerator();
             }
 
-            if (Current is Document doc)
-                _context.Transaction.ForgetAbout(doc);
-
             if (_innerEnumerator.MoveNext() == false)
                 return false;
             

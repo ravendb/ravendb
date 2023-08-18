@@ -16,8 +16,8 @@ namespace SlowTests.Issues
         {
         }
 
-        private readonly int _writeTimeout = 2_000;
-        private readonly TimeSpan _delay = TimeSpan.FromSeconds(25);
+        private readonly int _writeTimeout = 500;
+        private readonly TimeSpan _delay = TimeSpan.FromSeconds(1);
 
         [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-17745")]
         public async Task BulkInsertWithDelay()

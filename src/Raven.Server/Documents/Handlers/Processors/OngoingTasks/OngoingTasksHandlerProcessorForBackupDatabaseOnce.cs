@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Name = backupName,
             };
 
-            var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, Logger);
+            var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, Logger, RequestHandler.Database.PeriodicBackupRunner._forTestingPurposes);
             var threadName = $"Backup thread {backupName} for database '{RequestHandler.Database.Name}'";
 
             var t = RequestHandler.Database.Operations.AddLocalOperation(
