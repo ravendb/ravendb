@@ -335,8 +335,12 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        result = ExecuteClusterTransaction(context, cmd, index);
-                        leader?.SetStateOf(index, result);
+                        var errors = ExecuteClusterTransaction(context, cmd, index);
+                        if (errors != null)
+                        {
+                            result = errors;
+                            leader?.SetStateOf(index, errors);
+                        }
                         break;
 
                     case nameof(CleanUpClusterStateCommand):
@@ -939,7 +943,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private object ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -958,14 +962,14 @@ namespace Raven.Server.ServerWide
                 var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopology, context, index, compareExchangeItems);
                 if (error == null)
                 {
-                    var count = clusterTransaction.SaveCommandsBatch(context, index);
+                    clusterTransaction.SaveCommandsBatch(context, index);
                     var notify = clusterTransaction.HasDocumentsInTransaction
                         ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
                         : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return count;
+                    return null;
                 }
 
                 OnTransactionDispose(context, index);

@@ -45,7 +45,6 @@ namespace Raven.Server.Documents
         public static readonly Slice CollectionsSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
-        private static readonly Slice LastCompletedClusterTransactionIndexSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
@@ -108,7 +107,6 @@ namespace Raven.Server.Documents
             {
                 Slice.From(ctx, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
                 Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
-                Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
                 Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
                 Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
                 Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
@@ -692,31 +690,6 @@ namespace Raven.Server.Documents
             }
 
             return 0;
-        }
-
-        public static long ReadLastCompletedClusterTransactionIndex(Transaction tx)
-        {
-            if (tx == null)
-                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
-            var tree = tx.ReadTree(GlobalTreeSlice);
-            if (tree == null)
-            {
-                return 0;
-            }
-            var readResult = tree.Read(LastCompletedClusterTransactionIndexSlice);
-            if (readResult == null)
-            {
-                return 0;
-            }
-
-            return readResult.Reader.ReadLittleEndianInt64();
-        }
-
-        public void SetLastCompletedClusterTransactionIndex(DocumentsOperationContext context, long index)
-        {
-            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
-            using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
-                tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
 
         public static long ReadLastEtag(Transaction tx)
@@ -1827,7 +1800,7 @@ namespace Raven.Server.Documents
                     var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
 
-                    if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
+                    if (shouldVersion)
                     {
 
                         if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data,

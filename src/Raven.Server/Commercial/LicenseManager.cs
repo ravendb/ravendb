@@ -23,7 +23,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -79,8 +78,7 @@ namespace Raven.Server.Commercial
             BuildVersion = ServerVersion.Build,
             ProductVersion = ServerVersion.Version,
             CommitHash = ServerVersion.CommitHash,
-            FullVersion = ServerVersion.FullVersion,
-            AssemblyVersion = ServerVersion.AssemblyVersion
+            FullVersion = ServerVersion.FullVersion
         };
 
         public LicenseStatus LicenseStatus { get; private set; } = new LicenseStatus();

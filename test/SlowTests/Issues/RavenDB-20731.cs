@@ -19,7 +19,7 @@ using Assert = Xunit.Assert;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_20731 : ReplicationTestBase
+    internal class RavenDB_20731 : ReplicationTestBase
     {
         public RavenDB_20731(ITestOutputHelper output) : base(output)
         {
