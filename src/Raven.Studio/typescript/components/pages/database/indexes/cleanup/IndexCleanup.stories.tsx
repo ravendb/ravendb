@@ -31,3 +31,12 @@ export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
 
     return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };
+
+export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
+    const { indexesService } = mockServices;
+
+    indexesService.withGetStats();
+    indexesService.withGetIndexMergeSuggestions();
+
+    return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} licenseType="community" />;
+};
