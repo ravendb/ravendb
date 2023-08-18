@@ -385,7 +385,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Name = periodicBackup.Configuration.Name
                     };
 
-                    var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, _logger, _forTestingPurposes);
+                    var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, token: null, _logger, _forTestingPurposes);
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
 
                     periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask

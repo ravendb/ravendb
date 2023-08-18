@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Name = backupName,
             };
 
-            var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, Logger, RequestHandler.Database.PeriodicBackupRunner._forTestingPurposes);
+            var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, token, Logger, RequestHandler.Database.PeriodicBackupRunner._forTestingPurposes);
             var threadName = $"Backup thread {backupName} for database '{RequestHandler.Database.Name}'";
 
             var t = RequestHandler.Database.Operations.AddLocalOperation(
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                                 tcs.SetResult(backupResult);
                             }
                         }
-                        catch (OperationCanceledException)
+                        catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException)
                         {
                             tcs.SetCanceled();
                         }
