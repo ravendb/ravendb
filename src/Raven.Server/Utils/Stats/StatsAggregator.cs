@@ -28,6 +28,13 @@ namespace Raven.Server.Utils.Stats
         {
             Id = id;
 
+            SetStartTime(lastStats);
+
+            Stats = new TStats();
+        }
+
+        protected void SetStartTime(IStatsAggregator lastStats)
+        {
             var now = SystemTime.UtcNow;
             var currentScope = lastStats?.StatsScope;
             if (currentScope == null)
@@ -44,8 +51,6 @@ namespace Raven.Server.Utils.Stats
 
                 StartTime = lastCompleted > now ? lastCompleted : now;
             }
-
-            Stats = new TStats();
         }
 
         public void Complete()
@@ -55,7 +60,7 @@ namespace Raven.Server.Utils.Stats
 
         public bool Completed => _completed;
 
-        public DateTime StartTime { get; }
+        public DateTime StartTime { get; protected set; }
 
         public TStats ToIndexingBatchStats()
         {

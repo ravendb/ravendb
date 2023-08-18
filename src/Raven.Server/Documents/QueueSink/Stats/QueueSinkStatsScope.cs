@@ -36,9 +36,9 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
         return operation;
     }
 
-    public void RecordPulledMessage()
+    public void RecordReadMessage()
     {
-        _stats.NumberOfPulledMessages++;
+        _stats.NumberOfReadMessages++;
     }
 
     public void RecordProcessedMessage()
@@ -46,9 +46,14 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
         _stats.NumberOfProcessedMessages++;
     }
 
-    public void RecordScriptError()
+    public void RecordReadError()
     {
-        _stats.ScriptErrorCount++;
+        _stats.ReadErrorCount++;
+    }
+
+    public void RecordScriptProcessingError()
+    {
+        _stats.ScriptProcessingErrorCount++;
     }
 
     public void RecordPullCompleteReason(string reason)
