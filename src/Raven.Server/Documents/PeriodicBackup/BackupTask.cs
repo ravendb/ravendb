@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
-        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
             _taskName = backupParameters.Name;
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
-            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
+            TaskCancelToken = token ?? new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
             {

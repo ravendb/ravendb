@@ -2091,7 +2091,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var operation = database.Operations.GetOperation(operationId);
                     Assert.True(operation.Description.TaskType is OperationType.DatabaseBackup);
                     Assert.True(operation.Description.Description == $"Manual backup for database: {database.Name}");
-                    Assert.True(operation.State.Status is OperationStatus.Canceled);
+                    Assert.True(operation.State.Status is OperationStatus.Canceled, $"{operation.State.Status} is {OperationStatus.Canceled}");
                     Assert.Null(operation.State.Progress);
                     Assert.Null(operation.State.Result);
                 }
