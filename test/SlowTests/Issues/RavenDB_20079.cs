@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public class RavenDB_20079 : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void CanCreateIndexWithDefaultDateTime()
     {
         using (var store = GetDocumentStore())
@@ -38,7 +39,7 @@ public class RavenDB_20079 : RavenTestBase
         }
     }
     
-    public class TestIndex : AbstractIndexCreationTask<Entity, TestIndex.Result>
+    private class TestIndex : AbstractIndexCreationTask<Entity, TestIndex.Result>
     {
         public class Result
         {
