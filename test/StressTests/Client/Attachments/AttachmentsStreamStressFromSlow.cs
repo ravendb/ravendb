@@ -13,12 +13,23 @@ namespace StressTests.Client.Attachments
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Attachments, RavenArchitecture.AllX64)]
+        [InlineData(128 * 1024 * 1024)]
         [InlineData(1024 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
             using (var test = new AttachmentsStreamTests(Output))
             {
                 test.CanGetOneAttachment(size);
+            }
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.Attachments, RavenArchitecture.AllX64)]
+        [InlineData(128 * 1024 * 1024)]
+        public async Task CanGetOneAttachmentAsync(int size)
+        {
+            using (var test = new AttachmentsStreamTests(Output))
+            {
+                await test.CanGetOneAttachmentAsync(size);
             }
         }
 

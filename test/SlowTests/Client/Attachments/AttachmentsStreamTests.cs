@@ -22,7 +22,6 @@ namespace SlowTests.Client.Attachments
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
         [InlineData(1024 * 1024)]
-        [InlineData(128 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
             var rnd = new Random();
@@ -67,7 +66,6 @@ namespace SlowTests.Client.Attachments
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
         [InlineData(1024 * 1024)]
-        [InlineData(128 * 1024 * 1024)]
         public async Task CanGetOneAttachmentAsync(int size)
         {
             var rnd = new Random();
