@@ -123,7 +123,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         throw;
                     }
 
-                    context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
+                    context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(putResult.Id, cmd.Document.Size);
                     AddPutResult(putResult);
                     lastPutResult = putResult;
                     break;

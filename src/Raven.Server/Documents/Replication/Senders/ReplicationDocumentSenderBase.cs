@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, replicationSupportedFeatures.RevisionTombstonesWithId);
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
-            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(DocumentReplicationItem.From);
+            var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(x => DocumentReplicationItem.From(x, ctx));
             var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
             var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, replicationSupportedFeatures.CaseInsensitiveCounters);
             var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
@@ -278,12 +278,22 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     return true;
                 }
-                finally
+                catch
                 {
                     foreach (var item in _orderedReplicaItems)
                     {
                         item.Value.Dispose();
                     }
+
+                    foreach (var item in _replicaAttachmentStreams)
+                    {
+                        item.Value.Dispose();
+                    }
+
+                    throw;
+                }
+                finally
+                {
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
                 }
@@ -612,6 +622,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             foreach (var item in _orderedReplicaItems)
             {
+                using (item.Value)
                 using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                 {
                     item.Value.Write(cv, _stream, _tempBuffer, stats);
@@ -620,8 +631,11 @@ namespace Raven.Server.Documents.Replication.Senders
 
             foreach (var item in _replicaAttachmentStreams)
             {
+                using (item.Value)
+                {
                 item.Value.WriteStream(_stream, _tempBuffer);
                 stats.RecordAttachmentOutput(item.Value.Stream.Length);
+            }
             }
 
             // close the transaction as early as possible, and before we wait for reply

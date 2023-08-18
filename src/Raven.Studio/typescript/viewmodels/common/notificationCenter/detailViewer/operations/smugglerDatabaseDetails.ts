@@ -7,6 +7,7 @@ import generalUtils = require("common/generalUtils");
 import genericProgress = require("common/helpers/database/genericProgress");
 import delayBackupCommand = require("commands/database/tasks/delayBackupCommand");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import copyToClipboard = require("common/copyToClipboard");
 
 import ShardedSmugglerResult = Raven.Client.Documents.Smuggler.ShardedSmugglerResult;
 import CountsWithSkippedCountAndLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag;
@@ -219,8 +220,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         this.canDelay = ko.pureComputed(() => {
             const completed = this.op.isCompleted();
             const isBackup = this.op.taskType() === "DatabaseBackup";
+            const isOneTime = this.op.message().startsWith("Manual backup"); // unfortunately we don't have better way of detection as of now
 
-            return !completed && isBackup;
+            return !completed && isBackup && !isOneTime;
         });
 
         this.exportItems = ko.pureComputed(() => {
@@ -608,6 +610,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         return true;
     }
+
+    copyLogs() {
+        copyToClipboard.copy(this.messagesJoined(), "Copied details to clipboard.");
+}
 }
 
 export = smugglerDatabaseDetails;

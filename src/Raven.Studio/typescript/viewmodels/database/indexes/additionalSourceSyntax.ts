@@ -19,7 +19,7 @@ class additionalSourceSyntax extends dialogViewModelBase {
         const sampleText = [...additionalSourceSyntax.csharpSamples, ...additionalSourceSyntax.javascriptSamples]
             .find(x => x.title === sampleTitle).text;
 
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard");
     }
 
     static readonly additionalSourceCsharpText =

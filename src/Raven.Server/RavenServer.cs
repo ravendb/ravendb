@@ -194,6 +194,7 @@ namespace Raven.Server
                     options.Limits.MaxRequestBodySize = null; // no limit!
                     options.Limits.MinResponseDataRate = null; // no limit!
                     options.Limits.MinRequestBodyDataRate = null; // no limit!
+                    options.Limits.Http2.MaxStreamsPerConnection = int.MaxValue; // no limit!
 
                     if (Configuration.Http.MinDataRatePerSecond.HasValue && Configuration.Http.MinDataRateGracePeriod.HasValue)
                     {
@@ -211,6 +212,9 @@ namespace Raven.Server
 
                     if (Configuration.Http.KeepAlivePingTimeout.HasValue)
                         options.Limits.Http2.KeepAlivePingTimeout = Configuration.Http.KeepAlivePingTimeout.Value.AsTimeSpan;
+
+                    if (Configuration.Http.MaxStreamsPerConnection.HasValue)
+                        options.Limits.Http2.MaxStreamsPerConnection = Configuration.Http.MaxStreamsPerConnection.Value;
 
                     options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
 

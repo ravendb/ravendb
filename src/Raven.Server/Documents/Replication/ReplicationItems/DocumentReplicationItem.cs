@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
-using Raven.Client;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -27,9 +27,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public static DocumentReplicationItem From(Document doc)
+        public static DocumentReplicationItem From(Document doc, DocumentsOperationContext context)
         {
-            return new DocumentReplicationItem
+            var result = new DocumentReplicationItem
             {
                 Type = ReplicationItemType.Document,
                 Etag = doc.Etag,
@@ -38,8 +38,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Id = doc.Id,
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
-                LastModifiedTicks = doc.LastModified.Ticks
+                LastModifiedTicks = doc.LastModified.Ticks,
             };
+
+            result.ToDispose(new ForgetAboutDecompressionBuffer(doc, context));
+
+            return result;
         }
 
         public static DocumentReplicationItem From(DocumentConflict doc)
@@ -211,6 +215,23 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             var type = Data == null ? "Tombstone" : "Document";
             return $"{Id} : {ChangeVector} ({type})";
+        }
+
+        private class ForgetAboutDecompressionBuffer : IDisposable
+        {
+            private readonly Document _doc;
+            private readonly DocumentsOperationContext _context;
+
+            public ForgetAboutDecompressionBuffer(Document doc, DocumentsOperationContext context)
+            {
+                _doc = doc;
+                _context = context;
+            }
+            
+            public void Dispose()
+            {
+                _context.Transaction.ForgetAbout(_doc);
+            }
         }
     }
 }

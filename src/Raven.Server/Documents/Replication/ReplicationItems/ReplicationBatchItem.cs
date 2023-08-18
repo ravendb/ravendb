@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -29,6 +30,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         protected Reader Reader;
 
         private List<IDisposable> _garbage;
+
+        protected ReplicationBatchItem()
+        {
+        }
 
         public abstract long AssertChangeVectorSize();
 
