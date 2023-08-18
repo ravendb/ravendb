@@ -20,8 +20,9 @@ import database from "models/resources/database";
 import TaskUtils from "components/utils/TaskUtils";
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import liveQueueSinkStatsWebSocketClient from "common/liveQueueSinkStatsWebSocketClient";
 
-type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
+type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" | "previewSinkScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
 
 type rTreeLeaf = {
@@ -35,11 +36,13 @@ type rTreeLeaf = {
 
 type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation |
                      Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation |
+                     Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation;
 
 type performanceBaseWithCache = ReplicationPerformanceBaseWithCache |
                                 EtlPerformanceBaseWithCache |
+                                QueueSinkPerformanceBaseWithCache |
                                 SubscriptionConnectionPerformanceStatsWithCache |
                                 SubscriptionBatchPerformanceStatsWithCache;
 type trackInfo = {
@@ -53,6 +56,7 @@ type exportFileFormat = {
     Replication: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[];
     Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
     Subscription: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[];
+    QueueSink: Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkTaskPerformanceStats[];
 }
 
 type trackItemContext = {
@@ -66,6 +70,11 @@ type previewEtlScriptItemContext = {
     etlType: EtlType;
 }
 
+type previewSinkScriptItemContext = {
+    scriptName: string;
+    taskId: number;
+}
+
 type previewSubscriptionQueryItemContext = {
     taskId: number;
     taskName: string;
@@ -77,6 +86,7 @@ class hitTest {
     private container: d3.Selection<any>;
     private onToggleTrack: (trackName: string) => void;
     private onPreviewEtlScript: (context: previewEtlScriptItemContext) => void;
+    private onPreviewSinkScript: (context: previewSinkScriptItemContext) => void;
     private onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void;
     private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void;
     private handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void;
@@ -92,6 +102,7 @@ class hitTest {
     init(container: d3.Selection<any>,
         onToggleTrack: (trackName: string) => void,
         onPreviewEtlScript: (context: previewEtlScriptItemContext) => void,
+        onPreviewSinkScript: (context: previewSinkScriptItemContext) => void,
         onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void,
         handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void,
         handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void,
@@ -102,6 +113,7 @@ class hitTest {
         this.container = container;
         this.onToggleTrack = onToggleTrack;
         this.onPreviewEtlScript = onPreviewEtlScript;
+        this.onPreviewSinkScript = onPreviewSinkScript;
         this.onPreviewSubscriptionScript = onPreviewSubscriptionScript;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleSubscriptionErrorTooltip = handleSubscriptionErrorTooltip;
@@ -118,6 +130,10 @@ class hitTest {
 
     registerPreviewEtlScript(x: number, y: number, width: number, height: number, taskInfo: previewEtlScriptItemContext) {
         this.insertItem(x, y, width, height, "previewEtlScript", taskInfo);
+    }
+
+    registerPreviewSinkScript(x: number, y: number, width: number, height: number, taskInfo: previewSinkScriptItemContext) {
+        this.insertItem(x, y, width, height, "previewSinkScript", taskInfo);
     }
 
     registerPreviewSubscriptionQuery(x: number, y: number, width: number, height: number, taskInfo: previewSubscriptionQueryItemContext) {
@@ -325,6 +341,7 @@ class ongoingTasksStats extends shardViewModelBase {
 
     private liveViewReplicationClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private liveViewEtlClient = ko.observable<liveEtlStatsWebSocketClient>();
+    private liveViewQueueSinkClient = ko.observable<liveQueueSinkStatsWebSocketClient>();
     private liveViewSubscriptionClient = ko.observable<liveSubscriptionStatsWebSocketClient>();
     
     private autoScroll = ko.observable<boolean>(false);
@@ -343,6 +360,7 @@ class ongoingTasksStats extends shardViewModelBase {
     // The live data from endpoint
     private replicationData: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
+    private queueSinkData: Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkTaskPerformanceStats[] = [];
     private subscriptionData: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[] = [];
     
     private etlDefinitionsCache: etlScriptDefinitionCache;
@@ -434,7 +452,10 @@ class ongoingTasksStats extends shardViewModelBase {
             "ConnectionRejected": undefined as string,
             "ConnectionErrorBackground": undefined as string,
             "AggregatedBatchesInfo": undefined as string,
-            "UnknownOperation": undefined as string
+            "Queue Sink": undefined as string,
+            "PullMessages": undefined as string,
+            "ScriptProcessing": undefined as string,
+            "UnknownOperation": undefined as string,
         }
     };
     
@@ -468,13 +489,15 @@ class ongoingTasksStats extends shardViewModelBase {
         this.loading = ko.pureComputed(() => {
             const replicationClient = this.liveViewReplicationClient();
             const etlClient = this.liveViewEtlClient();
+            const queueSinkClient = this.liveViewQueueSinkClient();
             const subscriptionClient = this.liveViewSubscriptionClient();
 
             const replicationLoading = replicationClient ? replicationClient.loading() : true;
             const etlLoading = etlClient ? etlClient.loading() : true;
+            const queueSinkLoading = queueSinkClient ? queueSinkClient.loading() : true;
             const subscriptionLoading = subscriptionClient ? subscriptionClient.loading() : true;
             
-            return replicationLoading || etlLoading || subscriptionLoading;
+            return replicationLoading || etlLoading || queueSinkLoading || subscriptionLoading;
         });
     }
 
@@ -489,7 +512,7 @@ class ongoingTasksStats extends shardViewModelBase {
     deactivate() {
         super.deactivate();
 
-        if (this.liveViewReplicationClient() || this.liveViewEtlClient() || this.liveViewSubscriptionClient()) {
+        if (this.liveViewReplicationClient() || this.liveViewEtlClient() || this.liveViewQueueSinkClient() || this.liveViewSubscriptionClient()) {
             this.cancelLiveView();
         }
     }
@@ -514,6 +537,7 @@ class ongoingTasksStats extends shardViewModelBase {
         this.hitTest.init(this.svg,
             (replicationName) => this.onToggleTrack(replicationName),
             (context) => this.handlePreviewEtlScript(context),
+            (context) => this.handlePreviewSinkScript(context),
             (context) => this.handlePreviewSubscriptionScript(context),
             (context, x, y) => this.handleTrackTooltip(context, x, y),
             (context, x, y) => this.handleSubscriptionErrorTooltip(context, x, y),
@@ -600,6 +624,9 @@ class ongoingTasksStats extends shardViewModelBase {
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().pauseUpdates();
                 }
+                if (this.liveViewQueueSinkClient()) {
+                    this.liveViewQueueSinkClient().pauseUpdates();
+                }
                 if (this.liveViewSubscriptionClient()) {
                     this.liveViewSubscriptionClient().pauseUpdates();
                 }
@@ -614,6 +641,9 @@ class ongoingTasksStats extends shardViewModelBase {
                 }
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().resumeUpdates();
+                }
+                if (this.liveViewQueueSinkClient()) {
+                    this.liveViewQueueSinkClient().resumeUpdates();
                 }
                 if (this.liveViewSubscriptionClient()) {
                     this.liveViewSubscriptionClient().resumeUpdates();
@@ -699,6 +729,10 @@ class ongoingTasksStats extends shardViewModelBase {
             this.etlData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
+        this.liveViewQueueSinkClient(new liveQueueSinkStatsWebSocketClient(this.db, this.location, d => {
+            this.queueSinkData = d;
+            onDataUpdatedThrottle();
+        }, this.dateCutoff));
         this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, this.location, d => {
             this.subscriptionData = d;
             onDataUpdatedThrottle();
@@ -708,9 +742,10 @@ class ongoingTasksStats extends shardViewModelBase {
     private checkBufferUsage() {
         const replicationDataCount = _.sumBy(this.replicationData, x => x.Performance.length);
         const etlDataCount = _.sumBy(this.etlData, t => _.sumBy(t.Stats, s => s.Performance.length));
+        const queueSinkDataCount = _.sumBy(this.queueSinkData, t => _.sumBy(t.Stats, s => s.Performance.length));
         const subscriptionDataCount = _.sumBy(this.subscriptionData, x => x.BatchPerformance.length + x.ConnectionPerformance.length);
         
-        const dataCount = replicationDataCount + etlDataCount + subscriptionDataCount;
+        const dataCount = replicationDataCount + etlDataCount + queueSinkDataCount + subscriptionDataCount;
 
         const usage = Math.min(100, dataCount * 100.0 / ongoingTasksStats.bufferSize);
         this.bufferUsage(usage.toFixed(1));
@@ -770,6 +805,11 @@ class ongoingTasksStats extends shardViewModelBase {
             this.liveViewEtlClient(null);
         }
 
+        if (this.liveViewQueueSinkClient()) {
+            this.liveViewQueueSinkClient().dispose();
+            this.liveViewQueueSinkClient(null);
+        }
+
         if (this.liveViewSubscriptionClient()) {
             this.liveViewSubscriptionClient().dispose();
             this.liveViewSubscriptionClient(null);
@@ -778,7 +818,7 @@ class ongoingTasksStats extends shardViewModelBase {
 
     private draw(workData: workData[], maxConcurrentActions: number, resetFilter: boolean) {
         const anySubscriptionData = this.subscriptionData.some(x => x.BatchPerformance.length || x.ConnectionPerformance.length);
-        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || anySubscriptionData);
+        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || this.queueSinkData.length > 0 || anySubscriptionData);
 
         this.prepareBrushSection(workData, maxConcurrentActions);
         this.prepareMainSection(resetFilter);
@@ -908,10 +948,14 @@ class ongoingTasksStats extends shardViewModelBase {
     private findAndSetTaskNames(): void {
         this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
         this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
+        this.queueSinkData = _.orderBy(this.queueSinkData, [x => x.BrokerType, x => x.TaskName], ["asc", "asc"]);
         this.subscriptionData = _.orderBy(this.subscriptionData, [x => x.TaskName]);
         
         this.etlData.forEach(etl => {
             etl.Stats = _.orderBy(etl.Stats, [x => x.TransformationName], ["asc"]);
+        });
+        this.queueSinkData.forEach(etl => {
+            etl.Stats = _.orderBy(etl.Stats, [x => x.ScriptName], ["asc"]);
         });
         
         const trackInfos: trackInfo[] = [];
@@ -949,6 +993,30 @@ class ongoingTasksStats extends shardViewModelBase {
             });
         });
 
+        this.queueSinkData.forEach(queueTask => {
+            const scriptsCount = queueTask.Stats.length;
+
+            const closedHeight = ongoingTasksStats.openedTrackPadding
+                + (scriptsCount + 1) * ongoingTasksStats.trackHeight
+                + scriptsCount * ongoingTasksStats.betweenScriptsPadding
+                + ongoingTasksStats.openedTrackPadding;
+
+            const heightCount = 2;
+
+            const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
+                + ongoingTasksStats.trackHeight * heightCount
+                + (scriptsCount - 1) * ongoingTasksStats.betweenScriptsPadding
+                + scriptsCount * ongoingTasksStats.singleOpenedEtlItemHeight
+                + ongoingTasksStats.openedTrackPadding;
+
+            trackInfos.push({
+                name: queueTask.TaskName,
+                type: TaskUtils.queueTypeToStudioType(queueTask.BrokerType),
+                openedHeight: openedHeight,
+                closedHeight: closedHeight
+            });
+        })
+        
         this.subscriptionData.forEach(subscriptionTask => {
             const subscriptionName = subscriptionTask.TaskName;
             const subscription = this.subscriptionToWorkers.get(subscriptionName);
@@ -1117,6 +1185,12 @@ class ongoingTasksStats extends shardViewModelBase {
             })
         });
 
+        this.queueSinkData.forEach(stats => {
+            stats.Stats.forEach(stat => {
+                stat.Performance.forEach(s => onPerf(s as performanceBaseWithCache));
+            })
+        });
+
         this.subscriptionData.forEach(subscriptionStats => {
             subscriptionStats.ConnectionPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
             subscriptionStats.BatchPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
@@ -1209,6 +1283,9 @@ class ongoingTasksStats extends shardViewModelBase {
            drawBackground(replicationStat.Description);
         });
         this.etlData.forEach(x => {
+            drawBackground(x.TaskName);
+        });
+        this.queueSinkData.forEach(x => {
             drawBackground(x.TaskName);
         });
         this.subscriptionData.forEach(x => {
@@ -1495,10 +1572,34 @@ class ongoingTasksStats extends shardViewModelBase {
                     
                     drawTrack(trackName, yStartBase + offset, isOpened, etlStat.Performance as performanceBaseWithCache[]);
                     
-                    this.drawScriptName(context, yStartBase + offset + extraPadding, {
+                    this.drawEtlScriptName(context, yStartBase + offset + extraPadding, {
                         transformationName: etlStat.TransformationName,
                         etlType: etlItem.EtlType,
                         taskId: etlItem.TaskId
+                    });
+                });
+            }
+        });
+
+        this.queueSinkData.forEach(sinkItem => {
+            const trackName = sinkItem.TaskName;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const yStartBase = this.yScale(trackName);
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+                const extraPadding = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding + ongoingTasksStats.openedTrackPadding
+                    : ongoingTasksStats.closedTrackPadding;
+
+                sinkItem.Stats.forEach((sinkStat, idx) => {
+                    context.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+                    const openedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.singleOpenedEtlItemHeight;
+                    const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
+                    const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
+
+                    drawTrack(trackName, yStartBase + offset, isOpened, sinkStat.Performance as performanceBaseWithCache[]);
+
+                    this.drawSinkScriptName(context, yStartBase + offset + extraPadding, {
+                        scriptName: sinkStat.ScriptName,
+                        taskId: sinkItem.TaskId
                     });
                 });
             }
@@ -1519,9 +1620,14 @@ class ongoingTasksStats extends shardViewModelBase {
         });
     }
     
-    private drawScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewEtlScriptItemContext) {
+    private drawEtlScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewEtlScriptItemContext) {
         const areaWidth = this.drawText(context, yStart, taskInfo.transformationName);
         this.hitTest.registerPreviewEtlScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
+    }
+
+    private drawSinkScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewSinkScriptItemContext) {
+        const areaWidth = this.drawText(context, yStart, taskInfo.scriptName);
+        this.hitTest.registerPreviewSinkScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
     }
     
     private drawQuery(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewSubscriptionQueryItemContext) {
@@ -1624,6 +1730,10 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "Documents Batch";
             case "AggregatedBatchesInfo":
                 return "Aggregated History Batches Info";
+            case "KafkaQueueSink":
+                return "Kafka Sink";
+            case "RabbitQueueSink":
+                return "RabbitMQ Sink";
             default:
                 throw new Error("Unknown stats type: " + type);
         }
@@ -1815,6 +1925,9 @@ class ongoingTasksStats extends shardViewModelBase {
     
     private handlePreviewEtlScript(context: previewEtlScriptItemContext) {
         this.etlDefinitionsCache.showDefinitionFor(context.etlType, context.taskId, context.transformationName);
+    }
+
+    private handlePreviewSinkScript(context: previewSinkScriptItemContext) {
     }
 
     private handlePreviewSubscriptionScript(context: previewSubscriptionQueryItemContext) {
@@ -2176,7 +2289,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 importedData = {
                     Replication: importedData as any, // we force casting here
                     Etl: [],
-                    Subscription: []
+                    Subscription: [],
+                    QueueSink: []
                 }
             }
 
@@ -2186,6 +2300,7 @@ class ongoingTasksStats extends shardViewModelBase {
             } else {
                 this.replicationData = importedData.Replication;
                 this.etlData = importedData.Etl;
+                this.queueSinkData = importedData.QueueSink ?? [];
                 this.subscriptionData = importedData.Subscription;
 
                 this.fillCache();
@@ -2215,6 +2330,14 @@ class ongoingTasksStats extends shardViewModelBase {
                         TaskUtils.etlTypeToStudioType(etlTaskData.EtlType, etlTaskData.EtlSubType));
                 });
             })
+        });
+        
+        this.queueSinkData.forEach(queueSinkData => {
+            queueSinkData.Stats.forEach(sinkData => {
+                sinkData.Performance.forEach(perfStat => {
+                    liveQueueSinkStatsWebSocketClient.fillCache(perfStat, TaskUtils.queueTypeToStudioType(queueSinkData.BrokerType));
+                });
+            });
         });
 
         this.subscriptionData.forEach(subscriptionStat => {
@@ -2257,7 +2380,13 @@ class ongoingTasksStats extends shardViewModelBase {
                         stats => d3.max(stats.Performance, 
                             (p: EtlPerformanceBaseWithCache) => p.StartedAsDate)));
         
-        this.dateCutoff = d3.max([replicationMax, etlMax]);
+        const queueSinkMax = d3.max(this.queueSinkData, 
+                taskData => d3.max(taskData.Stats, 
+                        stats => d3.max(stats.Performance, 
+                            (x: QueueSinkPerformanceBaseWithCache) => x.StartedAsDate)));
+        
+        
+        this.dateCutoff = d3.max([replicationMax, etlMax, queueSinkMax]);
     }
 
     closeImport() {
@@ -2303,7 +2432,8 @@ class ongoingTasksStats extends shardViewModelBase {
         const filePayload: exportFileFormat = {
             Replication: this.replicationData,
             Etl: this.etlData,
-            Subscription: this.subscriptionData
+            Subscription: this.subscriptionData,
+            QueueSink: this.queueSinkData
         };
         
         fileDownloader.downloadAsJson(filePayload, exportFileName + ".json", exportFileName, (key, value) => {
