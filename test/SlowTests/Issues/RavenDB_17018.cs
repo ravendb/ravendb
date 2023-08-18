@@ -47,9 +47,15 @@ namespace SlowTests.Issues
                 }
 
                 var database = await GetDatabase(store.Database);
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
-                Assert.True(outcome, reason);
-                
+
+                var performanceHints = WaitForValue(() =>
+                {
+                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
+                    return database.NotificationCenter.GetPerformanceHintCount();
+                }, 1);
+
+                Assert.Equal(1, performanceHints);
+
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
                     var action = actions.First();
@@ -61,7 +67,6 @@ namespace SlowTests.Issues
                     Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.True(size > 0);
                 }
-
             }
         }
 
@@ -133,10 +138,10 @@ namespace SlowTests.Issues
                 }
 
                 var database = await GetDatabase(store.Database);
-                
+
                 var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
                 Assert.True(outcome, reason);
-                
+
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
                     var action = actions.First();
@@ -203,7 +208,7 @@ namespace SlowTests.Issues
                         .GetFor<Company>("companies/1", pageSize: 4);
                 }
                 var database = await GetDatabase(store.Database);
-                
+
                 string reason;
                 var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
                 Assert.True(outcome, reason);
