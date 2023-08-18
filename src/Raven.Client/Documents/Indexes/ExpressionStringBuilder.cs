@@ -855,6 +855,13 @@ namespace Raven.Client.Documents.Indexes
                 Out(')');
                 return node;
             }
+            if (node.Value is TimeSpan timeSpan && timeSpan.Equals(default))
+            {
+                Out("default(");
+                Out(typeof(TimeSpan).ToString());
+                Out(')');
+                return node;
+            }
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
             if (node.Value is DateOnly dateOnly && dateOnly.Equals(default))
             {
