@@ -126,14 +126,14 @@ class testIndex {
         }
     }
 
-    runTest() {
+    runTest(location: databaseLocationSpecifier) {
         const db = this.dbProvider();
 
         eventsCollector.default.reportEvent("index", "test");
 
         this.columnsSelector.reset();
 
-        this.fetchTask = this.fetchTestDocuments(db);
+        this.fetchTask = this.fetchTestDocuments(db, location);
 
         this.goToTab("queryResults");
 
@@ -179,12 +179,12 @@ class testIndex {
         this.languageService.dispose();
     }
 
-    private fetchTestDocuments(db: database): JQueryPromise<TestIndexResult> {
+    private fetchTestDocuments(db: database, location: databaseLocationSpecifier): JQueryPromise<TestIndexResult> {
         this.spinners.testing(true);
 
         const dto = this.toDto();
 
-        return new testIndexCommand(dto, db).execute()
+        return new testIndexCommand(dto, db, location).execute()
             .done(result => {
                 this.resultsCount({
                     queryResults: result.QueryResults.length,
