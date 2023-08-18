@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 using (serverContext.OpenReadTransaction())
                 {
                     // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
-                    var executed = database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
                     if (executed.Count == 0)
                         break;
 
