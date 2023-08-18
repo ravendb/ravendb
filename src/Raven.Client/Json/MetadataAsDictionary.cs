@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal sealed class MetadataAsDictionary : IMetadataDictionary
+    public sealed class MetadataAsDictionary : IMetadataDictionary
     {
         private readonly MetadataAsDictionary _parent;
         private readonly string _parentKey;

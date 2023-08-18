@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Sparrow.Extensions
 {
-    internal static class RavenDateTimeExtensions
+    public static class RavenDateTimeExtensions
     {
         private const long InitialJavaScriptDateTicks = 621355968000000000;
 
@@ -305,7 +305,7 @@ namespace Sparrow.Extensions
         /// <param name="dt"></param>
         /// <param name="isUtc"></param>
         /// <returns></returns>
-        public static unsafe int GetDefaultRavenFormat(this DateTime dt, JsonOperationContext context, out AllocatedMemoryData memory, bool isUtc = false)
+        internal static unsafe int GetDefaultRavenFormat(this DateTime dt, JsonOperationContext context, out AllocatedMemoryData memory, bool isUtc = false)
         {
             ValidateDate(dt, isUtc);
 
@@ -330,7 +330,7 @@ namespace Sparrow.Extensions
         /// <param name="dt"></param>
         /// <param name="isUtc"></param>
         /// <returns></returns>
-        public static unsafe int GetDefaultRavenFormat(this DateTime dt, byte* ptr, int ptrSize, bool isUtc = false)
+        internal static unsafe int GetDefaultRavenFormat(this DateTime dt, byte* ptr, int ptrSize, bool isUtc = false)
         {
             ValidateDate(dt, isUtc);
 
@@ -366,7 +366,7 @@ namespace Sparrow.Extensions
             throw new ArgumentException($"The memory passed to {nameof(GetDefaultRavenFormat)} is not big enough, we require at least 28 bytes to operate. This exception should never ever happen.");
         }
 
-        public static DateTime ParseDateMicrosoft(string text)
+        internal static DateTime ParseDateMicrosoft(string text)
         {
             var value = text.Substring(6, text.Length - 8);
 
