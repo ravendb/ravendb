@@ -10,6 +10,7 @@ using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
@@ -31,7 +32,7 @@ public class DeleteTest : StorageTest
         _analyzers = CreateKnownFields(_bsc);
     }
 
-    [Fact]
+    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void MultipleEntriesUnderSameId()
     {
         for (int i = 0; i < 1000; ++i)
@@ -131,13 +132,13 @@ public class DeleteTest : StorageTest
             switch (type)
             {
                 case DataType.Modulo:
-                    _longList.Add(new IndexSingleNumericalEntry<long> {Id = $"list/{i}", Content = i % modulo});
+                    _longList.Add(new IndexSingleNumericalEntry<long> { Id = $"list/{i}", Content = i % modulo });
                     break;
                 case DataType.Linear:
-                    _longList.Add(new IndexSingleNumericalEntry<long> {Id = $"list/{i}", Content = i});
+                    _longList.Add(new IndexSingleNumericalEntry<long> { Id = $"list/{i}", Content = i });
                     break;
                 default:
-                    _longList.Add(new IndexSingleNumericalEntry<long> {Id = $"list/{i}", Content = 0});
+                    _longList.Add(new IndexSingleNumericalEntry<long> { Id = $"list/{i}", Content = 0 });
                     break;
             }
     }
