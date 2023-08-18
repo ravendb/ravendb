@@ -1408,11 +1408,16 @@ namespace Corax
         {
             _pforDecoder.Dispose();
             _indexedEntries.Clear();
+
+            foreach (var entryTerms in _termsPerEntryId.Values)
+                entryTerms.Dispose(_entriesAllocator);
             _termsPerEntryId.Clear();
+            
             _deletedEntries.Clear();
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
             _removalsForTerm.Clear();
+            _tempListBuffer.Dispose();
 
             for (int i = 0; i < _knownFieldsTerms.Length; i++)
             {
@@ -1427,10 +1432,11 @@ namespace Corax
             }
             
             _entriesAllocator.Reset();
-
+            _entriesToTermsBuffer = new(_entriesAllocator);
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
             _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
-            
+            _tempListBuffer = new NativeIntegersList(_entriesAllocator);
+
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
 
