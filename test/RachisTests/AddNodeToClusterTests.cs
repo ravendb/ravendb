@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
@@ -17,7 +16,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
@@ -30,7 +28,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
-using Raven.Server.Web.System.Processors.Studio;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -1047,31 +1044,31 @@ namespace RachisTests
         {
             var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
             
-            await WaitForValueAsync(() =>
+            var tops = new IReadOnlyList<ServerNode>[nodes.Count];
+
+            var val = await WaitForValueAsync(() =>
             {
-                foreach (var node in nodes)
+                for (int i = 0; i < nodes.Count; i++)
                 {
-                    if (node.ServerStore.ClusterRequestExecutor?.TopologyNodes == null)
-                    {
+                    RavenServer node = nodes[i];
+                    tops[i] = node.ServerStore.ClusterRequestExecutor?.TopologyNodes;
+                }
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    var top = tops[i];
+                    if (top == null)
                         return false;
-                    }
+
+                    if (top.Count != 3)
+                        return false;
                 }
 
                 return true;
             }, true);
 
-            //check all nodes updated their in-memory topology
-            Assert.NotNull(nodes[0].ServerStore.ClusterRequestExecutor?.TopologyNodes);
-            Assert.NotNull(nodes[1].ServerStore.ClusterRequestExecutor?.TopologyNodes);
-            Assert.NotNull(nodes[2].ServerStore.ClusterRequestExecutor?.TopologyNodes);
+            Assert.True(val, GenerateMessage(tops));
 
-            var top = nodes[0].ServerStore.ClusterRequestExecutor.TopologyNodes;
-            Assert.True(top.Count == 3, $"node {nodes[0].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
-            top = nodes[1].ServerStore.ClusterRequestExecutor.TopologyNodes;
-            Assert.True(top.Count == 3, $"node {nodes[1].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
-            top = nodes[2].ServerStore.ClusterRequestExecutor.TopologyNodes;
-            Assert.True(top.Count == 3, $"node {nodes[2].ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
-            
             var serverD = GetNewServer();
             var serverDUrl = serverD.ServerStore.GetNodeHttpServerUrl();
             Servers.Add(serverD);
@@ -1092,6 +1089,20 @@ namespace RachisTests
                 return true;
             }, true);
             Assert.True(res);
+            return;
+
+            string GenerateMessage(IReadOnlyList<ServerNode>[] tops)
+            {
+                var sb = new StringBuilder();
+                for (int i = 0; i < tops.Length; i++)
+                {
+                    IReadOnlyList<ServerNode> top = tops[i];
+                    var node = nodes[i];
+                    sb.AppendLine($"Node: {node.ServerStore.NodeTag} had topology of {string.Join(",", top.Select(x => x.ClusterTag))}");
+                }
+
+                return sb.ToString();
+            }
         }
 
         [Fact]
