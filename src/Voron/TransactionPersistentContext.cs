@@ -8,7 +8,6 @@ namespace Voron
     public sealed class TransactionPersistentContext
     {
         private bool _longLivedTransaction;
-        private int _cacheSize;
 
         public bool LongLivedTransactions
         {
@@ -16,7 +15,6 @@ namespace Voron
             set
             {
                 _longLivedTransaction = value;
-                _cacheSize = _longLivedTransaction ? 512 : 256;
             }
         }
 
@@ -34,14 +32,13 @@ namespace Voron
             if (_pageLocators.Count != 0)
             {
                 locator = _pageLocators.Pop();
-                locator.Renew(tx, _cacheSize);
+                locator.Renew(tx);
             }
             else
             {
-                locator = new PageLocator(tx, _cacheSize);
+                locator = new PageLocator(tx);
             }
             return locator;
-
         }
 
         public void FreePageLocator(PageLocator locator)

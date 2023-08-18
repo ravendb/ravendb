@@ -168,7 +168,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         // Initialize the important infrastructure for the sorting.
         TComparer1 entryComparer = new();
         entryComparer.Init(ref match, default, 0);
-        var pageCache = new PageLocator(llt, 1024);
+        var pageCache = new PageLocator(llt);
         fixed (long* ptrBatchResults = batchResults)
         {
             var resultsPtr = new UnmanagedSpan<long>(ptrBatchResults, sizeof(long)* batchResults.Length);
