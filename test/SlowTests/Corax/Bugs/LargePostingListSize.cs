@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class LargePostingListSize : StorageTest
     {
     }
 
-    [Fact]
+    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void WillProduceProperTree()
     {
         using (var tw = Env.WriteTransaction())
