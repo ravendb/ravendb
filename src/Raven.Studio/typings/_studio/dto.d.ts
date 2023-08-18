@@ -769,6 +769,10 @@ type etlScriptDefinitionCacheItem = {
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
 }
 
+type sinkScriptDefinitionCacheItem = {
+    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink>;
+}
+
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
 type timeMagnitude = "minutes" | "hours" | "days";
 

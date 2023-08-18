@@ -1,0 +1,57 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel">Sink script definition preview</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="padding text-center" data-bind="visible: spinners.loading">
+                <i class="global-spinner"></i>
+            </div>
+
+            <div class="modal-details" data-bind="visible: !spinners.loading()">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Task name:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: taskName"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Script name:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: scriptName"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Collections:</div>
+                        <div class="col-sm-6 details-value" data-bind="with: sinkScript">
+                            <span data-bind="foreach: Queues">
+                                <span data-bind="text: $data"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="visible: script">
+                    Script:
+                    <pre class="form-control editor"
+                         data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript', readOnly: true }" style="height: 250px;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

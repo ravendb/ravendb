@@ -12,6 +12,7 @@ import messagePublisher = require("common/messagePublisher");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import colorsManager = require("common/colorsManager");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
+import sinkScriptDefinitionCache = require("models/database/stats/sinkScriptDefinitionCache");
 import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
@@ -186,18 +187,24 @@ class hitTest {
         if (previewEtlScript) {
             this.onPreviewEtlScript(previewEtlScript.arg as previewEtlScriptItemContext);
             return;
-        } 
-        
-       const previewSubscriptionScript = items.find(x => x.actionType === "previewSubscriptionQuery");
-       if (previewSubscriptionScript) {
-           this.onPreviewSubscriptionScript(previewSubscriptionScript.arg as previewSubscriptionQueryItemContext);
-           return;
-       }
-       
-       const toggleTrack = items.find(x => x.actionType === "toggleTrack");
-       if (toggleTrack) {
-           this.onToggleTrack(toggleTrack.arg as string);
-       }
+        }
+
+        const previewSinkScript = items.find(x => x.actionType === "previewSinkScript");
+        if (previewSinkScript) {
+            this.onPreviewSinkScript(previewSinkScript.arg as previewSinkScriptItemContext);
+            return;
+        }
+
+        const previewSubscriptionScript = items.find(x => x.actionType === "previewSubscriptionQuery");
+        if (previewSubscriptionScript) {
+            this.onPreviewSubscriptionScript(previewSubscriptionScript.arg as previewSubscriptionQueryItemContext);
+            return;
+        }
+
+        const toggleTrack = items.find(x => x.actionType === "toggleTrack");
+        if (toggleTrack) {
+            this.onToggleTrack(toggleTrack.arg as string);
+        }
     }
 
     onMouseDown() {
@@ -216,6 +223,12 @@ class hitTest {
 
         const currentPreviewEtlItem = items.find(x => x.actionType === "previewEtlScript");
         if (currentPreviewEtlItem) {
+            this.cursor("pointer");
+            return;
+        }
+
+        const currentPreviewSinkItem = items.find(x => x.actionType === "previewSinkScript");
+        if (currentPreviewSinkItem) {
             this.cursor("pointer");
             return;
         }
@@ -364,6 +377,7 @@ class ongoingTasksStats extends shardViewModelBase {
     private subscriptionData: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[] = [];
     
     private etlDefinitionsCache: etlScriptDefinitionCache;
+    private sinkDefinitionsCache: sinkScriptDefinitionCache;
     private subscriptionDefinitionCache: subscriptionQueryDefinitionCache;
 
     private subscriptionToWorkers = new Map<string, Set<string>>();
@@ -532,6 +546,7 @@ class ongoingTasksStats extends shardViewModelBase {
 
         const activeDatabase = this.db;
         this.etlDefinitionsCache = new etlScriptDefinitionCache(activeDatabase);
+        this.sinkDefinitionsCache = new sinkScriptDefinitionCache(activeDatabase);
         this.subscriptionDefinitionCache = new subscriptionQueryDefinitionCache(activeDatabase);
 
         this.hitTest.init(this.svg,
@@ -1928,6 +1943,7 @@ class ongoingTasksStats extends shardViewModelBase {
     }
 
     private handlePreviewSinkScript(context: previewSinkScriptItemContext) {
+        this.sinkDefinitionsCache.showDefinitionFor(context.taskId, context.scriptName);
     }
 
     private handlePreviewSubscriptionScript(context: previewSubscriptionQueryItemContext) {
