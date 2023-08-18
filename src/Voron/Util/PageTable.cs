@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Collections;
-using Sparrow.Server.Collections.LockFree;
 using Voron.Impl;
 
 namespace Voron.Util
@@ -16,8 +16,8 @@ namespace Voron.Util
     /// </summary>
     public sealed class PageTable
     {
-        private readonly LockFreeConcurrentDictionary<long, PagesBuffer> _values = new LockFreeConcurrentDictionary<long, PagesBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-        private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new SortedList<long, Dictionary<long, PagePosition>>(NumericComparer.BoxedInstanceInt64);
+        private readonly ConcurrentDictionary<long, PagesBuffer> _values = new();
+        private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new();
         private long _maxSeenTransaction;
 
         public void Clear()
