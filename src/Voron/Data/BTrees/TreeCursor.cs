@@ -9,17 +9,32 @@ namespace Voron.Data.BTrees
 {
     public sealed class TreeCursor : IDisposable
     {
-        public FastStack<TreePage> Pages = new FastStack<TreePage>();
-
-        private static readonly ObjectPool<Dictionary<long, TreePage>> _pagesByNumPool = new ObjectPool<Dictionary<long, TreePage>>(() => new Dictionary<long, TreePage>(50, NumericEqualityComparer.BoxedInstanceInt64));
-
-        private readonly Dictionary<long, TreePage> _pagesByNum;
-
+        private class TreeCursorState
+        {
+            public readonly Dictionary<long, TreePage> PageByNum;
+            public readonly FastStack<TreePage> Pages;
+            
+            public TreeCursorState(int pageCapacity, int stackCapacity)
+            {
+                PageByNum = new(pageCapacity);
+                Pages = new(stackCapacity);
+            }
+            
+            public void Clear()
+            {
+                PageByNum.Clear();
+                Pages.Clear();
+            }
+        }
+        
+        private static readonly ObjectPool<TreeCursorState> _pagesByNumPool = new ObjectPool<TreeCursorState>(() => new TreeCursorState(50, 16));
         private bool _anyOverrides;
+        private readonly TreeCursorState _state;
+        public FastStack<TreePage> Pages => _state.Pages;
 
         public TreeCursor()
         {
-            _pagesByNum = _pagesByNumPool.Allocate();
+            _state = _pagesByNumPool.Allocate();
         }
 
         public void Dispose()
@@ -33,8 +48,8 @@ namespace Voron.Data.BTrees
         {
             if (disposing)
             {
-                _pagesByNum.Clear();
-                _pagesByNumPool.Free(_pagesByNum);
+                _state.Clear();
+                _pagesByNumPool.Free(_state);
             }
         }
 
@@ -48,13 +63,13 @@ namespace Voron.Data.BTrees
 
             if (oldPageNumber == newPageNumber)
             {
-                _pagesByNum[oldPageNumber] = newVal;
+                _state.PageByNum[oldPageNumber] = newVal;
                 return;
             }
 
             _anyOverrides = true;
-            _pagesByNum[oldPageNumber] = newVal;
-            _pagesByNum.Add(newPageNumber, newVal);
+            _state.PageByNum[oldPageNumber] = newVal;
+            _state.PageByNum.Add(newPageNumber, newVal);
         }
 
         public TreePage ParentPage
@@ -62,42 +77,42 @@ namespace Voron.Data.BTrees
             get
             {
                 TreePage result;
-                if (Pages.TryPeek(2, out result))
+                if (_state.Pages.TryPeek(2, out result))
                     return result;
 
                 throw new InvalidOperationException("No parent page in cursor");
             }
         }
 
-        public TreePage CurrentPage => Pages.Peek();
+        public TreePage CurrentPage => _state.Pages.Peek();
 
-        public int PageCount => Pages.Count;
+        public int PageCount => _state.Pages.Count;
 
         public void Push(TreePage p)
         {
-            Pages.Push(p);
-            _pagesByNum.Add(p.PageNumber, p);
+            _state.Pages.Push(p);
+            _state.PageByNum.Add(p.PageNumber, p);
         }
 
         public TreePage Pop()
         {
-            if (Pages.Count == 0)
+            if (_state.Pages.Count == 0)
                 throw new InvalidOperationException("No page to pop");
 
-            var p = Pages.Pop();
+            var p = _state.Pages.Pop();
 
-            var removedPrimary = _pagesByNum.Remove(p.PageNumber);
+            var removedPrimary = _state.PageByNum.Remove(p.PageNumber);
             var removedSecondary = false;
 
             if (_anyOverrides)
             {
                 var pagesNumbersToRemove = new HashSet<long>();
 
-                foreach (var page in _pagesByNum.Where(page => page.Value.PageNumber == p.PageNumber))
+                foreach (var page in _state.PageByNum.Where(page => page.Value.PageNumber == p.PageNumber))
                     pagesNumbersToRemove.Add(page.Key);
 
                 foreach (var pageToRemove in pagesNumbersToRemove)
-                    removedSecondary |= _pagesByNum.Remove(pageToRemove);
+                    removedSecondary |= _state.PageByNum.Remove(pageToRemove);
             }
 
             Debug.Assert(removedPrimary || removedSecondary);
