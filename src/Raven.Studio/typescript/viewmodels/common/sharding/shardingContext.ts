@@ -9,7 +9,6 @@ import genUtils from "common/generalUtils";
 class shardingContext extends viewModelBase {
 
     mode: shardingMode;
-    shards = ko.observableArray<shard>();
 
     effectiveLocation = ko.observable<databaseLocationSpecifier>(null);
 
@@ -55,21 +54,13 @@ class shardingContext extends viewModelBase {
         this.bindToCurrentInstance("useDatabase");
     }
     
-    compositionComplete() {
-        super.compositionComplete();
-        
-        const activeDatabase = this.activeDatabase();
-        const shards = (activeDatabase.root instanceof shardedDatabase) ? activeDatabase.root.shards() : [];
-        this.shards.push(...shards);
-    }
-    
     onChange(handler: (db: database, location: databaseLocationSpecifier) => void) {
         this.onChangeHandler = handler;
     }
 
     changeScope() {
         const onClose = () => this.shardSelector(null);
-        this.shardSelector(new shardSelector(this.shards(), (db, nodeTag) => this.onShardSelected(db, nodeTag), onClose));
+        this.shardSelector(new shardSelector((db, nodeTag) => this.onShardSelected(db, nodeTag), onClose));
     }
 
     private onShardSelected(db: shard, nodeTag: string): void {
@@ -107,7 +98,7 @@ class shardingContext extends viewModelBase {
         if (this.supportsDatabase(activeDatabase)) {
             this.onChangeHandler(activeDatabase, null);
         } else {
-            this.shardSelector(new shardSelector(this.shards(), (db, nodeTag) => this.onShardSelected(db, nodeTag)));
+            this.shardSelector(new shardSelector((db, nodeTag) => this.onShardSelected(db, nodeTag)));
         }
     }
 

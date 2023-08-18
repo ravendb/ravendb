@@ -11,27 +11,8 @@
                 Select a shard to view:
             </p>
             <div class="flex-horizontal flex-content-center margin-top">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                        <i class="icon-shard text-info"></i> <span data-bind="text: $root.form.shard().shardName"></span> <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" data-bind="foreach: shards">
-                        <li><a href="#" data-bind="click: _.partial($root.changeShard, $data)"><i class="icon-shard"></i> <span data-bind="text: shardName"></span></a></li>
-                    </ul>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                        <i class="icon-node text-success"></i> <span>Node</span> <span data-bind="text: $root.form.node"></span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" data-bind="foreach: shardNodes">
-                        <li>
-                            <a href="#" data-bind="click: _.partial($root.changeNodeTag, $data)">
-                                <i class="icon-node"></i> Node <span data-bind="text: $data"></span>
-                                <i class="icon-link" data-bind="visible: $data !== $root.currentNode()"></i>
-                            </a>
-                        </li>
-                    </ul>
+                <div data-bind="with: $root.selector">
+                    <div data-bind="compose: { model: $root.selector }"></div>
                 </div>
                 <div>
                     <button class="btn btn-info" data-bind="click: shardSelected">

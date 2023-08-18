@@ -49,6 +49,7 @@ import configurationConstants from "configuration";
 import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 import testIndex = require("models/database/index/testIndex");
+import inlineShardSelector from "viewmodels/common/sharding/inlineShardSelector";
 
 class editIndex extends shardViewModelBase {
     
@@ -117,6 +118,8 @@ class editIndex extends shardViewModelBase {
     canOptimizeIndex = ko.observable<boolean>(false);
 
     static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
+    
+    readonly shardSelector: inlineShardSelector;
 
     constructor(db: database) {
         super(db);
@@ -144,6 +147,8 @@ class editIndex extends shardViewModelBase {
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
+
+        this.shardSelector = db.isSharded() ? new inlineShardSelector(db, { dropup: true }) : null;
     }
     
     detached() {
@@ -505,7 +510,7 @@ class editIndex extends shardViewModelBase {
     
     runTest() {
         this.testResultsVisible(true);
-        this.testIndex.runTest();
+        this.testIndex.runTest(this.shardSelector ? this.shardSelector.location() : null);
     }
 
     indexHistoryButtonHandler() {

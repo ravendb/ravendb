@@ -490,6 +490,7 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div data-bind="compose: { model: $root.shardSelector }"></div>
                                     </div>
                                     <div data-bind="with: testIndex">
                                         <button class="btn btn-info" data-bind="click: $root.runTest, css: { 'btn-spinner': spinners.testing }, disable: spinners.testing" title="Run test with current settings">
