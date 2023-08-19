@@ -86,7 +86,51 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int Version => GetValue<int?>("version") ?? -1;
+        public string Version
+        {
+            get
+            {
+                if (Attributes == null)
+                    return null;
+
+                if (Attributes.TryGetValue("version", out object versionValue) == false)
+                    return null;
+
+                switch (versionValue)
+                {
+                    case int versionInt:
+                        if (versionInt <= 10)
+                            return null;
+
+                        var versionDouble = versionInt / 10d;
+                        return versionDouble.ToString("F1");
+
+                    case string versionString:
+                        return versionString;
+
+                    default:
+                        return null;
+                }
+            }
+        }
+
+        public bool UpgradeRequired
+        {
+            get
+            {
+                if (Type != LicenseType.Community)
+                    return false;
+
+                if (Version == null)
+                    return false;
+
+                if (System.Version.TryParse(RavenVersionAttribute.Instance.Version, out var currentVersion) == false)
+                    return false;
+
+                var licenseVersion = new Version(Version);
+                return licenseVersion > currentVersion;
+            }
+        }
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
@@ -192,13 +236,13 @@ namespace Raven.Server.Commercial
                 [nameof(LicensedTo)] = LicensedTo,
                 [nameof(Status)] = Status,
                 [nameof(Expired)] = Expired,
+                [nameof(UpgradeRequired)] = UpgradeRequired,
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(ErrorMessage)] = ErrorMessage,
-
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Version)] = Version.ToString(),
+                [nameof(Version)] = Version,
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,

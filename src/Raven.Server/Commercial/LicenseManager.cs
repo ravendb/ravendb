@@ -731,7 +731,8 @@ namespace Raven.Server.Commercial
             if (license == null)
                 throw new InvalidOperationException("License not found");
 
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/renew",
+            var requestUri = $"/api/v2/license/renew?&build={ServerVersion.Build}";
+            var response = await ApiHttpClient.Instance.PostAsync(requestUri,
                     new StringContent(JsonConvert.SerializeObject(license), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
