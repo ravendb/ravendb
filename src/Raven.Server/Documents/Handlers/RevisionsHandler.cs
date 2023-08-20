@@ -132,13 +132,19 @@ namespace Raven.Server.Documents.Handlers
         {
             var token = CreateTimeLimitedBackgroundOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
-            bool includeForceCreated = GetBoolValueQueryString("includeForceCreated", required: false) ?? false;
+
+            EnforceRevisionsConfigurationRequest configuration;
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "revisions/revert");
+                configuration = JsonDeserializationServer.EnforceRevisionsConfiguration(json);
+            }
 
             var t = Database.Operations.AddOperation(
                 Database,
                 $"Enforce revision configuration in database '{Database.Name}'.",
                 Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, includeForceCreated, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, configuration.IncludeForceCreated, configuration.Collection, token),
                 operationId,
                 token: token);
 

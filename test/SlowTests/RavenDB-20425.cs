@@ -68,7 +68,7 @@ namespace SlowTests
         {
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated, token);
+                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated, token: token);
         }
 
         private async Task UpdateDoc(DocumentStore store, string docId)
