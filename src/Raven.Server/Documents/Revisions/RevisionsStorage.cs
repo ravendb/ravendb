@@ -1668,16 +1668,21 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public Task<IOperationResult> EnforceConfigurationIncludeForceCreatedAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, token);
+            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, null, token: token);
+        }
+
+        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, bool includeForceCreated, OperationCancelToken token)
+        {
+            return EnforceConfigurationAsync(onProgress, includeForceCreated, null, token: token);
         }
 
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, 
             bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
+            string collection, 
             OperationCancelToken token)
         {
-
             var parameters = new Parameters
             {
                 Before = DateTime.MinValue,
@@ -1707,9 +1712,28 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var revisions = new Table(RevisionsSchema, ctx.Transaction.InnerTransaction);
-                        foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
-                            parameters.LastScannedEtag))
+                        IEnumerable<Table.TableValueHolder> table = null;
+                        if (string.IsNullOrEmpty(collection)==false)
+                        {
+                            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: true);
+                            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                            var revisions = ctx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                            if (revisions == null) // there is no revisions for that collection
+                            {
+                                return new EnforceConfigurationResult
+                                {
+                                    RemovedRevisions = 0
+                                };
+                            }
+                            table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
+                        }
+                        else
+                        {
+                            var revisions = new Table(RevisionsSchema, ctx.Transaction.InnerTransaction);
+                            table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
+                        }
+
+                        foreach (var tvr in table)
                         {
                             token.ThrowIfCancellationRequested();
 
