@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.DataArchival
 
         protected override DataArchivalConfiguration GetDataArchivalConfiguration()
         {
-            throw new NotSupportedInShardingException("Data archival for a sharded database is currently not supported");
+            return RequestHandler.DatabaseContext.DatabaseRecord.DataArchival;
         }
     }
 }

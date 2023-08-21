@@ -9,7 +9,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.DataArchival
     {
         public ShardedDataArchivalHandlerProcessorForPost([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-            throw new NotSupportedInShardingException("Data archival for a sharded database is currently not supported");
         }
     }
 }
