@@ -17,8 +17,8 @@ public static class BackgroundWorkHelper
             // this can happen when we are running the expiration/refresh/data archival on a node that isn't 
             // the primary node for the database. In this case, we still run the cleanup
             // procedure, but we only account for documents that have already been 
-            // archived, to cleanup the archival queue. We'll stop on the first
-            // document that is scheduled to be archived and wait until the 
+            // marked for processing, to cleanup the queue. We'll stop on the first
+            // document that is scheduled to be processed (expired/refreshed/archived) and wait until the 
             // primary node will act on it. In this way, we reduce conflicts between nodes
             // performing the same action concurrently.     
             return false;
