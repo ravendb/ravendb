@@ -9,17 +9,7 @@ namespace Raven.Server.Background;
 
 public static class BackgroundWorkHelper
 {
-    public static bool CheckIfNodeIsFirstInTopology(ExpirationStorage.ExpiredDocumentsOptions expiredDocumentsOptions)
-    {
-        return CheckIfFirstInTopologyInternal(expiredDocumentsOptions.DatabaseTopology, expiredDocumentsOptions.NodeTag);
-    }
-
-    public static bool CheckIfNodeIsFirstInTopology(DataArchivalStorage.ArchivedDocumentsOptions archivedDocumentsOptions)
-    {
-        return CheckIfFirstInTopologyInternal(archivedDocumentsOptions.Topology, archivedDocumentsOptions.NodeTag);
-    }
-
-    private static bool CheckIfFirstInTopologyInternal(DatabaseTopology topology, string nodeTag)
+    public static bool CheckIfNodeIsFirstInTopology(DatabaseTopology topology, string nodeTag)
     {
         var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
         if (isFirstInTopology == false)
@@ -37,7 +27,7 @@ public static class BackgroundWorkHelper
         return true;
     }
     
-    public static unsafe bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime, string metadataPropertyToCheck)
+    public static unsafe bool CheckIfBackgroundWorkShouldProcessItemAlready(BlittableJsonReaderObject metadata, DateTime currentTime, string metadataPropertyToCheck)
     {
         if (!metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata)) 
             return false;
