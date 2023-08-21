@@ -116,7 +116,8 @@ namespace SlowTests.Issues
                     }
                 },
                 Configuration = conf,
-                CompoundFields = new List<string[]> {new []{"Name","Age"}}
+                CompoundFields = new List<string[]> {new []{"Name","Age"}},
+                SourceItemKind = IndexSourceItemKind.Default
             };
         }
 

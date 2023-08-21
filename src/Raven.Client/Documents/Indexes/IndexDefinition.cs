@@ -175,14 +175,7 @@ namespace Raven.Client.Documents.Indexes
             
             if (SourceItemKind != other.SourceItemKind)
             {
-                if ((SourceItemKind == null && other.SourceItemKind == IndexSourceItemKind.Default) || (SourceItemKind == IndexSourceItemKind.Default && other.SourceItemKind == null))
-                {
-                    // same
-                }
-                else
-                {
-                    result |= IndexDefinitionCompareDifferences.IndexSourceItemKind;
-                }
+                result |= IndexDefinitionCompareDifferences.IndexSourceItemKind;
             }
 
             if (Priority != other.Priority)
