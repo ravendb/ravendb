@@ -100,6 +100,8 @@ namespace Raven.Client.Documents.Indexes
             }
             internal set => _indexSourceType = value;
         }
+        // here
+        public virtual IndexSourceItemKind? SourceItemKind { get; set; }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
@@ -168,6 +170,18 @@ namespace Raven.Client.Documents.Indexes
                 else
                 {
                     result |= IndexDefinitionCompareDifferences.LockMode;
+                }
+            }
+            
+            if (SourceItemKind != other.SourceItemKind)
+            {
+                if ((SourceItemKind == null && other.SourceItemKind == IndexSourceItemKind.Default) || (SourceItemKind == IndexSourceItemKind.Default && other.SourceItemKind == null))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.IndexSourceItemKind;
                 }
             }
 
@@ -547,6 +561,7 @@ namespace Raven.Client.Documents.Indexes
             }
 
             definition.LockMode = LockMode;
+            definition.SourceItemKind = SourceItemKind;
             definition.Fields = fields;
             definition.Name = Name;
             definition.Priority = Priority;
@@ -611,7 +626,8 @@ namespace Raven.Client.Documents.Indexes
         AdditionalAssemblies = 1 << 11,
         DeploymentMode = 1 << 12,
         CompoundFields = 1 << 13,
+        IndexSourceItemKind = 1 << 14,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | IndexSourceItemKind,
     }
 }

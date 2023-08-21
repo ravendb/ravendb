@@ -32,7 +32,9 @@ namespace Raven.Server.Documents
         HasTimeSeries = 0x4000,
 
         FromResharding = 0x8000,
-        ForceCreated = 0x10000
+        ForceCreated = 0x10000,
+        
+        Archived = 0x20000
     }
 
     [Flags]

@@ -216,9 +216,10 @@ function mapToFormData(dto: ServerRefreshConfiguration): DocumentRefreshFormData
 }
 
 const codeExample = `{
-    "Example": "Set a timestamp in the @refresh metadata property",
-    "@metadata": {
-        "@collection": "Foo",
-        "@refresh": "2023-07-16T08:00:00.0000000Z"
-    }
+  "Example": 
+    "Set a timestamp in the @refresh metadata property",
+  "@metadata": {
+    "@collection": "Foo",
+    "@refresh": "2023-07-16T08:00:00.0000000Z"
+  }
 }`;

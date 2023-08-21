@@ -358,6 +358,16 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             tasks.Add(_server.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _name, RaftIdGenerator.DontCareId)));
             result.DatabaseRecord.RefreshConfigurationUpdated = true;
         }
+        
+        
+        if (databaseRecord.DataArchival != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DataArchival))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Data Archival from smuggler");
+
+            tasks.Add(_server.SendToLeaderAsync(new EditDataArchivalCommand(databaseRecord.DataArchival, _name, RaftIdGenerator.DontCareId)));
+            result.DatabaseRecord.DataArchivalConfigurationUpdated = true;
+        }
 
         if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
         {

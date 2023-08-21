@@ -138,6 +138,11 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates search engine.
         /// </summary>
         public SearchEngineType SearchEngineType { get; set; }
+        
+        /// <summary>
+        /// Indicates whether archived, unarchived or all documents will be indexed
+        /// </summary>
+        public IndexSourceItemKind SourceItemKind { get; set; }
 
         public IndexRunningStatus Status { get; set; }
 

@@ -274,7 +274,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     {
         foreach (var document in GetDocumentsEnumerator(queryContext, collection, take, token))
         {
-            yield return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
+            yield return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document, document.Flags);
         }
     }
 

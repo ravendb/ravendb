@@ -189,6 +189,21 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skipping.", e);
                     }
                 }
+                
+                if (reader.TryGet(nameof(databaseRecord.DataArchival), out BlittableJsonReaderObject archival) &&
+                    archival != null)
+                {
+                    try
+                    {
+                        databaseRecord.DataArchival = JsonDeserializationCluster.DataArchivalConfiguration(archival);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the archival configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
 
                 if (reader.TryGet(nameof(databaseRecord.Refresh), out BlittableJsonReaderObject refresh) &&
                     refresh != null)
@@ -754,7 +769,8 @@ namespace Raven.Server.Smuggler.Documents
                         reader.TryGet(nameof(SubscriptionState.LastBatchAckTime), out DateTime lastBatchAckTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.LastClientConnectionTime), out DateTime lastClientConnectionTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.Disabled), out bool disabled) == false ||
-                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false)
+                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false ||
+                        reader.TryGet(nameof(SubscriptionState.SourceItemKind), out SubscriptionSourceItemKind sourceItemKind) == false)
                     {
                         _result.Subscriptions.ErroredCount++;
                         _result.AddWarning("Could not read subscriptions entry.");
@@ -770,6 +786,7 @@ namespace Raven.Server.Smuggler.Documents
                         SubscriptionId = subscriptionId,
                         MentorNode = mentorNode,
                         NodeTag = nodeTag,
+                        SourceItemKind = sourceItemKind,
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
                         Disabled = disabled

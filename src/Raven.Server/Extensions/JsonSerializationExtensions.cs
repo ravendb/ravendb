@@ -36,6 +36,7 @@ namespace Raven.Server.Extensions
 #endif
             result[nameof(IndexDefinition.SourceType)] = definition.SourceType.ToString();
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
+            result[nameof(IndexDefinition.SourceItemKind)] = definition.SourceItemKind?.ToString();
             result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
             result[nameof(IndexDefinition.State)] = definition.State?.ToString();
             result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;

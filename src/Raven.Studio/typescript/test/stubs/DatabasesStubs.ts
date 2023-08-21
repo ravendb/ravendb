@@ -6,6 +6,7 @@ import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioData
 import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
 import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
@@ -384,5 +385,12 @@ export class DatabasesStubs {
 
     static customSorters(): SorterDefinition[] {
         return [{ Code: "database-sorter-code-1", Name: "First Database sorter" }];
+    }
+
+    static dataArchivalConfiguration(): DataArchival {
+        return {
+            Disabled: false,
+            ArchiveFrequencyInSec: 65,
+        };
     }
 }

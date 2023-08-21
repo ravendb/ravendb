@@ -7,6 +7,8 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
+using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -36,11 +38,8 @@ namespace Raven.Server.Documents.Expiration
             tx.CreateTree(DocumentsByRefresh);
         }
 
-        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
+        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject metadata)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return;
-
             var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
             var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
 
@@ -82,12 +81,13 @@ namespace Raven.Server.Documents.Expiration
         {
             public DocumentsOperationContext Context;
             public DateTime CurrentTime;
-            public bool IsFirstInTopology; 
+            public DatabaseTopology DatabaseTopology;
+            public string NodeTag;
             public long AmountToTake;
 
-            public ExpiredDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, bool isFirstInTopology, long amountToTake) =>
-                (Context, CurrentTime, IsFirstInTopology, AmountToTake)
-                = (context, currentTime, isFirstInTopology, amountToTake);
+            public ExpiredDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, DatabaseTopology databaseTopology, string nodeTag, long amountToTake) =>
+                (Context, CurrentTime, DatabaseTopology, NodeTag , AmountToTake)
+                = (context, currentTime, databaseTopology, nodeTag, amountToTake);
         }
 
         public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, out Stopwatch duration, CancellationToken cancellationToken)
@@ -140,34 +140,26 @@ namespace Raven.Server.Documents.Expiration
 
                                 try
                                 {
-                                    using (var document = _database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
+                                    using (var document = _database.DocumentsStorage.Get(options.Context, clonedId,
+                                               DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
                                     {
                                         if (document == null ||
                                             document.TryGetMetadata(out var metadata) == false ||
-                                            HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
+                                            BackgroundWorkHelper.HasPassed(metadata,  options.CurrentTime, metadataPropertyToCheck) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
                                             continue;
                                         }
 
-                                        if (options.IsFirstInTopology == false)
-                                        {
-                                            // this can happen when we are running the expiration on a node that isn't 
-                                            // the primary node for the database. In this case, we still run the cleanup
-                                            // procedure, but we only account for documents that have already been removed
-                                            // or refreshed, to cleanup the expiration queue. We'll stop on the first
-                                            // document that is scheduled to be expired / refreshed and wait until the 
-                                            // primary node will act on it. In this way, we reduce conflicts between nodes
-                                            // performing the same action concurrently. 
+                                        if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options) == false)
                                             break;
-                                        }
-
+                                        
                                         expiredDocs.Add((clonedId, document.Id));
                                     }
                                 }
                                 catch (DocumentConflictException)
                                 {
-                                    if (options.IsFirstInTopology == false)
+                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options) == false)
                                         break;
 
                                     var (allExpired, id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
@@ -204,7 +196,7 @@ namespace Raven.Server.Documents.Expiration
                     {
                         id = conflict.Id;
 
-                        if (HasPassed(conflict.Doc, currentTime))
+                        if (BackgroundWorkHelper.HasPassed(conflict.Doc, currentTime,Constants.Documents.Metadata.Expires))
                             continue;
 
                         allExpired = false;
@@ -216,28 +208,6 @@ namespace Raven.Server.Documents.Expiration
             return (allExpired, id);
         }
 
-        public static bool HasPassed(BlittableJsonReaderObject data, DateTime currentTime)
-        {
-            // Validate that the expiration value in metadata is still the same.
-            // We have to check this as the user can update this value.
-            if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return false;
-
-            return HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime);
-        }
-
-        private static bool HasPassed(BlittableJsonReaderObject metadata, string metadataPropertyName, DateTime currentTime)
-        {
-            if (metadata.TryGet(metadataPropertyName, out string expirationDate))
-            {
-                if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date))
-                {
-                    if (currentTime >= date.ToUniversalTime())
-                        return true;
-                }
-            }
-            return false;
-        }
 
         public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
         {
@@ -256,7 +226,7 @@ namespace Raven.Server.Documents.Expiration
                             {
                                 if (doc != null && doc.TryGetMetadata(out var metadata))
                                 {
-                                    if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
+                                    if (BackgroundWorkHelper.HasPassed(metadata, currentTime, Constants.Documents.Metadata.Expires))
                                     {
                                         _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
                                     }
@@ -294,7 +264,7 @@ namespace Raven.Server.Documents.Expiration
                         {
                             if (doc != null && doc.TryGetMetadata(out var metadata))
                             {
-                                if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
+                                if (BackgroundWorkHelper.HasPassed(metadata,  currentTime, Constants.Documents.Metadata.Refresh))
                                 {
                                     // remove the @refresh tag
                                     metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);

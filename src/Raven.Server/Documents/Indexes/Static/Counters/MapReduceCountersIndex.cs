@@ -87,8 +87,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             var counter = DocumentDatabase.DocumentsStorage.CountersStorage.Indexing.GetCountersMetadata(queryContext.Documents, etag);
             if (counter == null)
                 return default;
-
-            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+            
+            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter, null);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)

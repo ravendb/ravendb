@@ -1365,7 +1365,7 @@ namespace Raven.Server.Documents.Indexes
             if (document == null)
                 return default;
 
-            return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
+            return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document, document.Flags);
         }
 
         protected virtual IndexItem GetTombstoneByEtag(QueryOperationContext queryContext, long etag)
@@ -1374,7 +1374,7 @@ namespace Raven.Server.Documents.Indexes
             if (tombstone == null)
                 return default;
 
-            return new DocumentIndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, 0, tombstone);
+            return new DocumentIndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, 0, tombstone, tombstone.Flags);
         }
 
         protected virtual bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(QueryOperationContext context, string collection, long start, long end)
@@ -2560,6 +2560,17 @@ namespace Raven.Server.Documents.Indexes
         public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
+        public virtual bool MustDeleteArchivedDocument(IndexItem indexItem)
+        {
+            return true;
+        }
+
+        public virtual void HandleArchived(IndexItem indexItem, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats, LazyStringValue lowerId)
+        {
+            if (MustDeleteArchivedDocument(indexItem))
+                HandleDelete(new Tombstone { LowerId = lowerId}, collection, writer, indexContext, stats);
+        }
+        
         private void HandleIndexChange(IndexChange change)
         {
             if (string.Equals(change.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
@@ -3051,6 +3062,7 @@ namespace Raven.Server.Documents.Indexes
                         SearchEngineType = SearchEngineType,
                         SourceType = SourceType,
                         LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
+                        SourceItemKind = Definition?.SourceItemKind ?? IndexSourceItemKind.Default,
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
                         Status = Status,
@@ -3071,6 +3083,7 @@ namespace Raven.Server.Documents.Indexes
                     stats.SearchEngineType = SearchEngineType;
                     stats.Type = Type;
                     stats.LockMode = Definition.LockMode;
+                    stats.SourceItemKind = Definition.SourceItemKind;
                     stats.Priority = Definition.Priority;
                     stats.State = State;
                     stats.Status = Status;

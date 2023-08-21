@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -26,6 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool Disabled;
         public string MentorNode;
         public bool PinToMentorNode;
+        public SubscriptionSourceItemKind SourceItemKind = SubscriptionSourceItemKind.Default;
 
         // for serialization
         protected PutSubscriptionCommand() { }
@@ -109,7 +111,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 Disabled = Disabled,
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
-                LastClientConnectionTime = null
+                LastClientConnectionTime = null,
+                SourceItemKind = SourceItemKind
             }.ToJson();
             return json;
         }
@@ -195,6 +198,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(PinToMentorNode)] = PinToMentorNode;
+            json[nameof(SourceItemKind)] = SourceItemKind;
         }
     }
 }

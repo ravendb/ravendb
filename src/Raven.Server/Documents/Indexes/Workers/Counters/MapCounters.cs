@@ -2,6 +2,7 @@
 using Raven.Client;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers.Counters
 {
@@ -18,7 +19,10 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         protected override IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             foreach (var counter in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
-                yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+            {
+                yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter, null);
+            }
+            
         }
 
         private IEnumerable<CounterGroupItemMetadata> GetCountersEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)

@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
+        public IndexSourceItemKind SourceItemKind { get; set; }
+
         internal readonly IndexDefinitionClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
@@ -111,6 +113,10 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteInteger((int)State);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(SourceItemKind));
+            writer.WriteInteger((int)SourceItemKind);
+            writer.WriteComma();
+
             PersistFields(context, writer);
 
             writer.WriteEndObject();
@@ -182,10 +188,12 @@ namespace Raven.Server.Documents.Indexes
             T[] mapFields,
             long indexVersion,
             IndexDeploymentMode? deploymentMode,
-            IndexDefinitionClusterState clusterState)
+            IndexDefinitionClusterState clusterState,
+            IndexSourceItemKind? sourceItemKind)
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
+            SourceItemKind = sourceItemKind ?? IndexSourceItemKind.Default;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
@@ -460,6 +468,14 @@ namespace Raven.Server.Documents.Indexes
                 return IndexState.Normal;
 
             return (IndexState)StateAsInt;
+        }
+
+        protected static IndexSourceItemKind ReadSourceItemKind(BlittableJsonReaderObject reader)
+        {
+            if (reader.TryGet(nameof(SourceItemKind), out int SourceItemKindAsInt) == false)
+                return IndexSourceItemKind.Default;
+
+            return (IndexSourceItemKind)SourceItemKindAsInt;
         }
 
         protected static long ReadVersion(BlittableJsonReaderObject reader)

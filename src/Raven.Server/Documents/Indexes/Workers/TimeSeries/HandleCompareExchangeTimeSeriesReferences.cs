@@ -27,8 +27,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             var timeSeries = _timeSeriesStorage.GetTimeSeries(databaseContext, key, TimeSeriesSegmentEntryFields.ForIndexing);
             if (timeSeries == null)
                 return null;
-
-            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries, null);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

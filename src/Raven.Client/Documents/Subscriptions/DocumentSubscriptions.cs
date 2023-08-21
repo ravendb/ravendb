@@ -47,7 +47,8 @@ namespace Raven.Client.Documents.Subscriptions
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
                 MentorNode = options.MentorNode,
-                Disabled = options.Disabled
+                Disabled = options.Disabled,
+                SourceItemKind = options.SourceItemKind,
             }, options.Filter, options.Projection, options.Includes), database);
         }
 

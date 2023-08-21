@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -456,7 +457,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     if (_options.IncludeExpired == false &&
-                        ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
+                        BackgroundWorkHelper.HasPassed(item.Document.Data, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
                     {
                         SkipDocument(item, result.Documents);
                         continue;

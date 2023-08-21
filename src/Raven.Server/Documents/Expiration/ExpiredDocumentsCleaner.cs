@@ -134,13 +134,13 @@ namespace Raven.Server.Documents.Expiration
             try
             {
                 DatabaseTopology topology;
+                string nodeTag;
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
                     topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
+                    nodeTag = _database.ServerStore.NodeTag;
                 }
-
-                var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize);
+                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, topology, nodeTag, batchSize);
 
                             var expired =
                                 forExpiration ?

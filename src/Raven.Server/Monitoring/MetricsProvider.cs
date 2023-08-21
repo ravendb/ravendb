@@ -437,6 +437,7 @@ public sealed class MetricsProvider
             result.TimeSinceLastIndexingInSec = (SystemTime.UtcNow - lastIndexingType).TotalSeconds;
         }
 
+        result.SourceItemKind = index.Definition.SourceItemKind;
         result.LockMode = index.Definition.LockMode;
         result.IsInvalid = stats.IsInvalidIndex;
         result.Status = index.Status;

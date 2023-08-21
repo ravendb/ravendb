@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -87,6 +88,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string Query { get; set; }
         public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
+        public SubscriptionSourceItemKind SourceItemKind { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public DateTime? LastBatchAckTime { get; set; }
@@ -99,6 +101,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(Query)] = Query;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(SourceItemKind)] = SourceItemKind;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
             json[nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson();
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
@@ -124,6 +127,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 ChangeVectorForNextBatchStartingPointPerShard = state.ShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
                 SubscriptionId = state.SubscriptionId,
                 SubscriptionName = state.SubscriptionName,
+                SourceItemKind = state.SourceItemKind,
                 LastBatchAckTime = state.LastBatchAckTime,
                 Disabled = state.Disabled,
                 LastClientConnectionTime = state.LastClientConnectionTime,

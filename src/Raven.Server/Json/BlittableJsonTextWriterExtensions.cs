@@ -1308,6 +1308,10 @@ namespace Raven.Server.Json
             else
                 writer.WriteNull();
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.SourceItemKind));
+            writer.WriteString(indexDefinition.SourceItemKind?.ToString());
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));
             if (indexDefinition.Priority.HasValue)
