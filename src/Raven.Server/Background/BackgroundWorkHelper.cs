@@ -5,7 +5,7 @@ using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents;
+namespace Raven.Server.Background;
 
 public static class BackgroundWorkHelper
 {
