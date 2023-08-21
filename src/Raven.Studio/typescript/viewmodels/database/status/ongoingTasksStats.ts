@@ -466,8 +466,8 @@ class ongoingTasksStats extends shardViewModelBase {
             "ConnectionRejected": undefined as string,
             "ConnectionErrorBackground": undefined as string,
             "AggregatedBatchesInfo": undefined as string,
-            "Queue Sink": undefined as string,
-            "PullMessages": undefined as string,
+            "Consume": undefined as string,
+            "QueueReading": undefined as string,
             "ScriptProcessing": undefined as string,
             "UnknownOperation": undefined as string,
         }
@@ -2046,6 +2046,27 @@ class ongoingTasksStats extends shardViewModelBase {
             
             if (isRootItem) {
                 switch (type) {
+                    case "KafkaQueueSink":
+                    case "RabbitQueueSink": {
+                        const elementWithData = context.rootStats as any as QueueSinkPerformanceBaseWithCache;
+                        if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
+                            tooltipHtml += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} </div></div>`;
+                        }
+                        if (elementWithData.BatchPullStopReason) {
+                            tooltipHtml += `<div class="tooltip-li text-danger">Batch Pull Stop reason: <div class="value">${elementWithData.BatchPullStopReason} </div></div>`;
+                        }
+                        tooltipHtml += `<div class="tooltip-li">Number of processed messages: <div class="value">${elementWithData.NumberOfProcessedMessages.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Number of read messages: <div class="value">${elementWithData.NumberOfReadMessages.toLocaleString()} </div></div>`;
+                        
+                        if (elementWithData.ReadErrorCount) {
+                            tooltipHtml += `<div class="tooltip-li text-danger">Read error count: <div class="value">${elementWithData.ReadErrorCount} </div></div>`;
+                        }
+                        if (elementWithData.ScriptProcessingErrorCount) {
+                            tooltipHtml += `<div class="tooltip-li text-danger">Script Processing error count: <div class="value">${elementWithData.ScriptProcessingErrorCount} </div></div>`;
+                        }
+                        tooltipHtml += `<div class="tooltip-li">Successfully processed: <div class="value">${elementWithData.SuccessfullyProcessed ? "Yes" : "No"} </div></div>`;
+                    }
+                        break;
                     case "IncomingExternal":
                     case "IncomingInternal":
                     case "IncomingPull": {

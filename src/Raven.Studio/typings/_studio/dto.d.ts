@@ -400,6 +400,7 @@ interface QueueSinkPerformanceBaseWithCache extends Raven.Server.Documents.Queue
     CompletedAsDate: Date;
     HasErrors: boolean;
     HasScriptErrors: boolean;
+    HasReadErrors: boolean;
     Type: StudioQueueSinkType;
 }
 

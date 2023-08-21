@@ -141,10 +141,10 @@ class liveQueueSinkStatsWebSocketClient extends abstractWebSocketClient<resultsD
         const withCache = perf as QueueSinkPerformanceBaseWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveQueueSinkStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveQueueSinkStatsWebSocketClient.isoParser.parse(perf.Started);
-        withCache.HasScriptErrors = perf.ScriptErrorCount > 0;
-        withCache.HasErrors = !perf.SuccessfullyProcessed; //TODO:
+        withCache.HasReadErrors = perf.ReadErrorCount > 0;
+        withCache.HasScriptErrors = perf.ScriptProcessingErrorCount > 0;
+        withCache.HasErrors = !perf.SuccessfullyProcessed;
         withCache.Type = type;
-       
     }
 }
 
