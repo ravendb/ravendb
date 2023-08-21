@@ -69,7 +69,7 @@ namespace FastTests.Client
                 "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand", "GetTcpInfoForReplicationCommand", "GetCollectionFieldsCommand", "PreviewCollectionCommand",
                 "AddDatabaseShardCommand", "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand", "DelayBackupCommand",
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand", "GetTcpInfoForReplicationCommand",
-                "AddQueueSinkCommand", "UpdateQueueSinkCommand"
+                "AddQueueSinkCommand", "UpdateQueueSinkCommand", "ConfigureDataArchivalCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
