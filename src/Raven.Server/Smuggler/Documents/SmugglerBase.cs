@@ -458,7 +458,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     if (_options.IncludeExpired == false &&
-                        BackgroundWorkHelper.HasPassed(item.Document.Data, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
+                        BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(item.Document.Data, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
                     {
                         SkipDocument(item, result.Documents);
                         continue;

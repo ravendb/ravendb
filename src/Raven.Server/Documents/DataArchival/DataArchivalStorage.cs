@@ -68,12 +68,12 @@ namespace Raven.Server.Documents.DataArchival
         {
             public DocumentsOperationContext Context;
             public DateTime CurrentTime;
-            public DatabaseTopology Topology;
+            public DatabaseTopology DatabaseTopology;
             public string NodeTag;
             public long AmountToTake;
             
             public ArchivedDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, DatabaseTopology topology, string nodeTag, long amountToTake) =>
-                (Context, CurrentTime, Topology, NodeTag, AmountToTake)
+                (Context, CurrentTime, DatabaseTopology, NodeTag, AmountToTake)
                 = (context, currentTime, topology, nodeTag, amountToTake);
         }
 
@@ -127,13 +127,13 @@ namespace Raven.Server.Documents.DataArchival
                                 {
                                     if (document is null ||
                                         document.TryGetMetadata(out var metadata) == false ||
-                                        BackgroundWorkHelper.HasPassed(metadata, options.CurrentTime, Constants.Documents.Metadata.ArchiveAt) == false)
+                                        BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, options.CurrentTime, Constants.Documents.Metadata.ArchiveAt) == false)
                                     {
                                         docsToArchive.Add((clonedId, null));
                                         continue;
                                     }
 
-                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options) == false)
+                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
                                         break;
                                     
                                     docsToArchive.Add((clonedId, document.Id));
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.DataArchival
                     throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                 }
                 
-                if (BackgroundWorkHelper.HasPassed(metadata, currentTime, Constants.Documents.Metadata.ArchiveAt) == false) 
+                if (BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, currentTime, Constants.Documents.Metadata.ArchiveAt) == false) 
                     return false;
 
                 // Add archived flag, remove archive timestamp, add document flag

@@ -146,13 +146,13 @@ namespace Raven.Server.Documents.Expiration
                                     {
                                         if (document == null ||
                                             document.TryGetMetadata(out var metadata) == false ||
-                                            BackgroundWorkHelper.HasPassed(metadata,  options.CurrentTime, metadataPropertyToCheck) == false)
+                                            BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata,  options.CurrentTime, metadataPropertyToCheck) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
                                             continue;
                                         }
 
-                                        if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options) == false)
+                                        if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
                                             break;
                                         
                                         expiredDocs.Add((clonedId, document.Id));
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Expiration
                                 }
                                 catch (DocumentConflictException)
                                 {
-                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options) == false)
+                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
                                         break;
 
                                     var (allExpired, id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Expiration
                     {
                         id = conflict.Id;
 
-                        if (BackgroundWorkHelper.HasPassed(conflict.Doc, currentTime,Constants.Documents.Metadata.Expires))
+                        if (BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(conflict.Doc, currentTime,Constants.Documents.Metadata.Expires))
                             continue;
 
                         allExpired = false;
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Expiration
                             {
                                 if (doc != null && doc.TryGetMetadata(out var metadata))
                                 {
-                                    if (BackgroundWorkHelper.HasPassed(metadata, currentTime, Constants.Documents.Metadata.Expires))
+                                    if (BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, currentTime, Constants.Documents.Metadata.Expires))
                                     {
                                         _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
                                     }
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Expiration
                         {
                             if (doc != null && doc.TryGetMetadata(out var metadata))
                             {
-                                if (BackgroundWorkHelper.HasPassed(metadata,  currentTime, Constants.Documents.Metadata.Refresh))
+                                if (BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata,  currentTime, Constants.Documents.Metadata.Refresh))
                                 {
                                     // remove the @refresh tag
                                     metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
