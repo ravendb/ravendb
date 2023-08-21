@@ -9,7 +9,7 @@ namespace Voron.Data.BTrees
 {
     public sealed class TreeCursor : IDisposable
     {
-        private class TreeCursorState
+        private sealed class TreeCursorState
         {
             public readonly Dictionary<long, TreePage> PageByNum;
             public readonly FastStack<TreePage> Pages;
