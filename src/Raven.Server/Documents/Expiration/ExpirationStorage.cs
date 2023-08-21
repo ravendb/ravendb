@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
+using Raven.Server.Background;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

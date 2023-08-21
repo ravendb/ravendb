@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.ServerWide;
+using Raven.Server.Background;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
