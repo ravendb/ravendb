@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Indexes
             }
             internal set => _indexSourceType = value;
         }
-        // here
+
         public virtual IndexSourceItemKind? SourceItemKind { get; set; }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
