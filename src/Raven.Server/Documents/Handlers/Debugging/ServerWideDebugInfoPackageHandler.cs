@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.RevisionsForConflicts),
             nameof(DatabaseRecord.Expiration),
             nameof(DatabaseRecord.Refresh),
+            nameof(DatabaseRecord.DataArchival),
             nameof(DatabaseRecord.Client),
             nameof(DatabaseRecord.Studio),
             nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount),
