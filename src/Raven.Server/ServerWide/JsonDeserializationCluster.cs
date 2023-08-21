@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
@@ -70,6 +71,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RefreshConfiguration> RefreshConfiguration = GenerateJsonDeserializationRoutine<RefreshConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, DataArchivalConfiguration> DataArchivalConfiguration = GenerateJsonDeserializationRoutine<DataArchivalConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
@@ -178,6 +181,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsForConflictsConfigurationCommand>(),
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
+            [nameof(EditDataArchivalCommand)] = GenerateJsonDeserializationRoutine<EditDataArchivalCommand>(),
             [nameof(EditDocumentsCompressionCommand)] = GenerateJsonDeserializationRoutine<EditDocumentsCompressionCommand>(),
             [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),
             [nameof(CreateNewShardCommand)] = GenerateJsonDeserializationRoutine<CreateNewShardCommand>(),

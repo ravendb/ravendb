@@ -29,6 +29,9 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
+import DataArchivalConfiguration = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
+import getDataArchivalConfigurationCommand from "commands/database/documents/getDataArchivalConfigurationCommand";
+import saveDataArchivalConfigurationCommand from "commands/database/documents/saveDataArchivalConfigurationCommand";
 import getTombstonesStateCommand = require("commands/database/debug/getTombstonesStateCommand");
 import forceTombstonesCleanupCommand = require("commands/database/debug/forceTombstonesCleanupCommand");
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
@@ -117,6 +120,16 @@ export default class DatabasesService {
 
     async saveRefreshConfiguration(db: database, dto: RefreshConfiguration) {
         return new saveRefreshConfigurationCommand(db, dto).execute();
+    }
+
+    async getDataArchivalConfiguration(
+        db: database
+    ): Promise<Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration> {
+        return new getDataArchivalConfigurationCommand(db).execute();
+    }
+
+    async saveDataArchivalConfiguration(db: database, dto: DataArchivalConfiguration): Promise<any> {
+        return new saveDataArchivalConfigurationCommand(db, dto).execute();
     }
 
     async getExpirationConfiguration(db: database) {

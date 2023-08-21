@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             if (counter == null)
                 return default;
 
-            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter, null);
         }
 
         protected override bool ShouldReplace()
@@ -133,7 +133,6 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         {
             _isSideBySide = null;
         }
-
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);

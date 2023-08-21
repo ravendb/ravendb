@@ -96,6 +96,7 @@ class appUrl {
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         revertRevisions: ko.pureComputed(() => appUrl.forRevertRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
+        dataArchival: ko.pureComputed(() => appUrl.forDataArchival(appUrl.currentDatabase())),
         documentsCompression: ko.pureComputed(() => appUrl.forDocumentsCompression(appUrl.currentDatabase())),
         timeSeries: ko.pureComputed(() => appUrl.forTimeSeries(appUrl.currentDatabase())),
         refresh: ko.pureComputed(() => appUrl.forRefresh(appUrl.currentDatabase())),
@@ -381,6 +382,10 @@ class appUrl {
 
     static forExpiration(db: database): string {
         return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forDataArchival(db: database): string {
+        return "#databases/settings/dataArchival?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDocumentsCompression(db: database): string {

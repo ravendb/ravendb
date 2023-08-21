@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
@@ -27,7 +28,9 @@ namespace Raven.Client.Documents.Subscriptions
         // the responsible node of the subscription,
         // in sharding context - orchestrator node tag
         public string NodeTag { get; set; }
-        
+
+        public SubscriptionSourceItemKind SourceItemKind { get; set; }
+
         public SubscriptionShardingState ShardingState { get; set; }
 
         public ulong GetTaskKey()
@@ -74,6 +77,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
+                [nameof(SourceItemKind)] = SourceItemKind
             };
 
             if (ShardingState != null)

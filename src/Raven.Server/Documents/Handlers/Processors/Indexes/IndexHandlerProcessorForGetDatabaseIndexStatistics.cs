@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         State = x.State,
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
+                                        SourceItemKind = x.Definition.SourceItemKind,
                                         Priority = x.Definition.Priority,
                                     };
                                 }
@@ -104,6 +105,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         State = state,
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
+                                        SourceItemKind = x.Definition.SourceItemKind,
                                         Priority = x.Definition.Priority,
                                     };
                                 }

@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Indexes
         public readonly long Etag;
 
         public DateTime LastModified;
+        
+        public DocumentFlags? DocumentFlags;
 
         public readonly int Size;
 
@@ -31,7 +33,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool KnownToBeNew;
 
-        protected IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item, bool empty, IndexItemType itemType)
+        protected IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item, bool empty, IndexItemType itemType, DocumentFlags? flags)
         {
             Id = id;
             LowerId = lowerId;
@@ -44,6 +46,7 @@ namespace Raven.Server.Documents.Indexes
             LowerSourceDocumentId = lowerSourceDocumentId;
             Empty = empty;
             ItemType = itemType;
+            DocumentFlags = flags;
         }
 
         protected abstract string ToStringInternal();
@@ -62,8 +65,8 @@ namespace Raven.Server.Documents.Indexes
 
     public sealed class DocumentIndexItem : IndexItem
     {
-        public DocumentIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item)
-            : base(id, lowerId, null, null, etag, lastModified, null, size, item, empty: false, IndexItemType.Document)
+        public DocumentIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item, DocumentFlags flags)
+            : base(id, lowerId, null, null, etag, lastModified, null, size, item, empty: false, IndexItemType.Document, flags )
         {
         }
 
@@ -75,8 +78,8 @@ namespace Raven.Server.Documents.Indexes
 
     public sealed class TimeSeriesIndexItem : IndexItem
     {
-        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, DateTime lastModified, string timeSeriesName, int size, TimeSeriesSegmentEntry item)
-            : base(id, id, sourceDocumentId, sourceDocumentId, etag, lastModified, timeSeriesName, size, item, empty: item.Segment.NumberOfLiveEntries == 0, IndexItemType.TimeSeries)
+        public TimeSeriesIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, DateTime lastModified, string timeSeriesName, int size, TimeSeriesSegmentEntry item, DocumentFlags? flags)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, lastModified, timeSeriesName, size, item, empty: item.Segment.NumberOfLiveEntries == 0, IndexItemType.TimeSeries, flags)
         {
         }
 
@@ -88,8 +91,8 @@ namespace Raven.Server.Documents.Indexes
 
     public sealed class CounterIndexItem : IndexItem
     {
-        public CounterIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, LazyStringValue counterName, int size, object item)
-            : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, counterName, size, item, empty: false, IndexItemType.Counters)
+        public CounterIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, LazyStringValue counterName, int size, object item, DocumentFlags? flags)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, counterName, size, item, empty: false, IndexItemType.Counters, flags)
         {
         }
 

@@ -6,6 +6,7 @@ import { ManageDatabaseGroupPage } from "components/pages/resources/manageDataba
 import ClientDatabaseConfiguration from "components/pages/database/settings/clientConfiguration/ClientDatabaseConfiguration";
 import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
 import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
+import DataArchival from "components/pages/database/settings/dataArchival/DataArchival";
 import DocumentExpiration from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import DocumentRevisions from "components/pages/database/settings/documentRevisions/DocumentRevisions";
 import TombstonesState from "components/pages/database/settings/tombstones/TombstonesState";
@@ -112,6 +113,16 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-documents-compression',
             dynamicHash: appUrls.documentsCompression
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/dataArchival',
+            moduleId: bridgeToReact(DataArchival, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Data Archival',
+            nav: true,
+            css: 'icon-data-archival',
+            dynamicHash: appUrls.dataArchival,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/timeSeries',

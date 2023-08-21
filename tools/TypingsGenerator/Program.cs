@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -389,6 +390,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTasksPayload));
             scripter.AddType(typeof(ClusterOverviewPayload));
 
+            // data archival
+            scripter.AddType(typeof(DataArchivalConfiguration));
+            
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));
 

@@ -129,7 +129,11 @@ namespace Raven.Server.Documents
                     _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
-                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
+                
+                var table = context.Transaction.InnerTransaction.OpenTable(
+                    (newFlags & DocumentFlags.Archived) == DocumentFlags.Archived
+                        ? _documentDatabase.DocumentsStorage.CompressedDocsSchema
+                        : _documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
@@ -246,9 +250,10 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsHiLo == false)
+                if (collectionName.IsHiLo == false && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
-                    _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
+                    _documentsStorage.ExpirationStorage.Put(context, lowerId, metadata);
+                    _documentsStorage.DataArchivalStorage.Put(context, lowerId, metadata);
                 }
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);

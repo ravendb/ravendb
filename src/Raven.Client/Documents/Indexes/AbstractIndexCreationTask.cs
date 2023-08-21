@@ -138,6 +138,11 @@ namespace Raven.Client.Documents.Indexes
         ///<para>Default value: null means that the configuration from the database will be used.</para>
         /// </summary>
         public SearchEngineType? SearchEngineType { get; set; }
+        
+        /// <summary>
+        /// Set whether archived, unarchived or all documents will be indexed
+        /// </summary>
+        public IndexSourceItemKind? SourceItemKind { get; set; }
 
         /// <summary>
         /// Index state
@@ -223,6 +228,12 @@ namespace Raven.Client.Documents.Indexes
                 if (State.HasValue)
                     indexDefinition.State = State.Value;
 
+                if (SourceItemKind.HasValue)
+                {
+                    if (indexDefinition.SourceType != IndexSourceType.Documents)
+                        throw new NotSupportedException($"{nameof(SourceItemKind)} can be set only for document indexes.");
+                    indexDefinition.SourceItemKind = SourceItemKind.Value;
+                }
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;
 
@@ -231,6 +242,7 @@ namespace Raven.Client.Documents.Indexes
                     indexDefinition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
                 }
 
+                
                 return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }
             finally

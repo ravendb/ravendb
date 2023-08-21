@@ -1,6 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -19,6 +20,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string MentorNode { get; set; }
         public bool Disabled { get; set; }
         public bool PinToMentorNode { get; set; }
+        public SubscriptionSourceItemKind SourceItemKind { get; set; }
     }
 
     public sealed class SubscriptionCreationOptions<T>
@@ -32,6 +34,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
 
+        public SubscriptionSourceItemKind SourceItemKind { get; set; }
 
         public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
         {

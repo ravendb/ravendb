@@ -137,12 +137,22 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     try
                                     {
                                         current.KnownToBeNew = _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(current.Etag);
-                                        var numberOfResults = _index.HandleMap(current, mapResults,
-                                            writeOperation, indexContext, collectionStats);
-
-                                        resultsCount += numberOfResults;
-                                        collectionStats.RecordMapSuccess();
-                                        _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
+                                        if (_index.SourceType != IndexSourceType.Documents || 
+                                            ((itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == false && _index.Definition.SourceItemKind != IndexSourceItemKind.ArchivedOnly) ||
+                                            (itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == true && _index.Definition.SourceItemKind != IndexSourceItemKind.Default)))
+                                        {
+                                            var numberOfResults = _index.HandleMap(current, mapResults,
+                                                writeOperation, indexContext, collectionStats);
+                                            
+                                            resultsCount += numberOfResults;
+                                            
+                                            collectionStats.RecordMapSuccess();
+                                            _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
+                                        }
+                                        else
+                                        {   // skip from indexing
+                                            _index.HandleArchived(current, collection, writeOperation, indexContext, stats, itemEnumerator.Current.LowerId);
+                                        }
                                     }
                                     catch (Exception e) when (e.IsIndexError())
                                     {

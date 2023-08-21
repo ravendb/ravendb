@@ -88,6 +88,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                     IsStale = isStale,
                     Name = index.Name,
                     LockMode = index.Definition.LockMode,
+                    SourceItemKind = index.Definition.SourceItemKind,
                     Priority = index.Definition.Priority,
                     Type = index.Type,
                     LastIndexingTime = index.LastIndexingTime,

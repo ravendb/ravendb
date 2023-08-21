@@ -262,6 +262,10 @@ namespace Raven.Client
 
                 public const string Refresh = "@refresh";
 
+                public const string ArchiveAt = "@archive-at";
+                
+                public const string Archived = "@archived";
+
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";

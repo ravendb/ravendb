@@ -13,4 +13,6 @@ public class EssentialIndexInformation
     public IndexType Type { get; set; }
 
     public IndexSourceType SourceType { get; set; }
+    
+    public IndexSourceItemKind SourceItemKind { get; set; }
 }

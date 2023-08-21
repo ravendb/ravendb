@@ -53,6 +53,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SwappingHddInsteadOfSsd,
 
         RevisionsConfigurationNotValid,
+        ArchivalConfigurationNotValid,
 
         ReplicationMissingAttachments,
 

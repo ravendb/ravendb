@@ -55,7 +55,8 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = options.Name,
                 SubscriptionId = subscriptionId,
                 PinToMentorNode = options.PinToMentorNode,
-                Disabled = disabled ?? false
+                Disabled = disabled ?? false,
+                SourceItemKind = options.SourceItemKind
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -298,6 +299,7 @@ namespace Raven.Server.Documents.Subscriptions
                 ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
                 SubscriptionName = @base.SubscriptionName;
+                SourceItemKind = @base.SourceItemKind;
                 MentorNode = @base.MentorNode;
                 PinToMentorNode = @base.PinToMentorNode;
                 NodeTag = @base.NodeTag;

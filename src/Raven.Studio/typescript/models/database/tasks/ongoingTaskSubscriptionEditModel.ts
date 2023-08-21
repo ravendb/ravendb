@@ -114,7 +114,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
             ChangeVector: this.serializeChangeVector(),
-            Disabled: this.taskState() === "Disabled"
+            Disabled: this.taskState() === "Disabled",
+            SourceItemKind: "Default"
         }
     }
 
@@ -166,7 +167,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 TaskState: "Enabled",
                 TaskType: "Subscription",
                 TaskConnectionStatus: "Active",
-                ChangeVectorForNextBatchStartingPointPerShard: null
+                ChangeVectorForNextBatchStartingPointPerShard: null,
+                SourceItemKind: "Default"
             });
     }
 }

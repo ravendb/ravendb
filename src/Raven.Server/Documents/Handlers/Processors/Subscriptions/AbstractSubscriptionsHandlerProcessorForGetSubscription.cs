@@ -64,7 +64,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 [nameof(SubscriptionState.Query)] = state.Query,
                 [nameof(SubscriptionState.Disabled)] = state.Disabled,
                 [nameof(SubscriptionState.LastClientConnectionTime)] = state.LastClientConnectionTime,
-                [nameof(SubscriptionState.LastBatchAckTime)] = state.LastBatchAckTime
+                [nameof(SubscriptionState.LastBatchAckTime)] = state.LastBatchAckTime,
+                [nameof(SubscriptionState.SourceItemKind)] = state.SourceItemKind
             };
 
             if (state is SubscriptionStorage.SubscriptionGeneralDataAndStats stateAndStats)

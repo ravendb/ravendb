@@ -91,7 +91,8 @@ namespace Raven.Server.Documents.Handlers
             bool gotChanges = options.Name != state.SubscriptionName
                               || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
                               || options.MentorNode != state.MentorNode
-                              || options.Query != state.Query;
+                              || options.Query != state.Query
+                              || options.SourceItemKind != state.SourceItemKind;
 
             return gotChanges;
         }

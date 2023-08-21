@@ -13,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
+using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
@@ -62,6 +63,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         public RevisionsStorage RevisionsStorage;
         public ExpirationStorage ExpirationStorage;
+        public DataArchivalStorage DataArchivalStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public CountersStorage CountersStorage;
@@ -257,6 +259,7 @@ namespace Raven.Server.Documents
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx, RevisionsSchema, CompressedRevisionsSchema);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
+                    DataArchivalStorage = new DataArchivalStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
                     CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, CounterTombstonesSchema);

@@ -74,6 +74,14 @@ namespace Raven.Server.Documents.Indexes
 
             return numberOfOutputs;
         }
+        
+        public override bool MustDeleteArchivedDocument(IndexItem indexItem)
+        {
+            if (SearchEngineType != SearchEngineType.Lucene)
+                return true;
+
+            return _filters.Add(indexItem.LowerId) == false;
+        }
 
         private int UpdateIndexEntriesCorax(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {

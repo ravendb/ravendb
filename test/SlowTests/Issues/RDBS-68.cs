@@ -7,6 +7,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.ServerWide.Context;
@@ -98,7 +99,18 @@ namespace SlowTests.Issues
                     using (context.OpenReadTransaction())
                     {
                         var currentTime = database.Time.GetUtcNow();
-                        var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, false, batchSize);
+                        
+                        DatabaseTopology topology;
+                        string nodeTag;
+                        
+                        using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                        using (serverContext.OpenReadTransaction())
+                        {
+                            topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                            nodeTag = database.ServerStore.NodeTag;
+                        }
+                        
+                        var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, topology, nodeTag, batchSize);
                         
                         var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, CancellationToken.None);
                         var totalCount = 0;

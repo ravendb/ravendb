@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -131,6 +133,21 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
+                
+                if (item.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.SourceItemKind == SubscriptionSourceItemKind.Default)
+                {
+                    reason = $"{id} is archived, while the item kind is '{SubscriptionState.SourceItemKind}'";
+                    result.Status = SubscriptionBatchItemStatus.Skip;
+                    return result;
+                }
+                
+                if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.SourceItemKind == SubscriptionSourceItemKind.ArchivedOnly)
+                {
+                    reason = $"{id} is not archived, while the item kind is '{SubscriptionState.SourceItemKind}'";
+                    result.Status = SubscriptionBatchItemStatus.Skip;
+                    return result;
+                }
+                
                 var conflictStatus = GetConflictStatus(item.ChangeVector);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
