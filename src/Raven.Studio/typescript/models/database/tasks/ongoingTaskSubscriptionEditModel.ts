@@ -115,7 +115,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             PinToMentorNode: this.pinMentorNode(),
             ChangeVector: this.serializeChangeVector(),
             Disabled: this.taskState() === "Disabled",
-            SourceItemKind: "Default"
+            ArchivedDataProcessingBehavior: null,
         }
     }
 
@@ -168,7 +168,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 TaskType: "Subscription",
                 TaskConnectionStatus: "Active",
                 ChangeVectorForNextBatchStartingPointPerShard: null,
-                SourceItemKind: "Default"
+                ArchivedDataProcessingBehavior: null
             });
     }
 }
