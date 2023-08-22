@@ -29,6 +29,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -528,7 +529,7 @@ namespace Raven.Server.Documents
 
             foreach (var cmd in batch)
             {
-                ClusterTransactionWaiter.CreateTask(cmd.Options.TaskId);
+                ClusterTransactionWaiter.CreateTask(cmd.Options.TaskId, out _);
             }
 
             ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
@@ -1904,7 +1905,7 @@ namespace Raven.Server.Documents
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
 
-            internal Action AfterCommitInClusterTransaction;
+            internal Func<Task> AfterCommitInClusterTransaction;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Jint;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -19,10 +21,36 @@ namespace Raven.Server.Documents
             ServerStore = serverStore;
         }
 
-        public RemoveTask CreateTask(string id)
+        public RemoveTask CreateTask(string id, out Task task)
         {
             var t = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            _results.GetOrAdd(id, t);
+            var current = _results.GetOrAdd(id, t);
+
+            long? raftIndex;
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                raftIndex = ServerStore.Engine.LogHistory.GetIndexByRaftId(context, id);
+            }
+
+            if (raftIndex.HasValue &&
+                Database.LastCompletedClusterTransactionIndex >= raftIndex &&
+                current == t)
+            {
+                // the database already finished the processing of this command
+                task = Task.CompletedTask;
+            }
+            else
+            {
+                /* the database already finished the processing of this command but didn't removed yet the task
+                 * OR
+                 * the database is applying the command
+                 * OR
+                 * I created this task, before the database start applying the tx
+                 */
+                task = current.Task;
+            }
+
             return new RemoveTask(this, id);
         }
 

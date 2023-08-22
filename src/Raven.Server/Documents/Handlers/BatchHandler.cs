@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using Nest;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
@@ -40,6 +41,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -95,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
                     ValidateCommandForClusterWideTransaction(command, disableAtomicDocumentWrites);
                     var raftRequestId = GetRaftRequestIdFromQuery();
 
-                    using (Database.ClusterTransactionWaiter.CreateTask(id: raftRequestId))
+                    using (Database.ClusterTransactionWaiter.CreateTask(id: raftRequestId, out _))
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
                         // Because in any case the user will get a raft index to wait upon on his next request.
@@ -244,7 +246,11 @@ namespace Raven.Server.Documents.Handlers
 
             if (count.HasValue)
             {
-                Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
+                var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
+                if (forTestingTask != null)
+                {
+                    await forTestingTask;
+                }
 
                 await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
                 var lastModified = Database.Time.GetUtcNow();
@@ -292,10 +298,10 @@ namespace Raven.Server.Documents.Handlers
                 case null:
                     if (databaseCommandsCount == 0) // there isn't any databaseCommands
                         return null;
-                    throw new InvalidOperationException($"Cluster Transaction result is null, but has more then 0 database commands ({databaseCommandsCount})");
+                    goto default;
 
                 default:
-                    throw new InvalidOperationException($"Cluster Transaction result type ({result.GetType()}) isn't valid");
+                    throw new InvalidOperationException("Cluster Transaction result type isn't valid");
             }
         }
 

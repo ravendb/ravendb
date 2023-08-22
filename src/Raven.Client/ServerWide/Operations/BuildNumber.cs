@@ -17,10 +17,10 @@ namespace Raven.Client.ServerWide.Operations
             if (IsNightlyOrDev(BuildVersion) == false)
                 return FullVersion;
 
-            var index = FullVersion.IndexOf('-'); // if index is -1, FullVersion looks like that: '5.4.1', else it looks like that: '5.4.1-custom'
-            return index == -1 ? FullVersion : FullVersion.Remove(index); 
+            var index = FullVersion.IndexOf('-');
+            return index == -1 ? FullVersion : FullVersion.Remove(index);
         }
-        internal static bool IsNightlyOrDev(long buildVersion)
+        public static bool IsNightlyOrDev(long buildVersion)
         {
             return buildVersion >= 50 && buildVersion < 60;
         }
