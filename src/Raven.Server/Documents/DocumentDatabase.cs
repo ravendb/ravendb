@@ -642,19 +642,7 @@ namespace Raven.Server.Documents
 
                         indexTask.ContinueWith(t =>
                         {
-                            if (t.IsCompletedSuccessfully)
-                            {
-                                ClusterTransactionWaiter.SetResult(options.TaskId, index);
-                            }
-                            if (t.IsFaulted)
-                            {
-                                Exception e = t.Exception;
-                                if (e is AggregateException ae && ae.InnerExceptions.Count == 1)
-                                {
-                                    e = ae.InnerException;
-                                }
-                                ClusterTransactionWaiter.SetException(options.TaskId, index, e);
-                            }
+                            ClusterTransactionWaiter.SetResult(options.TaskId, index);
                         });
                     }
                     else
