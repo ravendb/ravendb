@@ -311,7 +311,6 @@ namespace Raven.Server.Documents.Handlers
         {
             foreach (var dataCmd in databaseCommands)
             {
-
                 count++;
                 var cv = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
                 if (disableAtomicDocumentWrites == false)
@@ -322,11 +321,14 @@ namespace Raven.Server.Documents.Handlers
                 switch (dataCmd.Type)
                 {
                     case CommandType.PUT:
+                        if (dataCmd.Document.GetMetadata().TryGet(Constants.Documents.Metadata.Collection, out string collection) == false)
+                            throw new InvalidOperationException($"Cannot get doc '{dataCmd.Id}' collection");
+
                         commandsResults.Add(new DynamicJsonValue
                         {
                             ["Type"] = dataCmd.Type,
                             [Constants.Documents.Metadata.Id] = dataCmd.Id,
-                            [Constants.Documents.Metadata.Collection] = CollectionName.GetCollectionName(dataCmd.Document),
+                            [Constants.Documents.Metadata.Collection] = collection,
                             [Constants.Documents.Metadata.ChangeVector] = cv,
                             [Constants.Documents.Metadata.LastModified] = lastModified,
                             [Constants.Documents.Metadata.Flags] = DocumentFlags.FromClusterTransaction.ToString()
