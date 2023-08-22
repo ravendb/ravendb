@@ -23,6 +23,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
 import { EditSubscriptionTaskInfoHub } from "./EditSubscriptionTaskInfoHub";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -336,6 +337,22 @@ class editSubscriptionTask extends shardViewModelBase {
         }
     }
 
+    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+        if (!mode) {
+            return "";
+        }
+        switch (mode) {
+            case "ArchivedOnly":
+                return "Archived Only";
+            case "IncludeArchived":
+                return "Include Archived";
+            case "ExcludeArchived":
+                return "Exclude Archived";
+            default:
+                assertUnreachable(mode);
+        }
+    }
+    
     private onIncludesLoaded(includes: dictionary<any>) {
         _.forIn(includes, (doc, id) => {
             const metadata = doc['@metadata'];
