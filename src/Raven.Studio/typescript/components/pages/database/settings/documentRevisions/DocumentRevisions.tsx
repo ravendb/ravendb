@@ -19,9 +19,8 @@ import {
     documentRevisionsActions,
     documentRevisionsSelectors,
 } from "./store/documentRevisionsSlice";
-import { useAppDispatch } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
-import { useSelector } from "react-redux";
 import DocumentRevisionsConfigPanel from "./DocumentRevisionsConfigPanel";
 import useBoolean from "components/hooks/useBoolean";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -48,22 +47,29 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);
     const [editRevisionData, setEditRevisionData] = useState<EditRevisionData>(null);
 
-    const { databasesService } = useServices();
+    const fetchStatus = useAppSelector(documentRevisionsSelectors.fetchStatus);
+    const defaultDocumentsConfig = useAppSelector(documentRevisionsSelectors.defaultDocumentsConfig);
+    const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
+    const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
+
     const dispatch = useAppDispatch();
-    const state = useSelector(documentRevisionsSelectors.state);
 
     useEffect(() => {
         dispatch(documentRevisionsActions.fetchConfigs(db));
     }, [db, dispatch]);
 
+    const { databasesService } = useServices();
+
+    console.log("kalczur collectionConfigs", collectionConfigs);
+
     const asyncSaveConfigs = useAsyncCallback(async () => {
         const config: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration = {
-            Default: _.omit(state.Config.Default, "Name"),
-            Collections: Object.fromEntries(state.Config.Collections.map((x) => [x.Name, _.omit(x, "Name")])),
+            Default: defaultDocumentsConfig ? _.omit(defaultDocumentsConfig, "Name") : null,
+            Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, _.omit(x, "Name")])),
         };
 
         const conflictsConfig: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration = _.omit(
-            state.ConflictsConfig,
+            defaultConflictsConfig,
             "Name"
         );
 
@@ -93,11 +99,11 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         });
     };
 
-    if (state.FetchStatus === "loading") {
+    if (fetchStatus === "loading") {
         return <LoadingView />;
     }
 
-    if (state.FetchStatus === "error") {
+    if (fetchStatus === "error") {
         return (
             <LoadError
                 error="Unable to load document revisions"
@@ -156,7 +162,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    !state.Config.Default ? (
+                                    !defaultDocumentsConfig ? (
                                         <Button
                                             color="info"
                                             size="sm"
@@ -166,9 +172,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                     taskType: "new",
                                                     configType: "defaultDocument",
                                                     onConfirm: (config) =>
-                                                        dispatch(
-                                                            documentRevisionsActions.addDocumentDefaultsConfig(config)
-                                                        ),
+                                                        dispatch(documentRevisionsActions.addConfig(config)),
                                                 })
                                             }
                                         >
@@ -181,29 +185,45 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 Defaults
                             </HrHeader>
                             <DocumentRevisionsConfigPanel
-                                config={state.Config.Default}
-                                onToggle={() => dispatch(documentRevisionsActions.toggleDocumentDefaultsConfig())}
-                                onDelete={() => dispatch(documentRevisionsActions.deleteDocumentDefaultsConfig())}
+                                config={defaultDocumentsConfig}
+                                onToggle={() =>
+                                    dispatch(
+                                        documentRevisionsActions.toggleConfigState({
+                                            name: defaultDocumentsConfig.Name,
+                                        })
+                                    )
+                                }
+                                onDelete={() =>
+                                    dispatch(
+                                        documentRevisionsActions.deleteConfig({
+                                            name: defaultDocumentsConfig.Name,
+                                        })
+                                    )
+                                }
                                 onOnEdit={() =>
                                     onEditRevision({
                                         taskType: "edit",
                                         configType: "defaultDocument",
-                                        onConfirm: (config) =>
-                                            dispatch(documentRevisionsActions.editDocumentDefaultsConfig(config)),
-                                        config: state.Config.Default,
+                                        onConfirm: (config) => dispatch(documentRevisionsActions.editConfig(config)),
+                                        config: defaultDocumentsConfig,
                                     })
                                 }
                             />
                             <DocumentRevisionsConfigPanel
-                                config={state.ConflictsConfig}
-                                onToggle={() => dispatch(documentRevisionsActions.toggleConflictsConfig())}
+                                config={defaultConflictsConfig}
+                                onToggle={() =>
+                                    dispatch(
+                                        documentRevisionsActions.toggleConfigState({
+                                            name: defaultConflictsConfig.Name,
+                                        })
+                                    )
+                                }
                                 onOnEdit={() =>
                                     onEditRevision({
                                         taskType: "edit",
                                         configType: "defaultConflicts",
-                                        onConfirm: (config) =>
-                                            dispatch(documentRevisionsActions.editConflictsConfig(config)),
-                                        config: state.ConflictsConfig,
+                                        onConfirm: (config) => dispatch(documentRevisionsActions.editConfig(config)),
+                                        config: defaultConflictsConfig,
                                     })
                                 }
                             />
@@ -220,7 +240,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                 taskType: "new",
                                                 configType: "collectionSpecific",
                                                 onConfirm: (config) =>
-                                                    dispatch(documentRevisionsActions.addCollectionConfig(config)),
+                                                    dispatch(documentRevisionsActions.addConfig(config)),
                                             })
                                         }
                                     >
@@ -231,27 +251,23 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 <Icon icon="documents" />
                                 Collections
                             </HrHeader>
-                            {state.Config.Collections.length > 0 ? (
-                                state.Config.Collections.map((config) => (
+                            {collectionConfigs.length > 0 ? (
+                                collectionConfigs.map((config) => (
                                     <DocumentRevisionsConfigPanel
                                         key={config.Name}
                                         config={config}
                                         onToggle={() =>
-                                            dispatch(
-                                                documentRevisionsActions.toggleCollectionConfig({ Name: config.Name })
-                                            )
+                                            dispatch(documentRevisionsActions.toggleConfigState({ name: config.Name }))
                                         }
                                         onDelete={() =>
-                                            dispatch(
-                                                documentRevisionsActions.deleteCollectionConfig({ Name: config.Name })
-                                            )
+                                            dispatch(documentRevisionsActions.deleteConfig({ name: config.Name }))
                                         }
                                         onOnEdit={() =>
                                             onEditRevision({
                                                 taskType: "edit",
                                                 configType: "collectionSpecific",
                                                 onConfirm: (config) =>
-                                                    dispatch(documentRevisionsActions.editCollectionConfig(config)),
+                                                    dispatch(documentRevisionsActions.editConfig(config)),
                                                 config,
                                             })
                                         }
