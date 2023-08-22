@@ -61,9 +61,9 @@ namespace SlowTests.Server.Documents.DataArchival;
                 });
                 var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
                 var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
-
+                
                 WaitForValue(() => companies.Count, 1, 5000);
-                Assert.Equal(companies.Count, 0);
+                Assert.Equal(0, companies.Count);
 
                 // Activate the archival manually
                 await SetupDataArchival(store);
@@ -73,7 +73,7 @@ namespace SlowTests.Server.Documents.DataArchival;
                 await documentsArchiver.ArchiveDocs();
 
                 await AssertWaitForCountAsync(() => Task.FromResult(companies), 1);
-                Assert.Equal(companies.Count, 1);
+                Assert.Equal(1, companies.Count());
             }
         }
         
