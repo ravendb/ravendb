@@ -22,6 +22,7 @@ abstract class database {
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     hasExpirationConfiguration = ko.observable<boolean>(false);
     hasRefreshConfiguration = ko.observable<boolean>(false);
+    hasArchivalConfiguration = ko.observable<boolean>(false);
     isEncrypted = ko.observable<boolean>(false);
     lockMode = ko.observable<DatabaseLockMode>();
     deletionInProgress = ko.observableArray<{ tag: string, status: DeletionInProgressStatus }>([]);

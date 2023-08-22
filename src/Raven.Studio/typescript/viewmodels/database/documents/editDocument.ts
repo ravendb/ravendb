@@ -93,6 +93,8 @@ class editDocument extends shardViewModelBase {
     isConflictRevision: KnockoutComputed<boolean>;
     isResolvedRevision: KnockoutComputed<boolean>;
     revisionText: KnockoutComputed<string>;
+    isArchived: KnockoutComputed<boolean>;
+    archivedText: KnockoutComputed<string>;
 
     createTimeSeriesUrl: KnockoutComputed<string>;
 
@@ -114,6 +116,7 @@ class editDocument extends shardViewModelBase {
     
     documentExpirationEnabled: KnockoutComputed<boolean>;
     documentRefreshEnabled: KnockoutComputed<boolean>;
+    documentArchivalEnabled: KnockoutComputed<boolean>;
 
     private docEditor: AceAjax.Editor;
     private docEditorRight: AceAjax.Editor;
@@ -414,6 +417,15 @@ class editDocument extends shardViewModelBase {
                 return false;
             }
         });
+
+        this.documentArchivalEnabled = ko.pureComputed(() => {
+            const db = this.db;
+            if (db) {
+                return db.hasArchivalConfiguration();
+            } else {
+                return false;
+            }
+        });
         
         this.leftRevisionIsNewer = ko.pureComputed(() => {
            const leftDoc = this.document();
@@ -474,6 +486,20 @@ class editDocument extends shardViewModelBase {
             }
            
             return "| REVISION";
+        });
+        
+        this.isArchived = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.archived;
+            } else {
+                return false;
+            }
+        });
+        
+        this.archivedText = ko.pureComputed(() => {
+            const archived = this.isArchived();
+            return archived ? "| ARCHIVED" : null;
         });
 
         this.document.subscribe(doc => {

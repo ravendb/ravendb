@@ -22,6 +22,7 @@
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
                             <a href="#" class="copy-button-hidden inherit-position" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
                             <span data-bind="visible: revisionText(), text: revisionText()" class="text-primary revision flex-shrink-0"></span>
+                            <span data-bind="visible: archivedText(), text: archivedText()" class="text-primary archived flex-shrink-0"></span>
                             <a target="_blank" href="#" title="Click to view the raw content of the document" class="flex-shrink-0 margin-left margin-left-sm"
                                data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i>
                             </a>
@@ -265,6 +266,19 @@
                             </span>
                             <span data-toggle="tooltip" data-animation="true" data-html="true" data-placement="bottom"
                                   data-bind="visible: !$root.documentExpirationEnabled(), tooltipText: 'Document expiration is turned off. <Br />This document won\'t be deleted on specified point in time.'">
+                                <i class="icon-danger text-warning"></i>
+                            </span>
+                        </dd>
+                    </div>
+                    <div data-bind="if: archiveAtDateInterval">
+                        <dt>Archive in:</dt>
+                        <dd>
+                             <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="tooltipText: '<div><strong>Archival Date</strong></div>' + archiveAtDateFullDate()">
+                                <span data-bind="text: archiveAtDateInterval"></span>
+                            </span>
+                            <span data-toggle="tooltip" data-animation="true" data-html="true" data-placement="bottom"
+                                  data-bind="visible: !$root.documentExpirationEnabled(), tooltipText: 'Document Archival is turned off. <Br />This document won\'t be archived on specified point in time.'">
                                 <i class="icon-danger text-warning"></i>
                             </span>
                         </dd>

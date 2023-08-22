@@ -3,7 +3,7 @@
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
-type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial" | "HasTimeSeries" | "Conflicted" | "Resolved";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial" | "HasTimeSeries" | "Conflicted" | "Resolved" | "@archived";
 
 interface revisionCounter {
     name: string;
@@ -36,6 +36,9 @@ class documentMetadata {
     refreshDateInterval: KnockoutComputed<string>;
     refreshDateFullDate: KnockoutComputed<string>;
     
+    archiveAtDateInterval: KnockoutComputed<string>;
+    archiveAtDateFullDate: KnockoutComputed<string>;
+    
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
     timeSeries = ko.observableArray<string>();
@@ -45,6 +48,7 @@ class documentMetadata {
     changeVector = ko.observable<string>();
     
     shardNumber: number | null;
+    archived: boolean;
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
@@ -55,6 +59,7 @@ class documentMetadata {
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
             this.shardNumber = dto['@shard-number'];
+            this.archived = !!dto["@archived"];
 
             const dateFormat = generalUtils.dateFormat;
             this.lastModifiedFullDate = ko.pureComputed(() => {
@@ -104,6 +109,24 @@ class documentMetadata {
                 if (refresh) {
                     return generalUtils.formatDurationByDate(moment.utc(refresh), true);
                 }
+                return "";
+            });
+            
+            this.archiveAtDateFullDate = ko.pureComputed(() => {
+                const refresh = dto["@archive-at"];
+                if (refresh) {
+                    const refreshMoment = moment(refresh);
+                    return refreshMoment.utc().format(dateFormat) + "(UTC)";
+                }
+                return "";
+            });
+            
+            this.archiveAtDateInterval = ko.pureComputed(() => {
+                const archiveAt = dto["@archive-at"];
+                if (archiveAt) {
+                    return generalUtils.formatDurationByDate(moment.utc(archiveAt), true);
+                }
+                
                 return "";
             });
 
