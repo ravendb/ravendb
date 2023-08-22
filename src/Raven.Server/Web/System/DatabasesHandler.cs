@@ -226,38 +226,22 @@ namespace Raven.Server.Web.System
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                                rawRecord.Topology.Members.Select(x =>
-                                    {
-                                        var json = new DynamicJsonValue
-                                        {
-                                            [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                            [nameof(ServerNode.ClusterTag)] = x,
-                                            [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                            [nameof(ServerNode.Database)] = rawRecord.DatabaseName
-                                        };
-
-                                        if (license != null)
-                                        {
-                                            json[nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion();
-                                        }
-                                        return json;
-                                    })
-                                .Concat(rawRecord.Topology.Rehabs.Select(x =>
-                                    {
-                                        var json = new DynamicJsonValue
-                                        {
-                                            [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                            [nameof(ServerNode.ClusterTag)] = x,
-                                            [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
-                                            [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab,
-                                        };
-
-                                        if(license != null)
-                                        {
-                                            json[nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion();
-                                        }
-                                        return json;
-                                    })
+                                rawRecord.Topology.Members.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                    [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
+                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
+                                    [nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion()
+                                })
+                                .Concat(rawRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                    [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab,
+                                    [nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion()
+                                })
                                 )
                             ),
                             [nameof(Topology.Etag)] = rawRecord.Topology.Stamp?.Index ?? -1

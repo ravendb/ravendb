@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.Handlers
                         });
                         break;
                     default:
-                        throw new InvalidOperationException($"Database command type ({dataCmd.Type}) isn't valid");
+                        throw new InvalidOperationException("Database command type isn't valid");
                 }
             }
         }
