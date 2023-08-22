@@ -19,20 +19,10 @@ namespace Raven.Server.Documents
             ServerStore = serverStore;
         }
 
-        public RemoveTask CreateTask(string id, long index)
+        public RemoveTask CreateTask(string id)
         {
-            var lastCompleted = Database.LastCompletedClusterTransactionIndex;
             var t = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var current = _results.GetOrAdd(id, t);
-
-            if (current == t)
-            {
-                if (lastCompleted >= index)
-                {
-                    current.TrySetResult();
-                }
-            }
-
+            _results.GetOrAdd(id, t);
             return new RemoveTask(this, id);
         }
 
@@ -73,11 +63,9 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                if (_parent._results.TryRemove(_id, out var task))
-                {
-                    // cancel it, if someone still awaits
-                    task.TrySetCanceled();
-                }
+                _parent._results.TryRemove(_id, out var task);
+                // cancel it, if someone still awaits
+                task.TrySetCanceled();
             }
         }
 

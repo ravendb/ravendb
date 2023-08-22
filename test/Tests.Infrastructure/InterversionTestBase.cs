@@ -282,28 +282,6 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected static async Task KillSlavedServerProcessAsync(Process process)
-        {
-            if (process == null || process.HasExited)
-                return;
-
-            try
-            {
-                process.Kill();
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-                await process.WaitForExitAsync(cts.Token);
-
-                if (process.HasExited == false)
-                {
-                    throw new TimeoutException("Failed to wait for the process to exit.");
-                }
-            }
-            catch (Exception e)
-            {
-                ReportError(e);
-            }
-        }
-
         private static async Task<string> ReadOutput(StreamReader output, Stopwatch startupDuration, Func<string, StringBuilder, Task<bool>> onLine)
         {
             var sb = new StringBuilder();

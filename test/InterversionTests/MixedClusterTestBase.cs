@@ -218,9 +218,9 @@ namespace InterversionTests
             }), stores);
         }
 
-        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null, DatabaseRecord record = null)
+        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null)
         {
-            var doc = record ?? new DatabaseRecord(dbName)
+            var doc = new DatabaseRecord(dbName)
             {
                 Settings =
                 {
