@@ -633,21 +633,26 @@ namespace Raven.Server.Documents
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
+                    Task indexTask = null;
                     if (options.WaitForIndexesTimeout != null)
                     {
-                        var indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
 
                         indexTask.ContinueWith(t =>
                         {
-                            try
+                            if (t.IsCompletedSuccessfully)
                             {
-                                t.GetAwaiter().GetResult();
                                 ClusterTransactionWaiter.SetResult(options.TaskId, index);
                             }
-                            catch (Exception e)
+                            if (t.IsFaulted)
                             {
+                                Exception e = t.Exception;
+                                if (e is AggregateException ae && ae.InnerExceptions.Count == 1)
+                                {
+                                    e = ae.InnerException;
+                                }
                                 ClusterTransactionWaiter.SetException(options.TaskId, index, e);
                             }
                         });
