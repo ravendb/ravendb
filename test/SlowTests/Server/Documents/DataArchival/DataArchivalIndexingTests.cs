@@ -629,7 +629,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                             {
                                 CompanyName = LoadDocument<Company>(counter.Name).Name
                             });
-            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ExcludeArchived;
         }
     }
     
@@ -665,7 +665,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                                          Min = segment.Min,
                                          Sum = segment.Sum
                                      });
-            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ExcludeArchived;
         }
     }
     
@@ -1102,7 +1102,7 @@ User: counter.DocumentId
 };
 })"
             };
-            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ExcludeArchived;
         }
     }
 

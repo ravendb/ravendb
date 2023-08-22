@@ -228,12 +228,20 @@ namespace Raven.Client.Documents.Indexes
                 if (State.HasValue)
                     indexDefinition.State = State.Value;
 
-                if (ArchivedDataProcessingBehavior.HasValue)
+                if (indexDefinition.SourceType != IndexSourceType.Documents)
                 {
-                    if (indexDefinition.SourceType != IndexSourceType.Documents)
-                        throw new NotSupportedException($"{nameof(ArchivedDataProcessingBehavior)} can be set only for document indexes.");
-                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.Value;
+                    if (ArchivedDataProcessingBehavior != null && ArchivedDataProcessingBehavior != Indexes.ArchivedDataProcessingBehavior.IncludeArchived)
+                    {
+                        throw new NotSupportedException(
+                        $"{nameof(ArchivedDataProcessingBehavior)} other than '{Indexes.ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes, not for indexes with {nameof(IndexSourceType)} '{indexDefinition.SourceType}' .");
+                    }
+                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior ?? Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
                 }
+                else
+                {
+                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior ?? Indexes.ArchivedDataProcessingBehavior.ExcludeArchived;
+                }
+                
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;
 

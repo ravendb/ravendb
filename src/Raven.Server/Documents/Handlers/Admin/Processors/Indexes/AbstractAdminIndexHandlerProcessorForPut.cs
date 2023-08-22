@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Esprima.Ast;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -76,6 +77,17 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                     throw new ArgumentException(
                         $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                 }
+
+                if (indexDefinition.SourceType != IndexSourceType.Documents)
+                {
+                    if(indexDefinition.ArchivedDataProcessingBehavior != null && indexDefinition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
+                    {
+                        throw new ArgumentException(
+                            $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{indexDefinition.SourceType}' .");
+                    }
+                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived;
+                }
+                    
 
                 var processor = GetIndexCreateProcessor();
 
