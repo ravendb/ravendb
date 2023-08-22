@@ -155,7 +155,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                    await ServerStore.WaitForExecutionOnSpecificNode(context, node, newIndex);
                 }
                 catch (DatabaseLoadFailureException e)
                 {
@@ -419,7 +419,15 @@ namespace Raven.Server.Web.System
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;
-            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, members, newIndex);
+            try
+            {
+                await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, newIndex);
+            }
+            catch (Exception e) when (e is AggregateException)
+            {
+                throw new InvalidDataException(
+                    $"The database '{name}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", e);
+            }
 
             var nodeUrlsAddedTo = new List<string>();
             foreach (var member in members)

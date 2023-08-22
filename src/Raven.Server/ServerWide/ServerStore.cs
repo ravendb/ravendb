@@ -3122,6 +3122,98 @@ namespace Raven.Server.ServerWide
             return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
+        public async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, string nodeTag, long index)
+        {
+            await WaitForExecutionOnRelevantNodesAsync(context, members: new List<string> { nodeTag }, index);
+        }
+
+        public async Task WaitForExecutionOnRelevantNodesAsync(JsonOperationContext context, List<string> members, long index)
+        {
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            if (members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
+
+            var executors = GetClusterRequestExecutorsForMembers(members);
+
+            try
+            {
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
+                {
+                    cts.CancelAfter(Configuration.Cluster.OperationTimeout.AsTimeSpan);
+
+                    List<Exception> exceptions = null;
+
+                    foreach (var task in executors.Zip(members, (executor, nodeTag) =>
+                                 WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, cts.Token)))
+                    {
+                        var exception = await task;
+                        if (exception == null)
+                            continue;
+
+                        exceptions ??= new List<Exception>();
+                        exceptions.Add(exception.ExtractSingleInnerException());
+                    }
+
+                    HandleExceptions(exceptions);
+                }
+            }
+            finally
+            {
+                foreach (var executor in executors)
+                {
+                    executor.Dispose();
+                }
+            }
+
+            return;
+
+            void HandleExceptions(IReadOnlyCollection<Exception> exceptions)
+            {
+                if (exceptions == null || exceptions.Count == 0)
+                    return;
+
+                var allExceptionsAreTimeouts  = exceptions.All(exception => exception is OperationCanceledException);
+                var aggregateException = new AggregateException(exceptions);
+
+                if (allExceptionsAreTimeouts)
+                    throw new TimeoutException($"The raft command (number '{index}') took too long to run on the intended nodes.", aggregateException);
+
+                throw aggregateException;
+            }
+        }
+
+        private List<ClusterRequestExecutor> GetClusterRequestExecutorsForMembers(IEnumerable<string> nodeTags)
+        {
+            return nodeTags.Select(member =>
+            {
+                var url = GetClusterTopology().GetUrlFromTag(member);
+                return ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+            }).ToList();
+        }
+
+        private async Task<Exception> WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(RequestExecutor executor, string nodeTag, long index, JsonOperationContext context, CancellationToken token)
+        {
+            try
+            {
+                await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
+                return null;
+            }
+            catch (RavenException re) when (re.InnerException is HttpRequestException)
+            {
+                // we want to throw for self-checks
+                if (nodeTag == NodeTag)
+                    return re;
+
+                // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
+                return null;
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+        }
+
         private ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
             var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
