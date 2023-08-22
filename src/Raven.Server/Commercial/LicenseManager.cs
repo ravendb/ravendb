@@ -476,7 +476,7 @@ namespace Raven.Server.Commercial
 
         public static LicenseStatus GetLicenseStatus(License license)
         {
-            Dictionary<string, object> licenseAttributes;
+            Dictionary<LicenseAttribute, object> licenseAttributes;
 
             try
             {
