@@ -671,9 +671,7 @@ namespace Raven.Server.Documents.Handlers
                 // need to wait on the relevant remote node
                 var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
                 if (node != null && node != ServerStore.NodeTag)
-                {
-                    await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, subscriptionId);
-                }
+                    await ServerStore.WaitForExecutionOnSpecificNode(serverContext, node, subscriptionId);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

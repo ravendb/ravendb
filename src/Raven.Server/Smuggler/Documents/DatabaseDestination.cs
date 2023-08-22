@@ -1402,12 +1402,28 @@ namespace Raven.Server.Smuggler.Documents
                 long maxIndex = 0;
                 foreach (var task in tasks)
                 {
-                    var (index, _) = await task;
+                    (long index, _) = await task;
                     if (index > maxIndex)
                         maxIndex = index;
                 }
 
-                await _database.RachisLogIndexNotifications.WaitForIndexNotification(maxIndex, _database.ServerStore.Engine.OperationTimeout);
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    List<string> members;
+
+                    using (context.OpenReadTransaction())
+                        members = _database.ServerStore.Cluster.ReadDatabaseTopology(context, _database.Name).Members;
+
+                    try
+                    {
+                        await _database.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, maxIndex);
+                    }
+                    catch (Exception e) when (e is AggregateException)
+                    {
+                        throw new InvalidDataException(
+                            "Respective tasks were dispatched, however, we couldn't achieve consistency across one or more target nodes due to errors.", e);
+                    }
+                }
 
                 tasks.Clear();
             }

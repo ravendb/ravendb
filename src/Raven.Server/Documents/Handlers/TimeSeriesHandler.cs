@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -11,8 +12,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -22,7 +21,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -889,14 +887,18 @@ namespace Raven.Server.Documents.Handlers
             var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
-            DatabaseTopology topology;
-            ClusterTopology clusterTopology;
+            List<string> members;
             using (context.OpenReadTransaction())
+                members = ServerStore.Cluster.ReadDatabaseTopology(context, name).Members;
+
+            try
             {
-                topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
-                clusterTopology = ServerStore.GetClusterTopology(context);
+                await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, result.Index);
             }
-            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, topology.Members, result.Index);
+            catch (Exception e) when (e is AggregateException)
+            {
+                throw new InvalidDataException($"TimeSeries Configuration was modified, but we couldn't send it due to errors on one or more target nodes.", e);
+            }
 
             return result;
         }
