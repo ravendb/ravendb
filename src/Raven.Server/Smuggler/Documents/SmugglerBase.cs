@@ -608,6 +608,13 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         continue;
                     }
+                    
+                    if (_options.IncludeArchived == false && // skip archived tombstones - we don't track archived data
+                        tombstone.Flags.Contain(DocumentFlags.Archived) &&
+                        tombstone.Flags.Contain(DocumentFlags.FromResharding) == false)
+                    {
+                        continue;
+                    }
 
                     var _ = NonPersistentDocumentFlags.None;
                     SetDocumentOrTombstoneFlags(ref tombstone.Flags, ref _, buildType);

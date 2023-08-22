@@ -30,6 +30,8 @@ namespace Raven.Server.Smuggler.Documents.Data
                         result.IncludeExpired = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, nameof(IncludeArtificial), StringComparison.OrdinalIgnoreCase))
                         result.IncludeArtificial = bool.Parse(item.Value[0]);
+                    else if (string.Equals(key, nameof(IncludeArchived), StringComparison.OrdinalIgnoreCase))
+                        result.IncludeArchived = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, nameof(RemoveAnalyzers), StringComparison.OrdinalIgnoreCase))
                         result.RemoveAnalyzers = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, nameof(TransformScript), StringComparison.OrdinalIgnoreCase))
@@ -57,6 +59,7 @@ namespace Raven.Server.Smuggler.Documents.Data
                 EncryptionKey = EncryptionKey,
                 Collections = Collections,
                 IncludeArtificial = IncludeArtificial,
+                IncludeArchived = IncludeArchived,
                 IncludeExpired = IncludeExpired,
                 MaxStepsForTransformScript = MaxStepsForTransformScript,
                 OperateOnDatabaseRecordTypes = OperateOnDatabaseRecordTypes,

@@ -10,6 +10,7 @@
         {
             IncludeExpired = options.IncludeExpired;
             IncludeArtificial = options.IncludeArtificial;
+            IncludeArchived = options.IncludeArchived;
             MaxStepsForTransformScript = options.MaxStepsForTransformScript;
             OperateOnTypes = options.OperateOnTypes;
             RemoveAnalyzers = options.RemoveAnalyzers;

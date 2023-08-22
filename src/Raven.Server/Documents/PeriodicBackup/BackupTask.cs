@@ -572,7 +572,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var options = new DatabaseSmugglerOptionsServerSide
                         {
                             AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                            IncludeArtificial = true // we want to include artificial in backup
+                            IncludeArtificial = true, // we want to include artificial in backup
+                            IncludeArchived = true // wa want also to include archived documents in backup
                         };
 
                         options.OperateOnTypes |= DatabaseItemType.Tombstones;
