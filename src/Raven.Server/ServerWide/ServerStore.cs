@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
@@ -86,8 +87,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
-using static Raven.Server.Documents.Handlers.BatchHandler;
-using static Raven.Server.Rachis.Leader;
 using Constants = Raven.Client.Constants;
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
@@ -3261,29 +3260,6 @@ namespace Raven.Server.ServerWide
         {
             await _engine.WaitForCommitIndexChange(modification, value, token);
         }
-
-        public bool CommandAlreadyInLog(CommandBase command,  /*DocumentDatabase database,*/ out Exception exception)
-        {
-            // exception = null;
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                var djv = command.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
-                if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out exception))
-                {
-                    command.RaftCommandIndex = index;
-                    // if this command is already committed, we can skip it and notify the caller about it
-                    // if (lastCommitted >= index)
-                    // {
-                        return true;
-                    // }
-                }
-            }
-            return false;
-        }
-
 
         public string LastStateChangeReason()
         {

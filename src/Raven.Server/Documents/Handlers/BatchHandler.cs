@@ -20,7 +20,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -40,8 +39,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -241,54 +238,46 @@ namespace Raven.Server.Documents.Handlers
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
-            var array = new DynamicJsonArray();
-            long index;
+            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
-            if (ServerStore.CommandAlreadyInLog(clusterTransactionCommand, out _) && clusterTransactionCommand.RaftCommandIndex.HasValue)
+            if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
-                index = clusterTransactionCommand.RaftCommandIndex.Value;
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index); // wait for the command to be applied on this node
-                while (Database.LastCompletedClusterTransactionIndex < index)
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
                 {
-                    await Task.Delay(200);
-                }
-
-                var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand); // get results from leader
-                var count = ValidateClusterTransactionResult(result.Result);
-
-                var lastModified = Database.Time.GetUtcNow();
-                GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count, lastModified, options.DisableAtomicDocumentWrites, array);
+                    ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
+                };
             }
-            else
+
+            // wait for the command to be applied on this node
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+
+            var array = new DynamicJsonArray();
+            if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                index = result.Index;
-                ValidateClusterTransactionResult(result.Result);
-
-                // wait for the command to be applied on this node
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-
-                if (clusterTransactionCommand.DatabaseCommandsCount > 0)
+                var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke(ServerStore, Database, clusterTransactionCommand);
+                if (forTestingTask != null)
                 {
-                    var forTestingTask = Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-                    if (forTestingTask != null)
-                    {
-                        await forTestingTask;
-                    }
-
-                    var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
-                    if (reply.IndexTask != null)
-                    {
-                        await reply.IndexTask;
-                    }
-
-                    array = reply.Array;
+                    await forTestingTask;
                 }
+
+                var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+                if (reply.IndexTask != null)
+                {
+                    await reply.IndexTask;
+                }
+
+                array = reply.Array;
             }
 
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
-                array.Add(new DynamicJsonValue { ["Type"] = clusterCommands.Type, ["Key"] = clusterCommands.Id, ["Index"] = index });
+                array.Add(new DynamicJsonValue
+                {
+                    ["Type"] = clusterCommands.Type,
+                    ["Key"] = clusterCommands.Id,
+                    ["Index"] = result.Index
+                });
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -297,7 +286,7 @@ namespace Raven.Server.Documents.Handlers
                 context.Write(writer, new DynamicJsonValue
                 {
                     [nameof(BatchCommandResult.Results)] = array,
-                    [nameof(BatchCommandResult.TransactionIndex)] = index
+                    [nameof(BatchCommandResult.TransactionIndex)] = result.Index
                 });
             }
         }
@@ -305,70 +294,6 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowNotSupportedType(string contentType)
         {
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
-        }
-
-        private long ValidateClusterTransactionResult(object result)
-        {
-            if (result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ClusterTransactionConcurrencyException(
-                    $"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
-                {
-                    ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
-                };
-            }
-
-            if (result is long count)
-            {
-                return count;
-            }
-            
-            throw new InvalidOperationException($"Cluster Transaction result type ({result.GetType()}) isn't valid");
-        }
-
-        private void GenerateDatabaseCommandsEvaluatedResults(List<ClusterTransactionDataCommand> databaseCommands, 
-            long index, long count, DateTime lastModified, bool? disableAtomicDocumentWrites,
-            DynamicJsonArray commandsResults)
-        {
-            foreach (var dataCmd in databaseCommands)
-            {
-                count++;
-                var cv = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
-                if (disableAtomicDocumentWrites == false)
-                {
-                    cv += $",{ChangeVectorParser.TrxnTag}:{index}-{Database.ClusterTransactionId}";
-                }
-
-                switch (dataCmd.Type)
-                {
-                    case CommandType.PUT:
-                        if (dataCmd.Document.GetMetadata().TryGet("@collection", out string collection) == false)
-                            throw new InvalidOperationException(); // TODO: change it to relevant exception
-
-                        commandsResults.Add(new DynamicJsonValue
-                        {
-                            ["Type"] = dataCmd.Type,
-                            [Constants.Documents.Metadata.Id] = dataCmd.Id,
-                            [Constants.Documents.Metadata.Collection] = collection,
-                            [Constants.Documents.Metadata.ChangeVector] = cv,
-                            [Constants.Documents.Metadata.LastModified] = lastModified,
-                            ["@flags"] = "FromClusterTransaction"
-                        });
-                        break;
-                    case CommandType.DELETE:
-                        commandsResults.Add(new DynamicJsonValue
-                        {
-                            [nameof(BatchRequestParser.CommandData.Id)] = dataCmd.Id,
-                            [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
-                            ["Deleted"] = true,
-                            ["ChangeVector"] = cv
-                        });
-                        break;
-                    default:
-                        throw new InvalidOperationException(); // TODO: change it to relevant exception
-                }
-            }
         }
 
         private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
