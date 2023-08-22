@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Set whether archived, unarchived or all documents will be indexed
         /// </summary>
-        public IndexSourceItemKind? SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
         /// <summary>
         /// Index state
@@ -228,11 +228,11 @@ namespace Raven.Client.Documents.Indexes
                 if (State.HasValue)
                     indexDefinition.State = State.Value;
 
-                if (SourceItemKind.HasValue)
+                if (ArchivedDataProcessingBehavior.HasValue)
                 {
                     if (indexDefinition.SourceType != IndexSourceType.Documents)
-                        throw new NotSupportedException($"{nameof(SourceItemKind)} can be set only for document indexes.");
-                    indexDefinition.SourceItemKind = SourceItemKind.Value;
+                        throw new NotSupportedException($"{nameof(ArchivedDataProcessingBehavior)} can be set only for document indexes.");
+                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.Value;
                 }
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;

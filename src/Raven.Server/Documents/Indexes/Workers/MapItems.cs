@@ -138,8 +138,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         current.KnownToBeNew = _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(current.Etag);
                                         if (_index.SourceType != IndexSourceType.Documents || 
-                                            ((itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == false && _index.Definition.SourceItemKind != IndexSourceItemKind.ArchivedOnly) ||
-                                            (itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == true && _index.Definition.SourceItemKind != IndexSourceItemKind.Default)))
+                                            ((itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == false && _index.Definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.ArchivedOnly) ||
+                                            (itemEnumerator.Current.DocumentFlags?.HasFlag(DocumentFlags.Archived) == true && _index.Definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.ExcludeArchived)))
                                         {
                                             var numberOfResults = _index.HandleMap(current, mapResults,
                                                 writeOperation, indexContext, collectionStats);

@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                               || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
                               || options.MentorNode != state.MentorNode
                               || options.Query != state.Query
-                              || options.SourceItemKind != state.SourceItemKind;
+                              || options.ArchivedDataProcessingBehavior != state.ArchivedDataProcessingBehavior;
 
             return gotChanges;
         }

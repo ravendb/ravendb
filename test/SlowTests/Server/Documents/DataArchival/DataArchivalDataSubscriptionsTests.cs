@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.DataArchival;
                 {
                     Query = "from Companies",
                     Name = "Created",
-                    SourceItemKind = SubscriptionSourceItemKind.ArchivedOnly
+                    ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
                 });
                 var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
                 var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
@@ -145,7 +145,7 @@ namespace SlowTests.Server.Documents.DataArchival;
                 {
                     Query = "from Companies",
                     Name = "Created",
-                    SourceItemKind = SubscriptionSourceItemKind.ArchivedIncluded
+                    ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
                 });
                 var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
                 var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
@@ -168,14 +168,14 @@ namespace SlowTests.Server.Documents.DataArchival;
         }
         
         [Fact]
-        public async Task ArchivedDocumentsDataSubscription_CanDisableAndEnableSubscriptionAndSourceItemKindWillBeTheSameBeforeAndAfter()
+        public async Task ArchivedDocumentsDataSubscription_CanDisableAndEnableSubscriptionAndArchivedDataProcessingBehaviorWillBeTheSameBeforeAndAfter()
         {
             using (var store = GetDocumentStore())
             {
                 // Set-up the subscription
                 var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
-                    Query = "from Companies", Name = "Created", SourceItemKind = SubscriptionSourceItemKind.ArchivedOnly
+                    Query = "from Companies", Name = "Created", ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
                 });
 
                 // Disable the subscription
@@ -190,7 +190,7 @@ namespace SlowTests.Server.Documents.DataArchival;
                 ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(subsId, OngoingTaskType.Subscription));
                 Assert.False(ongoingTask.Disabled);
                 
-                Assert.Equal(SubscriptionSourceItemKind.ArchivedOnly,(await store.Subscriptions.GetSubscriptionStateAsync("Created")).SourceItemKind);
+                Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly,(await store.Subscriptions.GetSubscriptionStateAsync("Created")).ArchivedDataProcessingBehavior);
             }
         }
     }

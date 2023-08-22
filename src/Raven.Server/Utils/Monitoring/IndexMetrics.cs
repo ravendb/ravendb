@@ -20,7 +20,7 @@ namespace Raven.Server.Utils.Monitoring
         public double? TimeSinceLastQueryInSec { get; set; }
         public double? TimeSinceLastIndexingInSec { get; set; }
         public IndexLockMode LockMode { get; set; }
-        public IndexSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
         public bool IsInvalid { get; set; }
         public IndexRunningStatus Status { get; set; }
         public double MappedPerSec { get; set; }
@@ -39,7 +39,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(TimeSinceLastQueryInSec)] = TimeSinceLastQueryInSec,
                 [nameof(TimeSinceLastIndexingInSec)] = TimeSinceLastIndexingInSec,
                 [nameof(LockMode)] = LockMode,
-                [nameof(SourceItemKind)] = SourceItemKind,
+                [nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior,
                 [nameof(IsInvalid)] = IsInvalid,
                 [nameof(Status)] = Status,
                 [nameof(MappedPerSec)] = MappedPerSec,

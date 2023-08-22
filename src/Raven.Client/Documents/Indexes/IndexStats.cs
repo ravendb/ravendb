@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Indicates whether archived, unarchived or all documents will be indexed
         /// </summary>
-        public IndexSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
 
         public IndexRunningStatus Status { get; set; }
 

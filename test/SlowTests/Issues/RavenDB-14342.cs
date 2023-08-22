@@ -211,7 +211,7 @@ namespace SlowTests.Issues
                     Assert.True(orderByCompanyMetrics.TimeSinceLastQueryInSec > 0);
                     Assert.True(orderByCompanyMetrics.TimeSinceLastIndexingInSec > 0);
                     Assert.Equal(IndexLockMode.Unlock, orderByCompanyMetrics.LockMode);
-                    Assert.Equal(IndexSourceItemKind.Default, orderByCompanyMetrics.SourceItemKind);
+                    Assert.Equal(ArchivedDataProcessingBehavior.ExcludeArchived, orderByCompanyMetrics.ArchivedDataProcessingBehavior);
                     Assert.False(orderByCompanyMetrics.IsInvalid);
                     Assert.Equal(IndexRunningStatus.Disabled, orderByCompanyMetrics.Status);
                     Assert.Equal(IndexType.MapReduce, orderByCompanyMetrics.Type);

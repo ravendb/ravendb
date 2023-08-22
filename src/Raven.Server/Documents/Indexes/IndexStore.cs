@@ -329,9 +329,9 @@ namespace Raven.Server.Documents.Indexes
                         existingIndex.SetLock(definition.LockMode);
                     }
 
-                    if ((differences & IndexDefinitionCompareDifferences.IndexSourceItemKind) != 0)
+                    if ((differences & IndexDefinitionCompareDifferences.ArchivedDataProcessingBehavior) != 0)
                     {
-                        existingIndex.Definition.SourceItemKind = definition.SourceItemKind;
+                        existingIndex.Definition.ArchivedDataProcessingBehavior = definition.ArchivedDataProcessingBehavior;
                     }
 
                     if ((differences & IndexDefinitionCompareDifferences.Priority) != 0)
@@ -1036,8 +1036,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (def.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
                     existingIndex.SetLock(def.LockMode.Value);
-                if (def.SourceItemKind.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.IndexSourceItemKind) != 0)
-                    existingIndex.Definition.SourceItemKind = def.SourceItemKind.Value;
+                if (def.ArchivedDataProcessingBehavior.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.ArchivedDataProcessingBehavior) != 0)
+                    existingIndex.Definition.ArchivedDataProcessingBehavior = def.ArchivedDataProcessingBehavior.Value;
             }
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
@@ -1661,8 +1661,8 @@ namespace Raven.Server.Documents.Indexes
                     if (def.LockMode != null && index.Definition.LockMode != def.LockMode)
                         differences |= IndexDefinitionCompareDifferences.LockMode;
 
-                    if (index.Definition.SourceItemKind != def.SourceItemKind)
-                        differences |= IndexDefinitionCompareDifferences.IndexSourceItemKind;
+                    if (index.Definition.ArchivedDataProcessingBehavior != def.ArchivedDataProcessingBehavior)
+                        differences |= IndexDefinitionCompareDifferences.ArchivedDataProcessingBehavior;
                 }
                 if (indexDefinition.Priority != null && index.Definition.Priority != indexDefinition.Priority)
                     differences |= IndexDefinitionCompareDifferences.Priority;
@@ -1946,10 +1946,10 @@ namespace Raven.Server.Documents.Indexes
                             oldIndexDefinition.LockMode.HasValue)
                             newIndex.SetLock(oldIndexDefinition.LockMode.Value);
 
-                        if (newIndex.Definition.SourceItemKind == IndexSourceItemKind.Default &&
-                            newIndexDefinition.SourceItemKind.HasValue == false &&
-                            oldIndexDefinition.SourceItemKind.HasValue)
-                            newIndex.Definition.SourceItemKind = oldIndexDefinition.SourceItemKind.Value;
+                        if (newIndex.Definition.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived &&
+                            newIndexDefinition.ArchivedDataProcessingBehavior.HasValue == false &&
+                            oldIndexDefinition.ArchivedDataProcessingBehavior.HasValue)
+                            newIndex.Definition.ArchivedDataProcessingBehavior = oldIndexDefinition.ArchivedDataProcessingBehavior.Value;
 
                         if (newIndex.Definition.Priority == IndexPriority.Normal &&
                             newIndexDefinition.Priority.HasValue == false &&

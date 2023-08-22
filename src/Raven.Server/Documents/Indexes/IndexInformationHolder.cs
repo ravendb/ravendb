@@ -146,6 +146,6 @@ public static class IndexInformationHolderExtensions
         SourceType = holder.SourceType,
         Priority = holder.Definition.Priority,
         LockMode = holder.Definition.LockMode,
-        SourceItemKind = holder.Definition.SourceItemKind
+        ArchivedDataProcessingBehavior = holder.Definition.ArchivedDataProcessingBehavior
     };
 }

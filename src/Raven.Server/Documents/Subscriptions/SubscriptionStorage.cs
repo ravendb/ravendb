@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = subscriptionId,
                 PinToMentorNode = options.PinToMentorNode,
                 Disabled = disabled ?? false,
-                SourceItemKind = options.SourceItemKind
+                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Subscriptions
                 ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
                 SubscriptionName = @base.SubscriptionName;
-                SourceItemKind = @base.SourceItemKind;
+                ArchivedDataProcessingBehavior = @base.ArchivedDataProcessingBehavior;
                 MentorNode = @base.MentorNode;
                 PinToMentorNode = @base.PinToMentorNode;
                 NodeTag = @base.NodeTag;

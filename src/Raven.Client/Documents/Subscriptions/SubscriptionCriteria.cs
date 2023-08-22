@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string MentorNode { get; set; }
         public bool Disabled { get; set; }
         public bool PinToMentorNode { get; set; }
-        public SubscriptionSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
     }
 
     public sealed class SubscriptionCreationOptions<T>
@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
 
-        public SubscriptionSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
 
         public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
         {

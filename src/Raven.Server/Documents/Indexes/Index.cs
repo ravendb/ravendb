@@ -3062,7 +3062,7 @@ namespace Raven.Server.Documents.Indexes
                         SearchEngineType = SearchEngineType,
                         SourceType = SourceType,
                         LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
-                        SourceItemKind = Definition?.SourceItemKind ?? IndexSourceItemKind.Default,
+                        ArchivedDataProcessingBehavior = Definition?.ArchivedDataProcessingBehavior ?? ArchivedDataProcessingBehavior.ExcludeArchived,
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
                         Status = Status,
@@ -3083,7 +3083,7 @@ namespace Raven.Server.Documents.Indexes
                     stats.SearchEngineType = SearchEngineType;
                     stats.Type = Type;
                     stats.LockMode = Definition.LockMode;
-                    stats.SourceItemKind = Definition.SourceItemKind;
+                    stats.ArchivedDataProcessingBehavior = Definition.ArchivedDataProcessingBehavior;
                     stats.Priority = Definition.Priority;
                     stats.State = State;
                     stats.Status = Status;

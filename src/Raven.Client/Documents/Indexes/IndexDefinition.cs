@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Indexes
             internal set => _indexSourceType = value;
         }
 
-        public virtual IndexSourceItemKind? SourceItemKind { get; set; }
+        public virtual ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
@@ -173,9 +173,9 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
             
-            if (SourceItemKind != other.SourceItemKind)
+            if (ArchivedDataProcessingBehavior != other.ArchivedDataProcessingBehavior)
             {
-                result |= IndexDefinitionCompareDifferences.IndexSourceItemKind;
+                result |= IndexDefinitionCompareDifferences.ArchivedDataProcessingBehavior;
             }
 
             if (Priority != other.Priority)
@@ -554,7 +554,7 @@ namespace Raven.Client.Documents.Indexes
             }
 
             definition.LockMode = LockMode;
-            definition.SourceItemKind = SourceItemKind;
+            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
             definition.Fields = fields;
             definition.Name = Name;
             definition.Priority = Priority;
@@ -619,8 +619,8 @@ namespace Raven.Client.Documents.Indexes
         AdditionalAssemblies = 1 << 11,
         DeploymentMode = 1 << 12,
         CompoundFields = 1 << 13,
-        IndexSourceItemKind = 1 << 14,
+        ArchivedDataProcessingBehavior = 1 << 14,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | IndexSourceItemKind,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior,
     }
 }
