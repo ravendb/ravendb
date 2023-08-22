@@ -97,6 +97,8 @@ interface documentMetadataDto {
     '@timeseries': Array<string>;
     '@expires'?: string;
     '@refresh'?: string;
+    '@archive-at'?: string;
+    '@archived'?: boolean;
 }
 
 interface updateDatabaseConfigurationsResult {
