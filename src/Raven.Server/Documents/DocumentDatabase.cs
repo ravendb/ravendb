@@ -535,8 +535,14 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
 
+            var removeTasks = new Dictionary<string, RemoveTask>();
             try
             {
+                foreach (var cmd in batch)
+                {
+                    var removeTask = ClusterTransactionWaiter.CreateTask(cmd.Options.TaskId, cmd.Index);
+                    removeTasks.Add(cmd.Options.TaskId, removeTask);
+                }
 
                 try
                 {
@@ -556,7 +562,12 @@ namespace Raven.Server.Documents
 
                 foreach (var command in batch)
                 {
-                    OnClusterTransactionCompletion(command, mergedCommands);
+                    var removeTask = removeTasks[command.Options.TaskId];
+                    var finished = OnClusterTransactionCompletion(command, mergedCommands, removeTask);
+                    if (finished == false)
+                    {
+                        removeTasks.Remove(command.Options.TaskId);
+                    }
                 }
             }
             catch
@@ -577,6 +588,9 @@ namespace Raven.Server.Documents
             }
             finally
             {
+                foreach (var removeTask in removeTasks)
+                    removeTask.Value.Dispose();
+
                 if (_logger.IsInfoEnabled && stopwatch != null)
                     _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
             }
@@ -593,18 +607,26 @@ namespace Raven.Server.Documents
                     command
                 };
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
-
+                var removeTask = removeTasks[command.Options.TaskId];
                 try
                 {
                     TxMerger.EnqueueSync(mergedCommand);
-                    OnClusterTransactionCompletion(command, mergedCommand);
+                    var finished = OnClusterTransactionCompletion(command, mergedCommand, removeTask);
+                    if (finished == false)
+                    {
+                        removeTasks.Remove(command.Options.TaskId);
+                    }
 
                     _clusterTransactionDelayOnFailure = 1000;
                     command.Processed = true;
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
-                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
+                    var finished = OnClusterTransactionCompletion(command, mergedCommand, removeTask, exception: e);
+                    if (finished == false)
+                    {
+                        removeTasks.Remove(command.Options.TaskId);
+                    }
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
@@ -624,9 +646,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
+        private bool OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands, RemoveTask removeTask, Exception exception = null)
         {
+            var finished = true;
             try
             {
                 var index = command.Index;
@@ -642,8 +665,6 @@ namespace Raven.Server.Documents
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
 
-                        var removeTask = ClusterTransactionWaiter.CreateTask(command.Options.TaskId, command.Index);
-
                         indexTask.ContinueWith(t =>
                         {
                             try
@@ -658,6 +679,7 @@ namespace Raven.Server.Documents
                             removeTask.Dispose();
                         });
 
+                        finished = false;
                     }
                     else
                     {
@@ -666,7 +688,7 @@ namespace Raven.Server.Documents
                     
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                    return;
+                    return finished;
                 }
 
                 ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
@@ -679,6 +701,7 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
+            return finished;
         }
 
         public struct DatabaseUsage : IDisposable
