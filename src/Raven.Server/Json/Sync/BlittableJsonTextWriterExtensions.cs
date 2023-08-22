@@ -26,9 +26,9 @@ namespace Raven.Server.Json.Sync
             writer.WriteString(indexDefinition.Type.ToString());
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.SourceItemKind));
-            if (indexDefinition.SourceItemKind.HasValue)
-                writer.WriteString(indexDefinition.SourceItemKind.ToString());
+            writer.WritePropertyName(nameof(indexDefinition.ArchivedDataProcessingBehavior));
+            if (indexDefinition.ArchivedDataProcessingBehavior.HasValue)
+                writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();

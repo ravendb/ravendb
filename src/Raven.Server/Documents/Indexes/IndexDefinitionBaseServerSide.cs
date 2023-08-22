@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        public IndexSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
 
         internal readonly IndexDefinitionClusterState ClusterState;
 
@@ -113,8 +113,8 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteInteger((int)State);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(SourceItemKind));
-            writer.WriteInteger((int)SourceItemKind);
+            writer.WritePropertyName(nameof(ArchivedDataProcessingBehavior));
+            writer.WriteInteger((int)ArchivedDataProcessingBehavior);
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -189,11 +189,11 @@ namespace Raven.Server.Documents.Indexes
             long indexVersion,
             IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState,
-            IndexSourceItemKind? sourceItemKind)
+            ArchivedDataProcessingBehavior? archivedDataProcessingBehavior)
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
-            SourceItemKind = sourceItemKind ?? IndexSourceItemKind.Default;
+            ArchivedDataProcessingBehavior = archivedDataProcessingBehavior ?? ArchivedDataProcessingBehavior.ExcludeArchived;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
@@ -470,12 +470,12 @@ namespace Raven.Server.Documents.Indexes
             return (IndexState)StateAsInt;
         }
 
-        protected static IndexSourceItemKind ReadSourceItemKind(BlittableJsonReaderObject reader)
+        protected static ArchivedDataProcessingBehavior ReadArchivedDataProcessingBehavior(BlittableJsonReaderObject reader)
         {
-            if (reader.TryGet(nameof(SourceItemKind), out int SourceItemKindAsInt) == false)
-                return IndexSourceItemKind.Default;
+            if (reader.TryGet(nameof(ArchivedDataProcessingBehavior), out int archivedDataProcessingBehaviorAsInt) == false)
+                return ArchivedDataProcessingBehavior.ExcludeArchived;
 
-            return (IndexSourceItemKind)SourceItemKindAsInt;
+            return (ArchivedDataProcessingBehavior)archivedDataProcessingBehaviorAsInt;
         }
 
         protected static long ReadVersion(BlittableJsonReaderObject reader)

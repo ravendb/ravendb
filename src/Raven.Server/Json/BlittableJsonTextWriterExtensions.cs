@@ -1309,8 +1309,8 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.SourceItemKind));
-            writer.WriteString(indexDefinition.SourceItemKind?.ToString());
+            writer.WritePropertyName(nameof(indexDefinition.ArchivedDataProcessingBehavior));
+            writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior?.ToString());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));

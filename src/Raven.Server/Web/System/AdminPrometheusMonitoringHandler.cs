@@ -34,7 +34,7 @@ namespace Raven.Server.Web.System
             public static readonly string IndexState = FormatEnumHelp<IndexState>();
             public static readonly string IndexStatus = FormatEnumHelp<IndexRunningStatus>();
             public static readonly string IndexLockMode = FormatEnumHelp<IndexLockMode>();
-            public static readonly string IndexSourceItemKind = FormatEnumHelp<IndexSourceItemKind>();
+            public static readonly string ArchivedDataProcessingBehavior = FormatEnumHelp<ArchivedDataProcessingBehavior>();
             public static readonly string IndexRunningStatus = FormatEnumHelp<IndexRunningStatus>();
             public static readonly string IndexType = FormatEnumHelp<IndexType>();
             
@@ -312,7 +312,7 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Index priority, " + EnumHelp.IndexPriority, "index_priority", metrics, x => (int)x.Priority, cachedTags);
                     WriteGauges(writer, "Index state, " + EnumHelp.IndexState, "index_state", metrics, x => (int)x.State, cachedTags);
                     WriteGauges(writer, "Index lock mode, " + EnumHelp.IndexLockMode, "index_lock_mode", metrics, x => (int)x.LockMode, cachedTags);
-                    WriteGauges(writer, "Index source item kind, " + EnumHelp.IndexSourceItemKind, "index_source_item_kind", metrics, x => (int)x.SourceItemKind, cachedTags);
+                    WriteGauges(writer, "Archived data processing behavior, " + EnumHelp.ArchivedDataProcessingBehavior, "archived_data_processing_behavior", metrics, x => (int)x.ArchivedDataProcessingBehavior, cachedTags);
                     WriteGauges(writer, "Index status, " + EnumHelp.IndexStatus, "index_status", metrics, x => (int)x.Status, cachedTags);
                     WriteGauges(writer, "Index type, " + EnumHelp.IndexType, "index_type", metrics, x => (int)x.Type, cachedTags);
                     WriteGauges(writer, "Number of entries in the index", "index_entries_count", metrics, x => x.EntriesCount, cachedTags);

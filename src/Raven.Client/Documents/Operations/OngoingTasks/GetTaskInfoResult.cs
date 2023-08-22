@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string Query { get; set; }
         public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
-        public SubscriptionSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public DateTime? LastBatchAckTime { get; set; }
@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(Query)] = Query;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
-            json[nameof(SourceItemKind)] = SourceItemKind;
+            json[nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
             json[nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson();
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 ChangeVectorForNextBatchStartingPointPerShard = state.ShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
                 SubscriptionId = state.SubscriptionId,
                 SubscriptionName = state.SubscriptionName,
-                SourceItemKind = state.SourceItemKind,
+                ArchivedDataProcessingBehavior = state.ArchivedDataProcessingBehavior,
                 LastBatchAckTime = state.LastBatchAckTime,
                 Disabled = state.Disabled,
                 LastClientConnectionTime = state.LastClientConnectionTime,

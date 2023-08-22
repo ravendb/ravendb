@@ -186,7 +186,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                     Count = g.Sum(x => x.Count)
                 };
 
-            SourceItemKind = IndexSourceItemKind.ArchivedOnly;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ArchivedOnly;
         }
     }
     
@@ -338,12 +338,12 @@ public class DataArchivalIndexingTests : RavenTestBase
                 };
             
             Index(x => x.AddressText, FieldIndexing.Search);
-            SourceItemKind = IndexSourceItemKind.ArchivedOnly;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ArchivedOnly;
         }
     }
 
     [Fact]
-    public async Task CanGetSourceItemKindFromIndexStatistics()
+    public async Task CanGetArchivedDataProcessingBehaviorFromIndexStatistics()
     {
         using (var store = GetDocumentStore())
         {
@@ -351,7 +351,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             await new ArchivedCompanies_AddressText().ExecuteAsync(store);
             
             var op = new GetIndexStatisticsOperation("ArchivedCompanies/AddressText");
-            Assert.Equal(IndexSourceItemKind.ArchivedOnly, store.Maintenance.Send(op).SourceItemKind);
+            Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, store.Maintenance.Send(op).ArchivedDataProcessingBehavior);
         }
     }
     
@@ -429,7 +429,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                 };
             
             Index(x => x.AddressText, FieldIndexing.Search);
-            SourceItemKind = IndexSourceItemKind.ArchivedIncluded;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
      
@@ -517,7 +517,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                         "    Name = o.Name" +
                         "}"},
                     Name = "test",
-                    SourceItemKind = IndexSourceItemKind.ArchivedIncluded
+                    ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
                 }}));
 
 
@@ -574,7 +574,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                         "    Name = o.Name" +
                         "}"},
                     Name = "test",
-                    SourceItemKind = IndexSourceItemKind.ArchivedIncluded
+                    ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
                 }}));
 
 
@@ -629,7 +629,7 @@ public class DataArchivalIndexingTests : RavenTestBase
                             {
                                 CompanyName = LoadDocument<Company>(counter.Name).Name
                             });
-            SourceItemKind = IndexSourceItemKind.ArchivedIncluded;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
     
@@ -665,13 +665,13 @@ public class DataArchivalIndexingTests : RavenTestBase
                                          Min = segment.Min,
                                          Sum = segment.Sum
                                      });
-            SourceItemKind = IndexSourceItemKind.ArchivedIncluded;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
     
     
     [Fact]
-    public async Task SettingSourceItemKindOnCountersIndexWillThrowNotSupportedException()
+    public async Task SettingArchivedDataProcessingBehaviorIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
         {
@@ -680,7 +680,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
     
     [Fact]
-    public async Task SettingSourceItemKindOnTimeSeriesIndexWillThrowNotSupportedException()
+    public async Task SettingArchivedDataProcessingBehaviorOnTimeSeriesIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
         {
@@ -926,7 +926,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             {
                 @"map('Companies', function (u){ return { Name: u.Name, Count: 1};})",
             };
-            SourceItemKind = IndexSourceItemKind.ArchivedOnly;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.ArchivedOnly;
         }
     }
     
@@ -938,7 +938,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             {
                 @"map('Companies', function (u){ return { Name: u.Name, Count: 1};})",
             };
-            SourceItemKind = IndexSourceItemKind.ArchivedIncluded;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
 
@@ -1102,12 +1102,12 @@ User: counter.DocumentId
 };
 })"
             };
-            SourceItemKind = IndexSourceItemKind.ArchivedIncluded;
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
 
     [Fact]
-    public async void SettingSourceItemKindOnJSCountersIndexWillThrowNotSupportedException()
+    public async void SettingArchivedDataProcessingBehaviorOnJSCountersIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
         {

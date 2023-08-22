@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool Disabled;
         public string MentorNode;
         public bool PinToMentorNode;
-        public SubscriptionSourceItemKind SourceItemKind = SubscriptionSourceItemKind.Default;
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived;
 
         // for serialization
         protected PutSubscriptionCommand() { }
@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
                 LastClientConnectionTime = null,
-                SourceItemKind = SourceItemKind
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
             }.ToJson();
             return json;
         }
@@ -198,7 +198,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(PinToMentorNode)] = PinToMentorNode;
-            json[nameof(SourceItemKind)] = SourceItemKind;
+            json[nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior;
         }
     }
 }

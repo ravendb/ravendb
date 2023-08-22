@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Subscriptions
         // in sharding context - orchestrator node tag
         public string NodeTag { get; set; }
 
-        public SubscriptionSourceItemKind SourceItemKind { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
 
         public SubscriptionShardingState ShardingState { get; set; }
 
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(SourceItemKind)] = SourceItemKind
+                [nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior
             };
 
             if (ShardingState != null)

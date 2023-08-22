@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         public FaultyIndexDefinition(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, IndexField[] mapFields, IndexDefinition definition)
             : base(name, collections, lockMode, priority, state, mapFields, IndexVersion.CurrentVersion, definition.DeploymentMode, definition.ClusterState,
-                definition.SourceItemKind.GetValueOrDefault())
+                definition.ArchivedDataProcessingBehavior.GetValueOrDefault())
         {
             _definition = definition;
         }
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Errors
 
             definition.Name = Name;
             definition.LockMode = LockMode;
-            definition.SourceItemKind = SourceItemKind;
+            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
             definition.Priority = Priority;
             definition.State = State;
             return definition;

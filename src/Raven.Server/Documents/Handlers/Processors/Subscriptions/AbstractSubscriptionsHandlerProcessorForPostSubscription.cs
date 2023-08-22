@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 SetSubscriptionChangeVectorOnUpdate(options, state);
                 options.MentorNode ??= state.MentorNode;
                 options.Query ??= state.Query;
-                options.SourceItemKind = state.SourceItemKind;
+                options.ArchivedDataProcessingBehavior = state.ArchivedDataProcessingBehavior;
 
                 if (SubscriptionsHandler.SubscriptionHasChanges(options, state) == false)
                 {
