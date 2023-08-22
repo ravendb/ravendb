@@ -9,7 +9,13 @@ interface EnforceConfigurationProps {
 }
 
 export default function EnforceConfiguration(props: EnforceConfigurationProps) {
-    const { isOpen, toggle } = props;
+    const { isOpen, toggle, onConfirm } = props;
+
+    const onSubmit = () => {
+        onConfirm();
+        toggle();
+    };
+
     return (
         <Modal isOpen={isOpen} toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
             <ModalBody className="vstack gap-2">
@@ -46,7 +52,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                 <Button color="secondary" onClick={toggle}>
                     Cancel
                 </Button>
-                <Button color="warning">
+                <Button color="warning" onClick={onSubmit}>
                     <Icon icon="rocket" />
                     Enforce Configuration
                 </Button>

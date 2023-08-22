@@ -5,6 +5,8 @@ import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDa
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
+import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
@@ -69,5 +71,21 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
 
     withTombstonesState(dto?: TombstonesStateOnWire) {
         return this.mockResolvedValue(this.mocks.getTombstonesState, dto, DatabasesStubs.tombstonesState());
+    }
+
+    withRevisionsConfiguration(dto?: RevisionsConfiguration) {
+        return this.mockResolvedValue(
+            this.mocks.getRevisionsConfiguration,
+            dto,
+            DatabasesStubs.revisionsConfiguration()
+        );
+    }
+
+    withRevisionsForConflictsConfiguration(dto?: RevisionsCollectionConfiguration) {
+        return this.mockResolvedValue(
+            this.mocks.getRevisionsForConflictsConfiguration,
+            dto,
+            DatabasesStubs.revisionsForConflictsConfiguration()
+        );
     }
 }

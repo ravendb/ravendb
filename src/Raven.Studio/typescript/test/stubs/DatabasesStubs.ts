@@ -7,6 +7,8 @@ import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGrou
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
+import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
+import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -333,6 +335,44 @@ export class DatabasesStubs {
                     Etag: 0,
                 },
             ],
+        };
+    }
+
+    static revisionsConfiguration(): RevisionsConfiguration {
+        return {
+            Default: {
+                Disabled: false,
+                MinimumRevisionsToKeep: 9,
+                MinimumRevisionAgeToKeep: "55.20:14:44",
+                PurgeOnDelete: true,
+                MaximumRevisionsToDeleteUponDocumentUpdate: 120,
+            },
+            Collections: {
+                Categories: {
+                    Disabled: true,
+                    MinimumRevisionsToKeep: 16,
+                    MinimumRevisionAgeToKeep: "65.00:00:00",
+                    PurgeOnDelete: true,
+                    MaximumRevisionsToDeleteUponDocumentUpdate: 80,
+                },
+                Shippers: {
+                    Disabled: false,
+                    MinimumRevisionsToKeep: null,
+                    MinimumRevisionAgeToKeep: null,
+                    PurgeOnDelete: false,
+                    MaximumRevisionsToDeleteUponDocumentUpdate: null,
+                },
+            },
+        };
+    }
+
+    static revisionsForConflictsConfiguration(): RevisionsCollectionConfiguration {
+        return {
+            Disabled: true,
+            MinimumRevisionsToKeep: null,
+            MinimumRevisionAgeToKeep: "55.00:00:00",
+            PurgeOnDelete: false,
+            MaximumRevisionsToDeleteUponDocumentUpdate: 100,
         };
     }
 }

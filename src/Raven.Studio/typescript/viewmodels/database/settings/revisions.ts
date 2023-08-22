@@ -398,19 +398,19 @@ class revisions extends shardViewModelBase {
                  </small>
              </div>`;
         
-        this.confirmationMessage("Enforce Revision Configuration", text1 + text2 + text3, { buttons: ["Cancel", "Enforce Revision Configuration"], html: true })
-            .done (result => {
-                if (result.can) {
-                    new enforceRevisionsConfigurationCommand(db)
-                        .execute()
-                        .done((operationIdDto: operationIdResults) => {
-                            shardingTodo("ANY", "when database is sharded we get operationIdDto per shard. For now - maybe open the popup dialog for the first one");
+        // this.confirmationMessage("Enforce Revision Configuration", text1 + text2 + text3, { buttons: ["Cancel", "Enforce Revision Configuration"], html: true })
+        //     .done (result => {
+        //         if (result.can) {
+        //             new enforceRevisionsConfigurationCommand(db)
+        //                 .execute()
+        //                 .done((operationIdDto: operationIdResults) => {
+        //                     shardingTodo("ANY", "when database is sharded we get operationIdDto per shard. For now - maybe open the popup dialog for the first one");
                             
-                            const operationId = operationIdDto.Results[0].OperationId;
-                            notificationCenter.instance.openDetailsForOperationById(db, operationId);
-                        });
-                }
-            });
+        //                     const operationId = operationIdDto.Results[0].OperationId;
+        //                     notificationCenter.instance.openDetailsForOperationById(db, operationId);
+        //                 });
+        //         }
+        //     });
     }
     
     private initTooltips() {

@@ -7,6 +7,7 @@ import ClientDatabaseConfiguration from "components/pages/database/settings/clie
 import StudioDatabaseConfiguration from "components/pages/database/settings/studioConfiguration/StudioDatabaseConfiguration";
 import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
 import DocumentExpiration from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import DocumentRevisions from "components/pages/database/settings/documentRevisions/DocumentRevisions";
 import TombstonesState from "components/pages/database/settings/tombstones/TombstonesState";
 
 export = getSettingsMenuItem;
@@ -64,7 +65,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/revisions',
-            moduleId: require('viewmodels/database/settings/revisions'),
+            moduleId: bridgeToReact(DocumentRevisions, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Document Revisions',
             nav: true,

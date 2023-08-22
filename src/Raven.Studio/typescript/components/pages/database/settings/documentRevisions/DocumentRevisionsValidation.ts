@@ -1,38 +1,44 @@
 import * as yup from "yup";
-import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import { yupResolver } from "@hookform/resolvers/yup";
-import { yupObjectSchema } from "components/utils/yupUtils";
 
-const schema = yupObjectSchema<RevisionsCollectionConfiguration>({
-    CollectionSpecificName: yup.string(),
+const editCollectionConfigSchema = yup.object({
+    CollectionName: yup.string().nullable().required(),
     Disabled: yup.boolean(),
-    IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: yup.boolean(),
-    MaximumRevisionsToDeleteUponDocumentUpdate: yup
-        .number()
-        .nullable()
-        .positive()
-        .integer()
-        .when("IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled", {
-            is: true,
-            then: (schema) => schema.required(),
-        }),
-    IsMinimumRevisionAgeToKeepEnabled: yup.boolean(),
-    MinimumRevisionAgeToKeep: yup.string().when("IsMinimumRevisionAgeToKeepEnabled", {
-        is: true,
-        then: (schema) => schema.required(),
-    }),
+    IsPurgeOnDeleteEnabled: yup.boolean(),
     IsMinimumRevisionsToKeepEnabled: yup.boolean(),
     MinimumRevisionsToKeep: yup
         .number()
         .nullable()
         .positive()
         .integer()
-        .when("IsMinimumRevisionsToKeepEnabled", {
+        .when("isMinimumRevisionsToKeepEnabled", {
             is: true,
             then: (schema) => schema.required(),
         }),
-    PurgeOnDelete: yup.boolean(),
+    IsMinimumRevisionAgeToKeepEnabled: yup.boolean(),
+    MinimumRevisionAgeToKeep: yup
+        .string()
+        .nullable()
+        .when("isMinimumRevisionAgeToKeepEnabled", {
+            is: true,
+            then: (schema) => schema.required(),
+        }),
+    IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: yup.boolean(),
+    MaximumRevisionsToDeleteUponDocumentUpdate: yup
+        .number()
+        .nullable()
+        .positive()
+        .integer()
+        .when("isMaximumRevisionsToDeleteUponDocumentUpdateEnabled", {
+            is: true,
+            then: (schema) => schema.required(),
+        }),
 });
 
-export const documentRevisionsYupResolver = yupResolver(schema);
-export type DocumentRevisionsFormData = Required<yup.InferType<typeof schema>>;
+const editConfigSchema = editCollectionConfigSchema.omit(["CollectionName"]);
+
+export const documentRevisionsConfigYupResolver = yupResolver(editConfigSchema);
+export const documentRevisionsCollectionConfigYupResolver = yupResolver(editCollectionConfigSchema);
+
+export type EditDocumentRevisionsConfig = Required<yup.InferType<typeof editConfigSchema>>;
+export type EditDocumentRevisionsCollectionConfig = Required<yup.InferType<typeof editCollectionConfigSchema>>;

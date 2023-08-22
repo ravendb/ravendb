@@ -3,12 +3,14 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class enforceRevisionsConfigurationCommand extends commandBase {
+    private readonly db: database;
 
-    constructor(private db: database) {
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
-    execute(): JQueryPromise<operationIdResults> {
+    execute(): JQueryPromise<operationIdDto> {
         const url = endpoints.databases.adminRevisions.adminRevisionsConfigEnforce;
 
         return this.post<void>(url, null, this.db)
