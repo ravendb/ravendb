@@ -20,7 +20,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -256,15 +255,12 @@ namespace Raven.Server.Documents.Handlers
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                var timeout = Database.ForTestingPurposes?.WaitForDatabaseResultsTimeoutInClusterTransaction?.Invoke(command) ??
-                              ServerStore.Engine.OperationTimeout;
-                var waitTask = Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
-                if (await waitTask.WaitWithTimeout(timeout) == false)
+                ClusterTransactionCompletionResult reply;
+                using (var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted))
                 {
-                    throw new System.TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                    reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
                 }
-
-                var reply = (ClusterTransactionCompletionResult)await waitTask;
                 if (reply.IndexTask != null)
                 {
                     await reply.IndexTask;

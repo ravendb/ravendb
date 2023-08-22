@@ -1883,8 +1883,6 @@ namespace Raven.Server.Documents
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
 
-            internal Func<BatchHandler.MergedBatchCommand, TimeSpan?> WaitForDatabaseResultsTimeoutInClusterTransaction;
-
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;
