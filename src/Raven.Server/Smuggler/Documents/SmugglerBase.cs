@@ -469,6 +469,12 @@ namespace Raven.Server.Smuggler.Documents
                         SkipDocument(item, result.Documents);
                         continue;
                     }
+                    
+                    if (_options.IncludeArchived == false && item.Document.Flags.HasFlag(DocumentFlags.Archived))
+                    {
+                        SkipDocument(item, result.Documents);
+                        continue;
+                    }
 
                     if (_patcher != null)
                     {

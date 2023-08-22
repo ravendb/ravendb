@@ -77,6 +77,8 @@ namespace Raven.Client.Documents.Smuggler
         public bool IncludeExpired { get; set; }
 
         public bool IncludeArtificial { get; set; }
+        
+        public bool IncludeArchived { get; set; }
 
         public bool RemoveAnalyzers { get; set; }
 
@@ -98,6 +100,7 @@ namespace Raven.Client.Documents.Smuggler
         DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
         bool IncludeExpired { get; set; }
         bool IncludeArtificial { get; set; }
+        bool IncludeArchived { get; set; }
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
