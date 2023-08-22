@@ -629,11 +629,10 @@ public static class QueryBuilderHelper
     internal static string CoraxGetValueAsString(object value) => value switch
     {
         StringSegment s => s.Value,
-        string { Length: 0 } => Constants.Documents.Indexing.Fields.EmptyString,
+        string { Length: 0 } => @"""",
         string s => s,
         long l => l.ToString(CultureInfo.InvariantCulture),
         double d => d.ToString(CultureInfo.InvariantCulture),
-        null => Corax.Constants.NullValue,
         _ => value?.ToString()
     };
 

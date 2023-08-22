@@ -51,16 +51,13 @@ public partial class IndexSearcher
     }
     
     //Numerical TermMatch.
-    public unsafe TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree termsTree = null)
+    public TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree termsTree = null)
     {
         var containerId = GetContainerIdOfNumericalTerm(field, out var numericalField, term);
 
-        if (containerId == 0)
-        {
-            return TermMatch.CreateEmpty(this, Allocator);
-        }
-
-        return TermQuery(numericalField, containerId, 1);
+        return containerId == 0 
+            ? TermMatch.CreateEmpty(this, Allocator) 
+            : TermQuery(numericalField, containerId, 1);
     }
     
     public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
@@ -72,15 +69,21 @@ public partial class IndexSearcher
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (terms == null && term != null)
         {
             // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty(this, Allocator);
         }
 
+        if (term is null)
+        {
+            return TryGetPostingListForNull(field, out var postingListId) 
+                ? TermQuery(field, postingListId, 1D) 
+                : TermMatch.CreateEmpty(this, Allocator);
+        }
+        
         var termSlice = term switch
         {
-            Constants.NullValue => Constants.NullValueSlice,
             Constants.EmptyString => Constants.EmptyStringSlice,
             _ => EncodeAndApplyAnalyzer(field, term)
         };
@@ -219,12 +222,20 @@ public partial class IndexSearcher
     private long NumberOfDocumentsUnderSpecificTerm(FieldMetadata binding, string term)
     {
         var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
-        if (terms == null)
+        if (terms == null && term != null)
             return 0;
+        
+        if (term is null)
+        {
+            //todo perf
+            var termMatch =  TryGetPostingListForNull(binding, out var postingListId) 
+                ? TermQuery(binding, postingListId, 1D) 
+                : TermMatch.CreateEmpty(this, Allocator);
+            return termMatch.Count;
+        }
         
         var termSlice = term switch
         {
-            Constants.NullValue => Constants.NullValueSlice,
             Constants.EmptyString => Constants.EmptyStringSlice,
             _ => EncodeAndApplyAnalyzer(binding, term)
         };
