@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                     return result;
                 }
                 
-                if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
+                if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
                 {
                     reason = $"{id} is not archived, while the item kind is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
                     result.Status = SubscriptionBatchItemStatus.Skip;
