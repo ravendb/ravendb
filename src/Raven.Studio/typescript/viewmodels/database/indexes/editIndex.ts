@@ -509,8 +509,13 @@ class editIndex extends shardViewModelBase {
     }
     
     runTest() {
+        const oldVisible = this.testResultsVisible();
         this.testResultsVisible(true);
-        this.testIndex.runTest(this.shardSelector ? this.shardSelector.location() : null);
+        
+        // wait for animation
+        setTimeout(() => {
+            this.testIndex.runTest(this.shardSelector ? this.shardSelector.location() : null);
+        }, oldVisible ? 1 : 200);
     }
 
     indexHistoryButtonHandler() {
