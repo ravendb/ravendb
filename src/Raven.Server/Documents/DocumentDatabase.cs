@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
+                ClusterTransactionWaiter = new ClusterTransactionWaiter(this, serverStore);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
                 {
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents
                 _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
                 IoChanges.OnIoChange += CheckWriteRateAndNotifyIfNecessary;
 
-                using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     LastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
@@ -631,6 +631,8 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
 
+                LastCompletedClusterTransactionIndex = index;
+
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
@@ -664,7 +666,6 @@ namespace Raven.Server.Documents
                     
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                    LastCompletedClusterTransactionIndex = index;
                     return;
                 }
 

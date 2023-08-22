@@ -239,7 +239,7 @@ namespace SlowTests.Issues
                 db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
                 {
                     if (Interlocked.CompareExchange(ref failover, 1, 0) == 0)
-                        throw new TimeoutException("Fake server fail that cause failover"); // for failover in node A
+                        throw new TimeoutException("Shahar"); // for failover in node A
                 };
             }
         }
