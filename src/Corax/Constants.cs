@@ -1,4 +1,5 @@
 using System;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 
@@ -9,11 +10,11 @@ namespace Corax
         public const string BeforeAllKeys = "BeforeAllKeys-a8e5f221-613e-4eae-9962-2689e7c44506";
         public const string AfterAllKeys = "AfterAllKeys-3622a0bb-1cf4-4200-b830-5e937d57ac99";
         
-        public const string NullValue = "NULL_VALUE";
+        public static readonly string NullValue = Encodings.Utf8.GetString(new []{(byte)0});
         public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
         
         
-        public const string EmptyString = "EMPTY_STRING";
+        public const string EmptyString = @"""";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
         
         public const string IndexMetadata = "@index_metadata";
@@ -59,7 +60,7 @@ namespace Corax
             
             public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
-                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField;            
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists;            
             public const int DynamicField = -2;
             static IndexWriter()
             {
@@ -78,6 +79,8 @@ namespace Corax
                     Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
                     Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
+                    Slice.From(ctx, "NullPostingLists", ByteStringType.Immutable, out NullPostingLists);
+
                 }
             }
         }

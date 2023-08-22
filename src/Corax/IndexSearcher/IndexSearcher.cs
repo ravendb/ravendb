@@ -1,6 +1,4 @@
 using System;
-using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -17,7 +15,6 @@ using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
 using Corax.Utils;
-using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -61,6 +58,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Tree _fieldsTree;
     private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
+    private Tree _nullPostingList;
     private long _dictionaryId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
@@ -464,6 +462,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _hasMultipleTermsInFieldCache[fieldName] = exists;
         
         return exists;
+    }
+
+    private bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId)
+    {
+        _nullPostingList ??= _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
+        postingListId = _nullPostingList?.ReadInt64(field.FieldName) ?? -1;
+        return postingListId != -1;
     }
 
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()

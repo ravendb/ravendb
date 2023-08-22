@@ -1162,6 +1162,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 terms[i] = GetValue(ref state,
                     // limit the search on the _next_ call on this page
                     state.LastSearchPosition);
+
+                //NULL VALUE
+                if ((terms[i] & ~long.MaxValue) != 0)
+                    terms[i] = missingValue;
+                
                 continue;
             }
 

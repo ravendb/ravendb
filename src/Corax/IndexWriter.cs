@@ -549,6 +549,7 @@ namespace Corax
             _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
 
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+            _nullEntriesPostingLists = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
@@ -1144,6 +1145,7 @@ namespace Corax
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
         private CompactTree _primaryKeyTree;
+        private Tree _nullEntriesPostingLists;
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public struct RecordedTerm : IComparable<RecordedTerm>
@@ -1299,8 +1301,9 @@ namespace Corax
             while (reader.MoveNextStoredField())
             {
                 //Null/empty is not stored in container, just exists as marker.
-                 if (reader.TermId == -1)
-                     continue;
+                if (reader.TermId == -1)
+                    continue;
+                
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
             }
@@ -1310,6 +1313,20 @@ namespace Corax
                 if (fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field) == false)
                 {
                     throw new InvalidOperationException($"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
+                }
+
+                if (reader.IsNull)
+                {
+                    ref var nullTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, Constants.NullValueSlice, out var nullExists);
+                    if (nullExists == false)
+                    {
+                        nullTermLocation = field.Storage.Count;
+                        field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, 1));
+                          // We dont want to reclaim the term name
+                    }
+                    ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
+                    nullTerm.Removal(_entriesAllocator, entryToDelete, reader.Frequency);
+                    continue;
                 }
                 
                 var decodedKey = reader.Current.Decoded();
@@ -1814,6 +1831,8 @@ namespace Corax
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
+                bool isNullTerm = term.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan());
+                
                 ref var entriesLocation = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
                 Debug.Assert(Unsafe.IsNullRef(ref entriesLocation) == false);
                 
@@ -1828,14 +1847,26 @@ namespace Corax
                     SetRange(_removalsForTerm, entries.Removals);
                 }
 
-                compactKeyCacheScope.Key.Set(term.AsSpan());
-                bool found = fieldTree.TryGetNextValue(compactKeyCacheScope.Key, out var termContainerId, out var existingIdInTree, out var keyLookup);
-                Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
+                bool alreadyIndexed = false;
+                bool termExists;
+                long termContainerId;
+                long existingIdInTree;
+                CompactTree.CompactKeyLookup keyLookup;
+                if (isNullTerm)
+                {
+                    existingIdInTree = TryGetNullTermPostingList(fieldTree, out termContainerId, out keyLookup, out termExists,  ref entries, out alreadyIndexed);
+                }
+                else
+                {
+                    compactKeyCacheScope.Key.Set(term.AsSpan());
+                    termExists = fieldTree.TryGetNextValue(compactKeyCacheScope.Key, out termContainerId, out existingIdInTree, out keyLookup);
+                    Debug.Assert(termExists || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
+                }
 
-                if (entries.HasChanges)
+                if (entries.HasChanges & alreadyIndexed == false)
                 {
                     long termId;
-                    if (entries.Additions.Count > 0 && found == false)
+                    if (entries.Additions.Count > 0 && termExists == false)
                     {
                         if (entries.Removals.Count != 0)
                             throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
@@ -1860,12 +1891,18 @@ namespace Corax
                                 fieldTree.SetAfterTryGetNext(ref keyLookup, termId);
                                 break;
                             case AddEntriesToTermResult.RemoveTermId:
+                                if (isNullTerm)
+                                {
+                                    //removal of null posting list
+                                    _nullEntriesPostingLists.Delete(indexedField.Name);
+                                    break;
+                                }
+                                
                                 if (fieldTree.TryRemoveExistingValue(ref keyLookup, out var oldValue) == false)
                                 {
                                     dumper.WriteRemoval(term, termId);
                                     ThrowTriedToDeleteTermThatDoesNotExists();
                                 }
-
                                 totalLengthOfTerm -= entries.TermSize;
                                 dumper.WriteRemoval(term, oldValue);
                                 _numberOfTermModifications--;
@@ -1883,12 +1920,14 @@ namespace Corax
                         }
                     }
                 }
-
+                
                 RecordTermsForEntries(entriesForTerm, entries, termContainerId);
                 
                 if (indexedField.Spatial == null)
                 {
-                    Debug.Assert(termContainerId > 0);
+                    Debug.Assert(isNullTerm || termContainerId > 0);
+                    Debug.Assert(isNullTerm == false || (termContainerId & ~long.MaxValue) != 0);
+
                     InsertEntriesForTerm(termContainerId);
                 }
             }
@@ -1898,6 +1937,38 @@ namespace Corax
             entriesForTerm.Dispose(_entriesAllocator);
 
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+
+            long TryGetNullTermPostingList(CompactTree tree, out long termContainerId, out CompactTree.CompactKeyLookup keyLookup, out bool termExists, ref EntriesModifications entries, out bool alreadyIndexed)
+            {
+                keyLookup = default;
+                termContainerId = ~long.MaxValue | (tree.RootPage << 3); // sign bit means its null, rootpage identificates field
+                termExists = true;
+                alreadyIndexed = false;
+                //We want to obtain posting lists for NULL value from different tree than CompactTree to make rest code as valid ;-)
+                //We will
+                var postingList = _nullEntriesPostingLists.ReadInt64(indexedField.Name);
+                if (postingList == null)
+                {
+                    long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
+
+                    // we need to account for the size of the posting lists, once a term has been switch to a posting list
+                    // it will always be in this model, so we don't need to do any cleanup
+                    _largePostingListSet ??= _transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
+                    _largePostingListSet.Add(setId);
+
+                    ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+                    {            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
+
+                        _pForEncoder.Encode(additions, entries.Additions.Count);
+                        PostingList.Create(_transaction.LowLevelTransaction, ref postingListState, _pForEncoder);
+                        postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
+                        _nullEntriesPostingLists.Add(indexedField.Name, postingList.Value);
+                    }
+                    alreadyIndexed = true;
+                }
+
+                return postingList.Value;
+            }
         }
 
         private void ClearEntriesForTerm()
@@ -2391,7 +2462,6 @@ namespace Corax
             _largePostingListSet.Add(setId); 
 
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
-
             PostingList.Create(_transaction.LowLevelTransaction, ref postingListState, _pForEncoder);
             termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
         }

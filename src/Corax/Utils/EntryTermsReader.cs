@@ -88,6 +88,7 @@ public unsafe struct EntryTermsReader
     public bool HasNumeric;
     public bool IsRaw;
     public bool IsList;
+    public bool IsNull => (_prevTerm & ~long.MaxValue) != 0;
 
     public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
     {
@@ -141,7 +142,7 @@ public unsafe struct EntryTermsReader
         var termContainerId = VariableSizeEncoding.Read<long>(_cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         _cur += offset;
-
+        
         if ((termContainerId & 0b11) == 0b10) // special term markers, rare
         {
             HandleSpecialTerm(termContainerId, skipStoredFieldLoad: true);
@@ -211,6 +212,12 @@ public unsafe struct EntryTermsReader
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
+        if ((termContainerId & ~long.MaxValue) != 0 ) // null value
+        {
+            FieldRootPage = (termContainerId & long.MaxValue) >> (hasFreq ? 11 : 3);
+            return;
+        }
+        
         Container.Get(_llt, TermId, out var termItem);
         FieldRootPage = termItem.PageLevelMetadata;
         TermsReader.Set(Current, termItem, _dicId);
