@@ -45,11 +45,14 @@ class flagsColumn implements virtualColumn {
             if (_.includes(flags, "HasTimeSeries")) {
                 extraClasses.push("time-series");
             }
+            if (metadata.archived) {
+                extraClasses.push("archived");
+            }
             
             shardText = metadata.shardNumber != null ? '<span class="label label-default" title="Shard #">#' + metadata.shardNumber + '</span>' : "";
         }
         
-        return `<div class="cell text-cell flags-cell ${extraClasses.join(" ")}" style="width: ${this.width}"><i title="Attachments" class="icon-attachment"></i><i title="Revisions" class="icon-revisions"></i><i title="Counters" class="icon-new-counter"></i><i title="Time Series" class="icon-new-time-series"></i>${shardText}</div>`;
+        return `<div class="cell text-cell flags-cell ${extraClasses.join(" ")}" style="width: ${this.width}"><i title="Attachments" class="icon-attachment"></i><i title="Revisions" class="icon-revisions"></i><i title="Counters" class="icon-new-counter"></i><i title="Time Series" class="icon-new-time-series"></i><i title="Archived" class="icon-data-archival"></i>${shardText}</div>`;
     }
 
     toDto(): virtualColumnDto {

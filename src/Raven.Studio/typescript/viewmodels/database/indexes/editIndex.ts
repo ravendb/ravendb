@@ -50,6 +50,7 @@ import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 import testIndex = require("models/database/index/testIndex");
 import inlineShardSelector from "viewmodels/common/sharding/inlineShardSelector";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 class editIndex extends shardViewModelBase {
     
@@ -157,6 +158,21 @@ class editIndex extends shardViewModelBase {
         this.testIndex.dispose();
     }
 
+    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+        if (!mode) {
+            return "";
+        }
+        switch (mode) {
+            case "ArchivedOnly":
+                return "Archived Only";
+            case "IncludeArchived":
+                return "Include Archived";
+            case "ExcludeArchived":
+                return "Exclude Archived";
+            default:
+                assertUnreachable(mode);
+        }
+    }
     formatDeploymentMode(mode: Raven.Client.Documents.Indexes.IndexDeploymentMode) {
         switch (mode) {
             case "Rolling":
@@ -629,6 +645,8 @@ class editIndex extends shardViewModelBase {
             indexDef.collectionNameForReferenceDocuments,
             indexDef.additionalSources,
             indexDef.additionalAssemblies,
+            indexDef.specifyArchivedDataProcessingBehavior,
+            indexDef.archivedDataProcessingBehavior,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
             hasDefaultFieldOptions,

@@ -238,6 +238,12 @@
                                   data-bind="text: editedIndex().numberOfConfigurationFields() || undefined"></span>
                         </a>
                     </li>
+                    <li role="presentation" id="archivedDataTab">
+                        <a href="#archivedData" aria-controls="archivedData" role="tab" data-toggle="tab">
+                            <i class="icon-data-archival"></i>
+                            <span>Archived Data</span>
+                        </a>
+                    </li>
                     <li role="presentation" id="additionalAssembliesTab">
                         <a href="#additionalAssemblies" aria-controls="additionalAssemblies" role="tab" data-toggle="tab">
                             <i class="icon-additional-assemblies"></i>
@@ -335,6 +341,46 @@
                                     <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)" title="Remove this customized configuration">
                                         <i class="icon-trash"></i>
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane fade" id="archivedData">
+                        <div class="alert alert-info">
+                            HERE GOES DESCRIPTION
+                        </div>
+
+                        <div class="flex-horizontal">
+                            <div class="toggle">
+                                <input id="toggleDataArchival" type="checkbox" data-bind="checked: editedIndex().specifyArchivedDataProcessingBehavior,
+                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                <label for="toggleDataArchival" class="control-label">
+                                    <strong>Override default archived data processing behavior</strong>
+                                </label>
+                            </div>
+
+                            <div data-bind="visible: editedIndex().specifyArchivedDataProcessingBehavior">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <span data-bind="text: $root.formatArchivedDataProcessingBehavior(editedIndex().archivedDataProcessingBehavior())"></span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ArchivedOnly')">
+                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ExcludeArchived')">
+                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ExcludeArchived')"></span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'IncludeArchived')">
+                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('IncludeArchived')"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
