@@ -57,8 +57,7 @@ namespace SlowTests.Issues
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
             {
-                cts.Cancel();
-                return Task.CompletedTask;
+                return Task.Delay(15_000);
             };
 
             var e = await Assert.ThrowsAsync<TaskCanceledException>(async () =>
@@ -72,6 +71,8 @@ namespace SlowTests.Issues
             });
 
             Assert.NotNull(e);
+            Assert.Contains("RequestExecutor", e.StackTrace);
+            Assert.Contains("HttpClient", e.StackTrace);
         }
 
         [Fact]
