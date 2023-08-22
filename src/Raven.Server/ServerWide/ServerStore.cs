@@ -3262,18 +3262,23 @@ namespace Raven.Server.ServerWide
             await _engine.WaitForCommitIndexChange(modification, value, token);
         }
 
-        public bool CommandAlreadyInLog(CommandBase command, out long index, out object result, out Exception exception)
+        public bool CommandAlreadyInLog(CommandBase command,  /*DocumentDatabase database,*/ out Exception exception)
         {
-            result = null;
-            index = -1;
+            // exception = null;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
+                // _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
                 var djv = command.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
-                if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out index, out result, out exception))
+                if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out exception))
                 {
-                    return true;
+                    command.RaftCommandIndex = index;
+                    // if this command is already committed, we can skip it and notify the caller about it
+                    // if (lastCommitted >= index)
+                    // {
+                        return true;
+                    // }
                 }
             }
             return false;

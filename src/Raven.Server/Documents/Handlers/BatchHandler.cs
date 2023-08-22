@@ -244,29 +244,29 @@ namespace Raven.Server.Documents.Handlers
             var array = new DynamicJsonArray();
             long index;
 
-            if (ServerStore.CommandAlreadyInLog(clusterTransactionCommand, out index, out var result, out _)) // failover
+            if (ServerStore.CommandAlreadyInLog(clusterTransactionCommand, out _) && clusterTransactionCommand.RaftCommandIndex.HasValue)
             {
-                if (result == null)
+                index = clusterTransactionCommand.RaftCommandIndex.Value;
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index); // wait for the command to be applied on this node
+                while (Database.LastCompletedClusterTransactionIndex < index)
                 {
-                    await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index); // wait for the command to be applied on this node
-                    if (Database.LastCompletedClusterTransactionIndex < index)
-                        while (await Database.LastCompletedClusterTransactionIndexWaiter.Task < index) ;
-                    
-                    ServerStore.CommandAlreadyInLog(clusterTransactionCommand, out index, out result, out _);
+                    await Task.Delay(200);
                 }
-                var count = ValidateClusterTransactionResult(result);
+
+                var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand); // get results from leader
+                var count = ValidateClusterTransactionResult(result.Result);
 
                 var lastModified = Database.Time.GetUtcNow();
                 GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count, lastModified, options.DisableAtomicDocumentWrites, array);
             }
             else
             {
-                var resultFromLeader = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                index = resultFromLeader.Index;
-                ValidateClusterTransactionResult(resultFromLeader.Result);
+                var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                index = result.Index;
+                ValidateClusterTransactionResult(result.Result);
 
                 // wait for the command to be applied on this node
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, resultFromLeader.Index);
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
 
                 if (clusterTransactionCommand.DatabaseCommandsCount > 0)
                 {
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Handlers
                 return count;
             }
             
-            throw new InvalidOperationException("Cluster Transaction result type isn't valid");
+            throw new InvalidOperationException($"Cluster Transaction result type ({result.GetType()}) isn't valid");
         }
 
         private void GenerateDatabaseCommandsEvaluatedResults(List<ClusterTransactionDataCommand> databaseCommands, 

@@ -439,11 +439,8 @@ namespace Raven.Server.Documents
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
 
-        public long LastCompletedClusterTransactionIndex { get; private set; }
-
-        public TaskCompletionSource<long> LastCompletedClusterTransactionIndexWaiter { get; private set; } =
-            new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        private long _lastCompletedClusterTransactionIndex;
+        public long LastCompletedClusterTransactionIndex => _lastCompletedClusterTransactionIndex;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -625,10 +622,6 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
-                LastCompletedClusterTransactionIndex = index;
-                LastCompletedClusterTransactionIndexWaiter.TrySetResult(index);
-                LastCompletedClusterTransactionIndexWaiter = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
-
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
@@ -648,6 +641,7 @@ namespace Raven.Server.Documents
                     ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+                    _lastCompletedClusterTransactionIndex = command.Index;
                     return;
                 }
 
