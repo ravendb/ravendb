@@ -17,7 +17,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -227,8 +226,38 @@ namespace Raven.Server.Web.System
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                                rawRecord.Topology.Members.Select(tag => GetNodeJson(tag, ServerNode.Role.Member, license, clusterTopology, rawRecord.DatabaseName))
-                                .Concat(rawRecord.Topology.Rehabs.Select(tag => GetNodeJson(tag, ServerNode.Role.Rehab, license, clusterTopology, rawRecord.DatabaseName))
+                                rawRecord.Topology.Members.Select(x =>
+                                    {
+                                        var json = new DynamicJsonValue
+                                        {
+                                            [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                            [nameof(ServerNode.ClusterTag)] = x,
+                                            [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
+                                            [nameof(ServerNode.Database)] = rawRecord.DatabaseName
+                                        };
+
+                                        if (license != null)
+                                        {
+                                            json[nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion();
+                                        }
+                                        return json;
+                                    })
+                                .Concat(rawRecord.Topology.Rehabs.Select(x =>
+                                    {
+                                        var json = new DynamicJsonValue
+                                        {
+                                            [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                            [nameof(ServerNode.ClusterTag)] = x,
+                                            [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
+                                            [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab,
+                                        };
+
+                                        if(license != null)
+                                        {
+                                            json[nameof(ServerNode.LastServerVersion)] = license.NodeLicenseDetails[x].BuildInfo.GetCleanedFullVersion();
+                                        }
+                                        return json;
+                                    })
                                 )
                             ),
                             [nameof(Topology.Etag)] = rawRecord.Topology.Stamp?.Index ?? -1
@@ -236,23 +265,6 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
-        }
-
-        private DynamicJsonValue GetNodeJson(string tag, ServerNode.Role role, LicenseLimits license, ClusterTopology clusterTopology, string database)
-        {
-            var json = new DynamicJsonValue
-            {
-                [nameof(ServerNode.Url)] = GetUrl(tag, clusterTopology),
-                [nameof(ServerNode.ClusterTag)] = tag,
-                [nameof(ServerNode.Database)] = database,
-                [nameof(ServerNode.ServerRole)] = role,
-            };
-
-            if (license != null && license.NodeLicenseDetails.TryGetValue(tag, out var nodeDetails))
-            {
-                json[nameof(ServerNode.LastServerVersion)] = nodeDetails.BuildInfo.GetCleanedFullVersion();
-            }
-            return json;
         }
 
         private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)

@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                ClusterTransactionWaiter = new ClusterTransactionWaiter(this, serverStore);
+                ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
                 {
@@ -441,6 +441,9 @@ namespace Raven.Server.Documents
 
         public long LastCompletedClusterTransactionIndex { get; private set; }
 
+        public TaskCompletionSource<long> LastCompletedClusterTransactionIndexWaiter { get; private set; } =
+            new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -526,11 +529,6 @@ namespace Raven.Server.Documents
             }
 
             var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
-
-            foreach (var cmd in batch)
-            {
-                ClusterTransactionWaiter.CreateTask(cmd.Options.TaskId, out _);
-            }
 
             ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
 
@@ -627,8 +625,9 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
-
                 LastCompletedClusterTransactionIndex = index;
+                LastCompletedClusterTransactionIndexWaiter.TrySetResult(index);
+                LastCompletedClusterTransactionIndexWaiter = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var options = mergedCommands.Options[index];
                 if (exception == null)
@@ -639,17 +638,14 @@ namespace Raven.Server.Documents
                         indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
 
-                        indexTask.ContinueWith(t =>
-                        {
-                            ClusterTransactionWaiter.SetResult(options.TaskId, index);
-                        });
-                    }
-                    else
+                    var result = new BatchHandler.ClusterTransactionCompletionResult
                     {
-                        ClusterTransactionWaiter.SetResult(options.TaskId, index);
-                    }
-                    
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
+                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
                     return;
