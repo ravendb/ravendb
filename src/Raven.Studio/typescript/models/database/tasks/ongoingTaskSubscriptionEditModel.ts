@@ -14,7 +14,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     startingPointLatestDocument: KnockoutComputed<boolean>;
     setStartingPoint = ko.observable<boolean>(true);
     
-    changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
+    changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
+
+    specifyArchivedDataProcessingBehavior = ko.observable<boolean>(false);
+    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior>("IncludeArchived");
 
     validationGroup: KnockoutValidationGroup; 
     
@@ -42,7 +45,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.startingPointType,
             this.startingChangeVector,
             this.setStartingPoint,
-            this.changeVectorForNextBatchStartingPoint
+            this.changeVectorForNextBatchStartingPoint,
+            this.specifyArchivedDataProcessingBehavior,
+            this.archivedDataProcessingBehavior,
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -58,6 +63,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.startingPointLatestDocument = ko.pureComputed(() => {
             return this.startingPointType() === "Latest Document";
         });
+        
     }   
 
     updateDetails(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
@@ -86,6 +92,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
+
+        this.specifyArchivedDataProcessingBehavior(!!dto.ArchivedDataProcessingBehavior);
+        this.archivedDataProcessingBehavior(dto.ArchivedDataProcessingBehavior ?? "ExcludeArchived");
     }
 
     private serializeChangeVector() {
@@ -115,7 +124,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             PinToMentorNode: this.pinMentorNode(),
             ChangeVector: this.serializeChangeVector(),
             Disabled: this.taskState() === "Disabled",
-            ArchivedDataProcessingBehavior: null,
+            ArchivedDataProcessingBehavior: this.specifyArchivedDataProcessingBehavior() ? this.archivedDataProcessingBehavior() : undefined,
         }
     }
 
@@ -140,11 +149,17 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 }]
         });
 
+        this.archivedDataProcessingBehavior.extend({
+            required: {
+                onlyIf: () =>this.specifyArchivedDataProcessingBehavior()
+            }
+        });
+
         this.validationGroup = ko.validatedObservable({
             query: this.query,
             startingChangeVector: this.startingChangeVector,
-            mentorNode: this.mentorNode
-            
+            mentorNode: this.mentorNode,
+            archivedDataProcessingBehavior: this.archivedDataProcessingBehavior,
         });
     }
 

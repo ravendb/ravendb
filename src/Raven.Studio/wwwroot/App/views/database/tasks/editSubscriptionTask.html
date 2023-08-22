@@ -72,6 +72,41 @@
                             </div>
                         </div>
                         <div class="panel padding flex-form">
+                            <div class="flex-horizontal">
+                                <div class="toggle">
+                                    <input id="toggleDataArchival" type="checkbox" data-bind="checked: specifyArchivedDataProcessingBehavior,
+                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
+                                    <label for="toggleDataArchival" class="control-label">
+                                        Override default archived data processing behavior
+                                    </label>
+                                </div>
+
+                                <div data-bind="visible: specifyArchivedDataProcessingBehavior">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                            <span data-bind="text: $root.formatArchivedDataProcessingBehavior(archivedDataProcessingBehavior())"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a href="#" data-bind="click: archivedDataProcessingBehavior.bind(archivedDataProcessingBehavior, 'ArchivedOnly')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#" data-bind="click: archivedDataProcessingBehavior.bind(archivedDataProcessingBehavior, 'ExcludeArchived')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ExcludeArchived')"></span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#" data-bind="click: archivedDataProcessingBehavior.bind(archivedDataProcessingBehavior, 'IncludeArchived')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('IncludeArchived')"></span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="form-group">
                                 <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set starting point from which documents will be sent" data-animation="true">
                                     <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
@@ -151,6 +186,8 @@
                                 <textarea id="latest-change-vector" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
                             </div>
                         </div>
+
+                        
                     </div>
                 </form>
             </div>
