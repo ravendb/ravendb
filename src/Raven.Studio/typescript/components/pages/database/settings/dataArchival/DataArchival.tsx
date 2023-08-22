@@ -138,10 +138,33 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                 targetId="about"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
-                                <h1>TODO - text</h1>
+                                <p>
+                                    When <strong>Data Archival</strong> is enabled:
+                                </p>
+                                <ul>
+                                    <li>
+                                        The server scans the database at the specified <strong>frequency</strong>,
+                                        searching for documents that should be archived.
+                                    </li>
+                                    <li>
+                                        Any document that has an <code>@archive-at</code> metadata property whose time has
+                                        passed at the time of the scan will be archived:
+                                        <ul>
+                                            <li>
+                                                The archived document will be compressed
+                                            </li>
+                                            <li>
+                                                The <code>@archive-at</code> metadata property will be replaced by: <code>@archieved: true</code>
+                                            </li>
+                                            <li>
+                                                Per-index/subscription, you can configure whether archived documents will be included in the indexing and subscription processes
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
 
                                 <p>Sample document:</p>
                                 <Code code={codeExample} language="javascript" />

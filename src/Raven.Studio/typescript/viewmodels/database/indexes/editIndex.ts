@@ -158,6 +158,22 @@ class editIndex extends shardViewModelBase {
         this.testIndex.dispose();
     }
 
+    textForArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+        if (!mode) {
+            return "";
+        }
+        switch (mode) {
+            case "ArchivedOnly":
+                return "=> Only archived documents will be included";
+            case "IncludeArchived":
+                return "=> Both archived and non-archived documents will be included";
+            case "ExcludeArchived":
+                return "=> Only non-archived documents will be included";
+            default:
+                assertUnreachable(mode);
+        }
+    }
+
     formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
         if (!mode) {
             return "";
@@ -173,6 +189,7 @@ class editIndex extends shardViewModelBase {
                 assertUnreachable(mode);
         }
     }
+    
     formatDeploymentMode(mode: Raven.Client.Documents.Indexes.IndexDeploymentMode) {
         switch (mode) {
             case "Rolling":

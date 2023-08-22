@@ -24,6 +24,7 @@ import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
 import { EditSubscriptionTaskInfoHub } from "./EditSubscriptionTaskInfoHub";
 import assertUnreachable from "components/utils/assertUnreachable";
+import popoverUtils = require("common/popoverUtils");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -135,6 +136,37 @@ class editSubscriptionTask extends shardViewModelBase {
             .done(() => this.dirtyFlag = this.editedSubscription().dirtyFlag);
 
         return $.when<any>(deferred);
+    }
+
+    attached() {
+        super.attached();
+
+        popoverUtils.longWithHover($(".archive-info"),
+            {
+                content:
+                    `<div class="margin-bottom-xs margin-top-sm">
+                         <div class="margin-bottom-xs"><strong>The default processing behavior of archived data</strong> is based on<br />
+                             the index serving the subscription query:</div>
+                         <ul class="small">
+                             <li class="margin-bottom-xs">Index data source: <strong>Documents</strong><br />
+                                 Archived documents are excluded.<br />
+                                 Only non-archived documents will be included in processing. 
+                             </li>
+                             <li class="margin-bottom-xs">Index data source: <strong>Counters</strong><br />
+                                 Archived documents are included.
+                                 Both archived and non-archived documents will be included in processing.
+                             </li>
+                             <li class="margin-bottom-xs">Index data source: <strong>TimeSeries</strong><br />
+                                 Archived documents are included.
+                                 Both archived and non-archived documents will be included in processing.
+                             </li>
+                             <li class="margin-bottom-xs">When the query is a collection query, or query by document ID only:<br />
+                                 No documents are excluded from processing.
+                             </li>
+                         </ul>
+                         <div class="margin-bottom-xs">Turn this toggle on to override the default behavior.</div>
+                     </div>`
+            });
     }
     
     detached() {

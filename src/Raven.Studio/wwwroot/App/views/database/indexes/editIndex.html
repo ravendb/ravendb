@@ -346,19 +346,53 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="archivedData">
-                        <div class="alert alert-info">
-                            HERE GOES DESCRIPTION
+                        <div class="alert alert-info small no-padding-left">
+                            <ul>
+                                <li>
+                                    <div class="margin-bottom-xs">
+                                        The default indexing behavior of archived data depends on the index data source:
+                                    </div>
+                                    <div class="margin-left">
+                                        <table class="table table-condensed">
+                                            <thead>
+                                            <tr>
+                                                <th class="no-padding">Data source</th>
+                                                <th class="no-padding">Default indexing behavior</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr>
+                                                <td class="no-padding">Documents</td>
+                                                <td class="no-padding">Exclude archived documents</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="no-padding">Counters</td>
+                                                <td class="no-padding">Include archived documents</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="no-padding">TimeSeries</td>
+                                                <td class="no-padding">Include archived documents</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="margin-top-xs">
+                                        Turn this toggle on to override the default behavior.<br />
+                                        When querying the index, results will be based only on data from documents that were included in the indexing process.
+                                    </div>
+                                </li>
+                            </ul>
                         </div>
-
                         <div class="flex-horizontal">
                             <div class="toggle">
                                 <input id="toggleDataArchival" type="checkbox" data-bind="checked: editedIndex().specifyArchivedDataProcessingBehavior,
                                             requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                 <label for="toggleDataArchival" class="control-label">
-                                    Override default archived data processing behavior
+                                    Override default behavior
                                 </label>
                             </div>
-
                             <div data-bind="visible: editedIndex().specifyArchivedDataProcessingBehavior">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -382,6 +416,9 @@
                                         </li>
                                     </ul>
                                 </div>
+                            </div>
+                            <div class="text-info bg-info small padding-xxs" data-bind="visible: editedIndex().specifyArchivedDataProcessingBehavior">
+                                <span data-bind="text: $root.textForArchivedDataProcessingBehavior(editedIndex().archivedDataProcessingBehavior())"></span>
                             </div>
                         </div>
                     </div>

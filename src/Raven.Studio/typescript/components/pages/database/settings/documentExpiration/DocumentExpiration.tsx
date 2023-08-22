@@ -174,6 +174,8 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                         passed at the time of the scan will be removed.
                                     </li>
                                 </ul>
+
+                                <p>Sample document:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -213,9 +215,10 @@ function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFo
 }
 
 const codeExample = `{
-    "Example": "Set a timestamp in the @expires metadata property",
+    "Example": 
+      "Set a timestamp in the @expires metadata property",
     "@metadata": {
-        "@collection": "Foo",
-        "@expires": "2023-07-16T08:00:00.0000000Z"
+      "@collection": "Foo",
+      "@expires": "2023-07-16T08:00:00.0000000Z"
     }
 }`;

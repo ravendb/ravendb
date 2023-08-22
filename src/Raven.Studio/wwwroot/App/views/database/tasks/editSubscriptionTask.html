@@ -77,10 +77,9 @@
                                     <input id="toggleDataArchival" type="checkbox" data-bind="checked: specifyArchivedDataProcessingBehavior,
                                             requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                     <label for="toggleDataArchival" class="control-label">
-                                        Override default archived data processing behavior
+                                        Override default processing behavior for archived data
                                     </label>
                                 </div>
-
                                 <div data-bind="visible: specifyArchivedDataProcessingBehavior">
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -105,8 +104,10 @@
                                         </ul>
                                     </div>
                                 </div>
+                                <div>
+                                  <span><small><i class="archive-info icon-info text-info"></i></small></span>
+                                </div>
                             </div>
-                            
                             <div class="form-group">
                                 <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set starting point from which documents will be sent" data-animation="true">
                                     <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
