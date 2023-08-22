@@ -25,6 +25,7 @@ class importDatabaseModel {
 
     includeExpiredDocuments = ko.observable(true);
     includeArtificialDocuments = ko.observable(false);
+    includeArchivedDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable<boolean>(true);
@@ -174,6 +175,7 @@ class importDatabaseModel {
         return {
             IncludeExpired: this.includeExpiredDocuments(),
             IncludeArtificial: this.includeArtificialDocuments(),
+            IncludeArchived: this.includeArchivedDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptedInput() ? this.encryptionKey() : undefined,
@@ -199,7 +201,8 @@ class importDatabaseModel {
                 || this.includeAttachments()
                 || this.includeDocumentsTombstones()
                 || this.includeCompareExchangeTombstones()
-                || this.includeArtificialDocuments();
+                || this.includeArtificialDocuments()
+                || this.includeArchivedDocuments();
         });
 
         this.transformScript.extend({

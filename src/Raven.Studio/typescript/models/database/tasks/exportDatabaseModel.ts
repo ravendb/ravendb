@@ -27,6 +27,7 @@ class exportDatabaseModel {
 
     includeExpiredDocuments = ko.observable(true);
     includeArtificialDocuments = ko.observable(false);
+    includeArchivedDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable(true);
@@ -171,6 +172,7 @@ class exportDatabaseModel {
             FileName: this.exportFileName(),
             IncludeExpired: this.includeExpiredDocuments(),
             IncludeArtificial: this.includeArtificialDocuments(),
+            IncludeArchived: this.includeArchivedDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptOutput() ? this.encryptionKey() : undefined,
@@ -196,7 +198,8 @@ class exportDatabaseModel {
                 || this.includeRevisionDocuments()
                 || this.includeTimeSeries()
                 || this.includeDocuments()
-                || this.includeArtificialDocuments();
+                || this.includeArtificialDocuments()
+                || this.includeArchivedDocuments();
         });
 
         this.transformScript.extend({
