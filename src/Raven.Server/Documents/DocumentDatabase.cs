@@ -549,7 +549,7 @@ namespace Raven.Server.Documents
                     {
                         _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                     }
-                    ExecuteClusterTransactionOneByOne(batch);
+                    ExecuteClusterTransactionOneByOne(batch, removeTasks);
                     return batch;
                 }
 
@@ -583,7 +583,7 @@ namespace Raven.Server.Documents
             return batch;
         }
 
-        private void ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        private void ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch, Dictionary<string, RemoveTask> removeTasks)
         {
             foreach (var command in batch)
             {

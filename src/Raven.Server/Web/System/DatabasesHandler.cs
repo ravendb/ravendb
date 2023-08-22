@@ -250,8 +250,7 @@ namespace Raven.Server.Web.System
 
             if (license != null && license.NodeLicenseDetails.TryGetValue(tag, out var nodeDetails))
             {
-                json[nameof(ServerNode.LastServerVersion)] =
-                    nodeDetails.BuildInfo.AssemblyVersion ?? nodeDetails.BuildInfo.ProductVersion;
+                json[nameof(ServerNode.LastServerVersion)] = nodeDetails.BuildInfo.GetCleanedFullVersion();
             }
             return json;
         }
