@@ -31,6 +31,13 @@ import saveExpirationConfigurationCommand = require("commands/database/documents
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 import getTombstonesStateCommand = require("commands/database/debug/getTombstonesStateCommand");
 import forceTombstonesCleanupCommand = require("commands/database/debug/forceTombstonesCleanupCommand");
+import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
+import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
+import getRevisionsForConflictsConfigurationCommand = require("commands/database/documents/getRevisionsForConflictsConfigurationCommand");
+import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
+import saveRevisionsConfigurationCommand = require("commands/database/documents/saveRevisionsConfigurationCommand");
+import saveRevisionsForConflictsConfigurationCommand = require("commands/database/documents/saveRevisionsForConflictsConfigurationCommand");
+import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -122,5 +129,25 @@ export default class DatabasesService {
 
     async forceTombstonesCleanup(db: database, location: databaseLocationSpecifier) {
         return new forceTombstonesCleanupCommand(db, location).execute();
+    }
+
+    async getRevisionsForConflictsConfiguration(db: database) {
+        return new getRevisionsForConflictsConfigurationCommand(db).execute();
+    }
+
+    async saveRevisionsForConflictsConfiguration(db: database, dto: RevisionsCollectionConfiguration) {
+        return new saveRevisionsForConflictsConfigurationCommand(db, dto).execute();
+    }
+
+    async getRevisionsConfiguration(db: database) {
+        return new getRevisionsConfigurationCommand(db).execute();
+    }
+
+    async saveRevisionsConfiguration(db: database, dto: RevisionsConfiguration) {
+        return new saveRevisionsConfigurationCommand(db, dto).execute();
+    }
+
+    async enforceRevisionsConfiguration(db: database) {
+        return new enforceRevisionsConfigurationCommand(db).execute();
     }
 }

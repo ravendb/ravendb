@@ -1,10 +1,16 @@
 import database = require("models/resources/database");
 import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
+import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 
 class saveRevisionsConfigurationCommand extends commandBase {
-    constructor(private db: database, private revisionsConfiguration: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration) {
+    private readonly db: database;
+    private readonly revisionsConfiguration: RevisionsConfiguration;
+
+    constructor(db: database, revisionsConfiguration: RevisionsConfiguration) {
         super();
+        this.db = db;
+        this.revisionsConfiguration = revisionsConfiguration;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {

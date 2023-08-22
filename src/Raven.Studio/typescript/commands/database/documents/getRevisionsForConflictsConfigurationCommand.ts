@@ -3,9 +3,11 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getRevisionsForConflictsConfigurationCommand extends commandBase {
+    private readonly db: database;
 
-    constructor(private db: database) {
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration> {

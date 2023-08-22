@@ -14,6 +14,11 @@ export default {
 export const DefaultDocumentRevisions: StoryObj<typeof DocumentRevisions> = {
     name: "Document Revisions",
     render: () => {
-        return <DocumentRevisions />;
+        const { databasesService } = mockServices;
+
+        databasesService.withRevisionsConfiguration();
+        databasesService.withRevisionsForConflictsConfiguration();
+
+        return <DocumentRevisions db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };
