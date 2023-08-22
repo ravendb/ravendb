@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public abstract class AutoIndexDefinitionBaseServerSide : IndexDefinitionBaseServerSide<AutoIndexField>
     {
-        protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
-            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, deploymentMode, clusterState: null)
+        protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null, AutoIndexDefinition autoIndexDefinition = null)
+            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, deploymentMode, clusterState: autoIndexDefinition?.ClusterState )
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
