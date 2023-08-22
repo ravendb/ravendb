@@ -1,4 +1,4 @@
-import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { EntityState, PayloadAction, createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 import { services } from "hooks/useServices";
 import database from "models/resources/database";
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
@@ -16,26 +16,20 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 
 export interface DocumentRevisionsState {
     FetchStatus: "success" | "loading" | "error";
-    Config: {
-        Collections: DocumentRevisionsConfig[];
-        Default: DocumentRevisionsConfig;
-    };
-    ConflictsConfig: DocumentRevisionsConfig;
+    Configs: EntityState<DocumentRevisionsConfig>;
+    OriginalConfigs: EntityState<DocumentRevisionsConfig>;
 }
+
+const configsAdapter = createEntityAdapter<DocumentRevisionsConfig>({
+    selectId: (config) => config.Name,
+});
+
+const configsSelectors = configsAdapter.getSelectors();
 
 const initialState: DocumentRevisionsState = {
     FetchStatus: "loading",
-    Config: {
-        Collections: [],
-        Default: null,
-    },
-    ConflictsConfig: {
-        Name: "Conflicting Document Defaults",
-        Disabled: false,
-        PurgeOnDelete: false,
-        MinimumRevisionsToKeep: undefined,
-        MinimumRevisionAgeToKeep: "45.00:00:00",
-    },
+    Configs: configsAdapter.getInitialState(),
+    OriginalConfigs: configsAdapter.getInitialState(),
 };
 
 const sliceName = "documentRevisions";
@@ -44,82 +38,66 @@ export const documentRevisionsSlice = createSlice({
     name: sliceName,
     initialState,
     reducers: {
-        addDocumentDefaultsConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            state.Config.Default = payload;
+        addConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
+            configsAdapter.addOne(state.Configs, payload);
         },
-        editDocumentDefaultsConfig: (...args) => {
-            documentRevisionsSlice.actions.editDocumentDefaultsConfig(args);
+        editConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
+            configsAdapter.updateOne(state.Configs, {
+                id: payload.Name,
+                changes: { ...payload },
+            });
         },
-        toggleDocumentDefaultsConfig: (state) => {
-            state.Config.Default.Disabled = !state.Config.Default.Disabled;
+        deleteConfig: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
+            configsAdapter.removeOne(state.Configs, payload.name);
         },
-        deleteDocumentDefaultsConfig: (state) => {
-            state.Config.Default = null;
-        },
-        addCollectionConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            state.Config.Collections.push(payload);
-        },
-        editCollectionConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            state.Config.Collections.push(payload);
-            const idx = state.Config.Collections.indexOf(state.Config.Collections.find((x) => x.Name === payload.Name));
-            state.Config.Collections[idx] = payload;
-        },
-        toggleCollectionConfig: (state, { payload }: PayloadAction<Pick<DocumentRevisionsConfig, "Name">>) => {
-            const config = state.Config.Collections.find((x) => x.Name === payload.Name);
-            config.Disabled = !config.Disabled;
-        },
-        deleteCollectionConfig: (state, { payload }: PayloadAction<Pick<DocumentRevisionsConfig, "Name">>) => {
-            state.Config.Collections = state.Config.Collections.filter((x) => x.Name !== payload.Name);
-        },
-        editConflictsConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            state.ConflictsConfig = payload;
-        },
-        toggleConflictsConfig: (state) => {
-            state.ConflictsConfig.Disabled = !state.ConflictsConfig.Disabled;
-        },
-        toggleSelectedConfigs: (
-            state,
-            { payload }: PayloadAction<{ names: DocumentRevisionsConfigName[]; disabled: boolean }>
-        ) => {
-            for (const name of payload.names) {
-                if (name === "Conflicting Document Defaults") {
-                    state.ConflictsConfig.Disabled = payload.disabled;
-                    continue;
-                }
+        toggleConfigState: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
+            const disabled = configsSelectors.selectById(state.Configs, payload.name).Disabled;
 
-                if (name === "Document Defaults") {
-                    state.Config.Default.Disabled = payload.disabled;
-                    continue;
-                }
-
-                const config = state.Config.Collections.find((x) => x.Name === name);
-                config.Disabled = payload.disabled;
-            }
+            configsAdapter.updateOne(state.Configs, {
+                id: payload.name,
+                changes: {
+                    Disabled: !disabled,
+                },
+            });
         },
     },
     extraReducers: (builder) => {
         builder
             .addCase(fetchConfigs.fulfilled, (state, { payload }) => {
                 if (payload.config) {
-                    state.Config = {
-                        Default: {
+                    if (payload.config.Default) {
+                        configsAdapter.addOne(state.OriginalConfigs, {
                             ...payload.config.Default,
                             Name: "Document Defaults",
-                        },
-                        Collections: Object.keys(payload.config.Collections).map((name) => ({
+                        });
+                    }
+
+                    configsAdapter.addMany(
+                        state.OriginalConfigs,
+                        Object.keys(payload.config.Collections).map((name) => ({
                             ...payload.config.Collections[name],
                             Name: name,
-                        })),
-                    };
+                        }))
+                    );
                 }
 
                 if (payload.conflictsConfig) {
-                    state.ConflictsConfig = {
+                    configsAdapter.addOne(state.OriginalConfigs, {
                         ...payload.conflictsConfig,
                         Name: "Conflicting Document Defaults",
-                    };
+                    });
+                } else {
+                    configsAdapter.addOne(state.OriginalConfigs, {
+                        Name: "Conflicting Document Defaults",
+                        Disabled: false,
+                        PurgeOnDelete: false,
+                        MaximumRevisionsToDeleteUponDocumentUpdate: null,
+                        MinimumRevisionAgeToKeep: "45.00:00:00",
+                        MinimumRevisionsToKeep: null,
+                    });
                 }
 
+                configsAdapter.setAll(state.Configs, configsSelectors.selectAll(state.OriginalConfigs));
                 state.FetchStatus = "success";
             })
             .addCase(fetchConfigs.pending, (state) => {
@@ -137,7 +115,7 @@ const fetchConfigs = createAsyncThunk<
         conflictsConfig: RevisionsCollectionConfiguration;
     },
     database
->(sliceName + "/fetchConfig", async (db: database) => {
+>(sliceName + "/fetchConfigs", async (db: database) => {
     const config = await services.databasesService.getRevisionsConfiguration(db);
     const conflictsConfig = await services.databasesService.getRevisionsForConflictsConfiguration(db);
 
@@ -153,5 +131,19 @@ export const documentRevisionsActions = {
 };
 
 export const documentRevisionsSelectors = {
-    state: (state: RootState) => state.documentRevisions,
+    fetchStatus: (store: RootState) => store.documentRevisions.FetchStatus,
+    defaultDocumentsConfig: (store: RootState) =>
+        configsSelectors.selectById(
+            store.documentRevisions.Configs,
+            "Document Defaults" satisfies DocumentRevisionsConfigName
+        ),
+    defaultConflictsConfig: (store: RootState) =>
+        configsSelectors.selectById(
+            store.documentRevisions.Configs,
+            "Conflicting Document Defaults" satisfies DocumentRevisionsConfigName
+        ),
+    collectionConfigs: (store: RootState) =>
+        configsSelectors
+            .selectAll(store.documentRevisions.Configs)
+            .filter((x) => x.Name !== "Conflicting Document Defaults" && x.Name !== "Document Defaults"),
 };
