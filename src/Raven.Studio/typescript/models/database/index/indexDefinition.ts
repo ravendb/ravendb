@@ -49,6 +49,9 @@ class indexDefinition {
     outputReduceToCollection = ko.observable<boolean>();
     reduceOutputCollectionName = ko.observable<string>();
     
+    specifyArchivedDataProcessingBehavior = ko.observable<boolean>(false);
+    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior>("IncludeArchived");
+    
     createReferencesToResultsCollection = ko.observable<boolean>();
     patternForReferencesToReduceOutputCollection = ko.observable<string>();
     collectionNameForReferenceDocuments = ko.observable<string>();
@@ -80,6 +83,9 @@ class indexDefinition {
         
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
         this.reduceOutputCollectionName(dto.OutputReduceToCollection);
+        
+        this.specifyArchivedDataProcessingBehavior(!!dto.ArchivedDataProcessingBehavior);
+        this.archivedDataProcessingBehavior(dto.ArchivedDataProcessingBehavior ?? "ExcludeArchived");
         
         this.createReferencesToResultsCollection(!!dto.PatternForOutputReduceToCollectionReferences);
         this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
@@ -178,6 +184,12 @@ class indexDefinition {
             }
         });
 
+        this.archivedDataProcessingBehavior.extend({
+            required: {
+                onlyIf: () =>this.specifyArchivedDataProcessingBehavior()
+            }
+        });
+
         this.patternForReferencesToReduceOutputCollection.extend({
             required: {
                 onlyIf: () => this.hasReduce() && this.createReferencesToResultsCollection()
@@ -199,6 +211,7 @@ class indexDefinition {
             reduceOutputCollectionName: this.reduceOutputCollectionName,
             patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection,
             collectionNameForReferenceDocuments: this.collectionNameForReferenceDocuments,
+            archivedDataProcessingBehavior: this.archivedDataProcessingBehavior,
             fields: this.fields
         });
     }
@@ -296,6 +309,7 @@ class indexDefinition {
             DeploymentMode: this.deploymentMode(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
+            ArchivedDataProcessingBehavior: this.specifyArchivedDataProcessingBehavior() ? this.archivedDataProcessingBehavior() : undefined,
             OutputReduceToCollection: this.hasReduce() &&
                                       this.reduce()    &&
                                       this.outputReduceToCollection() ? 
@@ -401,6 +415,7 @@ class indexDefinition {
             Type: "Map",
             SourceType: "None",
             OutputReduceToCollection: null,
+            ArchivedDataProcessingBehavior: null,
             AdditionalSources: null,
             AdditionalAssemblies: null,
             PatternForOutputReduceToCollectionReferences: null,
