@@ -27,11 +27,12 @@ interface EditRevisionProps {
 export default function EditRevision(props: EditRevisionProps) {
     const { toggle, configType, taskType, config, onConfirm } = props;
 
+    const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
+
     const { control, formState, setValue, handleSubmit } = useForm<EditDocumentRevisionsCollectionConfig>({
-        resolver:
-            configType === "collectionSpecific" && taskType === "new"
-                ? documentRevisionsCollectionConfigYupResolver
-                : documentRevisionsConfigYupResolver,
+        resolver: isForNewCollection
+            ? documentRevisionsCollectionConfigYupResolver
+            : documentRevisionsConfigYupResolver,
         mode: "all",
         defaultValues: getInitialValues(config),
     });
@@ -59,7 +60,12 @@ export default function EditRevision(props: EditRevisionProps) {
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
                             <Label className="mb-0 md-label">Collection</Label>
-                            <FormSelect control={control} name="CollectionName" options={collectionOptions} />
+                            <FormSelect
+                                control={control}
+                                name="CollectionName"
+                                options={collectionOptions}
+                                disabled={isForNewCollection}
+                            />
                         </InputGroup>
                     )}
                     <FormSwitch control={control} name="IsPurgeOnDeleteEnabled">

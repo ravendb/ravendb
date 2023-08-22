@@ -28,6 +28,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import notificationCenter from "common/notifications/notificationCenter";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 todo("Feature", "ANY", "Connect SelectionActions component");
 todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
@@ -51,6 +52,9 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const defaultDocumentsConfig = useAppSelector(documentRevisionsSelectors.defaultDocumentsConfig);
     const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
+    const isAnyModified = useAppSelector(documentRevisionsSelectors.isAnyModified);
+
+    useDirtyFlag(isAnyModified);
 
     const dispatch = useAppDispatch();
 
@@ -59,8 +63,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     }, [db, dispatch]);
 
     const { databasesService } = useServices();
-
-    console.log("kalczur collectionConfigs", collectionConfigs);
 
     const asyncSaveConfigs = useAsyncCallback(async () => {
         const config: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration = {
@@ -85,8 +87,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
         const dto = await databasesService.enforceRevisionsConfiguration(db);
 
-        // console.log("kalczur operationIdDto", dto);
-        // console.log("kalczur operationId", dto.OperationId);
         // TODO kalczur openDetailsForOperationById does not work for sharded db
 
         notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
@@ -114,12 +114,13 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
 
     return (
         <div className="content-margin">
+            {isEnforceConfigurationModalOpen && (
+                <EnforceConfiguration
+                    toggle={toggleEnforceConfigurationModal}
+                    onConfirm={asyncEnforceRevisionsConfiguration.execute}
+                />
+            )}
             {editRevisionData && <EditRevision {...editRevisionData} />}
-            <EnforceConfiguration
-                isOpen={isEnforceConfigurationModalOpen}
-                toggle={toggleEnforceConfigurationModal}
-                onConfirm={asyncEnforceRevisionsConfiguration.execute}
-            />
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
@@ -128,6 +129,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             <ButtonWithSpinner
                                 color="primary"
                                 icon="save"
+                                disabled={isAnyModified}
                                 onClick={asyncSaveConfigs.execute}
                                 isSpinning={asyncSaveConfigs.status === "loading"}
                             >

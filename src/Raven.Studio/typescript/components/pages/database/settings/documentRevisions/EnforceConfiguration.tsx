@@ -3,13 +3,12 @@ import { Alert, Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 
 interface EnforceConfigurationProps {
-    isOpen: boolean;
     toggle: () => void;
     onConfirm: () => Promise<void>;
 }
 
 export default function EnforceConfiguration(props: EnforceConfigurationProps) {
-    const { isOpen, toggle, onConfirm } = props;
+    const { toggle, onConfirm } = props;
 
     const onSubmit = () => {
         onConfirm();
@@ -17,7 +16,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     };
 
     return (
-        <Modal isOpen={isOpen} toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
+        <Modal toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
             <ModalBody className="vstack gap-2">
                 <h4>Enforce Revision Configuration</h4>
                 <p>The following collections have a revision configuration defined:</p>

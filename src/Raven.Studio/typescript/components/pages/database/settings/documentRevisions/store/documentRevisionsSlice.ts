@@ -146,4 +146,10 @@ export const documentRevisionsSelectors = {
         configsSelectors
             .selectAll(store.documentRevisions.Configs)
             .filter((x) => x.Name !== "Conflicting Document Defaults" && x.Name !== "Document Defaults"),
+    isAnyModified: (store: RootState) => {
+        return _.isEqual(store.documentRevisions.OriginalConfigs, store.documentRevisions.Configs);
+    },
+    originalConfigs: (store: RootState) => {
+        return configsSelectors.selectAll(store.documentRevisions.OriginalConfigs);
+    },
 };
