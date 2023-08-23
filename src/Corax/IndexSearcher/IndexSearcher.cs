@@ -239,7 +239,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
         if (allowToBeEmpty == false && tokensSpan.Length != 1) 
             Debug.Assert(tokensSpan.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
-        var disposable = Slice.From(Allocator, bufferSpan, ByteStringType.Immutable, out value);
+        var disposable =IndexWriter.CreateNormalizedTerm(Allocator, bufferSpan, out value);
 
         Analyzer.TokensPool.Return(tokens);
         Analyzer.BufferPool.Return(buffer);

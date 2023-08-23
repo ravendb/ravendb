@@ -1206,10 +1206,10 @@ namespace Corax
             }
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
+        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
             out Slice slice)
         {
-            if (value.Length < Constants.Terms.MaxLength)
+            if (value.Length <= Constants.Terms.MaxLength)
                 return Slice.From(context, value, ByteStringType.Mutable, out slice);
 
             return UnlikelyCreateLargeTerm(context, value, out slice);
