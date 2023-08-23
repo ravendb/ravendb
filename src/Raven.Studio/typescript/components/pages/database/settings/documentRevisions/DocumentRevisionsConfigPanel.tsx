@@ -21,6 +21,7 @@ import classNames from "classnames";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Checkbox } from "components/common/Checkbox";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import generalUtils from "common/generalUtils";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -54,7 +55,10 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
     const isDetailsVisible = config.PurgeOnDelete || config.MinimumRevisionsToKeep || config.MinimumRevisionAgeToKeep;
 
     // TODO kalczur tooltip for defaults
-    // TODO kalczur format retention time
+
+    const formattedMinimumRevisionAgeToKeep = config.MinimumRevisionAgeToKeep
+        ? generalUtils.formatTimeSpan(generalUtils.timeSpanToSeconds(config.MinimumRevisionAgeToKeep) * 1000, true)
+        : null;
 
     return (
         <RichPanel className="flex-row with-status">
@@ -120,7 +124,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                 {config.MinimumRevisionsToKeep}
                             </RichPanelDetailItem>
                         )}
-                        {config.MinimumRevisionAgeToKeep && (
+                        {formattedMinimumRevisionAgeToKeep && (
                             <RichPanelDetailItem
                                 label={
                                     <>
@@ -129,7 +133,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     </>
                                 }
                             >
-                                {config.MinimumRevisionAgeToKeep}
+                                {formattedMinimumRevisionAgeToKeep}
                             </RichPanelDetailItem>
                         )}
                         {isDeleteOnUpdateVisible && (
