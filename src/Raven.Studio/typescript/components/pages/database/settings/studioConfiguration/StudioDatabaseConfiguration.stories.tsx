@@ -5,11 +5,15 @@ import StudioDatabaseConfiguration from "./StudioDatabaseConfiguration";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Database/Studio Configuration",
     component: StudioDatabaseConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof StudioDatabaseConfiguration>;
 
 export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
     return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+};
+
+export const LicenseRestricted: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
+    return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} licenseType="community" />;
 };
