@@ -84,6 +84,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.DocumentsLimitForCompressionDictionaryCreation",
                 "Indexing.Corax.IncludeDocumentScore",
                 "Indexing.Corax.IncludeSpatialDistance",
+                "Indexing.Corax.MaxMemoizationSizeInMb",
                 
                 
                 //Obsolete studio keys:

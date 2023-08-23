@@ -1089,13 +1089,19 @@ namespace Sparrow.Server
         {
             if (_disposed)
                 ThrowObjectDisposed();
-            if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
 
             Debug.Assert((type & ByteStringType.External) == 0, "This allocation routine is only for use with internal storage byte strings.");
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
             int allocationSize = length + sizeof(ByteStringStorage);
             int allocationUnit = Bits.PowerOf2(allocationSize);
+            if (allocationUnit < 0)
+            {
+                if (((long)length + sizeof(ByteStringStorage)) < int.MaxValue)
+                    allocationUnit = int.MaxValue; // here we allow to allocate almost to 2GB
+                else
+                    ThrowAllocationLengthIsInvalid();
+            }
 
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
@@ -1152,6 +1158,11 @@ namespace Sparrow.Server
 
         AllocateWhole:
             return AllocateWholeSegment(length, type); // We will pass the length because this is a whole allocated segment able to hold a length size ByteString.
+
+            void ThrowAllocationLengthIsInvalid()
+            {
+                throw new ArgumentOutOfRangeException(nameof(length), "Cannot allocate size of " + length + " the allocation unit for it is: " + allocationSize);
+            }
         }
 
         private SegmentInformation GetFromReadyToUseMemorySegments(int allocationUnit)

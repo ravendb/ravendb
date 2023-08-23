@@ -18,7 +18,8 @@ namespace Corax.Queries
         private TInner _inner;
         private TOuter _outer;
         private MemoizationMatchProvider<TOuter> _memoizedOuter;
-        private ByteStringContext _ctx;
+        private readonly ByteStringContext _ctx;
+        private readonly IndexSearcher _indexSearcher;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
         private readonly CancellationToken _token;
@@ -40,7 +41,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _confidence;
 
         private BinaryMatch(
-            ByteStringContext ctx,
+            IndexSearcher indexSearcher,
             in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
@@ -49,6 +50,7 @@ namespace Corax.Queries
             QueryCountConfidence confidence,
             in CancellationToken token)
         {
+            _indexSearcher = indexSearcher;
             _totalResults = totalResults;
 
             _fillFunc = fillFunc;
@@ -59,7 +61,7 @@ namespace Corax.Queries
             _outer = outer;
             _confidence = confidence;
             _token = token;
-            _ctx = ctx;
+            _ctx = indexSearcher.Allocator;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
