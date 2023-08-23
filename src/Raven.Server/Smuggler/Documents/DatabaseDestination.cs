@@ -727,16 +727,14 @@ namespace Raven.Server.Smuggler.Documents
                     var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
                     var raftRequestId = RaftIdGenerator.NewId();
-                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId: raftRequestId, disableAtomicDocumentWrites: false,
+                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false,
                         ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
                     var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
 
                     var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
                     clusterTransactionCommand.FromBackup = true;
 
-
                     var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-
                     for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                     {
                         _clusterTransactionCommands[i].Document.Dispose();

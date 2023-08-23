@@ -10,7 +10,6 @@ namespace Raven.Server.ServerWide
         private static string _commitHash;
         private static string _version;
         private static string _fullVersion;
-        private static string _assemblyVersion;
 
         public static string Version => 
             _version ?? (_version = RavenVersionAttribute.Instance.Version);
@@ -23,9 +22,6 @@ namespace Raven.Server.ServerWide
             _commitHash ?? (_commitHash = RavenVersionAttribute.Instance.CommitHash);
         public static string FullVersion => 
             _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
-
-        public static string AssemblyVersion =>
-            _assemblyVersion ?? (_assemblyVersion = RavenVersionAttribute.Instance.AssemblyVersion);
 
         public const int DevBuildNumber = 54;
 

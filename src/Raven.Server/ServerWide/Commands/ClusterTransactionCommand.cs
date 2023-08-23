@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
@@ -398,10 +397,10 @@ namespace Raven.Server.ServerWide.Commands
             return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
-        public unsafe long? SaveCommandsBatch(ClusterOperationContext context, long index)
+        public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
         {
             if (HasDocumentsInTransaction == false)
-                return null;
+                return;
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
@@ -420,8 +419,6 @@ namespace Raven.Server.ServerWide.Commands
                     using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
                         *(long*)ptr = count + DatabaseCommandsCount;
                 }
-
-                return count;
             }
         }
 

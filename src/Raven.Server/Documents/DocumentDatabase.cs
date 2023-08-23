@@ -55,7 +55,6 @@ using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
 using static Raven.Server.Monitoring.Snmp.SnmpOids;
-using static Raven.Server.Documents.ClusterTransactionWaiter;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -370,11 +369,6 @@ namespace Raven.Server.Documents
                         _logger);
                     try
                     {
-                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            LastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                        }
                         _hasClusterTransaction.Set();
                         ExecuteClusterTransaction();
                     }
@@ -443,9 +437,6 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
-
-        public long LastCompletedClusterTransactionIndex { get; private set; }
-
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -536,7 +527,6 @@ namespace Raven.Server.Documents
 
             try
             {
-
                 try
                 {
                     //If we get a database shutdown while we process a cluster tx command this
@@ -592,7 +582,6 @@ namespace Raven.Server.Documents
                     command
                 };
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
-
                 try
                 {
                     TxMerger.EnqueueSync(mergedCommand);
@@ -629,41 +618,25 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
-
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
+                    Task indexTask = null;
                     if (options.WaitForIndexesTimeout != null)
                     {
-                        var indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-
-                        var removeTask = ClusterTransactionWaiter.CreateTask(command.Options.TaskId, command.Index);
-
-                        indexTask.ContinueWith(t =>
-                        {
-                            try
-                            {
-                                t.GetAwaiter().GetResult();
-                                ClusterTransactionWaiter.SetResult(options.TaskId, index);
-                            }
-                            catch (Exception e)
-                            {
-                                ClusterTransactionWaiter.SetException(options.TaskId, index, e);
-                            }
-                            removeTask.Dispose();
-                        });
-
                     }
-                    else
+
+                    var result = new BatchHandler.ClusterTransactionCompletionResult
                     {
-                        ClusterTransactionWaiter.SetResult(options.TaskId, index);
-                    }
-                    
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
+                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                    LastCompletedClusterTransactionIndex = index;
                     return;
                 }
 
@@ -1909,8 +1882,6 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
-
-            internal Action AfterCommitInClusterTransaction;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

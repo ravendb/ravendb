@@ -489,6 +489,5 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
-
     }
 }
