@@ -313,7 +313,8 @@ class indexDefinition {
                                              this.collectionNameForReferenceDocuments() ?
                                                 this.collectionNameForReferenceDocuments() : null,
             AdditionalSources: this.additionalSourceToDto(),
-            AdditionalAssemblies: this.additionalAssemblies().map(assembly => assembly.toDto())
+            AdditionalAssemblies: this.additionalAssemblies().map(assembly => assembly.toDto()),
+            CompoundFields: []
         }
     }
 
@@ -403,7 +404,8 @@ class indexDefinition {
             AdditionalSources: null,
             AdditionalAssemblies: null,
             PatternForOutputReduceToCollectionReferences: null,
-            PatternReferencesCollectionName: null
+            PatternReferencesCollectionName: null,
+            CompoundFields: []
         });
     }
 }
