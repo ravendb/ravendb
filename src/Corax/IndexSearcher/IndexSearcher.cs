@@ -140,7 +140,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term, bool canReturnEmptySlice = false)
     {
         if (term is null)
-            return default;
+            return Constants.NullValueSlice; // unary match
 
         if (ReferenceEquals(term, Constants.BeforeAllKeys))
             return Slices.BeforeAllKeys;
@@ -471,6 +471,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return postingListId != -1;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+        where TInner : IQueryMatch
+    {
+        return new IncludeNullMatch<TInner>(this, inner, field, forward);
+    }
+    
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
     {
         var pageToField = new Dictionary<long, string>();
