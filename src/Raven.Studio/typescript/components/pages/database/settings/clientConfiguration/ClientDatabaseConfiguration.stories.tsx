@@ -37,3 +37,12 @@ export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseCon
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
 };
+
+export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+    commonInit();
+
+    const { manageServerService } = mockServices;
+    manageServerService.withGetGlobalClientConfiguration();
+
+    return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} licenseType="community" />;
+};

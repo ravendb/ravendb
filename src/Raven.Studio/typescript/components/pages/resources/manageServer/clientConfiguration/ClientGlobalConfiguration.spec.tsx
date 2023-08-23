@@ -1,6 +1,6 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
-import { ClientConfiguration } from "./ClientGlobalConfiguration.stories";
+import { ClientConfiguration, LicenseRestricted } from "./ClientGlobalConfiguration.stories";
 
 describe("ClientGlobalConfiguration", function () {
     it("can render", async () => {
@@ -22,5 +22,11 @@ describe("ClientGlobalConfiguration", function () {
         await fillInput(inputElement, "ab");
         await fireClick(saveButton);
         expect(screen.getByText("Please enter exactly 1 character")).toBeInTheDocument();
+    });
+
+    it("is license restricted", async () => {
+        const { screen } = rtlRender(<LicenseRestricted />);
+
+        expect(await screen.findByText(/Licensing/)).toBeInTheDocument();
     });
 });
