@@ -144,27 +144,21 @@ class editSubscriptionTask extends shardViewModelBase {
         popoverUtils.longWithHover($(".archive-info"),
             {
                 content:
-                    `<div class="margin-bottom-xs margin-top-sm">
-                         <div class="margin-bottom-xs"><strong>The default processing behavior of archived data</strong> is based on<br />
-                             the index serving the subscription query:</div>
+                    `<div class="margin-bottom-sm margin-top-sm margin-left-xs">
+                         <div class="margin-bottom-xs">Turn this toggle on to override the default behavior.<br />
+                              Available options:
+                         </div>
                          <ul class="small">
-                             <li class="margin-bottom-xs">Index data source: <strong>Documents</strong><br />
-                                 Archived documents are excluded.<br />
-                                 Only non-archived documents will be included in processing. 
+                             <li class="margin-bottom-xs"><strong>Archived Only</strong><br />
+                                 Only archived documents will be included in processing.
                              </li>
-                             <li class="margin-bottom-xs">Index data source: <strong>Counters</strong><br />
-                                 Archived documents are included.
+                             <li class="margin-bottom-xs"><strong>Exclude Archived</strong> (Default behavior)<br />
+                                 Only non-archived documents will be included in processing.
+                             </li>
+                             <li class="margin-bottom-xs"><strong>Include Archived</strong><br />
                                  Both archived and non-archived documents will be included in processing.
-                             </li>
-                             <li class="margin-bottom-xs">Index data source: <strong>TimeSeries</strong><br />
-                                 Archived documents are included.
-                                 Both archived and non-archived documents will be included in processing.
-                             </li>
-                             <li class="margin-bottom-xs">When the query is a collection query, or query by document ID only:<br />
-                                 No documents are excluded from processing.
                              </li>
                          </ul>
-                         <div class="margin-bottom-xs">Turn this toggle on to override the default behavior.</div>
                      </div>`
             });
     }
