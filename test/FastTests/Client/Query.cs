@@ -814,6 +814,29 @@ namespace FastTests.Client
                 }
             }
         }
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Query_OverMaxSizeOfTerm(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    //todo maciej: maximum size of term
+                    var longName = new string('x', 700);
+                    newSession.Store(new User { Name = longName }, "users/1");
+                    newSession.SaveChanges();
+
+                    var queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.Equals(longName))
+                        .ToList();
+
+                    Assert.Equal(queryResult.Count, 1);
+                }
+            }
+        }
+
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
