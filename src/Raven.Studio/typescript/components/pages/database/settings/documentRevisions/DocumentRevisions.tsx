@@ -2,7 +2,6 @@
 import { Button, Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { Checkbox } from "components/common/Checkbox";
 import { HrHeader } from "components/common/HrHeader";
 import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
@@ -11,7 +10,7 @@ import EditRevision, {
     EditRevisionTaskType,
 } from "components/pages/database/settings/documentRevisions/EditRevision";
 import EnforceConfiguration from "components/pages/database/settings/documentRevisions/EnforceConfiguration";
-import { todo } from "common/developmentHelper";
+import { todo, shardingTodo } from "common/developmentHelper";
 import { NonShardedViewProps } from "components/models/common";
 import { LoadingView } from "components/common/LoadingView";
 import {
@@ -33,6 +32,7 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
 import { StickyHeader } from "components/common/StickyHeader";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -42,7 +42,6 @@ interface EditRevisionData {
     config?: DocumentRevisionsConfig;
 }
 
-todo("Feature", "ANY", "Connect SelectionActions component");
 todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
 todo("Other", "ANY", "Test the view");
 todo("Feature", "Matteo", "Add the Revert revisions view");
@@ -63,6 +62,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     useDirtyFlag(isAnyModified);
 
     const dispatch = useAppDispatch();
+    const { forCurrentDatabase: urls } = useAppUrls();
 
     useEffect(() => {
         dispatch(documentRevisionsActions.fetchConfigs(db));
@@ -91,8 +91,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
         const dto = await databasesService.enforceRevisionsConfiguration(db);
 
-        // TODO kalczur openDetailsForOperationById does not work for sharded db
-
+        shardingTodo("ANY", "openDetailsForOperationById does not work for sharded db");
         notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
     });
 
@@ -148,10 +147,16 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                         Save
                                     </ButtonWithSpinner>
                                     <FlexGrow />
-                                    <Button color="secondary">
+
+                                    <a
+                                        className="btn btn-secondary"
+                                        href={urls.revertRevisions()}
+                                        title="Revert all documents in the database to a specific point in time"
+                                    >
                                         <Icon icon="revert-revisions" />
                                         Revert revisions
-                                    </Button>
+                                    </a>
+
                                     <ButtonWithSpinner
                                         color="secondary"
                                         onClick={toggleEnforceConfigurationModal}
