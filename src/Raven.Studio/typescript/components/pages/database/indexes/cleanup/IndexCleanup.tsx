@@ -12,12 +12,11 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AboutViewFloating, {
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -26,14 +25,15 @@ const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-
 
 interface IndexCleanupProps {
     db: database;
-    licenseType?: string;
 }
 
 export function IndexCleanup(props: IndexCleanupProps) {
-    const { db, licenseType } = props;
+    const { db } = props;
 
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
+
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;
@@ -52,8 +52,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             <AboutViewHeading
                                 icon="index-cleanup"
                                 title="Index Cleanup"
-                                badge={licenseType === "community"}
-                                badgeText={licenseType === "community" ? "Professional +" : undefined}
+                                badgeText={licenseType === "Community" ? "Professional +" : undefined}
                             />
 
                             <FlexGrow />
@@ -63,7 +62,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     icon="about"
                                     color="info"
                                     heading="About this view"
-                                    description="Get additional info on what this feature can offer you"
+                                    description="Get additional info on this feature"
                                 >
                                     <p>
                                         Maintaining multiple indexes can lower performance. Every time data is inserted,
@@ -76,45 +75,16 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         in your application.
                                     </p>
                                 </AccordionItemWrapper>
-                                {licenseType === "community" && (
-                                    <AccordionItemWrapper
+                                {licenseType === "Community" && (
+                                    <AccordionCommunityLicenseNotIncluded
                                         targetId="licensing"
-                                        icon="license"
-                                        color="warning"
-                                        heading="Licensing"
-                                        description="See which plans offer this and more exciting features"
-                                        pill
-                                        pillText="Upgrade available"
-                                        pillIcon="star-filled"
-                                    >
-                                        <AccordionItemLicensing
-                                            description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                            featureName="Index Cleanup"
-                                            featureIcon="index-cleanup"
-                                            checkedLicenses={["Professional", "Enterprise"]}
-                                        >
-                                            <p className="lead fs-4">Get your license expanded</p>
-                                            <div className="mb-3">
-                                                <Button color="primary" className="rounded-pill">
-                                                    <Icon icon="notifications" />
-                                                    Contact us
-                                                </Button>
-                                            </div>
-                                            <small>
-                                                <a
-                                                    href="https://ravendb.net/buy"
-                                                    target="_blank"
-                                                    className="text-muted"
-                                                >
-                                                    See pricing plans
-                                                </a>
-                                            </small>
-                                        </AccordionItemLicensing>
-                                    </AccordionItemWrapper>
+                                        featureName="Index Cleanup"
+                                        featureIcon="index-cleanup"
+                                    />
                                 )}
                             </AboutViewFloating>
                         </div>
-                        <div className={licenseType === "community" ? "item-disabled pe-none" : ""}>
+                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
                             <Nav className="card-tabs gap-3 card-tabs">
                                 <NavItem>
                                     <Card
