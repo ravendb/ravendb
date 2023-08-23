@@ -40,5 +40,4 @@ const editConfigSchema = editCollectionConfigSchema.omit(["CollectionName"]);
 export const documentRevisionsConfigYupResolver = yupResolver(editConfigSchema);
 export const documentRevisionsCollectionConfigYupResolver = yupResolver(editCollectionConfigSchema);
 
-export type EditDocumentRevisionsConfig = Required<yup.InferType<typeof editConfigSchema>>;
 export type EditDocumentRevisionsCollectionConfig = Required<yup.InferType<typeof editCollectionConfigSchema>>;
