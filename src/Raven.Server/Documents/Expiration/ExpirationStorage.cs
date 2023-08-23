@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
@@ -196,8 +197,9 @@ namespace Raven.Server.Documents.Expiration
                     using (conflict)
                     {
                         id = conflict.Id;
-
-                        if (BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(conflict.Doc, currentTime,Constants.Documents.Metadata.Expires))
+                        
+                        if (conflict.Doc.TryGetMetadata(out var metadata) &&
+                            BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, currentTime, Constants.Documents.Metadata.Expires))
                             continue;
 
                         allExpired = false;
