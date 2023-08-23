@@ -20,6 +20,7 @@ import {
 import classNames from "classnames";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Checkbox } from "components/common/Checkbox";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -32,6 +33,8 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
     const { config, onDelete, onToggle, onOnEdit } = props;
 
     const dispatch = useAppDispatch();
+    const { reportEvent } = useEventsCollector();
+
     const originalConfigs = useAppSelector(documentRevisionsSelectors.originalConfigs);
     const isSelected = useAppSelector(documentRevisionsSelectors.isSelectedConfigName(config?.Name));
 
@@ -85,7 +88,13 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                             <Icon icon="edit" margin="m-0" />
                         </Button>
                         {onDelete && (
-                            <Button color="danger" onClick={onDelete}>
+                            <Button
+                                color="danger"
+                                onClick={() => {
+                                    reportEvent("revisions", "create");
+                                    onDelete();
+                                }}
+                            >
                                 <Icon icon="trash" margin="m-0" />
                             </Button>
                         )}

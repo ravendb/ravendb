@@ -32,6 +32,7 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
 import { StickyHeader } from "components/common/StickyHeader";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -68,8 +69,11 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     }, [db, dispatch]);
 
     const { databasesService } = useServices();
+    const { reportEvent } = useEventsCollector();
 
     const asyncSaveConfigs = useAsyncCallback(async () => {
+        reportEvent("revisions", "save");
+
         const config: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration = {
             Default: defaultDocumentsConfig ? _.omit(defaultDocumentsConfig, "Name") : null,
             Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, _.omit(x, "Name")])),
@@ -100,6 +104,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     });
 
     const onEditRevision = (editRevisionData: Omit<EditRevisionData, "toggle">) => {
+        if (editRevisionData.taskType === "new") {
+            reportEvent("revisions", "create");
+        }
+
         setEditRevisionData({
             ...editRevisionData,
             toggle: () => setEditRevisionData(null),

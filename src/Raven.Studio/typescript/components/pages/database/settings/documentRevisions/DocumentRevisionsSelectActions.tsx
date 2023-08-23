@@ -7,9 +7,11 @@ import { ButtonGroup, UncontrolledDropdown, DropdownToggle, DropdownMenu, Dropdo
 import { useAppSelector } from "components/store";
 import { documentRevisionsActions, documentRevisionsSelectors } from "./store/documentRevisionsSlice";
 import { useDispatch } from "react-redux";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 export default function DocumentRevisionsSelectActions() {
     const dispatch = useDispatch();
+    const { reportEvent } = useEventsCollector();
 
     const allConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const selectedConfigsNames = useAppSelector(documentRevisionsSelectors.selectedConfigNames);
@@ -20,12 +22,17 @@ export default function DocumentRevisionsSelectActions() {
 
     const selectionState = genUtils.getSelectionState(allConfigsNames, selectedConfigsNames);
 
+    const toggleAll = () => {
+        reportEvent("revisions", "toggle-select-all");
+        dispatch(documentRevisionsActions.toggleAllSelectedConfigNames());
+    };
+
     return (
         <div className="position-relative">
             <Checkbox
                 selected={selectionState === "AllSelected"}
                 indeterminate={selectionState === "SomeSelected"}
-                toggleSelection={() => dispatch(documentRevisionsActions.toggleAllSelectedConfigNames())}
+                toggleSelection={toggleAll}
                 color="primary"
                 title="Select all or none"
                 size="lg"
