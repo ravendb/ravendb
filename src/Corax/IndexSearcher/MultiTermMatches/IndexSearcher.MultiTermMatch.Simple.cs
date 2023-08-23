@@ -30,14 +30,14 @@ public partial class IndexSearcher
         };
     }
     
-    public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, bool validatePostfixLen = false,in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
-            (true, false) => MultiTermMatchBuilder<StartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, startWith, streamingEnabled, token),
-            (false, false) => MultiTermMatchBuilder<StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, startWith, streamingEnabled, token),
-            (true, true) => MultiTermMatchBuilder<NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, startWith, streamingEnabled, token),
-            (false, true) => MultiTermMatchBuilder<NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, startWith, streamingEnabled, token)
+            (true, false) => MultiTermMatchBuilder<StartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, startWith, streamingEnabled, validatePostfixLen, token),
+            (false, false) => MultiTermMatchBuilder<StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, startWith, streamingEnabled, validatePostfixLen, token),
+            (true, true) => MultiTermMatchBuilder<NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, startWith, streamingEnabled, validatePostfixLen, token),
+            (false, true) => MultiTermMatchBuilder<NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, startWith, streamingEnabled, validatePostfixLen, token)
         };
     }
     
@@ -58,10 +58,10 @@ public partial class IndexSearcher
     {
         return (forward, isNegated) switch
         {
-            (true, false) => MultiTermMatchBuilder<EndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, endsWith, streamingEnabled, token),
-            (false, false) => MultiTermMatchBuilder<EndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, endsWith, streamingEnabled, token),
-            (true, true) => MultiTermMatchBuilder<NotEndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, endsWith, streamingEnabled, token),
-            (false, true) => MultiTermMatchBuilder<NotEndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, endsWith, streamingEnabled, token)
+            (true, false) => MultiTermMatchBuilder<EndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, endsWith, streamingEnabled, validatePostfixLen: false, token: token),
+            (false, false) => MultiTermMatchBuilder<EndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, endsWith, streamingEnabled,  validatePostfixLen: false, token:token),
+            (true, true) => MultiTermMatchBuilder<NotEndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, endsWith, streamingEnabled,  validatePostfixLen: false, token:token),
+            (false, true) => MultiTermMatchBuilder<NotEndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, endsWith, streamingEnabled,  validatePostfixLen: false, token:token)
         };
     }
     

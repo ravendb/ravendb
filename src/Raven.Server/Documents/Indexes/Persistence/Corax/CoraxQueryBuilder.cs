@@ -98,10 +98,9 @@ public static class CoraxQueryBuilder
 
         public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting)
         {
-            //Conditions to consider streaming optimization:
-            //-sort only by one field
-            //-sort by Sequence/Number.
-            if (orderMetadata is not ({Length: 1} and [{FieldType: MatchCompareFieldType.Sequence or MatchCompareFieldType.Floating or MatchCompareFieldType.Integer}]) || searcher.HasMultipleTermsInField(orderMetadata[0].Field) || hasBoosting)
+            if (orderMetadata is not [{FieldType: MatchCompareFieldType.Sequence or MatchCompareFieldType.Floating or MatchCompareFieldType.Integer}, ..]
+                || searcher.HasMultipleTermsInField(orderMetadata[0].Field) 
+                || hasBoosting)
             {
                 SortField = default;
                 OptimizationIsPossible = false;
@@ -150,23 +149,13 @@ public static class CoraxQueryBuilder
 
             if (cbi.Field.Equals(SortField.Field) == false)
             {
-                var indexDefinition = builderParameters.Index.GetIndexDefinition();
-                if (indexDefinition.CompoundFields != null)
+                if ( builderParameters.Index.HasCompoundField(cbi.Field.FieldName, SortField.Field.FieldName, out var offset))
                 {
-                    for (int i = 0; i < indexDefinition.CompoundFields.Count; i++)
-                    {
-                        //TODO: Let's avoid those allocations
-                        if (indexDefinition.CompoundFields[i][0] == cbi.Field.FieldName.ToString() &&
-                            indexDefinition.CompoundFields[i][1] == SortField.Field.FieldName.ToString())
-                        {
-                            // TODO: YUCK on how we find it 
-                            var indexFieldBinding = builderParameters.IndexFieldsMapping.GetByFieldId(builderParameters.IndexFieldsMapping.Count - i -1);
-                            CompoundField = FieldMetadata.Build(indexFieldBinding.FieldName, indexFieldBinding.FieldTermTotalSumField,
-                                indexFieldBinding.FieldId, indexFieldBinding.FieldIndexingMode, indexFieldBinding.Analyzer);
-                            MatchedByCompoundField = true;
-                            return true;
-                        }
-                    }
+                    var indexFieldBinding = builderParameters.IndexFieldsMapping.GetByFieldId(builderParameters.IndexFieldsMapping.Count - offset);
+                    CompoundField = FieldMetadata.Build(indexFieldBinding.FieldName, indexFieldBinding.FieldTermTotalSumField,
+                        indexFieldBinding.FieldId, indexFieldBinding.FieldIndexingMode, indexFieldBinding.Analyzer);
+                    MatchedByCompoundField = true;
+                    return true;
                 }
                 return false;
             }
@@ -239,7 +228,7 @@ public static class CoraxQueryBuilder
                 coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
                 coraxQuery = MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
-            // just one item, with known field types
+            // We sort on known field types, we'll optimize based on the first one to get the rest
             else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..])
             {
                 var maxTermToScan = builderParameters.Take switch
@@ -249,6 +238,8 @@ public static class CoraxQueryBuilder
                     var take => take + 1
                 };
                 // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
+                // if we have multiple clauses, we'll get the first $TAKE+1 terms from the index, then sort just those, leading to the same
+                // behavior, but far faster
                 streamingOptimization.SkipOrderByClause = sortMetadata.Length == 1;
                 var betweenQuery =  sortBy.FieldType switch
                 {

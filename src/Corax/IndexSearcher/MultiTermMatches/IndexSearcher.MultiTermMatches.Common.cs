@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
@@ -13,7 +14,7 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, in CancellationToken token = default)
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default)
         where TTermProvider : struct, ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -38,7 +39,8 @@ public partial class IndexSearcher
             seekKey.Set(seekTerm.AsReadOnlySpan());
         }
         
-        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled: streamingEnabled, token: token));
+        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, 
+            GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey, validatePostfixLen, token), streamingEnabled: streamingEnabled, token: token));
     }
 
     private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, string term, bool streamingEnabled, CancellationToken token)
@@ -59,7 +61,9 @@ public partial class IndexSearcher
             seekKey.Set(seekTerm.AsReadOnlySpan());
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey), streamingEnabled, token: token));
+        return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, 
+            GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey,  validatePostfixLen: false, token: token), 
+            streamingEnabled, token: token));
     }
 
     private bool TryRewriteTermWhenPerformingBackwardStreaming<TTermProvider>(bool streamingEnabled, Slice termSlice, out Slice termForSeek)
@@ -114,20 +118,22 @@ public partial class IndexSearcher
         return true;
     }
 
-    private TTermProvider GetMultiTermMatchProvider<TTermProvider>(in FieldMetadata field, CompactTree termTree, CompactKey term, CompactKey seekTerm)
+    private TTermProvider GetMultiTermMatchProvider<TTermProvider>(in FieldMetadata field, CompactTree termTree, CompactKey term, CompactKey seekTerm, bool validatePostfixLen, CancellationToken token)
         where TTermProvider : struct, ITermProvider
     {
         if (typeof(TTermProvider) == typeof(StartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
-            return (TTermProvider)(object)new StartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, seekTerm);
+            return (TTermProvider)(object)new StartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, seekTerm, validatePostfixLen, token);
         
         if (typeof(TTermProvider) == typeof(StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
-            return (TTermProvider)(object)new StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, seekTerm);
+            return (TTermProvider)(object)new StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, seekTerm, validatePostfixLen, token);
         
         if (typeof(TTermProvider) == typeof(NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
-            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term);
+            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, validatePostfixLen, token);
         
         if (typeof(TTermProvider) == typeof(NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
-            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term);
+            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, validatePostfixLen, token);
+        
+        Debug.Assert(validatePostfixLen == false, "Not supported for the rest of this");
         
         if (typeof(TTermProvider) == typeof(EndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
             return (TTermProvider)(object)new EndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term);

@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -70,7 +71,6 @@ using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -82,6 +82,7 @@ using Voron.Impl.Compaction;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Indexes
@@ -120,8 +121,6 @@ namespace Raven.Server.Documents.Indexes
         private const int AllocationCleanupRequestsLimit = 10;
 
         private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
-
-
 
         protected Logger _logger;
 
@@ -168,6 +167,8 @@ namespace Raven.Server.Documents.Indexes
         internal StorageEnvironment _environment;
 
         internal TransactionContextPool _contextPool;
+        private ByteStringContext _indexAllocator;
+        private List<(Slice First, Slice Second)> _compoundFields;
 
         internal ThrottledManualResetEventSlim _mre;
         private readonly object _disablingIndexLock = new object();
@@ -374,6 +375,8 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
 
             exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
+            
+            exceptionAggregator.Execute(() => { _indexAllocator?.Dispose(); });
 
             exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
 
@@ -832,6 +835,8 @@ namespace Raven.Server.Documents.Indexes
                 _regexCache = new(ConcurrentLruRegexCache.DefaultCapacity, documentDatabase.Configuration.Queries.RegexTimeout.AsTimeSpan);
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
 
+                InitializeCompoundFields();
+
                 LoadValues();
 
                 DocumentDatabase.TombstoneCleaner.Subscribe(this);
@@ -849,6 +854,44 @@ namespace Raven.Server.Documents.Indexes
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        public bool HasCompoundField(Slice first, Slice second, out int offset)
+        {
+            offset = 0;
+            if (_compoundFields == null)
+                return false;
+            var span = CollectionsMarshal.AsSpan(_compoundFields);
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref var cur = ref span[i];
+                if (cur.First.AsSpan().SequenceEqual(first.AsSpan()) &&
+                    cur.Second.AsSpan().SequenceEqual(second.AsSpan()))
+                {
+                    offset = span.Length - i;
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        private void InitializeCompoundFields()
+        {
+            var indexDefinition = GetIndexDefinition();
+            if (indexDefinition.CompoundFields is not {Count: > 0})
+                return;
+            
+            _indexAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _compoundFields = new List<(Slice, Slice)>();
+
+            for (int index = 0; index < indexDefinition.CompoundFields.Count; index++)
+            {
+                string[] compoundField = indexDefinition.CompoundFields[index];
+                Debug.Assert(compoundField.Length == 2);
+                Slice.From(_indexAllocator, compoundField[0], out var fst);
+                Slice.From(_indexAllocator, compoundField[1], out var snd);
+                _compoundFields.Add((fst, snd));
             }
         }
 
