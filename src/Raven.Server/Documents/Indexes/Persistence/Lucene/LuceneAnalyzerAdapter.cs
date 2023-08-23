@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Corax;
 using Corax.Pipeline;
 using Lucene.Net.Analysis.Tokenattributes;
+using Raven.Server.Indexing;
+using Raven.Server.Json;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
@@ -16,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public sealed unsafe class LuceneAnalyzerAdapter : Analyzer
     {
         private static readonly ITransformer[] NoTransformers = new ITransformer[0];
+        private LazyStringReader _lazyStringReader;
 
         private readonly LuceneAnalyzer _analyzer;
 
@@ -29,12 +32,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         internal static void Run(Analyzer adapter, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
         {
-            var @this = (LuceneAnalyzerAdapter)adapter;
-            var analyzer = @this._analyzer;
+            var self = (LuceneAnalyzerAdapter)adapter;
+            var analyzer = self._analyzer;
 
-            var data = Encoding.UTF8.GetString(source);
-            using (var reader = new StringReader(data))                
+            fixed (byte* pText = source)
             {
+                TextReader reader = self._lazyStringReader.GetTextReader(pText, source.Length);
+
                 int currentOutputIdx = 0;
                 var currentTokenIdx = 0;
 
@@ -58,8 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // Advance the current token output.
                     currentOutputIdx += outputLength;
                     currentTokenIdx++;
-                }
-                while (stream.IncrementToken());
+                } while (stream.IncrementToken());
 
                 output = output.Slice(0, currentOutputIdx);
                 tokens = tokens.Slice(0, currentTokenIdx);
@@ -76,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public static LuceneAnalyzerAdapter Create(LuceneAnalyzer analyzer)
         {
-            return new LuceneAnalyzerAdapter(analyzer, &Run, &Run);
+            return new LuceneAnalyzerAdapter(analyzer, &Run, &Run) { _lazyStringReader = new LazyStringReader() };
         }
     }
 }

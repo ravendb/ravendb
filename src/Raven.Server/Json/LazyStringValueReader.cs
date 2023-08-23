@@ -25,13 +25,16 @@ namespace Raven.Server.Json
             if (value.Length < MinLengthForLazyStringStreamReader && _reader == null)
                 return new ReusableStringReader(GetStringFor(value));
 
-            if (_mmapStream == null)
-                _mmapStream = new MmapStream(null, 0);
-            if (_reader == null)
-                _reader = new LazyStringStreamReader(_mmapStream, Encodings.Utf8);
+            return GetTextReader(value.Buffer, value.Length);
+        }
+
+        public TextReader GetTextReader(byte* buffer, int len)
+        {
+            _mmapStream ??= new MmapStream(null, 0);
+            _reader ??= new LazyStringStreamReader(_mmapStream, Encodings.Utf8);
 
             _reader.DiscardBufferedData();
-            _mmapStream.Set(value.Buffer, value.Size);
+            _mmapStream.Set(buffer, len);
 
             return _reader;
         }
