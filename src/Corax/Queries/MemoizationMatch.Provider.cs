@@ -3,9 +3,9 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using static Voron.Global.Constants;
 
 namespace Corax.Queries
 {
@@ -17,6 +17,7 @@ namespace Corax.Queries
         public int ReplayCounter => _replayCounter;
 
         private readonly ByteStringContext _ctx;
+        private readonly IndexSearcher _indexSearcher;
         private TInner _inner;
 
         public bool IsBoosting => _inner.IsBoosting;
@@ -43,9 +44,10 @@ namespace Corax.Queries
             return true;
         }
 
-        public MemoizationMatchProvider(ByteStringContext ctx, in TInner inner)
+        public MemoizationMatchProvider(IndexSearcher indexSearcher, in TInner inner)
         {
-            _ctx = ctx;
+            _indexSearcher = indexSearcher;
+            _ctx = indexSearcher.Allocator;
             _inner = inner;
             _replayCounter = 0;
             _bufferHolder = default;
@@ -76,7 +78,7 @@ namespace Corax.Queries
         private void InitializeInner()
         {
             // We rent a buffer size. 
-            int bufferSize = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)_inner.Count), 16 * Size.Kilobyte);
+            int bufferSize = 4 * Math.Min(Math.Max(Voron.Global.Constants.Size.Kilobyte, (int)_inner.Count), 16 * Voron.Global.Constants.Size.Kilobyte);
             _bufferScope.Dispose();
             _bufferScope = _ctx.Allocate(bufferSize * sizeof(long), out _bufferHolder);
 
@@ -129,7 +131,7 @@ namespace Corax.Queries
             // Calculate the new size. 
             int currentLength = Buffer.Length;
             int size;
-            if (currentLength > 16 * Size.Megabyte)
+            if (currentLength > 16 * Voron.Global.Constants.Size.Megabyte)
             {
                 size = (int)(currentLength * 1.5);
             }
@@ -140,14 +142,35 @@ namespace Corax.Queries
                 size = currentLength * 3;
             }
 
+            var sizeInBytes = size * sizeof(long);
+
+            if (sizeInBytes > _indexSearcher.MaxMemoizationSize) ThrowExceededMemoizationSize();
+
             // Allocate the new buffer
-            var newBufferScope = _ctx.Allocate(size * sizeof(long), out var newBufferHolder);
+            var newBufferScope = _ctx.Allocate(sizeInBytes, out var newBufferHolder);
 
             // Ensure we copy the content and then switch the buffers. 
             Buffer[..currentlyUsed].CopyTo(MemoryMarshal.Cast<byte,long>(newBufferHolder.ToSpan()));
             _bufferScope.Dispose();
             _bufferHolder = newBufferHolder;
             _bufferScope = newBufferScope;
+
+            void ThrowExceededMemoizationSize()
+            {
+                var inner = _inner.ToString();
+                try
+                {
+                    inner = _inner.DebugView;
+                }
+                catch (Exception e)
+                {
+                    // we are protecting from an error in DebugView during error handling here
+                    inner += " - DebugView failure " + e.Message;
+                }
+                
+                throw new InvalidOperationException(
+                    $"Memoization clause need to allocation {new Size(sizeInBytes, SizeUnit.Bytes)} but 'Indexing.Corax.MaxMemoizationSizeInMb' is set to: {new Size(_indexSearcher.MaxMemoizationSize, SizeUnit.Bytes)}, in query: {inner}");
+            }
         }
 
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)

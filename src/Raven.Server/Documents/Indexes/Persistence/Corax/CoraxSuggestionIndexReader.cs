@@ -10,6 +10,7 @@ using Corax.Pipeline;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -27,7 +28,10 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
     {
         _fieldMappings = fieldsMapping;
         _binding = binding;
-        _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
+        _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
+        {
+            MaxMemoizationSize = index.Configuration.MaxMemoizationLengthSize.GetValue(SizeUnit.Bytes) 
+        };
     }
 
     public override SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)

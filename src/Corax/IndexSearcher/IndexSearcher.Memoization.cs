@@ -8,6 +8,6 @@ partial class IndexSearcher
     public MemoizationMatchProvider<TInner> Memoize<TInner>(TInner inner)
         where TInner : IQueryMatch
     {
-        return new MemoizationMatchProvider<TInner>(Allocator, inner);
+        return new MemoizationMatchProvider<TInner>(this, inner);
     }
 }

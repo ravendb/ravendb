@@ -493,6 +493,13 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         public bool CoraxIncludeSpatialDistance { get; set; }
+        
+        [Description("The maximum amount of memory that Corax can use for a memoization clause during query processing")]
+        [DefaultValue(128)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.MaxMemoizationSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public Size MaxMemoizationLengthSize { get; set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

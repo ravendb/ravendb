@@ -14,7 +14,7 @@ namespace Corax.Queries
     unsafe partial struct BinaryMatch<TInner, TOuter>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch<TInner, TOuter> YieldAnd(ByteStringContext ctx, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter> YieldAnd(IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
@@ -70,7 +70,7 @@ namespace Corax.Queries
                     // which can be really expensive, instead, let's memoize the outer and remember that 
                     if (resultsSpan.Length == 0 && match._memoizedOuter is null)
                     {
-                        match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._ctx, match._outer);
+                        match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._indexSearcher, match._outer);
                         match._memoizedOuter.SortingRequired();
                     }
 
@@ -123,10 +123,10 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(ctx, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, token);
+            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, token);
         }
 
-        public static BinaryMatch<TInner, TOuter> YieldOr(ByteStringContext ctx, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter> YieldOr(IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
 #if !DEBUG
             [SkipLocalsInit]
@@ -322,7 +322,7 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(ctx, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence, token);
+            return new BinaryMatch<TInner, TOuter>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence, token);
         }
     }
 }

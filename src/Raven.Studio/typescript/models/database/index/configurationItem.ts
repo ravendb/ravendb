@@ -40,7 +40,8 @@ class configurationItem {
         "Query.RegexTimeoutInMs",
         "Indexing.Lucene.ReaderTermsIndexDivisor",
         "Indexing.Corax.IncludeDocumentScore",
-        "Indexing.Corax.IncludeSpatialDistance"
+        "Indexing.Corax.IncludeSpatialDistance",
+        "Indexing.Corax.MaxMemoizationSizeInMb",
 
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
