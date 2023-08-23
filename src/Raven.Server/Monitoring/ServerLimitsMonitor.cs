@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Threading;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Util;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.Storage;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Platform.Posix;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 
@@ -12,25 +18,30 @@ namespace Raven.Server.Monitoring
 {
     public class ServerLimitsMonitor : IDisposable
     {
-        private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(5);
-        private static readonly float MaxMapCountThreshold = 0.05f;
-        private static readonly float MaxThreadsMaxThreshold = 0.05f;
-        private static readonly float MaxPidMaxThreshold = 0.05f;
-        private static readonly string pid_max = "/proc/sys/kernel/pid_max";
-        private static readonly string max_map_count = "/proc/sys/vm/max_map_count";
-        private static readonly string threads_max = "/proc/sys/kernel/threads-max";
+        private static readonly string _source = "server-limits";
 
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<StorageSpaceMonitor>(nameof(ServerLimitsMonitor));
-        private readonly object _runLock = new();
+        private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(5);
+
+        private static readonly float MaxMapCountPercentThreshold = 0.05f;
+        private static readonly int MaxMapCountNumberThreshold = 1024 * 10;
+
+        private static readonly float MaxThreadsThreshold = 0.05f;
+        private static readonly int MaxThreadsNumberThreshold = 1024 * 10;
+
+        private readonly ServerStore _serverStore;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly List<string> _alerts = new List<string>();
-        private readonly Dictionary<string, long> _maxLimitsDictionary = new Dictionary<string, long>();
+        private readonly NotificationsStorage _notificationsStorage;
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerLimitsMonitor>(nameof(ServerLimitsMonitor));
+        private readonly List<ServerLimitsDetails.ServerLimitInfo> _alerts = new List<ServerLimitsDetails.ServerLimitInfo>();
+        private readonly object _runLock = new();
 
         private Timer _timer;
 
-        public ServerLimitsMonitor(NotificationCenter.NotificationCenter notificationCenter)
+        public ServerLimitsMonitor(ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter, NotificationsStorage notificationsStorage)
         {
+            _serverStore = serverStore;
             _notificationCenter = notificationCenter;
+            _notificationsStorage = notificationsStorage;
 
             if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
             {
@@ -50,32 +61,80 @@ namespace Raven.Server.Monitoring
 
             try
             {
-                CheckMaxMapCountLimits();
-                CheckThreadsMaxLimits();
-                CheckPidMaxLimits();
+                var maxLimits = _serverStore.Server.MetricCacher.GetValue<LimitsInfo>(MetricCacher.Keys.Server.MaxServerLimits);
+                var currentLimits = _serverStore.Server.MetricCacher.GetValue<LimitsInfo>(MetricCacher.Keys.Server.CurrentServerLimits);
+
+                if (maxLimits == null || currentLimits == null)
+                    return;
+
+                AddAlertIfNeeded(currentLimits.MapCountCurrent, maxLimits.MapCountMax, MaxMapCountPercentThreshold, MaxMapCountNumberThreshold,
+                    LimitsReader.MaxMapCountFilePath, "Current map count");
+                AddAlertIfNeeded(currentLimits.ThreadsCurrent, maxLimits.ThreadsMax, MaxThreadsThreshold, MaxThreadsNumberThreshold, LimitsReader.ThreadsMaxFilePath,
+                    "Current threads number");
 
                 if (_alerts.Count > 0)
                 {
-                    var warningMsg = string.Join(Environment.NewLine, _alerts);
-                    if (_logger.IsOperationsEnabled)
+                    ServerLimitsDetails details;
+                    PerformanceHint hint;
+                    var id = PerformanceHint.GetKey(PerformanceHintType.ServerLimits, _source);
+
+                    using (_notificationsStorage.Read(id, out var ntv))
                     {
-                        _logger.Operations($"Running close to OS limits detected:{Environment.NewLine}" + warningMsg);
+                        if (ntv == null ||
+                            ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false ||
+                            detailsJson == null)
+                        {
+                            details = new ServerLimitsDetails();
+                        }
+                        else
+                        {
+                            details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ServerLimitsDetails>(detailsJson);
+                        }
+
+                        hint = PerformanceHint.Create(
+                            null,
+                            "Running close to OS limits",
+                            "We have detected server is running close to OS limits",
+                            PerformanceHintType.ServerLimits,
+                            NotificationSeverity.Info,
+                            _source,
+                            details
+                        );
                     }
 
-                    var alert = AlertRaised.Create(
-                        null,
-                        "Running close to OS limits",
-                        warningMsg,
-                        AlertType.LowServerLimits,
-                        NotificationSeverity.Warning);
+                    for (int i = _alerts.Count - 1; i >= 0; i--)
+                    {
+                        details.Limits.Add(_alerts[i]);
+                    }
 
-                    _notificationCenter.Add(alert);
+                    if (details.Limits.Count > ServerLimitsDetails.MaxNumberOfLimits)
+                    {
+                        details.Limits = details.Limits.Take(ServerLimitsDetails.MaxNumberOfLimits).ToList();
+                    }
+
+                    _notificationCenter.Add(hint);
+
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations($"Running close to OS limits detected:{Environment.NewLine}" + string.Join(Environment.NewLine,
+                            _alerts.Select(x =>
+                                $"{x.Name} is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file.")));
+                    }
                 }
             }
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to run {nameof(ServerLimitsMonitor)}", e);
+                {
+                    var addition = string.Empty;
+                    if (_alerts.Count > 0)
+                    {
+                        addition = $"Last Alerts: {Environment.NewLine}{string.Join(Environment.NewLine,
+                            _alerts.Select(x =>
+                                $"{x.Name} is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file."))}";
+                    }
+                    _logger.Operations($"Failed to run {nameof(ServerLimitsMonitor)}" + addition, e);
+                }
             }
             finally
             {
@@ -84,125 +143,13 @@ namespace Raven.Server.Monitoring
             }
         }
 
-        private void CheckPidMaxLimits()
+        private void AddAlertIfNeeded(long current, long max, float percentThreshold, int numberThreshold, string limit, string name)
         {
-            var maxPidMax = GetMaxValueForLimit(pid_max);
-
-            using var proc = new Process();
-            proc.StartInfo.RedirectStandardOutput = true;
-            proc.StartInfo.RedirectStandardError = true;
-            proc.StartInfo.FileName = "ps";
-            proc.StartInfo.Arguments = @"-efL";
-            proc.Start();
-
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
+            if (current > max - numberThreshold && current >= (long)(max * (1 - percentThreshold)))
             {
-                throw new InvalidOperationException($"Executing '{proc.StartInfo.FileName} {proc.StartInfo.Arguments}' failed (exit code {proc.ExitCode}){Environment.NewLine}StandardOutput:{Environment.NewLine}{proc.StandardOutput.ReadToEnd()}{Environment.NewLine}StandardError:{Environment.NewLine}{proc.StandardError.ReadToEnd()}");
+                var limitInfo = new ServerLimitsDetails.ServerLimitInfo(name, limit, current, max, SystemTime.UtcNow);
+                _alerts.Add(limitInfo);
             }
-
-            var currentPidMax = GetEolCount(proc.StandardOutput.BaseStream);
-
-            AddAlertIfNeeded(currentPidMax, maxPidMax, MaxPidMaxThreshold, pid_max, nameof(pid_max));
-        }
-
-        private void CheckThreadsMaxLimits()
-        {
-            var maxThreadsMax = GetMaxValueForLimit(threads_max);
-
-            var currentThreadsMax = 0L;
-            foreach (var _ in Directory.EnumerateDirectories("/proc/self/task", "*", SearchOption.TopDirectoryOnly))
-            {
-                currentThreadsMax++;
-            }
-
-            AddAlertIfNeeded(currentThreadsMax, maxThreadsMax, MaxThreadsMaxThreshold, threads_max, nameof(threads_max));
-        }
-
-        private void CheckMaxMapCountLimits()
-        {
-            var maxMapCount = GetMaxValueForLimit(max_map_count);
-
-            long currentMapCount = GetCurrentMapCount();
-            AddAlertIfNeeded(currentMapCount, maxMapCount, MaxMapCountThreshold, max_map_count, nameof(max_map_count));
-        }
-
-        private static long GetCurrentMapCount()
-        {
-            long currentMapCount;
-            using (FileStream stream = File.OpenRead("/proc/self/maps"))
-            {
-                currentMapCount = GetEolCount(stream);
-            }
-
-            return currentMapCount;
-        }
-
-        private long GetMaxValueForLimit(string limit)
-        {
-            if (_maxLimitsDictionary.TryGetValue(limit, out var maxValueForLimit) == false)
-            {
-                var maxValueString = File.ReadAllText(limit);
-                if (long.TryParse(maxValueString, out var maxValueLong) && maxValueLong > 0)
-                {
-                    _maxLimitsDictionary.Add(limit, maxValueLong);
-                    return maxValueLong;
-                }
-
-                throw new InvalidOperationException($"Could not parse the value of '{limit}', got: '{maxValueString}' and '{maxValueForLimit}'.");
-            }
-
-            return maxValueForLimit;
-        }
-
-        private void AddAlertIfNeeded(long currentMax, long maxMax, float threshold, string limit, string name)
-        {
-            if (currentMax >= (long)(maxMax * (1 - threshold)))
-            {
-                _alerts.Add($"'{name}' is ({currentMax} / {maxMax}), please increase the '{limit}' limit.");
-            }
-        }
-
-        private static long GetEolCount(Stream stream)
-        {
-            long eolCount = 0L;
-            char cr = '\r';
-            char lf = '\n';
-            char NULL = (char)0;
-
-            byte[] byteBuffer = new byte[256 * 1024];
-            char detectedEOL = NULL;
-            char currentChar = NULL;
-
-            int bytesRead;
-            while ((bytesRead = stream.Read(byteBuffer, 0, byteBuffer.Length)) > 0)
-            {
-                for (int i = 0; i < bytesRead; i++)
-                {
-                    currentChar = (char)byteBuffer[i];
-
-                    if (detectedEOL != NULL)
-                    {
-                        if (currentChar == detectedEOL)
-                        {
-                            eolCount++;
-                        }
-                    }
-                    else if (currentChar == lf || currentChar == cr)
-                    {
-                        detectedEOL = currentChar;
-                        eolCount++;
-                    }
-                }
-            }
-
-            if (currentChar != lf && currentChar != cr && currentChar != NULL)
-            {
-                eolCount++;
-            }
-
-            return eolCount;
         }
 
         public void Dispose()

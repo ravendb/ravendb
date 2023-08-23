@@ -478,6 +478,8 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new FeatureAnyExperimental(server.ServerStore));
 
+            ServerLimits.Register(store, server.MetricCacher);
+
             AddGc(GCKind.Any);
             AddGc(GCKind.Background);
             AddGc(GCKind.Ephemeral);
