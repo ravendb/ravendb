@@ -7,12 +7,29 @@ import { setLocale } from "yup";
 import { ClusterNode, clusterActions } from "components/common/shell/clusterSlice";
 import licenseModel from "models/auth/licenseModel";
 import { licenseActions } from "./licenseSlice";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
+import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 
 let initialized = false;
 
 function updateReduxStore() {
     const dtos = databasesManager.default.databases().map((x) => x.toDto());
     globalDispatch(databaseActions.databasesLoaded(dtos));
+}
+
+function updateReduxCollectionsTracker() {
+    globalDispatch(
+        collectionsTrackerActions.collectionsLoaded(
+            collectionsTracker.default.collections().map((x) => ({
+                name: x.name,
+                countPrefix: x.countPrefix(),
+                documentCount: x.documentCount(),
+                hasBounceClass: x.hasBounceClass(),
+                lastDocumentChangeVector: x.lastDocumentChangeVector(),
+                sizeClass: x.sizeClass(),
+            }))
+        )
+    );
 }
 
 const throttledUpdateReduxStore = _.throttle(() => updateReduxStore(), 200);
@@ -54,6 +71,9 @@ function initRedux() {
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
     });
+
+    collectionsTracker.default.registerOnGlobalChangeVectorUpdatedHandler(updateReduxCollectionsTracker);
+    collectionsTracker.default.onUpdateCallback = updateReduxCollectionsTracker;
 }
 
 function initYup() {

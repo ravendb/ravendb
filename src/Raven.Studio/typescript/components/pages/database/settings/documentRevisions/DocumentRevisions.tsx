@@ -29,6 +29,7 @@ import { useServices } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import notificationCenter from "common/notifications/notificationCenter";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
 todo("Feature", "ANY", "Connect SelectionActions component");
 todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
@@ -53,6 +54,9 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
     const isAnyModified = useAppSelector(documentRevisionsSelectors.isAnyModified);
+
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
+    const isAllCollectionsAdded = allCollectionNames.length === collectionConfigs.length;
 
     useDirtyFlag(isAnyModified);
 
@@ -129,7 +133,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             <ButtonWithSpinner
                                 color="primary"
                                 icon="save"
-                                disabled={isAnyModified}
+                                disabled={!isAnyModified}
                                 onClick={asyncSaveConfigs.execute}
                                 isSpinning={asyncSaveConfigs.status === "loading"}
                             >
@@ -233,21 +237,23 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    <Button
-                                        color="info"
-                                        size="sm"
-                                        className="rounded-pill"
-                                        onClick={() =>
-                                            onEditRevision({
-                                                taskType: "new",
-                                                configType: "collectionSpecific",
-                                                onConfirm: (config) =>
-                                                    dispatch(documentRevisionsActions.addConfig(config)),
-                                            })
-                                        }
-                                    >
-                                        Add new
-                                    </Button>
+                                    !isAllCollectionsAdded ? (
+                                        <Button
+                                            color="info"
+                                            size="sm"
+                                            className="rounded-pill"
+                                            onClick={() =>
+                                                onEditRevision({
+                                                    taskType: "new",
+                                                    configType: "collectionSpecific",
+                                                    onConfirm: (config) =>
+                                                        dispatch(documentRevisionsActions.addConfig(config)),
+                                                })
+                                            }
+                                        >
+                                            Add new
+                                        </Button>
+                                    ) : null
                                 }
                             >
                                 <Icon icon="documents" />
