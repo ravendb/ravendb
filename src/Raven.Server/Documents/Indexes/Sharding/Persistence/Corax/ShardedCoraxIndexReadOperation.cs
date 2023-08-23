@@ -109,6 +109,11 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     string m = null;
                     while (reader.FindNext(fieldRootPage))
                     {
+                        if (reader.IsNull)
+                        {
+                            m = null;
+                            continue;
+                        }
                         // we allocating managed string to make things easier, if this show up in profiling
                         // we can do the comparisons using CompactKeys
                         var stringValue = Encoding.UTF8.GetString(reader.Current.Decoded());
@@ -118,7 +123,6 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                     }
                     result.AddStringOrderByField(m switch
                     {
-                         Constants.NullValue => null,
                          Constants.EmptyString =>string.Empty,
                          _ => m
                     });
