@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Documents.Replication.Incoming;
@@ -25,6 +26,8 @@ namespace Raven.Server.Documents
 
         private List<Slice> _attachmentHashesToMaybeDelete;
 
+        private Task _handleReplicationChanges;
+
         private bool _replaced;
 
         private Dictionary<string, CollectionName> _collectionCache;
@@ -45,6 +48,8 @@ namespace Raven.Server.Documents
 
         public override void BeforeCommit()
         {
+            _handleReplicationChanges?.Start();
+
             if (_attachmentHashesToMaybeDelete == null)
                 return;
 
@@ -171,6 +176,11 @@ namespace Raven.Server.Documents
             var clone = hash.Clone(InnerTransaction.Allocator);
             _attachmentHashesToMaybeDelete ??= new();
             _attachmentHashesToMaybeDelete.Add(clone);
+        }
+
+        internal void InvokeDocumentsMigration(Task migrationTask)
+        {
+            _handleReplicationChanges ??= migrationTask;
         }
     }
 }
