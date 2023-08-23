@@ -186,6 +186,7 @@ export class IndexesStubs {
                         Configuration: {},
                         AdditionalSources: {},
                         AdditionalAssemblies: [],
+                        CompoundFields: []
                     },
                     Collection: "Products",
                     SurpassingIndex: "",
