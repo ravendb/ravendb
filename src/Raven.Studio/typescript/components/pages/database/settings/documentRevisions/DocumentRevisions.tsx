@@ -30,6 +30,8 @@ import messagePublisher from "common/messagePublisher";
 import notificationCenter from "common/notifications/notificationCenter";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
+import { StickyHeader } from "components/common/StickyHeader";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -85,6 +87,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
 
         await Promise.all(promises);
         messagePublisher.reportSuccess("Revisions configuration has been saved");
+
+        dispatch(documentRevisionsActions.fetchConfigs(db));
     });
 
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
@@ -124,46 +128,45 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                 />
             )}
             {editRevisionData && <EditRevision {...editRevisionData} />}
+
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading title="Document Revisions" icon="revisions" />
-                        <div className="d-flex gap-2">
-                            <ButtonWithSpinner
-                                color="primary"
-                                icon="save"
-                                disabled={!isAnyModified}
-                                onClick={asyncSaveConfigs.execute}
-                                isSpinning={asyncSaveConfigs.status === "loading"}
-                            >
-                                Save
-                            </ButtonWithSpinner>
-                            <FlexGrow />
-                            <Button color="secondary">
-                                <Icon icon="revert-revisions" />
-                                Revert revisions
-                            </Button>
-                            <ButtonWithSpinner
-                                color="secondary"
-                                onClick={toggleEnforceConfigurationModal}
-                                isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
-                            >
-                                <Icon icon="rocket" />
-                                Enforce configuration
-                            </ButtonWithSpinner>
-                        </div>
-                        <div className="mt-5">
-                            <Checkbox
-                                selected={false}
-                                indeterminate={null}
-                                toggleSelection={() => null}
-                                color="primary"
-                                title="Select all or none"
-                                size="lg"
-                            >
-                                <span className="small-label">Select All</span>
-                            </Checkbox>
-                        </div>
+                        <AboutViewHeading title="Document Revisions" icon="revisions" marginBottom={2} />
+
+                        <StickyHeader>
+                            <Row>
+                                <div className="d-flex gap-2">
+                                    <ButtonWithSpinner
+                                        color="primary"
+                                        icon="save"
+                                        disabled={!isAnyModified}
+                                        onClick={asyncSaveConfigs.execute}
+                                        isSpinning={asyncSaveConfigs.status === "loading"}
+                                    >
+                                        Save
+                                    </ButtonWithSpinner>
+                                    <FlexGrow />
+                                    <Button color="secondary">
+                                        <Icon icon="revert-revisions" />
+                                        Revert revisions
+                                    </Button>
+                                    <ButtonWithSpinner
+                                        color="secondary"
+                                        onClick={toggleEnforceConfigurationModal}
+                                        disabled={isAnyModified}
+                                        isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
+                                    >
+                                        <Icon icon="rocket" />
+                                        Enforce configuration
+                                    </ButtonWithSpinner>
+                                </div>
+                                <div className="mt-5">
+                                    <DocumentRevisionsSelectActions />
+                                </div>
+                            </Row>
+                        </StickyHeader>
+
                         <div className="mt-5">
                             <HrHeader
                                 right={
@@ -192,18 +195,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             <DocumentRevisionsConfigPanel
                                 config={defaultDocumentsConfig}
                                 onToggle={() =>
-                                    dispatch(
-                                        documentRevisionsActions.toggleConfigState({
-                                            name: defaultDocumentsConfig.Name,
-                                        })
-                                    )
+                                    dispatch(documentRevisionsActions.toggleConfigState(defaultDocumentsConfig.Name))
                                 }
                                 onDelete={() =>
-                                    dispatch(
-                                        documentRevisionsActions.deleteConfig({
-                                            name: defaultDocumentsConfig.Name,
-                                        })
-                                    )
+                                    dispatch(documentRevisionsActions.deleteConfig(defaultDocumentsConfig.Name))
                                 }
                                 onOnEdit={() =>
                                     onEditRevision({
@@ -217,11 +212,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             <DocumentRevisionsConfigPanel
                                 config={defaultConflictsConfig}
                                 onToggle={() =>
-                                    dispatch(
-                                        documentRevisionsActions.toggleConfigState({
-                                            name: defaultConflictsConfig.Name,
-                                        })
-                                    )
+                                    dispatch(documentRevisionsActions.toggleConfigState(defaultConflictsConfig.Name))
                                 }
                                 onOnEdit={() =>
                                     onEditRevision({
@@ -264,11 +255,9 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                         key={config.Name}
                                         config={config}
                                         onToggle={() =>
-                                            dispatch(documentRevisionsActions.toggleConfigState({ name: config.Name }))
+                                            dispatch(documentRevisionsActions.toggleConfigState(config.Name))
                                         }
-                                        onDelete={() =>
-                                            dispatch(documentRevisionsActions.deleteConfig({ name: config.Name }))
-                                        }
+                                        onDelete={() => dispatch(documentRevisionsActions.deleteConfig(config.Name))}
                                         onOnEdit={() =>
                                             onEditRevision({
                                                 taskType: "edit",

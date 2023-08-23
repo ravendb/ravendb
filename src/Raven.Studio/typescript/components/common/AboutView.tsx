@@ -24,12 +24,13 @@ interface AboutViewHeadingProps {
     title: string;
     icon: IconName;
     badgeText?: string;
+    marginBottom?: number;
 }
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, badgeText } = props;
+    const { title, icon, badgeText, marginBottom } = props;
     return (
-        <h2 className="d-flex align-items-center gap-1 mb-5 flex-wrap">
+        <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`)}>
             <Icon icon={icon} /> {title}{" "}
             {badgeText != null && (
                 <Badge color="faded-primary" className="about-view-title-badge">

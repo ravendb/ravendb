@@ -10,11 +10,16 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Input, Button } from "reactstrap";
+import { Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import { DocumentRevisionsConfig, documentRevisionsSelectors } from "./store/documentRevisionsSlice";
+import {
+    DocumentRevisionsConfig,
+    documentRevisionsActions,
+    documentRevisionsSelectors,
+} from "./store/documentRevisionsSlice";
 import classNames from "classnames";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { Checkbox } from "components/common/Checkbox";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -26,7 +31,9 @@ interface DocumentRevisionsConfigPanelProps {
 export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsConfigPanelProps) {
     const { config, onDelete, onToggle, onOnEdit } = props;
 
+    const dispatch = useAppDispatch();
     const originalConfigs = useAppSelector(documentRevisionsSelectors.originalConfigs);
+    const isSelected = useAppSelector(documentRevisionsSelectors.isSelectedConfigName(config?.Name));
 
     if (!config) {
         return null;
@@ -43,9 +50,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
 
     const isDetailsVisible = config.PurgeOnDelete || config.MinimumRevisionsToKeep || config.MinimumRevisionAgeToKeep;
 
-    // TODO kalczur ? align action buttons
     // TODO kalczur tooltip for defaults
-    // TODO kalczur action panel for toggle and delete
     // TODO kalczur format retention time
 
     return (
@@ -59,8 +64,12 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                 <RichPanelHeader className={classNames({ "h-100": !isDetailsVisible })}>
                     <RichPanelInfo>
                         <RichPanelSelect>
-                            {/* TODO */}
-                            <Input type="checkbox" checked={false} onChange={() => null} />
+                            <Checkbox
+                                selected={isSelected}
+                                toggleSelection={() =>
+                                    dispatch(documentRevisionsActions.toggleSelectedConfigName(config.Name))
+                                }
+                            />
                         </RichPanelSelect>
                         <RichPanelName>
                             {config.Name}
