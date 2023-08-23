@@ -52,7 +52,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue; // We skip any empty token. 
 
                     var term = stream.GetAttribute<ITermAttribute>();
-                    int outputLength = Encoding.UTF8.GetBytes(term.TermBuffer()[..term.TermLength()], output[currentOutputIdx..]);
+                    ReadOnlySpan<char> termChars = term.TermBuffer();
+                    int outputLength = Encoding.UTF8.GetBytes(termChars[..term.TermLength()], output[currentOutputIdx..]);
 
                     ref var token = ref tokens[currentTokenIdx];
                     token.Offset = currentOutputIdx;
