@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch
 
             using (DocumentIdWorker.GetLower(context.Allocator, id, out Slice lowerId))
             {
-                _database.DocumentsStorage.DocumentPut.ValidateId(lowerId);
+                _database.DocumentsStorage.DocumentPut.ValidateId(context, lowerId);
             }
 
             var originalDocument = GetCurrentDocument(context, id);

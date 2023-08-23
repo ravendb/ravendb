@@ -1,25 +1,25 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
-using System.Linq;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
-using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
-using Constants = Raven.Client.Constants;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using static Raven.Server.Documents.Schemas.Documents;
-using System.Diagnostics.CodeAnalysis;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public virtual void ValidateId(Slice lowerId)
+        public virtual void ValidateId(DocumentsOperationContext context, Slice lowerId, DocumentFlags documentFlags = DocumentFlags.None)
         {
 
         }
@@ -130,8 +130,7 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
-                    ValidateId(lowerId);
+                ValidateId(context, lowerId, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
