@@ -102,10 +102,8 @@ public partial class IndexSearcher
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
-        
         if (typeof(TValue) == typeof(long))
         {
-            
             return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, forward, streamingEnabled, maxNumberOfTerms,token: token);
         }
 
@@ -168,7 +166,7 @@ public partial class IndexSearcher
                     new TermRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high), streamingEnabled, maxNumberOfTerms, token: token));
     }
 
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool forward, long maxNumberOfTerms,  bool streamingEnabled, CancellationToken token)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool forward, bool streamingEnabled, long maxNumberOfTerms, CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {

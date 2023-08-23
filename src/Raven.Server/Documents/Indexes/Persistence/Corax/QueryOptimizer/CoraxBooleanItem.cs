@@ -114,8 +114,8 @@ public struct CoraxBooleanItem : IQueryMatch
         {
             case UnaryMatchOperation.Equals:
             {
-                Slice startWith = GetStartWithTermWithSeparator();
-                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true);
+                Slice startWith = GetStartWithTerm();
+                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true, validatePostfixLen: true);
             }
             case  UnaryMatchOperation.NotEquals:
                 // match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
@@ -168,7 +168,7 @@ public struct CoraxBooleanItem : IQueryMatch
     }
     
     
-    Slice GetStartWithTermWithSeparator()
+    Slice GetStartWithTerm()
     {
         var t = Term;
         if (t is double d)
@@ -177,19 +177,16 @@ public struct CoraxBooleanItem : IQueryMatch
         }
         if (t is long l)
         {        
-            _indexSearcher.Allocator.Allocate(sizeof(long) + 1, out var bs);
+            _indexSearcher.Allocator.Allocate(sizeof(long) , out var bs);
             Span<byte> buffer = bs.ToSpan();
             BitConverter.TryWriteBytes(buffer, Bits.SwapBytes(l));
-            buffer[sizeof(long)] = SpecialChars.RecordSeparator;
             return new Slice(bs);
         }
 
         var term = _indexSearcher.EncodeAndApplyAnalyzer(Field, TermAsString, true).AsSpan();
-        _indexSearcher.Allocator.Allocate(term.Length + 1, out var output);
+        _indexSearcher.Allocator.Allocate(term.Length, out var output);
 
-        Span<byte> prefix = output.ToSpan();
-        term.CopyTo(prefix);
-        prefix[term.Length] = SpecialChars.RecordSeparator;
+        term.CopyTo(output.ToSpan());
         return new Slice(output);
     }
 

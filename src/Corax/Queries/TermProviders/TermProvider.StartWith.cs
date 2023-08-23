@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Mappings;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
@@ -17,17 +18,21 @@ namespace Corax.Queries.TermProviders
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
         private readonly CompactKey _startWithLimit;
+        private readonly bool _validatePostfixLen;
+        private readonly CancellationToken _token;
         private bool _firstRun;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey seekTerm)
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey seekTerm, bool validatePostfixLen, CancellationToken token)
         {
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate<TLookupIterator>();
             _startWith = startWith;
             _startWithLimit = seekTerm;
+            _validatePostfixLen = validatePostfixLen;
+            _token = token;
             _tree = tree;
 
             Reset();
@@ -55,24 +60,39 @@ namespace Corax.Queries.TermProviders
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term)
         {
-            if (_iterator.MoveNext(out var compactKey, out _, out _) == false)
-            {
-                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-                return false;
-            }
+            ReadOnlySpan<byte> decodedStartsWith = _startWith.Decoded();
 
-            var key = compactKey.Decoded();
+            CompactKey compactKey;
+            ReadOnlySpan<byte> key;
+            while (true)
+            {
+                if (_iterator.MoveNext(out compactKey, out _, out _) == false)
+                {
+                    term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+                    return false;
+                }
+
+                key = compactKey.Decoded();
+                if (_validatePostfixLen == false  || 
+                    key[^1] == decodedStartsWith.Length)
+                {
+                     break;
+                }
+                // otherwise, it isn't a match, see: RavenDB-21131, it just a shared prefix
+                // that we need to skip
+                _token.ThrowIfCancellationRequested();
+            }
             
             //For backward iterator we can have two possibilities:
             //a) we're already on valid last term (when startsWith starts with [255]...[255][...] or our prefix is the last in tree)
             //b) we're on next term from our initial startsWith (e.g. for prefix 'ab' we have to seek a['b'+1])
-            if (_firstRun && default(TLookupIterator).IsForward == false && key.StartsWith(_startWith.Decoded()) == false)
+            if (_firstRun && default(TLookupIterator).IsForward == false && key.StartsWith(decodedStartsWith) == false)
             {
                 _firstRun = false;
                 return Next(out term);
             }
 
-            if (key.StartsWith(_startWith.Decoded()) == false)
+            if (key.StartsWith(decodedStartsWith) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
