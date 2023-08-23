@@ -90,7 +90,7 @@ public static class CoraxQueryBuilder
     {
         public readonly OrderMetadata SortField;
         public readonly bool OptimizationIsPossible;
-        public bool WhereClauseItemMatched;
+        public bool SkipOrderByClause;
         public bool MatchedByCompoundField;
         public bool BinaryMatchInQuery = false;
         public FieldMetadata CompoundField;
@@ -125,7 +125,7 @@ public static class CoraxQueryBuilder
             if (BinaryMatchInQuery)
                 return false;
             
-            WhereClauseItemMatched = methodType switch
+            SkipOrderByClause = methodType switch
             {
                 MethodType.StartsWith => SortField.FieldType is MatchCompareFieldType.Sequence,
                 MethodType.EndsWith => SortField.FieldType is MatchCompareFieldType.Sequence,
@@ -134,7 +134,7 @@ public static class CoraxQueryBuilder
                 _ => false
             };
 
-            return WhereClauseItemMatched;
+            return SkipOrderByClause;
         }
         
         public bool TrySetAsStreamingField(Parameters builderParameters, in CoraxBooleanItem cbi)
@@ -145,7 +145,7 @@ public static class CoraxQueryBuilder
             if (cbi.Operation is UnaryMatchOperation.NotEquals)
                 return false;
             
-            if (WhereClauseItemMatched && OptimizationIsPossible)
+            if (SkipOrderByClause && OptimizationIsPossible)
                 ThrowFieldIsAlreadyChosen();
 
             if (cbi.Field.Equals(SortField.Field) == false)
@@ -193,7 +193,7 @@ public static class CoraxQueryBuilder
             if (matchOnType == false)
                 return false;
 
-            WhereClauseItemMatched = true;
+            SkipOrderByClause = true;
             return true;
         }
 
@@ -240,18 +240,25 @@ public static class CoraxQueryBuilder
                 coraxQuery = MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
             // just one item, with known field types
-            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy])
+            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..])
             {
-                // We have no where clause and we have a single order by field? 
-                // Can just scan over the relevant index
-                streamingOptimization.WhereClauseItemMatched = true;
-                coraxQuery =  sortBy.FieldType switch
+                var maxTermToScan = builderParameters.Take switch
                 {
-                     MatchCompareFieldType.Integer => indexSearcher.BetweenQuery(sortBy.Field, long.MinValue, long.MaxValue, forward: sortBy.Ascending, streamingEnabled: true),
-                     MatchCompareFieldType.Floating => indexSearcher.BetweenQuery(sortBy.Field, double.MinValue, double.MaxValue, forward: sortBy.Ascending, streamingEnabled: true),
-                     MatchCompareFieldType.Sequence => indexSearcher.BetweenQuery(sortBy.Field, Constants.BeforeAllKeys, Constants.AfterAllKeys, forward: sortBy.Ascending, streamingEnabled: true),
+                    < 0 => int.MaxValue, // meaning, take all
+                    int.MaxValue => int.MaxValue, // avoid overflow
+                    var take => take + 1
+                };
+                // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
+                streamingOptimization.SkipOrderByClause = sortMetadata.Length == 1;
+                var betweenQuery =  sortBy.FieldType switch
+                {
+                     MatchCompareFieldType.Integer => indexSearcher.BetweenQuery(sortBy.Field, long.MinValue, long.MaxValue, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
+                     MatchCompareFieldType.Floating => indexSearcher.BetweenQuery(sortBy.Field, double.MinValue, double.MaxValue, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
+                     MatchCompareFieldType.Sequence => indexSearcher.BetweenQuery(sortBy.Field, Constants.BeforeAllKeys, Constants.AfterAllKeys, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
                      _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
+
+                coraxQuery = betweenQuery;
             }
             else 
             {
@@ -259,7 +266,7 @@ public static class CoraxQueryBuilder
             }
 
 
-            if (sortMetadata is not null && streamingOptimization.WhereClauseItemMatched == false)
+            if (sortMetadata is not null && streamingOptimization.SkipOrderByClause == false)
                 coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
 
             // The parser already throws parse exception if there is a syntax error.

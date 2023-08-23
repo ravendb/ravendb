@@ -25,9 +25,9 @@ namespace Corax.Queries
         private const int InitialFrequencyHolders = 64;
         private readonly CancellationToken _token;
         private readonly bool _isBoosting;
-        private long _totalResults;
+        private long _readTerms, _totalResults;
+        private readonly long _maxNumberOfTerms;
         private long _current;
-        private long _currentIdx;
         private bool _doNotSortResults;
         private QueryCountConfidence _confidence;
 
@@ -47,9 +47,6 @@ namespace Corax.Queries
 
         public bool IsBoosting => _isBoosting;
         public long Count => _totalResults;
-        public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
-
-        public bool RequiresSortAfterFill;
 
         public bool DoNotSortResults()
         {
@@ -60,24 +57,26 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _confidence;
 
         public MultiTermMatch(IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled,
-            long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default)
+            long maxNumberOfTerms = long.MaxValue, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default)
         {
             _inner = inner;
             _isBoosting = field.HasBoost;
             _token = token;
             _current = QueryMatch.Start;
             if (_inner.IsFillSupported && _isBoosting == false)
-                _termReader = new(indexSearcher);
+                _termReader = new MultiTermReader(indexSearcher);
             else
             {
                 var result = _inner.Next(out _currentTerm);
                 if (result == false)
                     _current = QueryMatch.Invalid;
+                else
+                    _readTerms = 1;
             }
-            
+
+            _totalResults = 0;
             _context = context;
-            _currentIdx = QueryMatch.Start;
-            _totalResults = totalResults;
+            _maxNumberOfTerms = maxNumberOfTerms;
             _confidence = confidence;
 
 
@@ -101,9 +100,14 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int FillWithReader(Span<long> buffer)
         {
-            int results = _termReader.Read(ref this, buffer);
+            if (_readTerms >= _maxNumberOfTerms)
+                return 0;
+            
+            int results = _termReader.Read(ref this, buffer, _maxNumberOfTerms - _readTerms, out var termsRead);
+            _readTerms += termsRead;
             if(results == 0)
                 _termReader.Dispose();
+            _totalResults += results;
             return results;
         }
 
@@ -151,9 +155,10 @@ namespace Corax.Queries
                 _smallListReader = default;
             }
 
-            public int Read(ref MultiTermMatch<TTermProvider> match, Span<long> sortedIds)
+            public int Read(ref MultiTermMatch<TTermProvider> match, Span<long> sortedIds, long maxTermsToRead, out long termsRead)
             {
                 int postingListCalls = 0;
+                termsRead = 0;
                 fixed (long* pSortedIds = sortedIds)
                 {
                     int currentIdx = 0;
@@ -178,6 +183,12 @@ namespace Corax.Queries
                                 break;
                         }
 
+                        if (termsRead++ > maxTermsToRead)
+                        {
+                            termsRead--;
+                            break;
+                        }
+                        
                         var postingListId = _itBuffer[_bufferIdx++];
                         var termType = (TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask;
                         switch (termType)
@@ -304,12 +315,12 @@ namespace Corax.Queries
                 {
                     _token.ThrowIfCancellationRequested();
                     AddTermToBm25();
-                    if (_inner.Next(out _currentTerm) == false)
+                    if (_inner.Next(out _currentTerm) == false || 
+                        ++_readTerms >= _maxNumberOfTerms)
                     {
                         _current = QueryMatch.Invalid;
                         goto End;
                     }
-
                     // We can prove that we need sorting and deduplication in the end. 
                     requiresSort |= count != buffer.Length;
                 }
@@ -325,7 +336,7 @@ namespace Corax.Queries
             {
                 count = Sorting.SortAndRemoveDuplicates(buffer[0..count]);
             }
-
+            _totalResults += count;
             return count;
         }
 
@@ -360,10 +371,12 @@ namespace Corax.Queries
             var actualMatches = buffer.Slice(0, matches);
             actualMatches.CopyTo(incomingMatches);
             var currentMatchCount = 0;
+            _totalResults = 0;
             //ensure we're not out of range
             while (results.Length > 0 && Fill(localMatches.Slice(0, results.Length)) is var read and > 0)
             {
                 _token.ThrowIfCancellationRequested();
+                _totalResults += read;
                 var common = MergeHelper.And(results, localMatches.Slice(0, read), incomingMatches.Slice(0, matches));
                 results = results.Slice(common);
                 currentMatchCount += common;
