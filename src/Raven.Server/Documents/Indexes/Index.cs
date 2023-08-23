@@ -953,6 +953,7 @@ namespace Raven.Server.Documents.Indexes
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
                 MaxNumberOfOutputsPerDocument = _indexStorage.ReadMaxNumberOfOutputsPerDocument(tx);
+                ArchivedDataProcessingBehavior = _indexStorage.ReadArchivedDataProcessingBehavior(tx);
             }
         }
 
@@ -4457,6 +4458,15 @@ namespace Raven.Server.Documents.Indexes
 
                 return _transactionSizeLimit.Value;
             }
+        }
+
+        
+        
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; private set; }
+
+        internal ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
+        {
+            return SourceType == IndexSourceType.Documents ? ArchivedDataProcessingBehavior.ExcludeArchived : ArchivedDataProcessingBehavior.IncludeArchived;
         }
 
         private DateTime _lastCheckedFlushLock;

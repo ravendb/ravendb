@@ -437,7 +437,7 @@ public sealed class MetricsProvider
             result.TimeSinceLastIndexingInSec = (SystemTime.UtcNow - lastIndexingType).TotalSeconds;
         }
 
-        result.ArchivedDataProcessingBehavior = index.Definition.ArchivedDataProcessingBehavior;
+        result.ArchivedDataProcessingBehavior = index.ArchivedDataProcessingBehavior;
         result.LockMode = index.Definition.LockMode;
         result.IsInvalid = stats.IsInvalidIndex;
         result.Status = index.Status;

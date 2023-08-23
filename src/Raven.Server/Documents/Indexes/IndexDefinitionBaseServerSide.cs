@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
         internal readonly IndexDefinitionClusterState ClusterState;
 
@@ -114,7 +114,12 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(ArchivedDataProcessingBehavior));
-            writer.WriteInteger((int)ArchivedDataProcessingBehavior);
+            
+            if (ArchivedDataProcessingBehavior == null)
+                writer.WriteNull();
+            else
+                writer.WriteInteger((int)ArchivedDataProcessingBehavior);
+            
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -189,11 +194,13 @@ namespace Raven.Server.Documents.Indexes
             long indexVersion,
             IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState,
-            ArchivedDataProcessingBehavior? archivedDataProcessingBehavior)
+            IndexSourceType indexSourceType,
+            ArchivedDataProcessingBehavior? archivedDataProcessingBehavior
+            )
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
-            ArchivedDataProcessingBehavior = archivedDataProcessingBehavior ?? ArchivedDataProcessingBehavior.ExcludeArchived;
+            ArchivedDataProcessingBehavior = archivedDataProcessingBehavior;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
@@ -470,11 +477,14 @@ namespace Raven.Server.Documents.Indexes
             return (IndexState)StateAsInt;
         }
 
-        protected static ArchivedDataProcessingBehavior ReadArchivedDataProcessingBehavior(BlittableJsonReaderObject reader)
+        protected static ArchivedDataProcessingBehavior? ReadArchivedDataProcessingBehavior(BlittableJsonReaderObject reader)
         {
-            if (reader.TryGet(nameof(ArchivedDataProcessingBehavior), out int archivedDataProcessingBehaviorAsInt) == false)
-                return ArchivedDataProcessingBehavior.ExcludeArchived;
+            if (reader.TryGet(nameof(ArchivedDataProcessingBehavior), out int? archivedDataProcessingBehaviorAsInt) == false)
+                return null;
 
+            if (archivedDataProcessingBehaviorAsInt == null)
+                return null;
+            
             return (ArchivedDataProcessingBehavior)archivedDataProcessingBehaviorAsInt;
         }
 

@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
-                    
+                    PersistArchivedDataProcessingBehavior(configurationTree, _index.GetDefaultArchivedDataProcessingBehavior());
                 }
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
@@ -198,6 +198,21 @@ namespace Raven.Server.Documents.Indexes
                             configurationTree.Add(configurationKey, SearchEngineType.Lucene.ToString());
                         else
                             configurationTree.Add(configurationKey, defaultEngineType.ToString());
+                    }
+                }
+
+                void PersistArchivedDataProcessingBehavior(Tree configurationTree, ArchivedDataProcessingBehavior defaultBehavior)
+                {
+                    const string configurationKey = nameof(ArchivedDataProcessingBehavior);
+
+                    if (_index.Definition.ArchivedDataProcessingBehavior != null)
+                        configurationTree.Add(configurationKey, _index.Definition.ArchivedDataProcessingBehavior.ToString());
+                    else
+                    {
+                        if (configurationTree.Read(configurationKey) != null)
+                            return; // do not overwrite default value if it exists already
+                        
+                        configurationTree.Add(configurationKey, defaultBehavior.ToString());
                     }
                 }
             }
@@ -461,6 +476,28 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return 0;
+        }
+        
+        public ArchivedDataProcessingBehavior ReadArchivedDataProcessingBehavior(RavenTransaction tx)
+        {
+            var configurationTree = tx.InnerTransaction.ReadTree(IndexSchema.ConfigurationTree);
+            if (configurationTree == null)
+            {
+                throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
+            }
+
+            var result = configurationTree.Read(IndexSchema.ArchivedDataProcessingBehaviorSlice);
+            if (result == null)
+            {
+                throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ArchivedDataProcessingBehaviorSlice)}' tree.");
+            }
+
+            if (Enum.TryParse(result.Reader.ToStringValue(), out ArchivedDataProcessingBehavior persistedArchivedDataProcessingBehavior) == false)
+            {
+                throw new InvalidOperationException($"Index does not contain valid {nameof(ArchivedDataProcessingBehavior)} property. It contains: {result.Reader.ToStringValue()}.");
+            }
+            
+            return persistedArchivedDataProcessingBehavior;
         }
 
         public sealed class DocumentReferences : ReferencesBase
@@ -1106,6 +1143,8 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice DatabaseIdSlice;
 
             public static readonly Slice SourceTypeSlice;
+            
+            public static readonly Slice ArchivedDataProcessingBehaviorSlice;
 
             public static readonly Slice CreatedTimestampSlice;
 
@@ -1166,6 +1205,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "EntriesCount", ByteStringType.Immutable, out EntriesCount);
                     Slice.From(ctx, "Time", ByteStringType.Immutable, out TimeSlice);
                     Slice.From(ctx, nameof(Client.Documents.Indexes.SearchEngineType), ByteStringType.Immutable, out SearchEngineType);
+                    Slice.From(ctx, "ArchivedDataProcessingBehavior", ByteStringType.Immutable, out ArchivedDataProcessingBehaviorSlice);
                 }
             }
         }

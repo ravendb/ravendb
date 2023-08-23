@@ -14,5 +14,5 @@ public class EssentialIndexInformation
 
     public IndexSourceType SourceType { get; set; }
     
-    public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
+    public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 }
