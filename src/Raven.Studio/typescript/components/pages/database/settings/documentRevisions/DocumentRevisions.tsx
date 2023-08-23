@@ -31,12 +31,6 @@ import notificationCenter from "common/notifications/notificationCenter";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
-todo("Feature", "ANY", "Connect SelectionActions component");
-todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
-todo("Feature", "Matteo", "Add the Revert revisions view");
-todo("Other", "Danielle", "Text for About this view");
-todo("Other", "ANY", "Test the view");
-
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
     configType: EditRevisionConfigType;
@@ -44,6 +38,11 @@ interface EditRevisionData {
     toggle: () => void;
     config?: DocumentRevisionsConfig;
 }
+
+todo("Feature", "ANY", "Connect SelectionActions component");
+todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
+todo("Other", "ANY", "Test the view");
+todo("Feature", "Matteo", "Add the Revert revisions view");
 
 export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);

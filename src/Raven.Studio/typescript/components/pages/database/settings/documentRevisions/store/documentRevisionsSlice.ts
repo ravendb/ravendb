@@ -20,9 +20,9 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 }
 
 export interface DocumentRevisionsState {
-    LoadStatus: loadStatus;
-    Configs: EntityState<DocumentRevisionsConfig>;
-    OriginalConfigs: EntityState<DocumentRevisionsConfig>;
+    loadStatus: loadStatus;
+    configs: EntityState<DocumentRevisionsConfig>;
+    originalConfigs: EntityState<DocumentRevisionsConfig>;
 }
 
 const configsAdapter = createEntityAdapter<DocumentRevisionsConfig>({
@@ -32,9 +32,9 @@ const configsAdapter = createEntityAdapter<DocumentRevisionsConfig>({
 const configsSelectors = configsAdapter.getSelectors();
 
 const initialState: DocumentRevisionsState = {
-    LoadStatus: "idle",
-    Configs: configsAdapter.getInitialState(),
-    OriginalConfigs: configsAdapter.getInitialState(),
+    loadStatus: "idle",
+    configs: configsAdapter.getInitialState(),
+    originalConfigs: configsAdapter.getInitialState(),
 };
 
 const sliceName = "documentRevisions";
@@ -44,21 +44,21 @@ export const documentRevisionsSlice = createSlice({
     initialState,
     reducers: {
         addConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            configsAdapter.addOne(state.Configs, payload);
+            configsAdapter.addOne(state.configs, payload);
         },
         editConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
-            configsAdapter.updateOne(state.Configs, {
+            configsAdapter.updateOne(state.configs, {
                 id: payload.Name,
                 changes: { ...payload },
             });
         },
         deleteConfig: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
-            configsAdapter.removeOne(state.Configs, payload.name);
+            configsAdapter.removeOne(state.configs, payload.name);
         },
         toggleConfigState: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
-            const disabled = configsSelectors.selectById(state.Configs, payload.name).Disabled;
+            const disabled = configsSelectors.selectById(state.configs, payload.name).Disabled;
 
-            configsAdapter.updateOne(state.Configs, {
+            configsAdapter.updateOne(state.configs, {
                 id: payload.name,
                 changes: {
                     Disabled: !disabled,
@@ -71,14 +71,14 @@ export const documentRevisionsSlice = createSlice({
             .addCase(fetchConfigs.fulfilled, (state, { payload }) => {
                 if (payload.config) {
                     if (payload.config.Default) {
-                        configsAdapter.addOne(state.OriginalConfigs, {
+                        configsAdapter.addOne(state.originalConfigs, {
                             ...payload.config.Default,
                             Name: documentRevisionsConfigNames.defaultDocument,
                         });
                     }
 
                     configsAdapter.addMany(
-                        state.OriginalConfigs,
+                        state.originalConfigs,
                         Object.keys(payload.config.Collections).map((name) => ({
                             ...payload.config.Collections[name],
                             Name: name,
@@ -87,12 +87,12 @@ export const documentRevisionsSlice = createSlice({
                 }
 
                 if (payload.conflictsConfig) {
-                    configsAdapter.addOne(state.OriginalConfigs, {
+                    configsAdapter.addOne(state.originalConfigs, {
                         ...payload.conflictsConfig,
                         Name: documentRevisionsConfigNames.defaultConflicts,
                     });
                 } else {
-                    configsAdapter.addOne(state.OriginalConfigs, {
+                    configsAdapter.addOne(state.originalConfigs, {
                         Name: documentRevisionsConfigNames.defaultConflicts,
                         Disabled: false,
                         PurgeOnDelete: false,
@@ -102,14 +102,14 @@ export const documentRevisionsSlice = createSlice({
                     });
                 }
 
-                configsAdapter.setAll(state.Configs, configsSelectors.selectAll(state.OriginalConfigs));
-                state.LoadStatus = "success";
+                configsAdapter.setAll(state.configs, configsSelectors.selectAll(state.originalConfigs));
+                state.loadStatus = "success";
             })
             .addCase(fetchConfigs.pending, (state) => {
-                state.LoadStatus = "loading";
+                state.loadStatus = "loading";
             })
             .addCase(fetchConfigs.rejected, (state) => {
-                state.LoadStatus = "failure";
+                state.loadStatus = "failure";
             });
     },
 });
@@ -136,24 +136,24 @@ export const documentRevisionsActions = {
 };
 
 export const documentRevisionsSelectors = {
-    loadStatus: (store: RootState) => store.documentRevisions.LoadStatus,
+    loadStatus: (store: RootState) => store.documentRevisions.loadStatus,
     defaultDocumentsConfig: (store: RootState) =>
-        configsSelectors.selectById(store.documentRevisions.Configs, documentRevisionsConfigNames.defaultDocument),
+        configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultDocument),
     defaultConflictsConfig: (store: RootState) =>
-        configsSelectors.selectById(store.documentRevisions.Configs, documentRevisionsConfigNames.defaultConflicts),
+        configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultConflicts),
     collectionConfigs: (store: RootState) =>
         configsSelectors
-            .selectAll(store.documentRevisions.Configs)
+            .selectAll(store.documentRevisions.configs)
             .filter(
                 (x) =>
                     x.Name !== documentRevisionsConfigNames.defaultConflicts &&
                     x.Name !== documentRevisionsConfigNames.defaultDocument
             ),
-    collectionConfigsNames: (store: RootState) => configsSelectors.selectIds(store.documentRevisions.Configs),
+    collectionConfigsNames: (store: RootState) => configsSelectors.selectIds(store.documentRevisions.configs),
     isAnyModified: (store: RootState) => {
-        return !_.isEqual(store.documentRevisions.OriginalConfigs, store.documentRevisions.Configs);
+        return !_.isEqual(store.documentRevisions.originalConfigs, store.documentRevisions.configs);
     },
     originalConfigs: (store: RootState) => {
-        return configsSelectors.selectAll(store.documentRevisions.OriginalConfigs);
+        return configsSelectors.selectAll(store.documentRevisions.originalConfigs);
     },
 };
