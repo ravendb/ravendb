@@ -29,7 +29,7 @@ public static class BackgroundWorkHelper
     
     public static unsafe bool CheckIfBackgroundWorkShouldProcessItemAlready(BlittableJsonReaderObject metadata, DateTime currentTime, string metadataPropertyToCheck)
     {
-        if (!metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata)) 
+        if (metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata) == false) 
             return false;
         
         if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime) 

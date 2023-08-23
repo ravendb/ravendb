@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Background;
@@ -457,13 +458,16 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (_options.IncludeExpired == false &&
-                        BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(item.Document.Data, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
+                    if (_options.IncludeExpired == false)
                     {
-                        SkipDocument(item, result.Documents);
-                        continue;
+                        if (item.Document.Data.TryGetMetadata(out var metadata) &&
+                            BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
+                        {
+                            SkipDocument(item, result.Documents);
+                            continue;
+                        }
                     }
-
+                    
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
                         SkipDocument(item, result.Documents);
