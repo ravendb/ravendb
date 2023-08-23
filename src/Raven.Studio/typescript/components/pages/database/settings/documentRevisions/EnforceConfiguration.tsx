@@ -16,7 +16,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     };
 
     return (
-        <Modal toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
+        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
             <ModalBody className="vstack gap-2">
                 <h4>Enforce Revision Configuration</h4>
                 <p>The following collections have a revision configuration defined:</p>
