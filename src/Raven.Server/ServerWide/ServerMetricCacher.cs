@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Platform.Posix;
 using Raven.Server.Utils;
 using Sparrow.LowMemory;
@@ -31,6 +32,8 @@ namespace Raven.Server.ServerWide
             Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, TimeSpan.FromSeconds(5), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
             Register(MetricCacher.Keys.Server.MemInfo, TimeSpan.FromSeconds(15), CalculateMemInfo);
+            Register(MetricCacher.Keys.Server.MaxServerLimits, TimeSpan.FromHours(1), CalculateMaxServerLimits);
+            Register(MetricCacher.Keys.Server.CurrentServerLimits, TimeSpan.FromMinutes(5), CalculateCurrentServerLimits);
             Register(MetricCacher.Keys.Server.GcAny, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Any));
             Register(MetricCacher.Keys.Server.GcBackground, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Background));
             Register(MetricCacher.Keys.Server.GcEphemeral, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Ephemeral));
@@ -62,6 +65,22 @@ namespace Raven.Server.ServerWide
                 return MemInfo.Invalid;
 
             return MemInfoReader.Read();
+        }
+
+        private static object CalculateMaxServerLimits()
+        {
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                return LimitsInfo.Invalid;
+
+            return LimitsReader.ReadMaxLimits();
+        }
+
+        private static object CalculateCurrentServerLimits()
+        {
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                return LimitsInfo.Invalid;
+
+            return LimitsReader.ReadCurrentLimitsAsync().GetAwaiter().GetResult();
         }
     }
 }

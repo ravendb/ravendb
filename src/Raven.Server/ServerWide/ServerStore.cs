@@ -192,7 +192,7 @@ namespace Raven.Server.ServerWide
 
             StorageSpaceMonitor = new StorageSpaceMonitor(NotificationCenter);
 
-            ServerLimitsMonitor = new ServerLimitsMonitor(NotificationCenter);
+            ServerLimitsMonitor = new ServerLimitsMonitor(this, NotificationCenter, _notificationsStorage);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 

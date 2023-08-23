@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Reflection;
-using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -279,6 +278,8 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Indicates if any experimental features are used")]
             public const string FeatureAnyExperimental = "1.16.1";
 
+            public const string ServerLimitsPrefix = "1.17.{0}";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
@@ -300,6 +301,16 @@ namespace Raven.Server.Monitoring.Snmp
 
 
                                 array.Add(CreateJsonItem(oid, $"{name} value from '{MemInfoReader.MemInfoFileName}'"));
+                            }
+                            break;
+                        case nameof(ServerLimitsPrefix):
+                            foreach (var propertyInfo in LimitsInfo.AllProperties.Values)
+                            {
+                                var index = propertyInfo.GetCustomAttribute<SnmpIndexAttribute>().Index;
+                                var description = propertyInfo.GetCustomAttribute<DescriptionAttribute>();
+                                var oid = Root + string.Format(ServerLimitsPrefix, index);
+
+                                array.Add(CreateJsonItem(oid, description.Description));
                             }
                             break;
                         default:
