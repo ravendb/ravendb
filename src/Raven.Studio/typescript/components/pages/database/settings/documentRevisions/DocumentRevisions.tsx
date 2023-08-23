@@ -48,7 +48,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);
     const [editRevisionData, setEditRevisionData] = useState<EditRevisionData>(null);
 
-    const fetchStatus = useAppSelector(documentRevisionsSelectors.fetchStatus);
+    const loadStatus = useAppSelector(documentRevisionsSelectors.loadStatus);
     const defaultDocumentsConfig = useAppSelector(documentRevisionsSelectors.defaultDocumentsConfig);
     const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
@@ -99,11 +99,11 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         });
     };
 
-    if (fetchStatus === "loading") {
+    if (loadStatus === "idle" || loadStatus === "loading") {
         return <LoadingView />;
     }
 
-    if (fetchStatus === "error") {
+    if (loadStatus === "failure") {
         return (
             <LoadError
                 error="Unable to load document revisions"
