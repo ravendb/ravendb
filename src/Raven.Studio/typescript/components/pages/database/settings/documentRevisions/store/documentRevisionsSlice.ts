@@ -149,8 +149,9 @@ export const documentRevisionsSelectors = {
                     x.Name !== documentRevisionsConfigNames.defaultConflicts &&
                     x.Name !== documentRevisionsConfigNames.defaultDocument
             ),
+    collectionConfigsNames: (store: RootState) => configsSelectors.selectIds(store.documentRevisions.Configs),
     isAnyModified: (store: RootState) => {
-        return _.isEqual(store.documentRevisions.OriginalConfigs, store.documentRevisions.Configs);
+        return !_.isEqual(store.documentRevisions.OriginalConfigs, store.documentRevisions.Configs);
     },
     originalConfigs: (store: RootState) => {
         return configsSelectors.selectAll(store.documentRevisions.OriginalConfigs);

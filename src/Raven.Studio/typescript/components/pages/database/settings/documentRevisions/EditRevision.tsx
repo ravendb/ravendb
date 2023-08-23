@@ -14,9 +14,13 @@ import {
     DocumentRevisionsConfig,
     DocumentRevisionsConfigName,
     documentRevisionsConfigNames,
+    documentRevisionsSelectors,
 } from "./store/documentRevisionsSlice";
 import useEditRevisionFormController from "./useEditRevisionFormController";
 import IconName from "typings/server/icons";
+import { useAppSelector } from "components/store";
+import { SelectOption } from "components/common/Select";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -34,6 +38,13 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
 
+    const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.collectionConfigsNames);
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
+
+    const collectionOptions: SelectOption<string>[] = allCollectionNames
+        .filter((name) => !collectionConfigsNames.includes(name))
+        .map((name) => ({ label: name, value: name }));
+
     const { control, formState, setValue, handleSubmit } = useForm<EditDocumentRevisionsCollectionConfig>({
         resolver: isForNewCollection
             ? documentRevisionsCollectionConfigYupResolver
@@ -49,13 +60,6 @@ export default function EditRevision(props: EditRevisionProps) {
         onConfirm(mapToDocumentRevisionsConfig(formData, configType));
         toggle();
     };
-
-    // TODO kalczur - get collections in parent
-    const collectionOptions = [
-        { value: "collection1", label: "Collection 1" },
-        { value: "collection2", label: "Collection 2" },
-        { value: "collection3", label: "Collection 3" },
-    ];
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
