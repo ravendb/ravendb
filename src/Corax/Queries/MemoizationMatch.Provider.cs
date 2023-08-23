@@ -83,7 +83,7 @@ namespace Corax.Queries
             _bufferScope = _ctx.Allocate(bufferSize * sizeof(long), out _bufferHolder);
 
             var bufferState = Buffer;
-            int iterations = 0;
+            int iterations = 0; 
 
             // Some inners can _tell_ us that they are already returning data in sorted order
             if (_inner.DoNotSortResults() == false)
