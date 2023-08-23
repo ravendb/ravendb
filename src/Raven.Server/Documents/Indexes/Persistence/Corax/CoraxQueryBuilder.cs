@@ -247,7 +247,7 @@ public static class CoraxQueryBuilder
                      _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                coraxQuery = betweenQuery;
+                coraxQuery = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
             }
             else 
             {

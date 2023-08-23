@@ -445,11 +445,12 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
         return currentIdx;
         
-        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => comparer.Type switch
+        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => (iterator.IsNull, comparer.Type) switch
         {
-            MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator.Current.Decoded()),
-            MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator.CurrentLong),
-            MultiUnaryItem.DataType.Double => comparer.CompareNumerical(iterator.CurrentDouble),
+            (true, _) => comparer.CompareLiteral(Constants.NullValueSlice),
+            (_, MultiUnaryItem.DataType.Slice) => comparer.CompareLiteral(iterator.Current.Decoded()),
+            (_, MultiUnaryItem.DataType.Long) => comparer.CompareNumerical(iterator.CurrentLong),
+            (_, MultiUnaryItem.DataType.Double) => comparer.CompareNumerical(iterator.CurrentDouble),
             _ => throw new ArgumentOutOfRangeException(comparer.Type.ToString())
         };
     }
