@@ -35,8 +35,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var data = Encoding.UTF8.GetString(source);
             using (var reader = new StringReader(data))                
             {
-                var sourceSpan = data.AsSpan();
-
                 int currentOutputIdx = 0;
                 var currentTokenIdx = 0;
 
@@ -50,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue; // We skip any empty token. 
 
                     var term = stream.GetAttribute<ITermAttribute>();
-                    int outputLength = Encoding.UTF8.GetBytes(term.Term, output.Slice(currentOutputIdx));
+                    int outputLength = Encoding.UTF8.GetBytes(term.TermBuffer()[..term.TermLength()], output[currentOutputIdx..]);
 
                     ref var token = ref tokens[currentTokenIdx];
                     token.Offset = currentOutputIdx;
