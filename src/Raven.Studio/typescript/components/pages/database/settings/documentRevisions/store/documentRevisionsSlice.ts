@@ -21,6 +21,7 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 
 export interface DocumentRevisionsState {
     loadStatus: loadStatus;
+    selectedConfigNames: DocumentRevisionsConfigName[];
     configs: EntityState<DocumentRevisionsConfig>;
     originalConfigs: EntityState<DocumentRevisionsConfig>;
 }
@@ -33,6 +34,7 @@ const configsSelectors = configsAdapter.getSelectors();
 
 const initialState: DocumentRevisionsState = {
     loadStatus: "idle",
+    selectedConfigNames: [],
     configs: configsAdapter.getInitialState(),
     originalConfigs: configsAdapter.getInitialState(),
 };
@@ -52,18 +54,61 @@ export const documentRevisionsSlice = createSlice({
                 changes: { ...payload },
             });
         },
-        deleteConfig: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
-            configsAdapter.removeOne(state.configs, payload.name);
+        deleteConfig: (state, { payload: name }: PayloadAction<DocumentRevisionsConfigName>) => {
+            configsAdapter.removeOne(state.configs, name);
         },
-        toggleConfigState: (state, { payload }: PayloadAction<{ name: DocumentRevisionsConfigName }>) => {
-            const disabled = configsSelectors.selectById(state.configs, payload.name).Disabled;
+        toggleConfigState: (state, { payload: name }: PayloadAction<DocumentRevisionsConfigName>) => {
+            const disabled = configsSelectors.selectById(state.configs, name).Disabled;
 
             configsAdapter.updateOne(state.configs, {
-                id: payload.name,
+                id: name,
                 changes: {
                     Disabled: !disabled,
                 },
             });
+        },
+        toggleAllSelectedConfigNames: (state) => {
+            if (state.selectedConfigNames.length === 0) {
+                state.selectedConfigNames = configsSelectors.selectIds(state.configs) as DocumentRevisionsConfigName[];
+            } else {
+                state.selectedConfigNames = [];
+            }
+        },
+        toggleSelectedConfigName: (state, { payload: name }: PayloadAction<DocumentRevisionsConfigName>) => {
+            if (state.selectedConfigNames.includes(name)) {
+                state.selectedConfigNames = state.selectedConfigNames.filter((selectedName) => selectedName !== name);
+            } else {
+                state.selectedConfigNames.push(name);
+            }
+        },
+        deleteSelectedConfigs: (state) => {
+            configsAdapter.removeMany(
+                state.configs,
+                state.selectedConfigNames.filter((name) => name !== documentRevisionsConfigNames.defaultConflicts)
+            );
+            state.selectedConfigNames = [];
+        },
+        disableSelectedConfigs: (state) => {
+            configsAdapter.updateMany(
+                state.configs,
+                state.selectedConfigNames.map((name) => ({
+                    id: name,
+                    changes: {
+                        Disabled: true,
+                    },
+                }))
+            );
+        },
+        enableSelectedConfigs: (state) => {
+            configsAdapter.updateMany(
+                state.configs,
+                state.selectedConfigNames.map((name) => ({
+                    id: name,
+                    changes: {
+                        Disabled: false,
+                    },
+                }))
+            );
         },
     },
     extraReducers: (builder) => {
@@ -149,7 +194,11 @@ export const documentRevisionsSelectors = {
                     x.Name !== documentRevisionsConfigNames.defaultConflicts &&
                     x.Name !== documentRevisionsConfigNames.defaultDocument
             ),
-    collectionConfigsNames: (store: RootState) => configsSelectors.selectIds(store.documentRevisions.configs),
+    allConfigsNames: (store: RootState) =>
+        configsSelectors.selectIds(store.documentRevisions.configs) as DocumentRevisionsConfigName[],
+    selectedConfigNames: (store: RootState) => store.documentRevisions.selectedConfigNames,
+    isSelectedConfigName: (name: DocumentRevisionsConfigName) => (store: RootState) =>
+        store.documentRevisions.selectedConfigNames.includes(name),
     isAnyModified: (store: RootState) => {
         return !_.isEqual(store.documentRevisions.originalConfigs, store.documentRevisions.configs);
     },

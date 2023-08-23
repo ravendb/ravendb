@@ -39,7 +39,7 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
 
-    const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.collectionConfigsNames);
+    const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
     const collectionOptions: SelectOption<string>[] = allCollectionNames
