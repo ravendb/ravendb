@@ -74,19 +74,12 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const asyncSaveConfigs = useAsyncCallback(async () => {
         reportEvent("revisions", "save");
 
-        const config: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration = {
-            Default: defaultDocumentsConfig ? _.omit(defaultDocumentsConfig, "Name") : null,
-            Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, _.omit(x, "Name")])),
-        };
-
-        const conflictsConfig: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration = _.omit(
-            defaultConflictsConfig,
-            "Name"
-        );
-
         const promises = [
-            databasesService.saveRevisionsConfiguration(db, config),
-            databasesService.saveRevisionsForConflictsConfiguration(db, conflictsConfig),
+            databasesService.saveRevisionsConfiguration(db, {
+                Default: mapToDto(defaultDocumentsConfig),
+                Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, mapToDto(x)])),
+            }),
+            databasesService.saveRevisionsForConflictsConfiguration(db, mapToDto(defaultConflictsConfig)),
         ];
 
         await Promise.all(promises);
@@ -310,4 +303,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
             </Col>
         </div>
     );
+}
+
+function mapToDto(
+    config: DocumentRevisionsConfig
+): Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration {
+    return config ? _.omit(config, "Name") : null;
 }
