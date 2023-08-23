@@ -3,7 +3,7 @@ import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./ClientDatabaseConfiguration.stories";
 import { composeStories } from "@storybook/react";
 
-const { WithGlobalConfiguration, WithoutGlobalConfiguration } = composeStories(stories);
+const { WithGlobalConfiguration, WithoutGlobalConfiguration, LicenseRestricted } = composeStories(stories);
 
 const serverConfigurationText = "Server Configuration";
 
@@ -20,5 +20,11 @@ describe("ClientDatabaseConfiguration", function () {
 
         expect(await screen.findByText(/Save/)).toBeInTheDocument();
         expect(screen.queryByText(serverConfigurationText)).not.toBeInTheDocument();
+    });
+
+    it("is license restricted", async () => {
+        const { screen } = rtlRender(<LicenseRestricted />);
+
+        expect(await screen.findByText(/Licensing/)).toBeInTheDocument();
     });
 });
