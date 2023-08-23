@@ -4,6 +4,7 @@ import database from "models/resources/database";
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import { RootState } from "components/store";
+import { loadStatus } from "components/models/common";
 
 export const documentRevisionsConfigNames = {
     defaultConflicts: "Conflicting Document Defaults",
@@ -19,7 +20,7 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 }
 
 export interface DocumentRevisionsState {
-    FetchStatus: "success" | "loading" | "error";
+    LoadStatus: loadStatus;
     Configs: EntityState<DocumentRevisionsConfig>;
     OriginalConfigs: EntityState<DocumentRevisionsConfig>;
 }
@@ -31,7 +32,7 @@ const configsAdapter = createEntityAdapter<DocumentRevisionsConfig>({
 const configsSelectors = configsAdapter.getSelectors();
 
 const initialState: DocumentRevisionsState = {
-    FetchStatus: "loading",
+    LoadStatus: "idle",
     Configs: configsAdapter.getInitialState(),
     OriginalConfigs: configsAdapter.getInitialState(),
 };
@@ -102,13 +103,13 @@ export const documentRevisionsSlice = createSlice({
                 }
 
                 configsAdapter.setAll(state.Configs, configsSelectors.selectAll(state.OriginalConfigs));
-                state.FetchStatus = "success";
+                state.LoadStatus = "success";
             })
             .addCase(fetchConfigs.pending, (state) => {
-                state.FetchStatus = "loading";
+                state.LoadStatus = "loading";
             })
             .addCase(fetchConfigs.rejected, (state) => {
-                state.FetchStatus = "error";
+                state.LoadStatus = "failure";
             });
     },
 });
@@ -135,7 +136,7 @@ export const documentRevisionsActions = {
 };
 
 export const documentRevisionsSelectors = {
-    fetchStatus: (store: RootState) => store.documentRevisions.FetchStatus,
+    loadStatus: (store: RootState) => store.documentRevisions.LoadStatus,
     defaultDocumentsConfig: (store: RootState) =>
         configsSelectors.selectById(store.documentRevisions.Configs, documentRevisionsConfigNames.defaultDocument),
     defaultConflictsConfig: (store: RootState) =>
