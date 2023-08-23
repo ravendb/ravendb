@@ -119,7 +119,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var searcher = new IndexSearcher(Env, knownFields))
         {
             Span<long> ids = new long[16];
-            var entries = searcher.TermQuery("Scope_1", Constants.NullValue);
+            var entries = searcher.TermQuery("Scope_1", null);
             Assert.Equal(1, entries.Fill(ids));
         }
         

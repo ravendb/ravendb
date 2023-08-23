@@ -464,7 +464,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return exists;
     }
 
-    private bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId)
+    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId)
     {
         _nullPostingList ??= _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
         postingListId = _nullPostingList?.ReadInt64(field.FieldName) ?? -1;

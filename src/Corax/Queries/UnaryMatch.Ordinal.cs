@@ -217,6 +217,14 @@ namespace Corax.Queries
                     {
                         if(reader.FieldRootPage != fieldRoot)
                             continue;
+
+                        if (reader.IsNull)
+                        {
+                            if (comparer.Compare(currentType, Constants.NullValueSlice))
+                                continue;
+                            isNotMatch = true;
+                            break;
+                        }
                         
                         if (comparer.Compare(currentType, reader.Current.Decoded()) == false)
                         {

@@ -42,11 +42,12 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
             if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
                 continue;
 
-            string value = entryReader.Current.ToString();
+            string value = entryReader.IsNull 
+                ? null 
+                : entryReader.Current.ToString();
             SetValue(fieldName, value  switch
             {
                 Constants.EmptyString => string.Empty,
-                Constants.NullValue => null, 
                 _ => value
             });
         }

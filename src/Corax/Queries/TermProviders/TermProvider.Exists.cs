@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Corax.Mappings;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
+using Voron.Data.PostingLists;
 
 namespace Corax.Queries.TermProviders
 {
@@ -12,7 +14,14 @@ namespace Corax.Queries.TermProviders
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-
+        
+        
+        private readonly bool _nullExists;
+        private readonly PostingList _nullPostingList;
+        private PostingList.Iterator _nullIterator;
+        private bool _fetchNulls;
+        private long _postingListId;
+        
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
         public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
@@ -20,6 +29,15 @@ namespace Corax.Queries.TermProviders
             _tree = tree;
             _field = field;
             _searcher = searcher;
+            if ((_nullExists = _searcher.TryGetPostingListForNull(field, out  _postingListId)) == false)
+                _nullIterator = default;
+            else
+            {
+                _nullPostingList = searcher.GetPostingList(_postingListId);
+                _nullIterator = _nullPostingList.Iterate();
+                _fetchNulls = true;
+            }
+            
             _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
         }
@@ -28,16 +46,35 @@ namespace Corax.Queries.TermProviders
 
         public int Fill(Span<long> containers)
         {
+            if (_fetchNulls)
+            {
+                if (_nullIterator.Fill(containers, out var total))
+                    return total;
+                
+                _fetchNulls = false;
+            }
+            
             return _iterator.Fill(containers);
         }
 
         public void Reset()
-        {            
+        {
+            _fetchNulls = _nullExists;
+            if (_fetchNulls)
+                _nullIterator = _nullPostingList.Iterate();
+
             _iterator.Reset();
         }
 
         public bool Next(out TermMatch term)
         {
+            if (_fetchNulls)
+            {
+                _fetchNulls = false;
+                term = _searcher.TermQuery(_field, containerId: _postingListId, 1D);
+                return true;
+            }
+            
             while (_iterator.MoveNext(out var key, out _, out _))
             {
                 term = _searcher.TermQuery(_field, key, _tree);
@@ -50,6 +87,13 @@ namespace Corax.Queries.TermProviders
 
         public bool GetNextTerm(out ReadOnlySpan<byte> term)
         {
+            if (_fetchNulls)
+            {
+                term = Constants.NullValueAsStringSlice;
+                _fetchNulls = false;
+                return true;
+            }
+            
             while (_iterator.MoveNext(out var compactKey, out _, out _))
             {
                 var key = compactKey.Decoded();
