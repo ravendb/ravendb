@@ -5,9 +5,13 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import { RootState } from "components/store";
 
+export const documentRevisionsConfigNames = {
+    defaultConflicts: "Conflicting Document Defaults",
+    defaultDocument: "Document Defaults",
+} as const;
+
 export type DocumentRevisionsConfigName =
-    | "Conflicting Document Defaults"
-    | "Document Defaults"
+    | (typeof documentRevisionsConfigNames)[keyof typeof documentRevisionsConfigNames]
     | (string & NonNullable<unknown>);
 
 export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguration {
@@ -68,7 +72,7 @@ export const documentRevisionsSlice = createSlice({
                     if (payload.config.Default) {
                         configsAdapter.addOne(state.OriginalConfigs, {
                             ...payload.config.Default,
-                            Name: "Document Defaults",
+                            Name: documentRevisionsConfigNames.defaultDocument,
                         });
                     }
 
@@ -84,11 +88,11 @@ export const documentRevisionsSlice = createSlice({
                 if (payload.conflictsConfig) {
                     configsAdapter.addOne(state.OriginalConfigs, {
                         ...payload.conflictsConfig,
-                        Name: "Conflicting Document Defaults",
+                        Name: documentRevisionsConfigNames.defaultConflicts,
                     });
                 } else {
                     configsAdapter.addOne(state.OriginalConfigs, {
-                        Name: "Conflicting Document Defaults",
+                        Name: documentRevisionsConfigNames.defaultConflicts,
                         Disabled: false,
                         PurgeOnDelete: false,
                         MaximumRevisionsToDeleteUponDocumentUpdate: null,
@@ -133,19 +137,17 @@ export const documentRevisionsActions = {
 export const documentRevisionsSelectors = {
     fetchStatus: (store: RootState) => store.documentRevisions.FetchStatus,
     defaultDocumentsConfig: (store: RootState) =>
-        configsSelectors.selectById(
-            store.documentRevisions.Configs,
-            "Document Defaults" satisfies DocumentRevisionsConfigName
-        ),
+        configsSelectors.selectById(store.documentRevisions.Configs, documentRevisionsConfigNames.defaultDocument),
     defaultConflictsConfig: (store: RootState) =>
-        configsSelectors.selectById(
-            store.documentRevisions.Configs,
-            "Conflicting Document Defaults" satisfies DocumentRevisionsConfigName
-        ),
+        configsSelectors.selectById(store.documentRevisions.Configs, documentRevisionsConfigNames.defaultConflicts),
     collectionConfigs: (store: RootState) =>
         configsSelectors
             .selectAll(store.documentRevisions.Configs)
-            .filter((x) => x.Name !== "Conflicting Document Defaults" && x.Name !== "Document Defaults"),
+            .filter(
+                (x) =>
+                    x.Name !== documentRevisionsConfigNames.defaultConflicts &&
+                    x.Name !== documentRevisionsConfigNames.defaultDocument
+            ),
     isAnyModified: (store: RootState) => {
         return _.isEqual(store.documentRevisions.OriginalConfigs, store.documentRevisions.Configs);
     },

@@ -10,10 +10,15 @@ import {
 } from "components/pages/database/settings/documentRevisions/DocumentRevisionsValidation";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
 import assertUnreachable from "components/utils/assertUnreachable";
-import { DocumentRevisionsConfig, DocumentRevisionsConfigName } from "./store/documentRevisionsSlice";
+import {
+    DocumentRevisionsConfig,
+    DocumentRevisionsConfigName,
+    documentRevisionsConfigNames,
+} from "./store/documentRevisionsSlice";
 import useEditRevisionFormController from "./useEditRevisionFormController";
+import IconName from "typings/server/icons";
 
-export type EditRevisionConfigType = "defaultDocument" | "defaultConflicts" | "collectionSpecific";
+export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
 
 interface EditRevisionProps {
@@ -64,7 +69,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 control={control}
                                 name="CollectionName"
                                 options={collectionOptions}
-                                disabled={isForNewCollection}
+                                disabled={!isForNewCollection}
                             />
                         </InputGroup>
                     )}
@@ -186,13 +191,24 @@ export default function EditRevision(props: EditRevisionProps) {
                         Cancel
                     </Button>
                     <Button type="submit" color="success">
-                        <Icon icon="plus" />
-                        Add config
+                        <Icon icon={getSubmitIcon(taskType)} />
+                        {_.startCase(taskType)} config
                     </Button>
                 </ModalFooter>
             </Form>
         </Modal>
     );
+}
+
+function getSubmitIcon(taskType: EditRevisionTaskType): IconName {
+    switch (taskType) {
+        case "new":
+            return "plus";
+        case "edit":
+            return "edit";
+        default:
+            assertUnreachable(taskType);
+    }
 }
 
 function getTitle(taskType: EditRevisionTaskType, configType: EditRevisionConfigType): string {
@@ -254,10 +270,10 @@ function mapToDocumentRevisionsConfig(
             name = formData.CollectionName;
             break;
         case "defaultDocument":
-            name = "Document Defaults";
+            name = documentRevisionsConfigNames.defaultDocument;
             break;
         case "defaultConflicts":
-            name = "Conflicting Document Defaults";
+            name = documentRevisionsConfigNames.defaultConflicts;
             break;
         default:
             assertUnreachable(configType);
