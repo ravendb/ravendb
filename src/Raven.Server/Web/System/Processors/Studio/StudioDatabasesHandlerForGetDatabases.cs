@@ -95,6 +95,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
         public bool HasExpirationConfiguration { get; set; }
 
         public bool HasRefreshConfiguration { get; set; }
+        
+        public bool HasDataArchivalConfiguration { get; set; }
 
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
 
@@ -117,6 +119,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
                 [nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration,
                 [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
                 [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
+                [nameof(HasDataArchivalConfiguration)] = HasDataArchivalConfiguration,
                 [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
                 [nameof(LockMode)] = LockMode,
                 [nameof(NodesTopology)] = NodesTopology?.ToJson(),
@@ -145,6 +148,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
                 StudioEnvironment = studioEnvironment,
                 HasExpirationConfiguration = record.ExpirationConfiguration != null,
                 HasRefreshConfiguration = record.RefreshConfiguration != null,
+                HasDataArchivalConfiguration = record.DataArchivalConfiguration != null,
                 HasRevisionsConfiguration = record.RevisionsConfiguration != null,
                 DeletionInProgress = record.DeletionInProgress,
                 IndexesCount = record.CountOfIndexes
