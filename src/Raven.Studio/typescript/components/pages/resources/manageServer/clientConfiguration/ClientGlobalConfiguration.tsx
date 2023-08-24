@@ -132,8 +132,8 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                     <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
                                         <div className="flex-horizontal p-3">
                                             <div>
-                                                Set this number to restrict the number of requests (<code>Reads</code> &{" "}
-                                                <code>Writes</code>) per session in the client API.
+                                                Set this number to restrict the number of requests<br /> 
+                                                (<code>Reads</code> &{" "} <code>Writes</code>) per session in the client API.
                                             </div>
                                         </div>
                                     </PopoverWithHover>
@@ -179,17 +179,17 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                                         <li>
                                                             <code>None</code>
                                                             <br />
-                                                            Read requests - the node the client will target will be
-                                                            based the Read balance behavior configuration.
+                                                            <strong>Read</strong> requests - the node the client will target will be
+                                                            based on Read balance behavior configuration.
                                                             <br />
-                                                            Write requests - will be sent to the preferred node.
+                                                            <strong>Write</strong> requests - will be sent to the preferred node.
                                                         </li>
                                                         <br />
                                                         <li>
                                                             <code>Use session context</code>
                                                             <br />
                                                             Sessions that are assigned the same context will have all
-                                                            their Read & Write requests routed to the same node.
+                                                            their <strong>Read & Write</strong> requests routed to the same node.
                                                             <br />
                                                             The session context is hashed from a context string (given
                                                             by the client) and an optional seed.
@@ -266,8 +266,7 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                             <div className="flex-horizontal p-3">
                                                 <div>
                                                     Set the Read balance method the client will use when accessing a
-                                                    node with
-                                                    <strong> Read</strong> requests.
+                                                    node with <strong> Read</strong> requests.
                                                     <br />
                                                     <strong>Write</strong> requests are sent to the preferred node.
                                                 </div>
@@ -299,11 +298,19 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                 icon="about"
                                 color="info"
                                 heading="About this view"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 targetId="1"
                             >
                                 <p>
-                                    <strong>Client Configuration</strong> lorem ipsum
+                                    <ul>
+                                        <li className="margin-bottom-xs">
+                                            This is the <strong>Server-wide Client-Configuration</strong> view.<br />
+                                            The available client-configuration options will apply serve-wide to all databases.
+                                        </li>
+                                        <li>
+                                            These values can be customized per database in the Database Client-Configuration view.
+                                        </li>
+                                    </ul>
                                 </p>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
