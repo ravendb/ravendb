@@ -8,7 +8,7 @@ interface Duration {
     seconds: number;
 }
 
-interface DurationPickerProps {
+export interface DurationPickerProps {
     onChange: (totalSeconds: number) => void;
     totalSeconds: number;
     showDays?: boolean;
@@ -61,6 +61,15 @@ export default function DurationPicker(props: DurationPickerProps) {
     );
 }
 function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
+    if (!totalSeconds) {
+        return {
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+        };
+    }
+
     let total = totalSeconds,
         hours = 0,
         days = 0;
