@@ -3,6 +3,7 @@ import { loadStatus } from "./common";
 import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
 export type IndexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
+export type IndexType = "StaticIndex" | "AutoIndex";
 
 export interface IndexGroup {
     name: string;
@@ -58,6 +59,7 @@ export interface IndexNodeInfoDetails {
 export interface IndexFilterCriteria {
     searchText: string;
     statuses: IndexStatus[];
+    types: IndexType[];
     showOnlyIndexesWithIndexingErrors: boolean;
     autoRefresh: boolean; //TODO:
 }

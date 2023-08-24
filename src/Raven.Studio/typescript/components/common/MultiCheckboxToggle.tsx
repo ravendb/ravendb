@@ -5,7 +5,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { InputItem } from "components/models/common";
 import "./Toggles.scss";
 import { Icon } from "./Icon";
-import { Button } from "reactstrap";
+import { Button, UncontrolledTooltip } from "reactstrap";
+import { calculateThreshold } from "components/utils/licenseLimitsUtils";
 
 interface MultiCheckboxToggleProps<T extends string | number = string> {
     inputItems: InputItem<T>[];
@@ -101,7 +102,27 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                                 <span>
                                     {inputItem.label}
                                     {inputItem.count >= 0 && (
-                                        <span className="multi-toggle-item-count">{inputItem.count}</span>
+                                        <>
+                                            {inputItem.count > calculateThreshold(inputItem.limit) ? (
+                                                <>
+                                                    <span className="multi-toggle-item-count bg-warning text-dark">
+                                                        {inputItem.count} / {inputItem.limit}
+                                                    </span>
+                                                    <UncontrolledTooltip
+                                                        target={uniqueId + inputItem.value}
+                                                        placement="top"
+                                                    >
+                                                        {inputItem.limitMessage ? (
+                                                            inputItem.limitMessage
+                                                        ) : (
+                                                            <>Limited by your license</>
+                                                        )}
+                                                    </UncontrolledTooltip>
+                                                </>
+                                            ) : (
+                                                <span className="multi-toggle-item-count">{inputItem.count}</span>
+                                            )}
+                                        </>
                                     )}
                                 </span>
                             </label>

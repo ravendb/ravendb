@@ -6,6 +6,7 @@ import {
     IndexNodeInfoDetails,
     IndexSharedInfo,
     IndexStatus,
+    IndexType,
 } from "components/models/indexes";
 import database from "models/resources/database";
 import {
@@ -33,6 +34,7 @@ import { useAsync } from "react-async-hook";
 import { InputItem } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import React from "react";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -40,6 +42,9 @@ type IndexEvent =
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
+    const staticIndexLimit = 12; //TODO
+    const autoIndexLimit = 24; //TODO
+
     const locations = database.getLocations();
 
     const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{
@@ -563,6 +568,36 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     };
 
+    const filterByTypeOptions: InputItem<IndexType>[] = useMemo(() => {
+        let StaticIndex = 0,
+            AutoIndex = 0;
+
+        for (const index of stats.indexes) {
+            if (IndexUtils.isAutoIndex(index)) {
+                AutoIndex++;
+            } else {
+                StaticIndex++;
+            }
+        }
+
+        return [
+            {
+                value: "StaticIndex",
+                label: "Static",
+                count: StaticIndex,
+                limit: staticIndexLimit,
+                limitMessage: <>Your license allows {staticIndexLimit} Static Indexes</>,
+            },
+            {
+                value: "AutoIndex",
+                label: "Auto",
+                count: AutoIndex,
+                limit: autoIndexLimit,
+                limitMessage: <>Your license allows {autoIndexLimit} Static Indexes</>,
+            },
+        ];
+    }, [stats.indexes]);
+
     const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
         let normal = 0,
             errorOrFaulty = 0,
@@ -614,6 +649,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         filter,
         setFilter,
         filterByStatusOptions,
+        filterByTypeOptions,
         groups,
         replacements,
         swapNowProgress,
@@ -646,6 +682,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
 export const defaultFilterCriteria: IndexFilterCriteria = {
     statuses: [],
+    types: [],
     autoRefresh: true,
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",

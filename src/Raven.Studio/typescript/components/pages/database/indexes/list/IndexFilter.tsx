@@ -1,7 +1,7 @@
 ﻿import React from "react";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria } from "components/models/indexes";
-import { Button, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { IndexStatus, IndexFilterCriteria, IndexType } from "components/models/indexes";
+import { Button, Col, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
 import produce from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
@@ -12,11 +12,12 @@ interface IndexFilterProps {
     filter: IndexFilterCriteria;
     setFilter: (x: IndexFilterCriteria) => void;
     filterByStatusOptions: InputItem<IndexStatus>[];
+    filterByTypeOptions: InputItem<IndexType>[];
     indexesCount: number;
 }
 
 export default function IndexFilter(props: IndexFilterProps) {
-    const { filter, setFilter, filterByStatusOptions, indexesCount } = props;
+    const { filter, setFilter, filterByStatusOptions, filterByTypeOptions, indexesCount } = props;
 
     shardingTodo();
 
@@ -77,6 +78,14 @@ export default function IndexFilter(props: IndexFilterProps) {
         );
     };
 
+    const onSearchTypesChange = (types: IndexType[]) => {
+        setFilter(
+            produce(filter, (draft) => {
+                draft.types = types;
+            })
+        );
+    };
+
     const toggleAutoRefreshSelection = () => {
         setFilter(
             produce(filter, (draft) => {
@@ -86,7 +95,7 @@ export default function IndexFilter(props: IndexFilterProps) {
     };
 
     return (
-        <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div className="hstack flex-wrap align-items-end gap-3 my-3 justify-content-end">
             <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
@@ -108,17 +117,24 @@ export default function IndexFilter(props: IndexFilterProps) {
                     )}
                 </div>
             </div>
-            <div>
-                <MultiCheckboxToggle
-                    inputItems={filterByStatusOptions}
-                    label="Filter by state"
-                    selectedItems={filter.statuses}
-                    setSelectedItems={onSearchStatusesChange}
-                    selectAll
-                    selectAllLabel="All"
-                    selectAllCount={indexesCount}
-                />
-            </div>
+
+            <MultiCheckboxToggle
+                inputItems={filterByStatusOptions}
+                label="Filter by state"
+                selectedItems={filter.statuses}
+                setSelectedItems={onSearchStatusesChange}
+                selectAll
+                selectAllLabel="All"
+                selectAllCount={indexesCount}
+            />
+            <MultiCheckboxToggle
+                inputItems={filterByTypeOptions}
+                label="Filter by type"
+                selectedItems={filter.types}
+                setSelectedItems={onSearchTypesChange}
+                selectAllCount={indexesCount}
+            />
+
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
             <Switch
                 id="autoRefresh"
