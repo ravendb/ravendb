@@ -168,7 +168,7 @@ namespace SlowTests.Server.Documents.DataArchival;
         }
         
         [Fact]
-        public async Task ArchivedDocumentsDataSubscription_CanDisableAndEnableSubscriptionAndArchivedDataProcessingBehaviorWillBeTheSameBeforeAndAfter()
+        public async Task ArchivedDocumentsDataSubscription_BehaviorWillBeTheSameAfterRestart()
         {
             using (var store = GetDocumentStore())
             {
