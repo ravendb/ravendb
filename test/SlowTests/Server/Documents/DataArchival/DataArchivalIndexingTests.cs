@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
@@ -675,7 +676,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     {
         using (var store = GetDocumentStore())
         {
-            await Assert.ThrowsAsync<NotSupportedException>(async () => await new InvalidCountersIndexDefinitionWithItemKind().ExecuteAsync(store));
+            await Assert.ThrowsAsync<RavenException>(async () => await new InvalidCountersIndexDefinitionWithItemKind().ExecuteAsync(store));
         }
     }
     
@@ -684,7 +685,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     {
         using (var store = GetDocumentStore())
         {
-            await Assert.ThrowsAsync<NotSupportedException>(async () => await new InvalidTimeSeriesDefinitionWithItemKind().ExecuteAsync(store));
+            await Assert.ThrowsAsync<RavenException>(async () => await new InvalidTimeSeriesDefinitionWithItemKind().ExecuteAsync(store));
         }
     }
        
@@ -1111,7 +1112,7 @@ User: counter.DocumentId
     {
         using (var store = GetDocumentStore())
         {
-            await Assert.ThrowsAsync<NotSupportedException>(async () => await new InvalidJSCountersIndex().ExecuteAsync(store));
+            await Assert.ThrowsAsync<RavenException>(async () => await new InvalidJSCountersIndex().ExecuteAsync(store));
         }
     }
     
