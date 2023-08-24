@@ -41,6 +41,7 @@ export class DatabasesStubs {
             IsDisabled: false,
             HasRefreshConfiguration: false,
             HasExpirationConfiguration: false,
+            HasDataArchivalConfiguration: false,
             HasRevisionsConfiguration: false,
             StudioEnvironment: "None",
             IsSharded: false,
