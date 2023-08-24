@@ -7,6 +7,7 @@ import { services } from "hooks/useServices";
 import { accessManagerSlice } from "components/common/shell/accessManagerSlice";
 import { clusterSlice } from "components/common/shell/clusterSlice";
 import { databasesViewSlice } from "components/pages/resources/databases/store/databasesViewSlice";
+import { licenseSlice } from "./common/shell/licenseSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -20,6 +21,7 @@ export function createStoreConfiguration() {
             databasesView: databasesViewSlice.reducer,
             accessManager: accessManagerSlice.reducer,
             cluster: clusterSlice.reducer,
+            license: licenseSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
