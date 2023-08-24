@@ -157,7 +157,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                                 The archived document will be compressed
                                             </li>
                                             <li>
-                                                The <code>@archive-at</code> metadata property will be replaced by: <code>@archieved: true</code>
+                                                The <code>@archive-at</code> metadata property will be replaced by: <code>@archived: true</code>
                                             </li>
                                             <li>
                                                 Per-index/subscription, you can configure whether archived documents will be included in the indexing and subscription processes
