@@ -10,6 +10,7 @@ describe("StudioGlobalConfiguration", function () {
         const { screen } = rtlRender(<StudioConfiguration />);
         expect(await screen.findByText("Collapse documents when opening")).toBeInTheDocument();
     });
+
     it("is license restricted", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 

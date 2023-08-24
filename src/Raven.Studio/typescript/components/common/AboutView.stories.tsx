@@ -11,6 +11,7 @@ import {
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
+import AccordionCommunityLicenseWarning from "./AccordionCommunityLicenseWarning";
 
 export default {
     title: "Bits/AboutView",
@@ -70,36 +71,11 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 </p>
                                 <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
-                            <AccordionItemWrapper
-                                icon="license"
-                                color="warning"
-                                heading="Licensing"
-                                description="See which plans offer this and more exciting features"
+                            <AccordionCommunityLicenseWarning
                                 targetId="3"
-                                pill
-                                pillText="Upgrade available"
-                                pillIcon="star-filled"
-                            >
-                                <AccordionItemLicensing
-                                    description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                    featureName="Document Compression"
-                                    featureIcon="documents-compression"
-                                    checkedLicenses={["Professional", "Enterprise"]}
-                                >
-                                    <p className="lead fs-4">Get your license expanded</p>
-                                    <div className="mb-3">
-                                        <Button color="primary" className="rounded-pill">
-                                            <Icon icon="notifications" />
-                                            Contact us
-                                        </Button>
-                                    </div>
-                                    <small>
-                                        <a href="#" target="_blank" className="text-muted">
-                                            See pricing plans
-                                        </a>
-                                    </small>
-                                </AccordionItemLicensing>
-                            </AccordionItemWrapper>
+                                featureName="Document Compression"
+                                featureIcon="documents-compression"
+                            />
                         </AboutViewFloating>
                     </Col>
                 </Row>
