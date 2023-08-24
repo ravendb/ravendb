@@ -1,7 +1,6 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Sparrow.Binary;
 using Sparrow.Server;
 using Voron.Impl;
 
@@ -50,9 +49,7 @@ namespace Voron
             _cache = (PageData*)_cacheMemory.Ptr;
 
             for (var i = 0; i < CacheSize; i++)
-            {
                 _cache[i].PageNumber = Invalid;
-            }
         }
 
         public PageLocator(LowLevelTransaction tx)
@@ -64,41 +61,33 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetReadOnlyPage(long pageNumber, out Page page)
         {
-            Debug.Assert(pageNumber != Invalid);
+            ulong bucket = (ulong)pageNumber & CacheMask;
+            Debug.Assert(bucket is >= 0 and < CacheSize);
 
-            ref var node = ref _cache[pageNumber & CacheMask];
-
-            if (node.PageNumber == pageNumber && node.PageNumber != Invalid)
-            {
-                page = node.Page;
-                return true;
-            }
-
-            page = default(Page);
-            return false;
+            ref var node = ref _cache[bucket];
+            page = node.Page;
+            return node.PageNumber == pageNumber && node.PageNumber != Invalid;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetWritablePage(long pageNumber, out Page page)
         {
-            Debug.Assert(pageNumber != Invalid);
+            ulong bucket = (ulong)pageNumber & CacheMask;
+            Debug.Assert(bucket is >= 0 and < CacheSize);
 
-            ref var node = ref _cache[pageNumber & CacheMask];
-
-            if (node.IsWritable && node.PageNumber == pageNumber && node.PageNumber != Invalid)
-            {
-                page = node.Page;
-                return true;
-            }
-
-            page = default(Page);
-            return false;
+            ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
+            page = node.Page;
+            return node.IsWritable && node.PageNumber == pageNumber && node.PageNumber != Invalid;
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(long pageNumber)
         {
-            ref var node = ref _cache[pageNumber & CacheMask];
+            ulong bucket = (ulong)pageNumber & CacheMask;
+            Debug.Assert(bucket is >= 0 and < CacheSize);
+
+            ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
 
             if (node.PageNumber == pageNumber)
             {
@@ -107,9 +96,14 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetReadable(long pageNumber, Page page)
+        public void SetReadable(Page page)
         {
-            ref var node = ref _cache[pageNumber & CacheMask];
+            long pageNumber = page.PageNumber;
+
+            ulong bucket = (ulong)pageNumber & CacheMask;
+            Debug.Assert(bucket is >= 0 and < CacheSize);
+
+            ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
 
             if (node.PageNumber != pageNumber)
             {
@@ -120,9 +114,14 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetWritable(long pageNumber, Page page)
+        public void SetWritable(Page page)
         {
-            ref var node = ref _cache[pageNumber & CacheMask];
+            long pageNumber = page.PageNumber;
+
+            ulong bucket = (ulong)pageNumber & CacheMask;
+            Debug.Assert(bucket is >= 0 and < CacheSize);
+
+            ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
 
             if (node.PageNumber != pageNumber || node.IsWritable == false)
             {

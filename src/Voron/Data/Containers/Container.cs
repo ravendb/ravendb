@@ -1005,7 +1005,7 @@ namespace Voron.Data.Containers
                 if (pageCache.TryGetReadOnlyPage(pageNum, out var page) == false)
                 {
                     page = llt.GetPage(pageNum);
-                    pageCache.SetReadable(pageNum, page);
+                    pageCache.SetReadable(page);
                 }
 
                 var container = new Container(page);

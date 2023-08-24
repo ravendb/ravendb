@@ -546,7 +546,7 @@ namespace Voron.Impl
 
             TrackWritablePage(newPage);
 
-            _pageLocator.SetWritable(num, newPage);
+            _pageLocator.SetWritable(newPage);
 
             return newPage;
         }
@@ -593,7 +593,7 @@ namespace Voron.Impl
 
             var p = GetPageInternal(pageNumber);
 
-            _pageLocator.SetReadable(p.PageNumber, p);
+            _pageLocator.SetReadable(p);
 
             return p;
         }
@@ -825,7 +825,7 @@ namespace Voron.Impl
                     Flags = PageFlags.Single
                 };
 
-                _pageLocator.SetWritable(pageNumber, newPage);
+                _pageLocator.SetWritable(newPage);
 
                 TrackWritablePage(newPage);
 
