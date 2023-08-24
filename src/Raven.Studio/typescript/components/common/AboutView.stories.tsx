@@ -11,7 +11,7 @@ import {
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
-import AccordionCommunityLicenseWarning from "./AccordionCommunityLicenseWarning";
+import AccordionCommunityLicenseNotIncluded from "./AccordionCommunityLicenseNotIncluded";
 
 export default {
     title: "Bits/AboutView",
@@ -71,7 +71,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 </p>
                                 <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
-                            <AccordionCommunityLicenseWarning
+                            <AccordionCommunityLicenseNotIncluded
                                 targetId="3"
                                 featureName="Document Compression"
                                 featureIcon="documents-compression"
@@ -142,7 +142,7 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                 targetId="3"
                                 pill
                                 pillText="Upgrade available"
-                                pillIcon="star-filled"
+                                pillIcon="upgrade-arrow"
                             >
                                 <AccordionItemLicensing
                                     description="This feature is not available in your license. Unleash the full potential and upgrade your plan."

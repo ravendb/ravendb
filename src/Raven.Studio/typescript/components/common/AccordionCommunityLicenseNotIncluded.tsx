@@ -3,13 +3,13 @@ import { AccordionItemWrapper, AccordionItemLicensing } from "./AboutView";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 
-interface AccordionCommunityLicenseWarningProps {
+interface AccordionCommunityLicenseNotIncludedProps {
     targetId: string;
     featureName: string;
     featureIcon: IconName;
 }
 
-export default function AccordionCommunityLicenseWarning(props: AccordionCommunityLicenseWarningProps) {
+export default function AccordionCommunityLicenseNotIncluded(props: AccordionCommunityLicenseNotIncludedProps) {
     const { targetId, featureName, featureIcon } = props;
 
     return (
@@ -21,7 +21,7 @@ export default function AccordionCommunityLicenseWarning(props: AccordionCommuni
             targetId={targetId}
             pill
             pillText="Upgrade available"
-            pillIcon="star-filled"
+            pillIcon="upgrade-arrow"
         >
             <AccordionItemLicensing
                 description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
