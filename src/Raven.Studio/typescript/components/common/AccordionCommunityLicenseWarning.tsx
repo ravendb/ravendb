@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "reactstrap";
 import { AccordionItemWrapper, AccordionItemLicensing } from "./AboutView";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
@@ -32,13 +31,13 @@ export default function AccordionCommunityLicenseWarning(props: AccordionCommuni
             >
                 <p className="lead fs-4">Get your license expanded</p>
                 <div className="mb-3">
-                    <Button color="primary" className="rounded-pill">
+                    <a href="https://ravendb.net/contact" target="_blank" className="btn btn-primary rounded-pill">
                         <Icon icon="notifications" />
                         Contact us
-                    </Button>
+                    </a>
                 </div>
                 <small>
-                    <a href="#" target="_blank" className="text-muted">
+                    <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
                         See pricing plans
                     </a>
                 </small>
