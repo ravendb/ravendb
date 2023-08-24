@@ -112,5 +112,81 @@ public class DataArchivalSmugglerTests: RavenTestBase
         }
             
     }
+    
+    
+    [Fact]
+    public async Task CanCreateOneTimeBackupAndRestore_WithArchivedData()
+    {
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        var name = "EGR";
 
+        using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User {Name = name, Id = "users/1"};
+                await session.StoreAsync(user, "users/1");
+                var retires = SystemTime.UtcNow.AddMinutes(5);
+                var metadata = session.Advanced.GetMetadataFor(user);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.SaveChangesAsync();
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            var config = new BackupConfiguration
+            {
+                BackupType = BackupType.Backup,
+                LocalSettings = new LocalSettings
+                {
+                    FolderPath = backupPath
+                }
+            };
+
+            var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
+            var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+            Assert.True(backupResult.Documents.Processed);
+            Assert.Equal(1, backupResult.Documents.ReadCount);
+            Assert.NotEmpty(backupResult.Messages);
+
+            var databaseName = $"restored_database-{Guid.NewGuid()}";
+            var backupLocation = Directory.GetDirectories(backupPath).First();
+
+            using (ReadOnly(backupLocation))
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = databaseName }))
+            {
+                using (var session = store.OpenAsyncSession(databaseName))
+                {
+                    var usr = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(name, usr.Name);
+                }
+            }
+        }
+    }
+
+    
+    private static IDisposable ReadOnly(string path)
+    {
+        var files = Directory.GetFiles(path);
+        var attributes = new FileInfo(files[0]).Attributes;
+        foreach (string file in files)
+        {
+            File.SetAttributes(file, FileAttributes.ReadOnly);
+        }
+
+        return new DisposableAction(() =>
+        {
+            foreach (string file in files)
+            {
+                File.SetAttributes(file, attributes);
+            }
+        });
+    }
+     
 }
