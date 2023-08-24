@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -786,6 +785,9 @@ namespace Raven.Server.Documents.Revisions
 
             foreach (var revision in revisionsToRemove)
             {
+                if (revision.ChangeVector.Length > DocumentIdWorker.MaxIdSize)
+                    DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
+
                 using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var prefixSlice))
                 using (CreateRevisionTombstoneKeySlice(context, prefixSlice, revision.ChangeVector, out var changeVectorSlice, out var keySlice))
                 {
