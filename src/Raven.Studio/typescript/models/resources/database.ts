@@ -100,6 +100,7 @@ abstract class database {
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.hasExpirationConfiguration(incomingCopy.HasExpirationConfiguration);
         this.hasRefreshConfiguration(incomingCopy.HasRefreshConfiguration);
+        this.hasArchivalConfiguration(incomingCopy.HasDataArchivalConfiguration);
         
         this.environment(incomingCopy.StudioEnvironment !== "None" ? incomingCopy.StudioEnvironment : null);
         

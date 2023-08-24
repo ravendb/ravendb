@@ -57,6 +57,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
             });
 
             messagePublisher.reportSuccess("Data archival configuration saved successfully");
+            db.hasArchivalConfiguration(formData.isDataArchivalEnabled);
             reset(formData);
         });
     };
@@ -150,17 +151,17 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                         searching for documents that should be archived.
                                     </li>
                                     <li>
-                                        Any document that has an <code>@archive-at</code> metadata property whose time has
-                                        passed at the time of the scan will be archived:
+                                        Any document that has an <code>@archive-at</code> metadata property whose time
+                                        has passed at the time of the scan will be archived:
                                         <ul>
+                                            <li>The archived document will be compressed</li>
                                             <li>
-                                                The archived document will be compressed
+                                                The <code>@archive-at</code> metadata property will be replaced by:{" "}
+                                                <code>@archived: true</code>
                                             </li>
                                             <li>
-                                                The <code>@archive-at</code> metadata property will be replaced by: <code>@archived: true</code>
-                                            </li>
-                                            <li>
-                                                Per-index/subscription, you can configure whether archived documents will be included in the indexing and subscription processes
+                                                Per-index/subscription, you can configure whether archived documents
+                                                will be included in the indexing and subscription processes
                                             </li>
                                         </ul>
                                     </li>
