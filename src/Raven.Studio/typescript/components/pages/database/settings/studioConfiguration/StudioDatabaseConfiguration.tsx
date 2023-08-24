@@ -106,7 +106,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                 Save
                             </ButtonWithSpinner>
                             <small title="Navigate to the server-wide Client Configuration View">
-                                <a target="_blank" href={appUrl.forGlobalClientConfiguration()}>
+                                <a target="_blank" href={appUrl.forGlobalStudioConfiguration()}>
                                     <Icon icon="link" />
                                     Go to Server-Wide Studio Configuration View
                                 </a>
@@ -117,7 +117,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
                                         <Label className="mb-0 md-label">
-                                            Environment <Icon icon="info" color="info" id="environmentInfo" />
+                                            Database Environment <Icon icon="info" color="info" id="environmentInfo" />
                                             <UncontrolledPopover
                                                 target="environmentInfo"
                                                 placement="right"
@@ -125,8 +125,10 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                                 container="popoverContainer"
                                             >
                                                 <PopoverBody>
-                                                    Change the studio environment tag. This does not affect settings or
-                                                    features.
+                                                    <ul>
+                                                        <li className="margin-bottom-xs">Apply a <strong>tag</strong> to the Studio indicating the database environment.</li>
+                                                        <li>This does not affect any settings or features.</li>
+                                                    </ul>
                                                 </PopoverBody>
                                             </UncontrolledPopover>
                                         </Label>
@@ -149,7 +151,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                         >
                                             <PopoverBody>
                                                 <ul className="mb-0">
-                                                    <li>
+                                                    <li className="margin-bottom-xs">
                                                         Toggle on to disable creating new Auto-Indexes when making a
                                                         <strong> dynamic query</strong>.
                                                     </li>
@@ -176,11 +178,12 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                             icon="about"
                             color="info"
                             heading="About this view"
-                            description="Get additional info on what this feature can offer you"
+                            description="Get additional info on this feature"
                             targetId="1"
                         >
                             <p>
-                                <strong>Studio Configuration</strong> lorem ipsum
+                                This is the <strong>Database Studio-Configuration</strong> view.<br />
+                                The available configuration options will apply only to this database.
                             </p>
                             <hr />
                             <div className="small-label mb-2">useful links</div>

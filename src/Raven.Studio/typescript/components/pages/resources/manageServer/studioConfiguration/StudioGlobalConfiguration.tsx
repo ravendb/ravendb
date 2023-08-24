@@ -112,7 +112,7 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
                                         <Label className="mb-0 md-label">
-                                            Environment <Icon icon="info" color="info" id="EnvironmentInfo" />
+                                            Server Environment <Icon icon="info" color="info" id="EnvironmentInfo" />
                                             <UncontrolledPopover
                                                 target="EnvironmentInfo"
                                                 placement="right"
@@ -120,8 +120,10 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                                 container="popoverContainer"
                                             >
                                                 <PopoverBody>
-                                                    Change the studio environment tag. This does not affect settings or
-                                                    features.
+                                                    <ul>
+                                                        <li className="margin-bottom-xs">Apply a <strong>tag</strong> to the Studio indicating the server environment.</li>
+                                                        <li>This does not affect any settings or features.</li>
+                                                    </ul>
                                                 </PopoverBody>
                                             </UncontrolledPopover>
                                         </Label>
@@ -132,7 +134,23 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                         ></FormSelect>
                                     </InputGroup>
                                     <InputGroup className="gap-1 flex-wrap flex-column">
-                                        <Label className="mb-0 md-label">Default Replication Factor</Label>
+                                        <Label className="mb-0 md-label">
+                                            Default Replication Factor <Icon icon="info" color="info" id="ReplicationFactorInfo" />
+                                            <UncontrolledPopover
+                                                target="ReplicationFactorInfo"
+                                                placement="right"
+                                                trigger="hover"
+                                                container="popoverContainer"
+                                            >
+                                                <PopoverBody>
+                                                    <ul>
+                                                        <li className="margin-bottom-xs">Set the default <strong>replication factor</strong> when creating a new database.</li>
+                                                        <li className="margin-bottom-xs"> If not set, then the number of nodes in your cluster will be used.</li>
+                                                        <li>Additional nodes can always be added to the database after it is created.</li>
+                                                    </ul>
+                                                </PopoverBody>
+                                            </UncontrolledPopover>
+                                        </Label>
                                         <FormInput
                                             control={control}
                                             name="replicationFactor"
@@ -163,11 +181,19 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                             icon="about"
                             color="info"
                             heading="About this view"
-                            description="Get additional info on what this feature can offer you"
+                            description="Get additional info on this feature"
                             targetId="1"
                         >
                             <p>
-                                <strong>Studio Configuration</strong> lorem ipsum
+                                <ul>
+                                    <li className="margin-bottom-xs">
+                                        This is the <strong>Server-wide Studio-Configuration</strong> view.<br />
+                                        The available studio-configuration options will apply serve-wide to all databases.
+                                    </li>
+                                    <li>
+                                        The environment tag can be customized per database in the Database Studio-Configuration view.
+                                    </li>
+                                </ul>
                             </p>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
