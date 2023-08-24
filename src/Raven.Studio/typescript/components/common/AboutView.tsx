@@ -115,15 +115,16 @@ const AboutViewAnchored = (props: AboutViewProps) => {
 };
 
 interface AccordionItemLicensingProps {
-    description: string;
+    description: ReactNode;
     featureName: string;
     featureIcon: IconName;
     children: ReactNode;
     checkedLicenses: string[];
+    isCommunityLimited?: boolean;
 }
 
 const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
-    const { featureName, featureIcon, children, checkedLicenses, description } = props;
+    const { featureName, featureIcon, children, checkedLicenses, description, isCommunityLimited } = props;
     const licenses = [
         { name: "Community", checked: checkedLicenses.includes("Community") },
         { name: "Professional", checked: checkedLicenses.includes("Professional") },
@@ -140,6 +141,9 @@ const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
                     <div className="vstack align-items-center" key={license.name}>
                         <h5 className={classNames("license-name", license.name.toLowerCase())}>{license.name}</h5>
                         <Icon icon={license.checked ? "tick" : "cancel"} />
+                        {isCommunityLimited && license.name === "Community" ? (
+                            <small className="text-muted">(limited)</small>
+                        ) : null}
                     </div>
                 ))}
             </div>
