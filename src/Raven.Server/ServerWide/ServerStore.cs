@@ -1221,6 +1221,8 @@ namespace Raven.Server.ServerWide
                         DebugTag = "cluster-topology-update"
                     });
 
+                // We only want to fire a notification if the follower's persistent cluster topology is caught up to leader
+                // Or if we are leader and our own cluster topology has changed
                 if (leaderClusterTopology == null || localClusterTopology.Etag == leaderClusterTopology.Etag)
                     NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag, NodeTag, _engine.CurrentTerm, _engine.CurrentState,
                         status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
