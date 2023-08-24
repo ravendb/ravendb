@@ -5,6 +5,8 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import { setLocale } from "yup";
 import { ClusterNode, clusterActions } from "components/common/shell/clusterSlice";
+import licenseModel from "models/auth/licenseModel";
+import { licenseActions } from "./licenseSlice";
 
 let initialized = false;
 
@@ -47,6 +49,10 @@ function initRedux() {
     clusterTopologyManager.default.topology.subscribe((topology) => {
         onClusterTopologyChanged();
         topology.nodes.subscribe(onClusterTopologyChanged);
+    });
+
+    licenseModel.licenseStatus.subscribe((licenseStatus) => {
+        globalDispatch(licenseActions.statusLoaded(licenseStatus));
     });
 }
 
