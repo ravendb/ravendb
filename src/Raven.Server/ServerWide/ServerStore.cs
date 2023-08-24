@@ -535,11 +535,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool ShouldUpdateTopology(long newRecordIndex, long currentIndex, out string url)
+        public bool ShouldUpdateTopology(long newRecordIndex, long currentIndex, out string url, ClusterTopology clusterTopology = null)
         {
             if (currentIndex < newRecordIndex)
             {
-                var clusterTopology = GetClusterTopology();
+                clusterTopology ??= GetClusterTopology();
                 url = clusterTopology.GetUrlFromTag(NodeTag);
                 if (url != null)
                     return true;
@@ -1213,7 +1213,7 @@ namespace Raven.Server.ServerWide
         {
             var topology = leaderClusterTopology ?? localClusterTopology;
             
-            if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _))
+            if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _, localClusterTopology))
             {
                 _ = ClusterRequestExecutor.UpdateTopologyAsync(
                     new RequestExecutor.UpdateTopologyParameters(topologyNode)
