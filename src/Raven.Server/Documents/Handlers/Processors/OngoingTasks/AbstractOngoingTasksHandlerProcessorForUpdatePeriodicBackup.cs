@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
@@ -20,6 +21,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
+            if (requestHandler.ServerStore.LicenseManager.LicenseStatus.HasPeriodicBackup == false)
+            {
+                throw new LicenseLimitException("Your license doesn't support adding periodic backups.");
+            }
         }
 
         protected override async ValueTask<PeriodicBackupConfiguration> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)

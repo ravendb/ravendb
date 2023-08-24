@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -69,6 +70,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
+using static Raven.Server.ServerWide.Commands.DeleteServerWideTaskCommand;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.ServerWide
@@ -489,7 +491,7 @@ namespace Raven.Server.ServerWide
                     case nameof(SourceMigrationSendCompletedCommand):
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
-                        UpdateDatabase(context, type, cmd, index, leader, serverStore);
+                        UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(AcknowledgeSubscriptionBatchCommand):
@@ -508,6 +510,13 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateQueueSinkProcessStateCommand):
                     case nameof(RemoveQueueSinkProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
+
+                        //TODO
+                        /*var maxNumberOfSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
+                        if (maxNumberOfSubscriptionsPerDatabase != null && maxNumberOfSubscriptionsPerDatabase >= 0 && maxNumberOfSubscriptionsPerDatabase > databaseRecord.ExternalReplications.Count)
+                        {
+                            throw new LicenseLimitException($"The maximum number of external replications cannot exceed the limit of: {maxNumberOfExternalReplications}");
+                        }*/
                         if (result != null)
                             leader?.SetStateOf(index, result);
                         break;
@@ -641,7 +650,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, cmd, index, leader);
+                        var addedNodes = AddDatabase(context, cmd, index, serverStore);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -925,7 +934,8 @@ namespace Raven.Server.ServerWide
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
                    e is AuthorizationException ||
-                   e is CompareExchangeKeyTooBigException;
+                   e is CompareExchangeKeyTooBigException ||
+                   e is LicenseLimitException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -1733,7 +1743,7 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.QueueSinks)
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1775,6 +1785,12 @@ namespace Raven.Server.ServerWide
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
+
+                        AssertLicenseLimits(nameof(PutIndexesCommand), serverStore, addDatabaseCommand.Record, items, context);
+                        AssertLicenseLimits(nameof(PutAutoIndexCommand), serverStore, addDatabaseCommand.Record, items, context);
+                        AssertLicenseLimits(nameof(PutSortersCommand), serverStore, addDatabaseCommand.Record, items, context);
+                        AssertLicenseLimits(nameof(PutAnalyzersCommand), serverStore, addDatabaseCommand.Record, items, context);
+
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                         if (addDatabaseCommand.Record.IsSharded == false)
                             return addDatabaseCommand.Record.Topology.Members;
@@ -2629,7 +2645,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private void UpdateDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void UpdateDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new RachisApplyException("Update database command must contain a DatabaseName property");
@@ -2684,6 +2700,8 @@ namespace Raven.Server.ServerWide
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+
+                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
                 }
             }
             catch (Exception e)
@@ -2696,6 +2714,133 @@ namespace Raven.Server.ServerWide
                 LogCommand(type, index, exception, updateCommand);
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
             }
+        }
+
+        private static void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
+        {
+            switch (type)
+            {
+                case nameof(PutIndexCommand):
+                case nameof(PutIndexesCommand):
+                    var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
+                    if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && maxStaticIndexesPerDatabase < databaseRecord.Indexes.Count)
+                    {
+                        throw new LicenseLimitException($"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
+                    }
+
+                    var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
+                    if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0 && maxStaticIndexesPerCluster < GetTotal(TotalType.StaticIndex))
+                    {
+                        throw new LicenseLimitException($"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
+                    }
+                    break;
+
+                case nameof(PutAutoIndexCommand):
+                    var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
+                    if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && maxAutoIndexesPerDatabase < databaseRecord.AutoIndexes.Count)
+                    {
+                        throw new LicenseLimitException($"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+                    }
+
+                    var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
+                    if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0 && maxAutoIndexesPerCluster < GetTotal(TotalType.AutoIndex))
+                    {
+                        throw new LicenseLimitException($"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+                    }
+                    break;
+
+                case nameof(UpdateExternalReplicationCommand):
+                    var maxExternalReplicationsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfExternalReplicationsPerDatabase;
+                    if (maxExternalReplicationsPerDatabase != null && maxExternalReplicationsPerDatabase >= 0 && maxExternalReplicationsPerDatabase > databaseRecord.ExternalReplications.Count)
+                    {
+                        throw new LicenseLimitException($"The maximum number of external replications per database cannot exceed the limit of: {maxExternalReplicationsPerDatabase}");
+                    }
+
+                    var maxExternalReplicationsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfExternalReplicationsPerCluster;
+                    if (maxExternalReplicationsPerCluster != null && maxExternalReplicationsPerCluster >= 0 && maxExternalReplicationsPerCluster > GetTotal(TotalType.ExternalReplication))
+                    {
+                        throw new LicenseLimitException($"The maximum number of external replications per cluster cannot exceed the limit of: {maxExternalReplicationsPerCluster}");
+                    }
+                    break;
+
+                case nameof(PutSortersCommand):
+                    var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
+                    if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && maxCustomSortersPerDatabase > databaseRecord.Sorters.Count)
+                    {
+                        throw new LicenseLimitException($"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
+                    }
+
+                    var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
+                    if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0 && maxCustomSortersPerCluster > GetTotal(TotalType.CustomSorters))
+                    {
+                        throw new LicenseLimitException($"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
+                    }
+                    break;
+
+                case nameof(PutAnalyzersCommand):
+                    var maxAnalyzersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
+                    if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && maxAnalyzersPerDatabase > databaseRecord.Sorters.Count)
+                    {
+                        throw new LicenseLimitException($"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
+                    }
+
+                    var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
+                    if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 && maxAnalyzersPerCluster > GetTotal(TotalType.Analyzers))
+                    {
+                        throw new LicenseLimitException($"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
+                    }
+                    break;
+            }
+
+            long GetTotal(TotalType resultType)
+            {
+                long total = 0;
+
+                using (Slice.From(context.Allocator, "db/", out var loweredPrefix))
+                {
+                    foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                    {
+                        var (_, _, record) = GetCurrentItem(context, result.Value);
+
+                        switch (resultType)
+                        {
+                            case TotalType.StaticIndex:
+                                if (record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) && obj != null)
+                                    total += obj.Count;
+                                break;
+                            case TotalType.AutoIndex:
+                                if (record.TryGet(nameof(DatabaseRecord.AutoIndexes), out obj) && obj != null)
+                                    total += obj.Count;
+                                break;
+                            case TotalType.ExternalReplication:
+                                if (record.TryGet(nameof(DatabaseRecord.ExternalReplications), out obj) && obj != null)
+                                    total += obj.Count;
+                                break;
+                            case TotalType.CustomSorters:
+                                if (record.TryGet(nameof(DatabaseRecord.Sorters), out obj) && obj != null)
+                                    total += obj.Count;
+                                break;
+                            case TotalType.Analyzers:
+                                if (record.TryGet(nameof(DatabaseRecord.Analyzers), out obj) && obj != null)
+                                    total += obj.Count;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                        }
+                    }
+
+                    return total;
+                }
+            }
+        }
+
+        private enum TotalType
+        {
+            StaticIndex,
+            AutoIndex,
+            ExternalReplication,
+            CustomSorters,
+            Analyzers
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -189,26 +189,33 @@ namespace Raven.Server.Commercial
 
         public bool HasQueueSink => Enabled(LicenseAttribute.KafkaRabbitMQSink);
 
-        // TODO grisha
-        public int? MaxNumberOfStaticIndexesPerDatabase => Type == LicenseType.Community ? 12 : null;
+        public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
 
-        public int? MaxNumberOfStaticIndexesPerCluster => Type == LicenseType.Community ? (12 * 5) : null;
+        public bool HasServerWideTasks => Enabled(LicenseAttribute.ServerWideTasks);
 
-        public int? MaxNumberOfAutoIndexesPerDatabase => Type == LicenseType.Community ? 24 : null;
+        public int? MaxNumberOfStaticIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerDatabase);
 
-        public int? MaxNumberOfAutoIndexesPerCluster => Type == LicenseType.Community ? (24 * 5) : null;
+        public int? MaxNumberOfStaticIndexesPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerCluster);
 
-        public int? MaxNumberOfSubscriptionsPerDatabase => Type == LicenseType.Community ? 3 : null;
+        public int? MaxNumberOfAutoIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfAutoIndexesPerDatabase);
 
-        public int? MaxNumberOfSubscriptionsPerCluster => Type == LicenseType.Community ? (3 * 5) : null;
+        public int? MaxNumberOfAutoIndexesPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfAutoIndexesPerCluster);
 
-        public int? MaxNumberOfCustomSortersPerDatabase => Type == LicenseType.Community ? 1 : null;
+        public int? MaxNumberOfSubscriptionsPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfSubscriptionsPerDatabase);
 
-        public int? MaxNumberOfCustomSortersPerCluster => Type == LicenseType.Community ? 5 : null;
+        public int? MaxNumberOfSubscriptionsPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfSubscriptionsPerCluster);
 
-        public int? MaxNumberOfCustomAnalyzersPerDatabase => Type == LicenseType.Community ? 1 : null;
+        public int? MaxNumberOfExternalReplicationsPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfExternalReplicationsPerDatabase);
 
-        public int? MaxNumberOfCustomAnalyzersPerCluster => Type == LicenseType.Community ? 5 : null;
+        public int? MaxNumberOfExternalReplicationsPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfExternalReplicationsPerCluster);
+
+        public int? MaxNumberOfCustomSortersPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomSortersPerDatabase);
+
+        public int? MaxNumberOfCustomSortersPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomSortersPerCluster);
+
+        public int? MaxNumberOfCustomAnalyzersPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerDatabase);
+
+        public int? MaxNumberOfCustomAnalyzersPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerCluster);
 
         public int? MaxNumberOfRevisionsToKeep => Type == LicenseType.Community ? 2 : null;
 
