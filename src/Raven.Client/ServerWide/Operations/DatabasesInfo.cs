@@ -46,6 +46,7 @@ namespace Raven.Client.ServerWide.Operations
         public bool HasRevisionsConfiguration { get; set; }
         public bool HasExpirationConfiguration { get; set; }
         public bool HasRefreshConfiguration { get; set; }
+        public bool HasDataArchivalConfiguration { get; set; }
         public int? IndexesCount { get; set; }
         public NodesTopology NodesTopology { get; set; }
         public int ReplicationFactor { get; set; }
@@ -67,6 +68,7 @@ namespace Raven.Client.ServerWide.Operations
             djv[nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration;
             djv[nameof(HasExpirationConfiguration)] = HasExpirationConfiguration;
             djv[nameof(HasRefreshConfiguration)] = HasRefreshConfiguration;
+            djv[nameof(HasDataArchivalConfiguration)] = HasDataArchivalConfiguration;
             djv[nameof(IndexesCount)] = IndexesCount;
             djv[nameof(NodesTopology)] = NodesTopology?.ToJson();
             djv[nameof(ReplicationFactor)] = ReplicationFactor;

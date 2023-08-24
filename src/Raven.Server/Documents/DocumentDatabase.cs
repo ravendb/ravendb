@@ -1146,6 +1146,7 @@ namespace Raven.Server.Documents
                 [nameof(ExtendedDatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
                 [nameof(ExtendedDatabaseInfo.HasExpirationConfiguration)] = (ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false,
                 [nameof(ExtendedDatabaseInfo.HasRefreshConfiguration)] = (ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
+                [nameof(ExtendedDatabaseInfo.HasDataArchivalConfiguration)] = (DataArchivist?.DataArchivalConfiguration?.Disabled ?? true) == false,
                 [nameof(ExtendedDatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(ExtendedDatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.Encryption.IsEnabled,
                 [nameof(ExtendedDatabaseInfo.Name)] = Name,
