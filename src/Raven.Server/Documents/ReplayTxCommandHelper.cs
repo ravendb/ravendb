@@ -18,6 +18,7 @@ using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Handlers.Processors.HiLo;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.QueueSink.Commands;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -270,6 +271,9 @@ namespace Raven.Server.Documents
 
                 case nameof(TimeSeriesRollups.TimeSeriesRetentionCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(reader);
+
+                case nameof(BatchQueueSinkScriptCommand):
+                    return jsonSerializer.Deserialize<BatchQueueSinkScriptCommand.Dto>(reader);
 
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);

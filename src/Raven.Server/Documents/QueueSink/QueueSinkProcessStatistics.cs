@@ -12,7 +12,6 @@ public class QueueSinkProcessStatistics
     private readonly string _processTag;
     private readonly string _processName;
     private readonly DatabaseNotificationCenter _notificationCenter;
-    private bool _preventFromAddingAlertsToNotificationCenter;
 
     public QueueSinkProcessStatistics(string processTag, string processName, DatabaseNotificationCenter notificationCenter)
     {
@@ -27,19 +26,15 @@ public class QueueSinkProcessStatistics
     
     public DateTime? LastConsumeErrorTime { get; private set; }
     
-    public Queue<QueueSinkErrorInfo> ConsumeErrorsInCurrentBatch { get; }
+    public Queue<QueueSinkErrorInfo> ConsumeErrorsInCurrentBatch { get; } = new();
     
-    public Queue<QueueSinkErrorInfo> ScriptExecutionErrorsInCurrentBatch { get; }
+    public Queue<QueueSinkErrorInfo> ScriptExecutionErrorsInCurrentBatch { get; } = new();
     
     public bool WasLatestConsumeSuccessful { get; set; }
-    
-    public DateTime? LastScriptExecutionErrorTime { get; private set; }
     
     public AlertRaised LastAlert { get; set; }
 
     private int ScriptExecutionErrors { get; set; }
-
-    private int ScriptExecutionSuccesses { get; set; }
     
     public void ConsumeSuccess(int items)
     {
@@ -53,10 +48,9 @@ public class QueueSinkProcessStatistics
 
         ConsumeErrors += count;
 
+        ConsumeErrorsInCurrentBatch.Enqueue(new QueueSinkErrorInfo(error));
+
         LastConsumeErrorTime = SystemTime.UtcNow;
-        
-        if (ConsumeErrors < 100)
-            return;
 
         if (ConsumeErrors <= ConsumeSuccesses)
             return;
@@ -73,34 +67,22 @@ public class QueueSinkProcessStatistics
     {
         ScriptExecutionErrors++;
 
-        LastScriptExecutionErrorTime = SystemTime.UtcNow;
-
         ScriptExecutionErrorsInCurrentBatch.Enqueue(new QueueSinkErrorInfo(e.ToString()));
 
         if (ScriptExecutionErrors < 100)
             return;
 
-        if (ScriptExecutionErrors <= ScriptExecutionSuccesses)
-            return;
-
-        var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}, successes: {ScriptExecutionSuccesses}). " +
-                      "Could not tolerate script execution error ratio and stopped current Queue Sink batch. ";
+        var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}). " +
+                      "Could not tolerate script execution error ratio and stopped current batch. ";
         
         CreateAlertIfAnyScriptExecutionErrors(message);
 
         throw new InvalidOperationException($"{message}. Current stats: {this}");
     }
     
-    public IDisposable PreventFromAddingAlertsToNotificationCenter()
-    {
-        _preventFromAddingAlertsToNotificationCenter = true;
-
-        return new DisposableAction(() => _preventFromAddingAlertsToNotificationCenter = false);
-    }
-    
     private void CreateAlertIfAnyConsumeErrors(string preMessage = null)
     {
-        if (ConsumeErrorsInCurrentBatch.Count == 0 || _preventFromAddingAlertsToNotificationCenter)
+        if (ConsumeErrorsInCurrentBatch.Count == 0)
             return;
         
         LastAlert = _notificationCenter.QueueSinkNotifications.AddConsumeErrors(_processTag, _processName, ConsumeErrorsInCurrentBatch, preMessage);
@@ -110,11 +92,23 @@ public class QueueSinkProcessStatistics
     
     private void CreateAlertIfAnyScriptExecutionErrors(string preMessage = null)
     {
-        if (ScriptExecutionErrorsInCurrentBatch.Count == 0 || _preventFromAddingAlertsToNotificationCenter)
+        if (ScriptExecutionErrorsInCurrentBatch.Count == 0)
             return;
 
         LastAlert = _notificationCenter.QueueSinkNotifications.AddScriptErrors(_processTag, _processName, ScriptExecutionErrorsInCurrentBatch, preMessage);
 
         ScriptExecutionErrorsInCurrentBatch.Clear();
+    }
+
+    public IDisposable NewBatch()
+    {
+        ConsumeErrorsInCurrentBatch.Clear();
+        ScriptExecutionErrorsInCurrentBatch.Clear();
+
+        return new DisposableAction(() =>
+        {
+            CreateAlertIfAnyConsumeErrors();
+            CreateAlertIfAnyScriptExecutionErrors();
+        });
     }
 }

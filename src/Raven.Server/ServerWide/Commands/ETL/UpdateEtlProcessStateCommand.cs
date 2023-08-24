@@ -162,23 +162,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(etlState.ToJson(), GetItemId()));
         }
 
-        public static Func<string> GetLastResponsibleNode(
-           bool hasHighlyAvailableTasks,
-           DatabaseTopology topology,
-           string nodeTag)
-        {
-            return () =>
-            {
-                if (hasHighlyAvailableTasks)
-                    return null;
-
-                if (topology.Members.Contains(nodeTag) == false)
-                    return null;
-
-                return nodeTag;
-            };
-        }
-
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(ConfigurationName)] = ConfigurationName;

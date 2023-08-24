@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Operations.QueueSink;
 
 public class QueueSinkProcessState : IDatabaseTaskStatus
 {
-    public string NodeTag { get; }
+    public string NodeTag { get; set; }
     
     public string ConfigurationName { get; set; }
 
