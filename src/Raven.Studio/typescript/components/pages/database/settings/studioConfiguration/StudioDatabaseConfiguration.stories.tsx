@@ -6,7 +6,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Studio Configuration",
+    title: "Pages/Database/Settings/Studio Configuration",
     component: StudioDatabaseConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof StudioDatabaseConfiguration>;

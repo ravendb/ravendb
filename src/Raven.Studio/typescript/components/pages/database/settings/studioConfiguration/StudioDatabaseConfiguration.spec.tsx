@@ -10,6 +10,7 @@ describe("StudioDatabaseConfiguration", function () {
         const { screen } = rtlRender(<StudioConfiguration />);
         expect(await screen.findByText("Go to Server-Wide Studio Configuration View")).toBeInTheDocument();
     });
+
     it("is license restricted", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 

@@ -1,16 +1,5 @@
 import React from "react";
-import {
-    Button,
-    Card,
-    CardBody,
-    Col,
-    Form,
-    InputGroup,
-    Label,
-    PopoverBody,
-    Row,
-    UncontrolledPopover,
-} from "reactstrap";
+import { Card, CardBody, Col, Form, InputGroup, Label, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
@@ -29,14 +18,10 @@ import { studioEnvironmentOptions } from "components/common/studioConfiguration/
 import { useServices } from "components/hooks/useServices";
 import appUrl from "common/appUrl";
 import { NonShardedViewProps } from "components/models/common";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import AccordionCommunityLicenseWarning from "components/common/AccordionCommunityLicenseWarning";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -194,36 +179,11 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                             </a>
                         </AccordionItemWrapper>
                         {licenseType === "Community" && (
-                            <AccordionItemWrapper
-                                icon="license"
-                                color="warning"
-                                heading="Licensing"
-                                description="See which plans offer this and more exciting features"
+                            <AccordionCommunityLicenseWarning
                                 targetId="licensing"
-                                pill
-                                pillText="Upgrade available"
-                                pillIcon="star-filled"
-                            >
-                                <AccordionItemLicensing
-                                    description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                    featureName="Studio Configuration"
-                                    featureIcon="database-studio-configuration"
-                                    checkedLicenses={["Professional", "Enterprise"]}
-                                >
-                                    <p className="lead fs-4">Get your license expanded</p>
-                                    <div className="mb-3">
-                                        <Button color="primary" className="rounded-pill">
-                                            <Icon icon="notifications" />
-                                            Contact us
-                                        </Button>
-                                    </div>
-                                    <small>
-                                        <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                            See pricing plans
-                                        </a>
-                                    </small>
-                                </AccordionItemLicensing>
-                            </AccordionItemWrapper>
+                                featureName="Studio Configuration"
+                                featureIcon="studio-configuration"
+                            />
                         )}
                     </AboutViewAnchored>
                 </Col>
