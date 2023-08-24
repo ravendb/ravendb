@@ -65,7 +65,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
 
-    public long MaxMemoizationSize = 128 * 1024 * 1024;
+    public long MaxMemoizationSizeInBytes = 128 * 1024 * 1024;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 

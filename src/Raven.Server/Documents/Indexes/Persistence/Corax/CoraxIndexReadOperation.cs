@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _fieldMappings = fieldsMapping;
             IndexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
             {
-                MaxMemoizationSize = index.Configuration.MaxMemoizationLengthSize.GetValue(SizeUnit.Bytes) 
+                MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes) 
             };
             if (index.Type.IsMap())
             {

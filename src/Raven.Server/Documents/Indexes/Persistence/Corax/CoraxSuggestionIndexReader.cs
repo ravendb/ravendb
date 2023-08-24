@@ -30,7 +30,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
         _binding = binding;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
         {
-            MaxMemoizationSize = index.Configuration.MaxMemoizationLengthSize.GetValue(SizeUnit.Bytes) 
+            MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes) 
         };
     }
 

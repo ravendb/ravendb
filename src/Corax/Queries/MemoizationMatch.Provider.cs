@@ -144,7 +144,7 @@ namespace Corax.Queries
 
             var sizeInBytes = size * sizeof(long);
 
-            if (sizeInBytes > _indexSearcher.MaxMemoizationSize) ThrowExceededMemoizationSize();
+            if (sizeInBytes > _indexSearcher.MaxMemoizationSizeInBytes) ThrowExceededMemoizationSize();
 
             // Allocate the new buffer
             var newBufferScope = _ctx.Allocate(sizeInBytes, out var newBufferHolder);
@@ -169,7 +169,7 @@ namespace Corax.Queries
                 }
                 
                 throw new InvalidOperationException(
-                    $"Memoization clause need to allocation {new Size(sizeInBytes, SizeUnit.Bytes)} but 'Indexing.Corax.MaxMemoizationSizeInMb' is set to: {new Size(_indexSearcher.MaxMemoizationSize, SizeUnit.Bytes)}, in query: {inner}");
+                    $"Memoization clause need to allocation {new Size(sizeInBytes, SizeUnit.Bytes)} but 'Indexing.Corax.MaxMemoizationSizeInMb' is set to: {new Size(_indexSearcher.MaxMemoizationSizeInBytes, SizeUnit.Bytes)}, in query: {inner}");
             }
         }
 
