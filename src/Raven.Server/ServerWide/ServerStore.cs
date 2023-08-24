@@ -1171,7 +1171,7 @@ namespace Raven.Server.ServerWide
 
                         if (_engine.CurrentState != RachisState.Follower)
                         {
-                            OnTopologyChangeInternal(clusterTopology);
+                            OnTopologyChangeInternal(clusterTopology, leaderClusterTopology: null, new ServerNode(){ClusterTag = NodeTag, Url = GetNodeHttpServerUrl()});
                             return;
                         }
 
@@ -1191,7 +1191,7 @@ namespace Raven.Server.ServerWide
                             await clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
                             var response = command.Result;
 
-                            OnTopologyChangeInternal(response.Topology, response.Status);
+                            OnTopologyChangeInternal(clusterTopology, response.Topology, new ServerNode() { ClusterTag = leaderTag, Url = leaderUrl }, response.Status);
                         }
                     }
                     catch (TaskCanceledException)
@@ -1209,20 +1209,23 @@ namespace Raven.Server.ServerWide
             }, ServerShutdown);
         }
 
-        private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
+        private void OnTopologyChangeInternal(ClusterTopology localClusterTopology, ClusterTopology leaderClusterTopology, ServerNode topologyNode, Dictionary<string, NodeStatus> status = null)
         {
+            var topology = leaderClusterTopology ?? localClusterTopology;
+            
             if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _))
             {
-                _lastClusterTopologyIndex = topology.Etag;
-
                 _ = ClusterRequestExecutor.UpdateTopologyAsync(
-                    new RequestExecutor.UpdateTopologyParameters(new ServerNode() {ClusterTag = NodeTag, Url = GetNodeHttpServerUrl()})
+                    new RequestExecutor.UpdateTopologyParameters(topologyNode)
                     {
                         DebugTag = "cluster-topology-update"
                     });
 
-                NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
-                    NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
+                if (leaderClusterTopology == null || localClusterTopology.Etag == leaderClusterTopology.Etag)
+                    NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag, NodeTag, _engine.CurrentTerm, _engine.CurrentState,
+                        status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
+
+                _lastClusterTopologyIndex = topology.Etag;
             }
         }
 
