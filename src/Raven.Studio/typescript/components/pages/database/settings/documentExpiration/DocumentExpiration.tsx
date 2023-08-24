@@ -1,6 +1,11 @@
 import React, { useEffect } from "react";
-import { Card, CardBody, Col, Form, Row } from "reactstrap";
-import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { Alert, Button, Card, CardBody, Col, Form, Row } from "reactstrap";
+import {
+    AboutViewAnchored,
+    AboutViewHeading,
+    AccordionItemLicensing,
+    AccordionItemWrapper,
+} from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -18,7 +23,11 @@ import { NonShardedViewProps } from "components/models/common";
 import { useAsyncCallback } from "react-async-hook";
 import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 
-export default function DocumentExpiration({ db }: NonShardedViewProps) {
+interface DocumentExpirationProps extends NonShardedViewProps {
+    licenseType?: string;
+}
+
+export default function DocumentExpiration({ db, licenseType }: DocumentExpirationProps) {
     const { databasesService } = useServices();
 
     const asyncGetExpirationConfiguration = useAsyncCallback<DocumentExpirationFormData>(async () =>
@@ -48,6 +57,8 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
         formValues.deleteFrequency,
         setValue,
     ]);
+
+    const frequencyLimit = 129600;
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -90,7 +101,10 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={!formState.isDirty}
+                                disabled={
+                                    !formState.isDirty ||
+                                    (licenseType === "community" && formValues.deleteFrequency < frequencyLimit)
+                                }
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
@@ -121,9 +135,21 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
                                                     }
-                                                    placeholder="Default (60)"
+                                                    placeholder={
+                                                        licenseType === "community"
+                                                            ? "Default (129600)"
+                                                            : "Default (60)"
+                                                    }
                                                     addonText="seconds"
-                                                ></FormInput>
+                                                />
+                                                {licenseType === "community" &&
+                                                    formValues.isDeleteFrequencyEnabled &&
+                                                    formValues.deleteFrequency < frequencyLimit && (
+                                                        <Alert color="warning" className="mt-3">
+                                                            <Icon icon="warning" /> Your current license does not allow
+                                                            a frequency higher than 36 hours (129600 seconds)
+                                                        </Alert>
+                                                    )}
                                             </div>
                                         </div>
                                     </CardBody>
@@ -137,7 +163,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
                                 <p>
@@ -160,6 +186,39 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Expiration
                                 </a>
                             </AccordionItemWrapper>
+                            {licenseType === "community" && (
+                                <AccordionItemWrapper
+                                    targetId="licensing"
+                                    icon="license"
+                                    color="warning"
+                                    description="See available upgrade options"
+                                    heading="Licensing"
+                                    pill
+                                    pillText="Upgrade available"
+                                    pillIcon="star-filled"
+                                >
+                                    <AccordionItemLicensing
+                                        description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
+                                        featureName="Document Expiration"
+                                        featureIcon="document-expiration"
+                                        checkedLicenses={["Community", "Professional", "Enterprise"]}
+                                        isCommunityLimited
+                                    >
+                                        <p className="lead fs-4">Get your license expanded</p>
+                                        <div className="mb-3">
+                                            <Button color="primary" className="rounded-pill">
+                                                <Icon icon="notifications" />
+                                                Contact us
+                                            </Button>
+                                        </div>
+                                        <small>
+                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
+                                                See pricing plans
+                                            </a>
+                                        </small>
+                                    </AccordionItemLicensing>
+                                </AccordionItemWrapper>
+                            )}
                         </AboutViewAnchored>
                     </Col>
                 </Row>

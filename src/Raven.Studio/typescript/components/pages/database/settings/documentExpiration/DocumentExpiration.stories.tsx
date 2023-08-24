@@ -6,7 +6,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Database/Settings/Document Expiration",
     component: DocumentExpiration,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentExpiration>;
@@ -18,5 +18,15 @@ export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
         databasesService.withExpirationConfiguration();
 
         return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    },
+};
+
+export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
+    name: "License Restricted",
+    render: () => {
+        const { databasesService } = mockServices;
+        databasesService.withExpirationConfiguration();
+
+        return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} licenseType="community" />;
     },
 };
