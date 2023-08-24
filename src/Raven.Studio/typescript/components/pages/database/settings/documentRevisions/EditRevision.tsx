@@ -1,7 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
 import { Alert, Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
-import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
     EditDocumentRevisionsCollectionConfig,
@@ -21,6 +21,7 @@ import IconName from "typings/server/icons";
 import { useAppSelector } from "components/store";
 import { SelectOption } from "components/common/Select";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import genUtils from "common/generalUtils";
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -97,12 +98,12 @@ export default function EditRevision(props: EditRevisionProps) {
                         Limit # of revisions to keep by age
                     </FormSwitch>
                     {formValues.IsMinimumRevisionAgeToKeepEnabled && (
-                        <InputGroup className="mb-2 d-flex">
-                            <FormInput
-                                type="text"
+                        <InputGroup className="mb-2">
+                            <FormDurationPicker
                                 control={control}
                                 name="MinimumRevisionAgeToKeep"
-                                placeholder="Days"
+                                showDays
+                                showSeconds
                             />
                         </InputGroup>
                     )}
@@ -255,7 +256,7 @@ function getInitialValues(config: DocumentRevisionsConfig): EditDocumentRevision
         CollectionName: config.Name,
         IsPurgeOnDeleteEnabled: config.PurgeOnDelete,
         IsMinimumRevisionAgeToKeepEnabled: config.MinimumRevisionAgeToKeep != null,
-        MinimumRevisionAgeToKeep: config.MinimumRevisionAgeToKeep,
+        MinimumRevisionAgeToKeep: genUtils.timeSpanToSeconds(config.MinimumRevisionAgeToKeep),
         IsMinimumRevisionsToKeepEnabled: config.MinimumRevisionsToKeep != null,
         MinimumRevisionsToKeep: config.MinimumRevisionsToKeep,
         IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: config.MaximumRevisionsToDeleteUponDocumentUpdate != null,
@@ -287,7 +288,7 @@ function mapToDocumentRevisionsConfig(
         Name: name,
         Disabled: formData.Disabled,
         MaximumRevisionsToDeleteUponDocumentUpdate: formData.MaximumRevisionsToDeleteUponDocumentUpdate,
-        MinimumRevisionAgeToKeep: formData.MinimumRevisionAgeToKeep,
+        MinimumRevisionAgeToKeep: genUtils.formatAsTimeSpan(formData.MinimumRevisionAgeToKeep * 1000),
         MinimumRevisionsToKeep: formData.MinimumRevisionsToKeep,
         PurgeOnDelete: formData.IsPurgeOnDeleteEnabled,
     };

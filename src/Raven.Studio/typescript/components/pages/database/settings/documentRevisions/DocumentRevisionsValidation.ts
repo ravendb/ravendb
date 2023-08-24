@@ -17,8 +17,10 @@ const editCollectionConfigSchema = yup.object({
         }),
     IsMinimumRevisionAgeToKeepEnabled: yup.boolean(),
     MinimumRevisionAgeToKeep: yup
-        .string()
+        .number()
         .nullable()
+        .positive()
+        .integer()
         .when("IsMinimumRevisionAgeToKeepEnabled", {
             is: true,
             then: (schema) => schema.required(),

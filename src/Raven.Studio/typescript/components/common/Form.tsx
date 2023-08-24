@@ -8,6 +8,7 @@ import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle
 import AceEditor, { AceEditorProps } from "./AceEditor";
 import Select, { SelectProps } from "./Select";
 import classNames from "classnames";
+import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -196,6 +197,31 @@ export function FormAceEditor<
     });
 
     return <AceEditor onChange={onChange} value={value} validationErrorMessage={error?.message} {...rest} />;
+}
+
+export function FormDurationPicker<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(props: FormElementProps<TFieldValues, TName> & Omit<DurationPickerProps, "onChange" | "totalSeconds">) {
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <>
+            <DurationPicker totalSeconds={value} onChange={onChange} {...rest} />
+            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
+        </>
+    );
 }
 
 function FormInputGeneral<
