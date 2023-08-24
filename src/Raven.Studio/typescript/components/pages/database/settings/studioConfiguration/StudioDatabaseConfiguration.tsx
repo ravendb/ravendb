@@ -89,8 +89,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     <AboutViewHeading
                         icon="database-studio-configuration"
                         title="Studio Configuration"
-                        badge={licenseType === "Community"}
-                        badgeText={licenseType === "Community" ? "Professional +" : undefined}
+                        badgeText={licenseType === "Community" ? "Professional +" : null}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">

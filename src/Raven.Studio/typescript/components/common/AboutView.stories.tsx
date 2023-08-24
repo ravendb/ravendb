@@ -24,7 +24,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
             <Col xxl={12}>
                 <Row>
                     <Col>
-                        <AboutViewHeading title="Section title" icon="zombie" badge badgeText="Professional" />
+                        <AboutViewHeading title="Section title" icon="zombie" badgeText="Professional" />
                     </Col>
                     <Col sm={"auto"}>
                         <AboutViewFloating>
