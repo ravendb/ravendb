@@ -1,6 +1,11 @@
 import React, { useEffect } from "react";
-import { Card, CardBody, Col, Form, Row } from "reactstrap";
-import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { Alert, Button, Card, CardBody, Col, Form, Row } from "reactstrap";
+import {
+    AboutViewAnchored,
+    AboutViewHeading,
+    AccordionItemLicensing,
+    AccordionItemWrapper,
+} from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -17,6 +22,9 @@ import ServerRefreshConfiguration = Raven.Client.Documents.Operations.Refresh.Re
 import messagePublisher = require("common/messagePublisher");
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -34,12 +42,18 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
 
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const frequencyLimit = 129600;
+
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
             setValue("refreshFrequency", null, { shouldValidate: true });
         }
         if (!formValues.isDocumentRefreshEnabled && formValues.isRefreshFrequencyEnabled) {
             setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
+        }
+        if (licenseType === "Community" && !formValues.isRefreshFrequencyEnabled) {
+            setValue("refreshFrequency", null, { shouldValidate: true });
         }
     }, [
         formValues.isDocumentRefreshEnabled,
@@ -84,7 +98,12 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={!formState.isDirty}
+                                disabled={
+                                    !formState.isDirty ||
+                                    (licenseType === "Community" &&
+                                        formValues.isRefreshFrequencyEnabled &&
+                                        formValues.refreshFrequency < frequencyLimit)
+                                }
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
@@ -118,9 +137,21 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
                                                     }
-                                                    placeholder="Default (60)"
+                                                    placeholder={
+                                                        licenseType === "Community"
+                                                            ? "Default (129600)"
+                                                            : "Default (60)"
+                                                    }
                                                     addonText="seconds"
-                                                ></FormInput>
+                                                />
+                                                {licenseType === "Community" &&
+                                                    formValues.isRefreshFrequencyEnabled &&
+                                                    formValues.refreshFrequency < frequencyLimit && (
+                                                        <Alert color="warning" className="mt-3">
+                                                            <Icon icon="warning" /> Your current license does not allow
+                                                            a frequency higher than 36 hours (129600 seconds)
+                                                        </Alert>
+                                                    )}
                                             </div>
                                         </div>
                                     </CardBody>
@@ -134,7 +165,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
                                 <p>
@@ -163,6 +194,14 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
                             </AccordionItemWrapper>
+                            {licenseType === "Community" && (
+                                <AccordionCommunityLicenseLimited
+                                    description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
+                                    targetId="licensing"
+                                    featureName="Document Refresh"
+                                    featureIcon="expos-refresh"
+                                />
+                            )}
                         </AboutViewAnchored>
                     </Col>
                 </Row>

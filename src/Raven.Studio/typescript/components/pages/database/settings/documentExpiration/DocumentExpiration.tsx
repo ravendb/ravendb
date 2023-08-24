@@ -22,12 +22,11 @@ import Code from "components/common/Code";
 import { NonShardedViewProps } from "components/models/common";
 import { useAsyncCallback } from "react-async-hook";
 import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 
-interface DocumentExpirationProps extends NonShardedViewProps {
-    licenseType?: string;
-}
-
-export default function DocumentExpiration({ db, licenseType }: DocumentExpirationProps) {
+export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
 
     const asyncGetExpirationConfiguration = useAsyncCallback<DocumentExpirationFormData>(async () =>
@@ -44,6 +43,9 @@ export default function DocumentExpiration({ db, licenseType }: DocumentExpirati
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
 
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const frequencyLimit = 129600;
+
     useEffect(() => {
         if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {
             setValue("deleteFrequency", null, { shouldValidate: true });
@@ -57,8 +59,6 @@ export default function DocumentExpiration({ db, licenseType }: DocumentExpirati
         formValues.deleteFrequency,
         setValue,
     ]);
-
-    const frequencyLimit = 129600;
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -103,7 +103,9 @@ export default function DocumentExpiration({ db, licenseType }: DocumentExpirati
                                 icon="save"
                                 disabled={
                                     !formState.isDirty ||
-                                    (licenseType === "community" && formValues.deleteFrequency < frequencyLimit)
+                                    (licenseType === "Community" &&
+                                        formValues.isDeleteFrequencyEnabled &&
+                                        formValues.deleteFrequency < frequencyLimit)
                                 }
                                 isSpinning={formState.isSubmitting}
                             >
@@ -136,13 +138,13 @@ export default function DocumentExpiration({ db, licenseType }: DocumentExpirati
                                                         formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
                                                     }
                                                     placeholder={
-                                                        licenseType === "community"
+                                                        licenseType === "Community"
                                                             ? "Default (129600)"
                                                             : "Default (60)"
                                                     }
                                                     addonText="seconds"
                                                 />
-                                                {licenseType === "community" &&
+                                                {licenseType === "Community" &&
                                                     formValues.isDeleteFrequencyEnabled &&
                                                     formValues.deleteFrequency < frequencyLimit && (
                                                         <Alert color="warning" className="mt-3">
@@ -186,38 +188,13 @@ export default function DocumentExpiration({ db, licenseType }: DocumentExpirati
                                     <Icon icon="newtab" /> Docs - Document Expiration
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "community" && (
-                                <AccordionItemWrapper
+                            {licenseType === "Community" && (
+                                <AccordionCommunityLicenseLimited
+                                    description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
                                     targetId="licensing"
-                                    icon="license"
-                                    color="warning"
-                                    description="See available upgrade options"
-                                    heading="Licensing"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="star-filled"
-                                >
-                                    <AccordionItemLicensing
-                                        description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
-                                        featureName="Document Expiration"
-                                        featureIcon="document-expiration"
-                                        checkedLicenses={["Community", "Professional", "Enterprise"]}
-                                        isCommunityLimited
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    featureName="Document Expiration"
+                                    featureIcon="document-expiration"
+                                />
                             )}
                         </AboutViewAnchored>
                     </Col>

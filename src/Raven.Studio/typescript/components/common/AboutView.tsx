@@ -107,7 +107,7 @@ const AboutViewAnchored = (props: AboutViewProps) => {
 
     return (
         <div className={classNames(className)}>
-            <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion">
+            <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion" defaultOpen={["licensing"]}>
                 {children}
             </UncontrolledAccordion>
         </div>
