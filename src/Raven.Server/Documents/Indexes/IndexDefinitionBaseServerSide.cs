@@ -194,7 +194,6 @@ namespace Raven.Server.Documents.Indexes
             long indexVersion,
             IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState,
-            IndexSourceType indexSourceType,
             ArchivedDataProcessingBehavior? archivedDataProcessingBehavior
             )
         {

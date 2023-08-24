@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Background;
@@ -32,8 +34,10 @@ public static class BackgroundWorkHelper
         if (metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata) == false) 
             return false;
         
-        if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime) 
-            return false;
+        if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime)
+            if (DateTime.TryParseExact(dateFromMetadata.ToString(CultureInfo.InvariantCulture), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out date) == false)
+                return false;
         
         if (date.Kind != DateTimeKind.Utc) 
             date = date.ToUniversalTime();
