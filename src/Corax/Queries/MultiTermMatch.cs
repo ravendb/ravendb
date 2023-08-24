@@ -253,6 +253,8 @@ namespace Corax.Queries
                 if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false ||
                     sortedIds[read - 1] > _max)
                     _postListIt = default;
+                EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx..], read);
+
                 currentIdx += read;
             }
 
