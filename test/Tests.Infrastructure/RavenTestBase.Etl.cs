@@ -319,6 +319,8 @@ namespace FastTests
                 foreach (var documentDatabase in databases)
                 {
                     var performanceStats = GetEtlPerformanceStatsForDatabase(documentDatabase);
+                    if (performanceStats == null)
+                        continue;
                     sb.AppendLine($"database '{documentDatabase.Name}' stats : {performanceStats}");
                 }
 
@@ -327,7 +329,9 @@ namespace FastTests
 
             public string GetEtlPerformanceStatsForDatabase(DocumentDatabase database)
             {
-                var process = database.EtlLoader.Processes.First();
+                var process = database.EtlLoader.Processes.FirstOrDefault();
+                if (process == null)
+                    return null;
                 var stats = process.GetPerformanceStats();
                 return string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject));
             }
