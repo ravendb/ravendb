@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -59,19 +60,29 @@ namespace Voron.Impl
 
         public unsafe void Add(Slice key, TValue value)
         {
+            if (_overflowStorage != null)
+            {
+                goto Overflow;
+            }
+
             int idx = FindKey(key);
             if (idx == Invalid)
+            {
+                // side affect, overflow if needed
                 idx = RequestWritableBucket();
-
-            // We have overflowed already. 
-            if (_overflowStorage != null)
-                _overflowStorage[key] = value;
+                if (idx == Invalid)
+                    goto Overflow;
+            }
 
             _keys[idx] = key;
             _keySizes[idx] = key.Size;
             _keyHashes[idx] = Hashing.XXHash64.CalculateInline(key.Content.Ptr, (ulong)key.Size);
             _values[idx] = value;
-
+            return;
+            
+            Overflow:
+            Debug.Assert(_overflowStorage != null);
+            _overflowStorage[key] = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -136,14 +147,24 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int RequestWritableBucket()
         {
-            if (_currentIdx >= _length - 1 && _overflowStorage == null)
+            if (_overflowStorage != null)
+                return Invalid;
+            
+            if (_currentIdx >= _length - 1)
             {
                 var storage = new Dictionary<Slice, TValue>(SliceComparer.Instance);
                 storage.EnsureCapacity(_currentIdx * 2);
 
                 for (int i = 0; i <= _currentIdx; i++)
+                {
+                    if(_keys[i].HasValue == false)
+                        continue;
                     storage[_keys[i]] = _values[i];
+                }
+
                 _overflowStorage = storage;
+                _currentIdx = Invalid;
+                return Invalid;
             }
 
             _currentIdx++;
@@ -199,15 +220,13 @@ namespace Voron.Impl
 
         public void Remove(Slice name)
         {
-            int idx = FindKey(name);
-            if (idx == Invalid)
+            if (_overflowStorage != null)
             {
-                if (_overflowStorage == null)
-                    return;
-
                 _overflowStorage.Remove(name);
+                return;
             }
-            
+
+            int idx = FindKey(name);
             _keys[idx] = default;
             _keySizes[idx] = default;
             _keyHashes[idx] = default;
