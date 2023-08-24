@@ -49,6 +49,7 @@ public enum LicenseAttribute
     SubscriptionRevisions,
     ShardingReplicationFactor,
     ShardingOnTheSameNodeOnly,
+    MaxCoresPerNode,
     MinCheckPeriodForExpirationAndRefreshInHours,
     MaxNumberOfStaticIndexesPerDatabase,
     MaxNumberOfStaticIndexesPerCluster,
