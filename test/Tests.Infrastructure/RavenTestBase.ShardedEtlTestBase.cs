@@ -81,6 +81,32 @@ public partial class RavenTestBase
             return list;
         }
 
+        public IEnumerable<ManualResetEventSlim> WaitForEtlOnAllShardsInCluster(string database, Func<string, EtlProcessStatistics, bool> predicate)
+        {
+            var mresPerShard = new Dictionary<string, ManualResetEventSlim>();
+            foreach (var server in _parent.Servers)
+            {
+                var dbs = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
+                foreach (var task in dbs)
+                {
+                    var db = task.Result;
+
+                    if (mresPerShard.TryGetValue(db.Name, out var mre) == false)
+                    {
+                        mresPerShard[db.Name] = mre = new ManualResetEventSlim();
+                    }
+
+                    db.EtlLoader.BatchCompleted += x =>
+                    {
+                        if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                            mre.Set();
+                    };
+                }
+            }
+
+            return mresPerShard.Values;
+        }
+
         public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
             return AsyncHelpers.RunSync(() => WaitForEtlAsync(store, predicate, count: 1));
