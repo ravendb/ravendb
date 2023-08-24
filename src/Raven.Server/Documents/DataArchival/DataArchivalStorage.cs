@@ -177,8 +177,7 @@ namespace Raven.Server.Documents.DataArchival
 
                 using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    _database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction),
-                        nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                    _database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
                 }
             }
 
