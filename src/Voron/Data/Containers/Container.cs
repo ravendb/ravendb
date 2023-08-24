@@ -230,23 +230,26 @@ namespace Voron.Data.Containers
 
             // We are creating a set where we will store the free list.
             using var freePagesTree = Tree.Create(llt, llt.Transaction, FreePagesTreeName);
-            using var allPagesState = Tree.Create(llt, llt.Transaction, AllPagesTreeName);
+            using var allPagesTree = Tree.Create(llt, llt.Transaction, AllPagesTreeName);
+            long pageNum = Bits.SwapBytes(page.PageNumber);
+            
+            // We are adding the root to the list of all pages and to the free list
+            using (Slice.From(llt.Allocator, (byte*)&pageNum, sizeof(long), ByteStringType.Immutable, out var slice))
+            {
+                allPagesTree.DirectAdd(slice, 0, out _);
+                freePagesTree.DirectAdd(slice, 0, out _);
+            }
 
             fixed (void* pState = freeListTreeState)
             {
                 freePagesTree.State.CopyTo((TreeRootHeader*)pState);
             }
 
-            // We are adding the root to the list of all pages.
-            long pageNum = Bits.SwapBytes(page.PageNumber);
-            using (Slice.From(llt.Allocator, (byte*)&pageNum, sizeof(long), ByteStringType.Immutable, out var slice))
-            {
-                allPagesState.DirectAdd(slice, 0, out _);
-            }
+           
 
             fixed (void* pState = allPagesTreeState)
             {
-                allPagesState.State.CopyTo((TreeRootHeader*)pState);
+                allPagesTree.State.CopyTo((TreeRootHeader*)pState);
             }
             return page.PageNumber;
         }
@@ -431,7 +434,11 @@ namespace Voron.Data.Containers
 
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
-            RemovePageFromContainerFreeList( rootContainer,  container);// we take it out now..., we'll add to the free list when we delete from it
+            // we'll only remove from the free list if the page level metadata matches, since it probably has space otherwise
+            if (pageLevelMetadata == container.Header.PageLevelMetadata)
+                RemovePageFromContainerFreeList(rootContainer, container); // we take it out now..., we'll add to the free list when we delete from it
+            else
+                AddPageToContainerFreeList(rootContainer, container);
             
             // We wont work as hard if we know that the entry is too big.
             bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
@@ -441,19 +448,19 @@ namespace Voron.Data.Containers
             // This is the case where at some point we need to just give up or end up wasting more time to find a page than the time
             // we will use to create and store in disk a new one.
             int i = 0;
+            using var it = ScanFreePages(GetFreeListTree(llt, rootContainer)).GetEnumerator();
             for (; i < tries; i++)  
             {                
-                var freeListState = rootContainer.GetItemPtr(ContainerPageHeader.FreeListOffset, out var _);
-                
-                Tree freeList = Tree.Open(llt, llt.Transaction, FreePagesTreeName, (TreeRootHeader*)freeListState);
-                var it = freeList.Iterate(prefetch:false);
                 if (it.MoveNext() == false)
                     break;
 
-                ValueReader readerForCurrent = it.CurrentKey.CreateReader();
-                long pageNum = readerForCurrent.ReadBigEndianInt64();
-                var page = llt.ModifyPage(pageNum);
+                var page = llt.ModifyPage(it.Current);
                 var maybe = new Container(page);
+                
+                // During indexing, we are going to very quickly shift between different pages 
+                // with multiple page-level-metadata, we can't remove it from the free list too soon 
+                if(PageMetadataMatch(maybe, pageLevelMetadata) == false)
+                    continue;
 
                 // we want to ensure that the free list doesnt get too big...
                 // if we don't have space here, we should discard it from the free list
@@ -461,12 +468,7 @@ namespace Voron.Data.Containers
                 // are abnormally big. In those cases, the reasonable thing to do is just
                 // skip it and create a new page for it but without discarding pages that
                 // would be reasonably used by following requests. 
-                
-                // if we exclude this based on the pageLevelMetadata match, this is fine,
-                // since we assume that there are *long* usage periods for each pageLevelMetadata
-                // so we aren't expected to switch between them too often
-                if (!isBigEntry || 
-                    PageMetadataMatch(maybe, pageLevelMetadata))
+                if (!isBigEntry)
                 {
                     RemovePageFromContainerFreeList(rootContainer, maybe);
                 }
@@ -477,7 +479,7 @@ namespace Voron.Data.Containers
                 // we register it as the next free page
                 rootContainer.UpdateNextFreePage(page.PageNumber);
                 
-                Debug.Assert(container.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
+                Debug.Assert(maybe.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
                 return  maybe;
             }
 
@@ -488,7 +490,7 @@ namespace Voron.Data.Containers
             container = new Container(newPage);
             container.Header.PageLevelMetadata = pageLevelMetadata;
             
-            AddPageToContainerFreeList(rootContainer, container);
+            AddPageToContainerAllPagesList(rootContainer, container);
 
             return container;
 
@@ -501,8 +503,35 @@ namespace Voron.Data.Containers
             void AddPageToContainerFreeList(Container parent, Container page)
             {
                 page.Header.OnFreeList = true;
+                ModifyMetadataList(llt, parent, ContainerPageHeader.FreeListOffset, add: true, page.Header.PageNumber);
+            }
+            
+            void AddPageToContainerAllPagesList(Container parent, Container page)
+            {
+                page.Header.OnFreeList = true;
                 ModifyMetadataList(llt, parent, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
             }
+        }
+
+        private static IEnumerable<long> ScanFreePages(Tree freeList)
+        {
+            var it = freeList.Iterate(prefetch: false);
+            if (it.Seek(Slices.BeforeAllKeys) == false)
+                yield break;
+            do
+            {
+                ValueReader readerForCurrent = it.CurrentKey.CreateReader();
+                long pageNum = readerForCurrent.ReadBigEndianInt64();
+                yield return pageNum;
+            } while (it.MoveNext());
+
+        }
+        
+        
+        private static Tree GetFreeListTree(LowLevelTransaction llt ,in Container c)
+        {
+            var freeListState = c.GetItemPtr(ContainerPageHeader.FreeListOffset, out var _);
+            return Tree.Open(llt, llt.Transaction, FreePagesTreeName, (TreeRootHeader*)freeListState);
         }
 
         private static bool PageMetadataMatch(Container maybe, long pageLevelMetadata)
