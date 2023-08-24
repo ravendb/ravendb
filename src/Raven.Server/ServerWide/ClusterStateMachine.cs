@@ -70,6 +70,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
+using static Raven.Server.Documents.Indexes.MapReduce.ReduceKeyProcessor;
 using static Raven.Server.ServerWide.Commands.DeleteServerWideTaskCommand;
 using Constants = Raven.Client.Constants;
 
@@ -1507,6 +1508,11 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
                 }
+
+                if (type == nameof(PutSubscriptionCommand))
+                {
+                    AssertSubscriptionsLicenseLimits(serverStore, items, updateCommand.DatabaseName, context);
+                }
             }
             catch (Exception e)
             {
@@ -2713,6 +2719,50 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(type, index, exception, updateCommand);
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
+            }
+        }
+
+        private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, string databaseName, ClusterOperationContext context)
+        {
+            var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
+            if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(databaseName))
+            {
+                throw new LicenseLimitException($"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
+            }
+
+            var maxSubscriptionsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerCluster;
+            if (maxSubscriptionsPerCluster != null && maxSubscriptionsPerCluster >= 0 && maxSubscriptionsPerCluster < GetSubscriptionsCount())
+            {
+                throw new LicenseLimitException($"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
+            }
+
+            long GetSubscriptionsCount()
+            {
+                long count = 0;
+
+                foreach (var name in GetDatabaseNames(context))
+                {
+                    count += GetSubscriptionsCountForDatabase(name);
+                }
+
+                return count;
+            }
+
+            long GetSubscriptionsCountForDatabase(string name)
+            {
+                var count = 0;
+
+                var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(name).ToLowerInvariant();
+
+                using (Slice.From(context.Allocator, subscriptionPrefix, out Slice loweredPrefix))
+                {
+                    foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
             }
         }
 
