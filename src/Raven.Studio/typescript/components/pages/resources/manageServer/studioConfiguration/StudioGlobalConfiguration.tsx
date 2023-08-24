@@ -33,11 +33,10 @@ import {
     AccordionItemLicensing,
     AccordionItemWrapper,
 } from "components/common/AboutView";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
-interface StudioGlobalConfigurationProps {
-    licenseType?: string;
-}
-export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalConfigurationProps) {
+export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
 
@@ -58,6 +57,7 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
     useDirtyFlag(formState.isDirty);
 
     const { reportEvent } = useEventsCollector();
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -93,8 +93,8 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                     <AboutViewHeading
                         icon="studio-configuration"
                         title="Studio Configuration"
-                        badge={licenseType === "community"}
-                        badgeText={licenseType === "community" ? "Professional +" : undefined}
+                        badge={licenseType === "Community"}
+                        badgeText={licenseType === "Community" ? "Professional +" : undefined}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <ButtonWithSpinner
@@ -107,7 +107,7 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                         >
                             Save
                         </ButtonWithSpinner>
-                        <div className={licenseType === "community" ? "item-disabled pe-none" : ""}>
+                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -121,7 +121,10 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                             >
                                                 <PopoverBody>
                                                     <ul>
-                                                        <li className="margin-bottom-xs">Apply a <strong>tag</strong> to the Studio indicating the server environment.</li>
+                                                        <li className="margin-bottom-xs">
+                                                            Apply a <strong>tag</strong> to the Studio indicating the
+                                                            server environment.
+                                                        </li>
                                                         <li>This does not affect any settings or features.</li>
                                                     </ul>
                                                 </PopoverBody>
@@ -135,7 +138,8 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                     </InputGroup>
                                     <InputGroup className="gap-1 flex-wrap flex-column">
                                         <Label className="mb-0 md-label">
-                                            Default Replication Factor <Icon icon="info" color="info" id="ReplicationFactorInfo" />
+                                            Default Replication Factor{" "}
+                                            <Icon icon="info" color="info" id="ReplicationFactorInfo" />
                                             <UncontrolledPopover
                                                 target="ReplicationFactorInfo"
                                                 placement="right"
@@ -144,9 +148,19 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                             >
                                                 <PopoverBody>
                                                     <ul>
-                                                        <li className="margin-bottom-xs">Set the default <strong>replication factor</strong> when creating a new database.</li>
-                                                        <li className="margin-bottom-xs"> If not set, then the number of nodes in your cluster will be used.</li>
-                                                        <li>Additional nodes can always be added to the database after it is created.</li>
+                                                        <li className="margin-bottom-xs">
+                                                            Set the default <strong>replication factor</strong> when
+                                                            creating a new database.
+                                                        </li>
+                                                        <li className="margin-bottom-xs">
+                                                            {" "}
+                                                            If not set, then the number of nodes in your cluster will be
+                                                            used.
+                                                        </li>
+                                                        <li>
+                                                            Additional nodes can always be added to the database after
+                                                            it is created.
+                                                        </li>
                                                     </ul>
                                                 </PopoverBody>
                                             </UncontrolledPopover>
@@ -187,11 +201,14 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                             <p>
                                 <ul>
                                     <li className="margin-bottom-xs">
-                                        This is the <strong>Server-wide Studio-Configuration</strong> view.<br />
-                                        The available studio-configuration options will apply serve-wide to all databases.
+                                        This is the <strong>Server-wide Studio-Configuration</strong> view.
+                                        <br />
+                                        The available studio-configuration options will apply serve-wide to all
+                                        databases.
                                     </li>
                                     <li>
-                                        The environment tag can be customized per database in the Database Studio-Configuration view.
+                                        The environment tag can be customized per database in the Database
+                                        Studio-Configuration view.
                                     </li>
                                 </ul>
                             </p>
@@ -201,7 +218,7 @@ export default function StudioGlobalConfiguration({ licenseType }: StudioGlobalC
                                 <Icon icon="newtab" /> Docs - Client Configuration
                             </a>
                         </AccordionItemWrapper>
-                        {licenseType === "community" && (
+                        {licenseType === "Community" && (
                             <AccordionItemWrapper
                                 icon="license"
                                 color="warning"

@@ -35,12 +35,10 @@ import {
     AccordionItemLicensing,
     AccordionItemWrapper,
 } from "components/common/AboutView";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useAppSelector } from "components/store";
 
-interface StudioDatabaseConfigurationProps extends NonShardedViewProps {
-    licenseType?: string;
-}
-
-export default function StudioDatabaseConfiguration({ db, licenseType }: StudioDatabaseConfigurationProps) {
+export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
 
     const asyncDatabaseSettings = useAsyncCallback<StudioDatabaseConfigurationFormData>(async () => {
@@ -62,6 +60,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
     useDirtyFlag(formState.isDirty);
 
     const { reportEvent } = useEventsCollector();
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -90,8 +89,8 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                     <AboutViewHeading
                         icon="database-studio-configuration"
                         title="Studio Configuration"
-                        badge={licenseType === "community"}
-                        badgeText={licenseType === "community" ? "Professional +" : undefined}
+                        badge={licenseType === "Community"}
+                        badgeText={licenseType === "Community" ? "Professional +" : undefined}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">
@@ -112,7 +111,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                 </a>
                             </small>
                         </div>
-                        <div className={licenseType === "community" ? "item-disabled pe-none" : ""}>
+                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -126,7 +125,10 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                             >
                                                 <PopoverBody>
                                                     <ul>
-                                                        <li className="margin-bottom-xs">Apply a <strong>tag</strong> to the Studio indicating the database environment.</li>
+                                                        <li className="margin-bottom-xs">
+                                                            Apply a <strong>tag</strong> to the Studio indicating the
+                                                            database environment.
+                                                        </li>
                                                         <li>This does not affect any settings or features.</li>
                                                     </ul>
                                                 </PopoverBody>
@@ -182,7 +184,8 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                             targetId="1"
                         >
                             <p>
-                                This is the <strong>Database Studio-Configuration</strong> view.<br />
+                                This is the <strong>Database Studio-Configuration</strong> view.
+                                <br />
                                 The available configuration options will apply only to this database.
                             </p>
                             <hr />
@@ -191,7 +194,7 @@ export default function StudioDatabaseConfiguration({ db, licenseType }: StudioD
                                 <Icon icon="newtab" /> Docs - Studio Configuration
                             </a>
                         </AccordionItemWrapper>
-                        {licenseType === "community" && (
+                        {licenseType === "Community" && (
                             <AccordionItemWrapper
                                 icon="license"
                                 color="warning"
