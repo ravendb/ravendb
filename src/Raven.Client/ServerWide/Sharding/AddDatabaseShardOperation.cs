@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Sharding
 {
-    internal sealed class AddDatabaseShardOperation : IServerOperation<AddDatabaseShardResult>
+    public sealed class AddDatabaseShardOperation : IServerOperation<AddDatabaseShardResult>
     {
         private readonly string _databaseName;
         private readonly int? _shardNumber;
