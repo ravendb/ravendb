@@ -497,9 +497,9 @@ namespace Raven.Server.Config.Categories
         [Description("The maximum amount of memory that Corax can use for a memoization clause during query processing")]
         [DefaultValue(128)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.MaxMemoizationSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public Size MaxMemoizationLengthSize { get; set; }
+        public Size MaxMemoizationSize { get; set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

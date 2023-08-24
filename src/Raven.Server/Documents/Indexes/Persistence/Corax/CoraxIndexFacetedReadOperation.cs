@@ -39,7 +39,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         _fieldMappings = fieldsMapping;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
         {
-            MaxMemoizationSize = index.Configuration.MaxMemoizationLengthSize.GetValue(SizeUnit.Bytes) 
+            MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes) 
         };
         _fieldNameCache = new();
     }
