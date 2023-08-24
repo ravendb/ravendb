@@ -279,7 +279,11 @@ namespace Raven.Server.ServerWide
             [nameof(SourceMigrationSendCompletedCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationSendCompletedCommand>(),
             [nameof(DestinationMigrationConfirmCommand)] = GenerateJsonDeserializationRoutine<DestinationMigrationConfirmCommand>(),
             [nameof(SourceMigrationCleanupCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationCleanupCommand>(),
-            [nameof(UpdateServerPublishedUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdateServerPublishedUrlsCommand>()
+            [nameof(UpdateServerPublishedUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdateServerPublishedUrlsCommand>(),
+            [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
+            [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
+            [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
+            [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
         };
     }
 }

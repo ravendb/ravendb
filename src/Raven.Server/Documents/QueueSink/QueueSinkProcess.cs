@@ -11,12 +11,15 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.QueueSink.Commands;
 using Raven.Server.Documents.QueueSink.Stats;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
@@ -45,7 +48,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
     private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-    private readonly Logger _logger;
+    protected readonly Logger Logger;
 
     private int _statsId;
     private QueueSinkStatsAggregator _lastStats;
@@ -58,7 +61,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         DocumentDatabase database, string tag)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
-        _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+        Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
         Database = database;
         Configuration = configuration;
         Script = script;
@@ -133,6 +136,18 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         }
     }
 
+    protected void UpdateProcessState(QueueSinkProcessState state)
+    {
+        var command = new UpdateQueueSinkProcessStateCommand(Database.Name, state, Database.ServerStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
+
+        var sendToLeaderTask = Database.ServerStore.SendToLeaderAsync(command);
+
+        sendToLeaderTask.Wait(CancellationToken);
+        var (etag, _) = sendToLeaderTask.Result;
+
+        Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, Database.ServerStore.Engine.OperationTimeout).Wait(CancellationToken);
+    }
+
     private void Run()
     {
         while (true)
@@ -169,8 +184,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                     {
                         string msg = $"[{Name}] Failed to create queue consumer";
 
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations(msg, e);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg, e);
 
                         var key = $"{Tag}/{Name}";
 
@@ -185,6 +200,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
                 var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
 
+                using (Statistics.NewBatch())
                 using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var stats = statsAggregator.CreateScope())
                 {
@@ -233,8 +249,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                             {
                                 string msg = "Failed to consume message.";
 
-                                if (_logger.IsOperationsEnabled)
-                                    _logger.Operations(msg, e);
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations(msg, e);
 
                                 readScope.RecordReadError();
                                 Statistics.RecordConsumeError(e.Message);
@@ -248,50 +264,25 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                         }
                     }
 
-                    bool batchStopped = false;
-                    var processed = 0;
+                    var processedSuccessfully = 0;
 
                     try
                     {
-                        using (var tx = context.OpenWriteTransaction())
                         using (var scriptProcessingScope = stats.For(QueueSinkBatchPhases.ScriptProcessing))
                         {
-                            var mainScript = new PatchRequest(Script.Script, PatchRequestType.QueueSink);
-                            Database.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
-
-                            foreach (var message in messages)
+                            try
                             {
-                                try
-                                {
-                                    using (message)
-                                    using (documentScript.Run(context, context, "execute", new object[] { message }))
-                                    {
-                                    }
+                                var command = new BatchQueueSinkScriptCommand(Script.Script, messages, scriptProcessingScope, Statistics, Logger);
 
-                                    scriptProcessingScope.RecordProcessedMessage();
-                                    processed++;
-                                }
-                                catch (JavaScriptParseException e)
-                                {
-                                    HandleScriptParseException(e);
-                                    batchStopped = true;
-                                }
-                                catch (Exception e)
-                                {
-                                    var msg = "Failed to process consumed message by the script.";
+                                Database.TxMerger.EnqueueSync(command);
 
-                                    if (_logger.IsOperationsEnabled) 
-                                        _logger.Operations(msg, e);
-                                    
-                                    scriptProcessingScope.RecordScriptProcessingError();
-                                    Statistics.RecordScriptExecutionError(e);
-                                }
-                            }
+                                processedSuccessfully = command.ProcessedSuccessfully;
 
-                            if (batchStopped == false)
-                            {
-                                tx.Commit();
                                 _consumer.Commit();
+                            }
+                            catch (JavaScriptParseException e)
+                            {
+                                HandleScriptParseException(e);
                             }
                         }
                     }
@@ -303,25 +294,45 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                     {
                         var message = $"{Tag} Exception in queue sink process '{Name}'";
 
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations(message, e);
-
-                        Statistics.RecordConsumeError(e.Message);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(message, e);
                     }
 
                     statsAggregator.Complete();
+                    
+                    if (processedSuccessfully > 0)
+                    {
+                        Statistics.ConsumeSuccess(processedSuccessfully);
 
-                    Statistics.ConsumeSuccess(processed);
-                    Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+                        try
+                        {
+                            UpdateProcessState(new QueueSinkProcessState
+                            {
+                                ConfigurationName = Configuration.Name,
+                                ScriptName = Script.Name,
+                                NodeTag = Database.ServerStore.NodeTag
+                            });
+
+                            Database.QueueSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+                        }
+                        catch (Exception e)
+                        {
+                            if (CancellationToken.IsCancellationRequested == false)
+                            {
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations($"{Tag} Failed to update state of queue sink process '{Name}'", e);
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception e)
             {
                 var msg = $"Unexpected error in {Tag} process: '{Name}'";
 
-                if (_logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled)
                 {
-                    _logger.Operations(msg, e);
+                    Logger.Operations(msg, e);
                 }
             }
             finally
@@ -361,19 +372,19 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
-                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                 NativeMemory.EnsureRegistered();
                 Run();
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to run Queue Sink {Name}", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to run Queue Sink {Name}", e);
             }
         }, null, ThreadNames.ForQueueSinkProcess(threadName, Tag, Name));
 
-        if (_logger.IsOperationsEnabled)
-            _logger.Operations($"Starting {Tag} process: '{Name}'.");
+        if (Logger.IsOperationsEnabled)
+            Logger.Operations($"Starting {Tag} process: '{Name}'.");
 
     }
 
@@ -425,9 +436,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
         string msg = $"Stopping {Tag} process: '{Name}'. Reason: {reason}";
 
-        if (_logger.IsOperationsEnabled)
+        if (Logger.IsOperationsEnabled)
         {
-            _logger.Operations(msg);
+            Logger.Operations(msg);
         }
 
         _cts.Cancel();
@@ -446,8 +457,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     {
         var message = $"[{Name}] Could not parse script. Stopping Queue Sink process.";
 
-        if (_logger.IsOperationsEnabled)
-            _logger.Operations(message, e);
+        if (Logger.IsOperationsEnabled)
+            Logger.Operations(message, e);
 
         var key = $"{Tag}/{Name}";
         var details = new QueueSinkErrorsDetails();
@@ -464,8 +475,6 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             details: details);
 
         Database.NotificationCenter.Add(alert);
-
-        Statistics.RecordScriptExecutionError(e);
 
         Stop(message);
     }
@@ -507,8 +516,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         {
             var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"[{Name}] {reason}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] {reason}");
 
             stats.RecordPullCompleteReason(reason);
 
@@ -519,8 +528,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         {
             var reason = $"The batch was stopped after processing {batchSize:#,#;;0} items because of low memory";
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"[{Name}] {reason}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] {reason}");
 
             stats.RecordPullCompleteReason(reason);
             return false;
@@ -535,7 +544,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         {
             if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                     totalAllocated,
-                    Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Database.ServerStore.Server.MetricCacher, _logger, out var memoryUsage) == false)
+                    Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Database.ServerStore.Server.MetricCacher, Logger, out var memoryUsage) == false)
             {
                 var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
                 if (memoryUsage != null)
@@ -545,8 +554,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
                 }
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"[{Name}] {reason}");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
 
                 stats.RecordPullCompleteReason(reason);
 
@@ -562,8 +571,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         {
             var reason = $"Stopping the batch because maximum batch size limit was reached ({batchSize})";
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"[{Name}] {reason}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] {reason}");
 
             stats.RecordPullCompleteReason(reason);
 
@@ -583,7 +592,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         if (CancellationToken.IsCancellationRequested)
             return;
 
-        var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {GetType().Name}: '{Name}'");
+        var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
         exceptionAggregator.Execute(() => Stop("Dispose"));
 

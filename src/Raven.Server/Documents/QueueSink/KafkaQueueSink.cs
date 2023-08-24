@@ -7,7 +7,7 @@ using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
 
-public class KafkaQueueSink : QueueSinkProcess
+public sealed class KafkaQueueSink : QueueSinkProcess
 {
     public KafkaQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database, string tag) : base(configuration, script, database, tag)
     {
@@ -44,7 +44,21 @@ public class KafkaQueueSink : QueueSinkProcess
             }
         }
 
-        var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
+        var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig)
+            .SetErrorHandler((consumer, error) =>
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(
+                        $"Kafka Sink process '{Name}' got the following Kafka consumer " +
+                        $"{(error.IsFatal ? "fatal" : "non fatal")}{(error.IsBrokerError ? " broker" : string.Empty)} error: {error.Reason} " +
+                        $"(code: {error.Code}, is local: {error.IsLocalError})");
+            })
+            .SetLogHandler((consumer, logMessage) =>
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Kafka Sink process: {Name}. {logMessage.Message} (level: {logMessage.Level}, facility: {logMessage.Facility}");
+            })
+            .Build();
         consumer.Subscribe(Script.Queues);
 
         return new KafkaSinkConsumer(consumer);

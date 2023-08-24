@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             private readonly ServerStore _serverStore;
             private readonly TransactionOperationContext _context;
             private readonly (string Name, List<string> Transformations) _deletingEtl;
+            private readonly (string Name, List<string> Scripts) _deletingQueueSink;
             private readonly TRequestHandler _requestHandler;
 
             public DeleteOngoingTaskAction(TRequestHandler requestHandler, long id, OngoingTaskType type, ServerStore serverStore, TransactionOperationContext context)
@@ -104,6 +105,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             if (elasticEtl != null)
                                 _deletingEtl = (elasticEtl.Name, elasticEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             break;
+                        case OngoingTaskType.QueueSink:
+                            var queueSinks = rawRecord.QueueSinks;
+                            var queueSink = queueSinks?.Find(x => x.TaskId == id);
+                            if (queueSink != null)
+                                _deletingQueueSink = (queueSink.Name, queueSink.Scripts.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
                     }
                 }
             }
@@ -116,6 +123,17 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     {
                         var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _requestHandler.DatabaseName, _deletingEtl.Name, transformation,
                             $"{raftRequestId}/{transformation}");
+
+                        await _requestHandler.WaitForIndexNotificationAsync(index);
+                    }
+                }
+
+                if (_deletingQueueSink.Name != null)
+                {
+                    foreach (var script in _deletingQueueSink.Scripts)
+                    {
+                        var (index, _) = await _serverStore.RemoveQueueSinkProcessState(_context, _requestHandler.DatabaseName, _deletingQueueSink.Name, script,
+                            $"{raftRequestId}/{script}");
 
                         await _requestHandler.WaitForIndexNotificationAsync(index);
                     }

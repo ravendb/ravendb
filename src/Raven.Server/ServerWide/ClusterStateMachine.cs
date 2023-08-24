@@ -505,6 +505,8 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
+                    case nameof(UpdateQueueSinkProcessStateCommand):
+                    case nameof(RemoveQueueSinkProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
                         if (result != null)
                             leader?.SetStateOf(index, result);

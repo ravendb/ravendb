@@ -107,6 +107,23 @@ namespace Raven.Server.ServerWide.Commands
             return databaseName;
         }
 
+        public static Func<string> GetLastResponsibleNode(
+            bool hasHighlyAvailableTasks,
+            DatabaseTopology topology,
+            string nodeTag)
+        {
+            return () =>
+            {
+                if (hasHighlyAvailableTasks)
+                    return null;
+
+                if (topology.Members.Contains(nodeTag) == false)
+                    return null;
+
+                return nodeTag;
+            };
+        }
+
         protected enum UpdatedValueActionType
         {
             Noop,
@@ -130,6 +147,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 Value?.Dispose();
             }
+
         }
     }
 }

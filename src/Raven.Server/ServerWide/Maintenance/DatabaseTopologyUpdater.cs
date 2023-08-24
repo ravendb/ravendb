@@ -586,6 +586,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (topology.Rehabs.Contains(member) == false)
             {
                 topology.Members.Remove(member);
+
                 topology.Rehabs.Add(member);
             }
 

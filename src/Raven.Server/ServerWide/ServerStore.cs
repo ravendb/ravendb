@@ -1074,6 +1074,7 @@ namespace Raven.Server.ServerWide
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
             var msg = $"{DateTime.UtcNow}, State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
+
             if (Engine.Log.IsInfoEnabled)
             {
                 Engine.Log.Info(msg);
@@ -2389,6 +2390,13 @@ namespace Raven.Server.ServerWide
         public Task<(long, object)> RemoveEtlProcessState(TransactionOperationContext context, string databaseName, string configurationName, string transformationName, string raftRequestId)
         {
             var command = new RemoveEtlProcessStateCommand(databaseName, configurationName, transformationName, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long, object)> RemoveQueueSinkProcessState(TransactionOperationContext context, string databaseName, string configurationName, string scriptName, string raftRequestId)
+        {
+            var command = new RemoveQueueSinkProcessStateCommand(databaseName, configurationName, scriptName, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

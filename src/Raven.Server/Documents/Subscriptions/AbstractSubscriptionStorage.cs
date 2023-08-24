@@ -10,6 +10,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -38,7 +39,7 @@ public abstract class AbstractSubscriptionStorage
     {
         var topology = GetTopology(context);
         var tag = GetNodeFromState(taskStatus);
-        var lastFunc = GetLastResponsibleNode(_serverStore.LicenseManager.HasHighlyAvailableTasks(), topology, tag);
+        var lastFunc = UpdateValueForDatabaseCommand.GetLastResponsibleNode(_serverStore.LicenseManager.HasHighlyAvailableTasks(), topology, tag);
         return topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, taskStatus, lastFunc);
     }
 
@@ -46,14 +47,14 @@ public abstract class AbstractSubscriptionStorage
     {
         var topology = string.IsNullOrEmpty(shardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(shardName)];
         var tag = string.IsNullOrEmpty(shardName) ? taskStatus.NodeTag : taskStatus.ShardingState.NodeTagPerShard.GetOrDefault(shardName);
-        var lastResponsibleNode = GetLastResponsibleNode(hasHighlyAvailableTasks, topology, tag);
+        var lastResponsibleNode = UpdateValueForDatabaseCommand.GetLastResponsibleNode(hasHighlyAvailableTasks, topology, tag);
         return topology.WhoseTaskIsIt(RachisState.Follower, taskStatus, lastResponsibleNode);
     }
 
     public static string GetSubscriptionResponsibleNodeForConnection(RawDatabaseRecord record, SubscriptionState taskStatus, bool hasHighlyAvailableTasks)
     {
         var topology = record.TopologyForSubscriptions();
-        var lastResponsibleNode = GetLastResponsibleNode(hasHighlyAvailableTasks, topology, taskStatus.NodeTag);
+        var lastResponsibleNode = UpdateValueForDatabaseCommand.GetLastResponsibleNode(hasHighlyAvailableTasks, topology, taskStatus.NodeTag);
         return topology.WhoseTaskIsIt(RachisState.Follower, taskStatus, lastResponsibleNode);
     }
 
@@ -126,23 +127,6 @@ public abstract class AbstractSubscriptionStorage
     public void ReleaseSubscriptionsSemaphore()
     {
         _concurrentConnectionsSemiSemaphore.Release();
-    }
-
-    private static Func<string> GetLastResponsibleNode(
-        bool hasHighlyAvailableTasks,
-        DatabaseTopology topology,
-        string nodeTag)
-    {
-        return () =>
-        {
-            if (hasHighlyAvailableTasks)
-                return null;
-
-            if (topology.Members.Contains(nodeTag) == false)
-                return null;
-
-            return nodeTag;
-        };
     }
 }
 

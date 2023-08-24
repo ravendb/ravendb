@@ -178,7 +178,9 @@ namespace Raven.Server.ServerWide
             [nameof(PutShardedSubscriptionBatchCommand)] = 60_000,
             
             [nameof(AddQueueSinkCommand)] = 60_000,            
-            [nameof(UpdateQueueSinkCommand)] = 60_000,            
+            [nameof(UpdateQueueSinkCommand)] = 60_000,
+            [nameof(RemoveQueueSinkProcessStateCommand)] = 60_000,
+            [nameof(UpdateQueueSinkProcessStateCommand)] = 60_000,
         };
 
         public bool CanPutCommand(string command)

@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 
 namespace Raven.Server.Documents.QueueSink;
 
-public class RabbitMqQueueSink : QueueSinkProcess
+public sealed class RabbitMqQueueSink : QueueSinkProcess
 {
     public RabbitMqQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script, DocumentDatabase database,
         string tag) : base(configuration, script, database, tag)

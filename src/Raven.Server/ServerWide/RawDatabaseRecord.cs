@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -805,6 +806,29 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _queueEtls;
+            }
+        }
+
+        private List<QueueSinkConfiguration> _queueSinks;
+
+        public List<QueueSinkConfiguration> QueueSinks
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.QueueSinks;
+
+                if (_queueSinks == null)
+                {
+                    _queueSinks = new List<QueueSinkConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.QueueSinks), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _queueSinks.Add(JsonDeserializationCluster.QueueSinkConfiguration(element));
+                    }
+                }
+
+                return _queueSinks;
             }
         }
 
