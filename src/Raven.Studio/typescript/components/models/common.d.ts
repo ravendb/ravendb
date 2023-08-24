@@ -24,6 +24,8 @@ export interface InputItem<T extends string | number = string> {
     label: string;
     value: T;
     count?: number;
+    limit?: number;
+    limitMessage?: string | ReactNode | ReactNode[];
     verticalSeparatorLine?: boolean;
 }
 

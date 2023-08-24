@@ -7,7 +7,7 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Button, Card, Col, Row } from "reactstrap";
+import { Alert, Button, Card, Col, Row } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -19,6 +19,8 @@ import { Icon } from "components/common/Icon";
 import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import AboutViewFloating, { AccordionItemLicensing, AccordionItemWrapper } from "components/common/AboutView";
+import { LicenseLimitThreshold } from "components/common/LicenseLimitThreshold";
 
 interface IndexesPageProps {
     db: database;
@@ -28,6 +30,11 @@ interface IndexesPageProps {
 
 export function IndexesPage(props: IndexesPageProps) {
     const { db, stale, indexName: indexToHighlight } = props;
+
+    const staticIndexServerLimit = 12 * 5; //TODO
+    const autoIndexServerLimit = 24 * 5; //TODO
+    const staticIndexServerCount = 12 * 5; //TODO
+    const autoIndexServerCount = 24 * 5; //TODO
 
     const { canReadWriteDatabase } = useAccessManager();
     const { reportEvent } = useEventsCollector();
@@ -48,6 +55,7 @@ export function IndexesPage(props: IndexesPageProps) {
         filter,
         setFilter,
         filterByStatusOptions,
+        filterByTypeOptions,
         groups,
         replacements,
         highlightCallback,
@@ -88,26 +96,128 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
+            <LicenseLimitThreshold count={staticIndexServerCount} limit={staticIndexServerLimit}>
+                <Alert color="warning" className="text-center">
+                    Your server is reaching the <strong>maximum number of static indexes</strong> allowed by your
+                    license{" "}
+                    <strong>
+                        ({staticIndexServerCount}/{staticIndexServerLimit})
+                    </strong>
+                    <br /> Delete unused indexes or{" "}
+                    <strong>
+                        <a href="https://ravendb.net/buy" target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            </LicenseLimitThreshold>
+            <LicenseLimitThreshold count={autoIndexServerCount} limit={autoIndexServerLimit}>
+                <Alert color="warning" className="text-center">
+                    Your server is reaching the <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+                    <strong>
+                        ({autoIndexServerCount}/{autoIndexServerLimit})
+                    </strong>
+                    <br /> Delete unused indexes or{" "}
+                    <strong>
+                        <a href="https://ravendb.net/buy" target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            </LicenseLimitThreshold>
             {stats.indexes.length > 0 && (
                 <StickyHeader>
                     <Row>
-                        <Col sm="auto" className="align-self-center">
+                        <Col>
                             <Button color="primary" href={newIndexUrl} className="rounded-pill px-3">
                                 <Icon icon="index" addon="plus" />
                                 <span>New index</span>
                             </Button>
                         </Col>
-                        <Col>
-                            <IndexFilter
-                                filter={filter}
-                                setFilter={(x) => setFilter(x)}
-                                filterByStatusOptions={filterByStatusOptions}
-                                indexesCount={allIndexesCount}
-                            />
+                        <Col xs="auto">
+                            <AboutViewFloating>
+                                <AccordionItemWrapper
+                                    icon="index"
+                                    color="info"
+                                    heading="About this view"
+                                    description="Get additional info on what this feature can offer you"
+                                    targetId="1"
+                                >
+                                    <p>
+                                        <strong>Admin JS Console</strong> is a specialized feature primarily intended
+                                        for resolving server errors. It provides a direct interface to the underlying
+                                        system, granting the capacity to execute scripts for intricate server
+                                        operations.
+                                    </p>
+                                    <p>
+                                        It is predominantly intended for advanced troubleshooting and rectification
+                                        procedures executed by system administrators or RavenDB support.
+                                    </p>
+                                    <hr />
+                                    <div className="small-label mb-2">useful links</div>
+                                    <a href="https://ravendb.net/l/IBUJ7M/6.0/Csharp" target="_blank">
+                                        <Icon icon="newtab" /> Docs - Admin JS Console
+                                    </a>
+                                </AccordionItemWrapper>
+                                <AccordionItemWrapper
+                                    icon="road-cone"
+                                    color="success"
+                                    heading="Examples of use"
+                                    description="Learn how to get the most of this feature"
+                                    targetId="2"
+                                >
+                                    <p>
+                                        <strong>To set the refresh time:</strong> enter the appropriate date in the
+                                        metadata <code>@refresh</code> property.
+                                    </p>
+                                    <p>
+                                        <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
+                                        frequency specified. The actual refresh time can increase (up to) that value.
+                                    </p>
+                                </AccordionItemWrapper>
+                                <AccordionItemWrapper
+                                    icon="license"
+                                    color="warning"
+                                    heading="Licensing"
+                                    description="See which plans offer this and more exciting features"
+                                    targetId="3"
+                                    pill
+                                    pillText="Upgrade available"
+                                    pillIcon="star-filled"
+                                >
+                                    <AccordionItemLicensing
+                                        description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
+                                        featureName="Document Compression"
+                                        featureIcon="documents-compression"
+                                        checkedLicenses={["Professional", "Enterprise"]}
+                                    >
+                                        <p className="lead fs-4">Get your license expanded</p>
+                                        <div className="mb-3">
+                                            <Button color="primary" className="rounded-pill">
+                                                <Icon icon="notifications" />
+                                                Contact us
+                                            </Button>
+                                        </div>
+                                        <small>
+                                            <a href="#" target="_blank" className="text-muted">
+                                                See pricing plans
+                                            </a>
+                                        </small>
+                                    </AccordionItemLicensing>
+                                </AccordionItemWrapper>
+                            </AboutViewFloating>
                         </Col>
-
-                        {/*  TODO  <IndexGlobalIndexing /> */}
                     </Row>
+                    <IndexFilter
+                        filter={filter}
+                        setFilter={(x) => setFilter(x)}
+                        filterByStatusOptions={filterByStatusOptions}
+                        filterByTypeOptions={filterByTypeOptions}
+                        indexesCount={allIndexesCount}
+                    />
+
+                    {/*  TODO  <IndexGlobalIndexing /> */}
+
                     {canReadWriteDatabase(db) && (
                         <IndexSelectActions
                             indexNames={indexNames}
