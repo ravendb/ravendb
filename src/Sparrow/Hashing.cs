@@ -998,7 +998,7 @@ namespace Sparrow
         {
             public static uint Calculate(byte[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
             {
-                fixed ( byte* ptr = buffer )
+                fixed (byte* ptr = buffer)
                     return CalculateInline(ptr, buffer.Length, seed);
             }
 
@@ -1087,6 +1087,10 @@ namespace Sparrow
             {
                 uint high = (uint)(seed >> 32);
                 uint low = (uint)seed;
+                uint final = 0x80;
+
+                if (len == 0)
+                    goto Tail;
 
                 byte* ptr = buffer;
                 byte* bEnd = ptr + len;
@@ -1098,7 +1102,6 @@ namespace Sparrow
                     ptr += sizeof(uint);
                 }
 
-                uint final = 0x80;
                 int rest = (int)(bEnd - ptr);
                 if (rest == 3)
                     final = (final << 8) | ptr[2];
@@ -1107,6 +1110,7 @@ namespace Sparrow
                 if (rest >= 1)
                     final = (final << 8) | ptr[0];
 
+                Tail:
                 MarvinMix(ref high, ref low, final);
                 MarvinMix(ref high, ref low, 0);
 
