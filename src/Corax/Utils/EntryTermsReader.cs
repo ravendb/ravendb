@@ -66,6 +66,13 @@ namespace Corax.Utils;
 ///
 /// * 0b010 - indicates a spatial point. The term id in this case holds the *field root page*, not a term. This is followed by two doubles (raw) representing lat/lng.
 /// * 0b110 - indicates that this is a  *stored* field. The term id contains the type of term we deal with, not a term.
+///
+///
+/// ### NULL Handling:
+/// In the context of NULL handling, we faced the challenge that the three lowest bits in the TermContainer were already in use.
+/// In order to store information about NULL terms, we utilized the highest bit (the sign bit) since container IDs are always positive.
+/// To identify which field contains NULL values, we store the RootPage number of CompactTree as the TermContainerId.
+/// The rest of the configuration remains compatible with the assumptions mentioned above, including handling frequency and other aspects in the same manner.
 /// </summary>
 public unsafe struct EntryTermsReader
 {
@@ -212,9 +219,9 @@ public unsafe struct EntryTermsReader
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
-        if ((termContainerId & ~long.MaxValue) != 0 ) // null value
+        if ((termContainerId & EntryTermsWriter.NullMarker) != 0 ) // null value
         {
-            FieldRootPage = (termContainerId & long.MaxValue) >> (hasFreq ? 11 : 3);
+            FieldRootPage = (termContainerId & ~EntryTermsWriter.NullMarker) >> (hasFreq ? 11 : 3);
             return;
         }
         
