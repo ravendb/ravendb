@@ -3064,7 +3064,7 @@ namespace Raven.Server.Documents.Indexes
                         SearchEngineType = SearchEngineType,
                         SourceType = SourceType,
                         LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
-                        ArchivedDataProcessingBehavior = Definition?.ArchivedDataProcessingBehavior ?? ArchivedDataProcessingBehavior.ExcludeArchived,
+                        ArchivedDataProcessingBehavior = Definition?.ArchivedDataProcessingBehavior ?? GetDefaultArchivedDataProcessingBehavior(),
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
                         Status = Status,
@@ -4466,7 +4466,7 @@ namespace Raven.Server.Documents.Indexes
         public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; private set; }
 
         internal ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
-        {
+        {                                                       // z konfiguracji Indexing.Static...            // to samo
             return SourceType == IndexSourceType.Documents ? ArchivedDataProcessingBehavior.ExcludeArchived : ArchivedDataProcessingBehavior.IncludeArchived;
         }
 

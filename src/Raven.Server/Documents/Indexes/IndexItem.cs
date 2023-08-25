@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 
@@ -51,6 +52,22 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract string ToStringInternal();
 
+        private bool IsArchived()
+        {
+            return DocumentFlags?.HasFlag(Documents.DocumentFlags.Archived) == true;
+        }
+        
+        public bool ShouldBeProcessedAsArchived(ArchivedDataProcessingBehavior behavior)
+        {
+            return behavior switch
+            {
+                ArchivedDataProcessingBehavior.IncludeArchived => false,
+                ArchivedDataProcessingBehavior.ExcludeArchived => IsArchived(),
+                ArchivedDataProcessingBehavior.ArchivedOnly => IsArchived() == false,
+                _ => throw new NotSupportedException($"Unknown archived behavior: '{behavior}'")
+            };
+        }
+        
         public void Dispose()
         {
             if (Item is IDisposable disposable)
