@@ -243,9 +243,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private BlittableJsonReaderObject RewriteQueryIfNeeded(BlittableJsonReaderObject queryTemplate)
     {
-        var query = Query.Metadata.Query;
-
-        var queryChanges = DetectChangesForQueryRewrite(query, out var groupByFields);
+        var queryChanges = DetectChangesForQueryRewrite(Query, out var groupByFields);
 
         if (queryChanges == QueryChanges.None)
             return queryTemplate;
@@ -269,6 +267,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             RemoveLimitAndOffset();
         }
+
+        var query = Query.Metadata.Query;
 
         if (queryChanges.HasFlag(QueryChanges.UseCachedOrderByFieldsInMapReduce))
         {
@@ -324,7 +324,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             var limit = ((Query.Limit ?? 0) + (Query.Offset ?? 0));
             if (limit == 0)
                 limit = Query.Start + Query.PageSize;
-            
+
             if (limit > int.MaxValue) // overflow
                 limit = int.MaxValue;
 
@@ -410,16 +410,15 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    private QueryChanges DetectChangesForQueryRewrite(Query query, out List<string> groupByFields)
+    private QueryChanges DetectChangesForQueryRewrite(IndexQueryServerSide indexQuery, out List<string> groupByFields)
     {
+        var query = indexQuery.Metadata.Query;
         var queryChanges = QueryChanges.None;
 
-        if (Query.Offset is > 0 || Query.Start > 0)
+        if (indexQuery.Offset is > 0 || indexQuery.Start > 0)
             queryChanges |= QueryChanges.RewriteForPaging;
 
-        
-        var isProjectionQuery = query.Select?.Count > 0 ||
-                                query.SelectFunctionBody.FunctionText != null;
+        var isProjectionQuery = indexQuery.Metadata.HasFacet == false && (query.Select?.Count > 0 || query.SelectFunctionBody.FunctionText != null);
 
         groupByFields = null;
 
@@ -449,7 +448,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 {
                     // we have a limit and order by fields
                     // we need to get all results if the order by isn't done on the group by fields
-                    foreach (var orderByField in Query.Metadata.OrderByFieldNames)
+                    foreach (var orderByField in indexQuery.Metadata.OrderByFieldNames)
                     {
                         if (groupByFields.Contains(orderByField) == false)
                         {
@@ -461,7 +460,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
                     // we are missing some group by fields
                     if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
-                        Query.Metadata.OrderByFieldNames.Count != groupByFields.Count)
+                        indexQuery.Metadata.OrderByFieldNames.Count != groupByFields.Count)
                     {
                         queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
                     }
