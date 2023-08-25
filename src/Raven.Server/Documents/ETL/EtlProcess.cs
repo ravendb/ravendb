@@ -493,7 +493,7 @@ namespace Raven.Server.Documents.ETL
 
                         EnterFallbackMode();
 
-                        Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems.Sum(x => x.Value));
+                        Statistics.ThrowLoadError(e.ToString(), count: stats.NumberOfExtractedItems.Sum(x => x.Value));
                     }
 
                     return false;

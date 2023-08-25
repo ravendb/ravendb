@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                 $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
                         }
 
-                        _etl.Statistics.RecordLoadError($"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
+                        _etl.Statistics.RecordPartialLoadError($"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
                             itemToReplicate.DocumentId);
                     }
                     finally
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             _logger.Info($"Failure to replicate deletions to relational database for: {_etl.Name}, " +
                                          "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _etl.Statistics.RecordLoadError($"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}", null);
+                        _etl.Statistics.RecordPartialLoadError($"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}", null);
                     }
                     finally
                     {

@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
             throw new InvalidOperationException($"{message}. Current stats: {this}");
         }
 
-        public void RecordLoadError(string error, string documentId, int count = 1)
+        public void RecordPartialLoadError(string error, string documentId, int count = 1)
         {
             WasLatestLoadSuccessful = false;
 
@@ -125,6 +125,15 @@ namespace Raven.Server.Documents.ETL
             CreateAlertIfAnyLoadErrors(message);
 
             throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
+        }
+
+        public void ThrowLoadError(string error, int count)
+        {
+            var message = $"Current ETL batch with '{count}' items was stopped. Error: {error}";
+
+            CreateAlertIfAnyLoadErrors(message);
+
+            throw new InvalidOperationException($"{message}. Current stats: {this}");
         }
 
         public void RecordSlowSql(SlowSqlStatementInfo slowSql)
