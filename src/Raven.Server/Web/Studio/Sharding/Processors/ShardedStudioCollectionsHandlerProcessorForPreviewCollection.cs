@@ -75,14 +75,13 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
 
     private sealed class ShardedPreviewState : PreviewState
     {
-        private const string ShardNumberKey = "@shard-number";
         public int ShardNumber;
 
         public override DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
         {
             return new DynamicJsonValue(current)
             {
-                [ShardNumberKey] = ShardNumber
+                [Constants.Documents.Metadata.Sharding.ShardNumber] = ShardNumber
             };
         }
     }
@@ -93,6 +92,12 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
     {
         ((ShardedPreviewState)state).ShardNumber = result.ShardNumber;
         WriteDocument(writer, context, result.Item, state);
+    }
+
+    protected override void WriteMetadata(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, BlittableJsonReaderObject metadata)
+    {
+        writer.WritePropertyName(Constants.Documents.Metadata.Key);
+        writer.WriteObject(metadata);
     }
 
     protected override async ValueTask<long> GetTotalResultsAsync()
