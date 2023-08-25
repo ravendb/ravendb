@@ -187,7 +187,7 @@ export default function StudioGlobalConfiguration() {
                                     <li className="margin-bottom-xs">
                                         This is the <strong>Server-wide Studio-Configuration</strong> view.
                                         <br />
-                                        The available studio-configuration options will apply serve-wide to all
+                                        The available studio-configuration options will apply server-wide to all
                                         databases.
                                     </li>
                                     <li>

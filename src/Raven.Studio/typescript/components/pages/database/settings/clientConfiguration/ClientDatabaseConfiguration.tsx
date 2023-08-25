@@ -21,20 +21,16 @@ import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
-import Code from "components/common/Code";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
-    licenseType?: string;
 }
 
-export default function ClientDatabaseConfiguration({ db, licenseType }: ClientDatabaseConfigurationProps) {
+export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfigurationProps) {
     const { manageServerService } = useServices();
     const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
     const asyncGetClientGlobalConfiguration = useAsync(manageServerService.getGlobalClientConfiguration, []);
@@ -49,6 +45,8 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
     });
 
     useDirtyFlag(formState.isDirty);
+
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
@@ -100,8 +98,7 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            badge={licenseType === "community"}
-                            badgeText={licenseType === "community" ? "Professional +" : undefined}
+                            badgeText={licenseType === "Community" ? "Professional +" : undefined}
                         />
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                             <div>
@@ -128,7 +125,7 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                 </small>
                             )}
                         </div>
-                        <div className={licenseType === "community" ? "item-disabled pe-none" : ""}>
+                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
                             {globalConfig && (
                                 <div className="mt-4 mb-3">
                                     <div className="hstack justify-content-center">
@@ -145,23 +142,21 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                             <Row>
                                 {globalConfig && (
                                     <Col>
+                                        <h4 className="my-3">
+                                            <Icon icon="server" />
+                                            Server Configuration
+                                            {canNavigateToServerSettings() && (
+                                                <a
+                                                    target="_blank"
+                                                    href={appUrl.forGlobalClientConfiguration()}
+                                                    className="ms-1 no-decor"
+                                                    title="Server settings"
+                                                >
+                                                    <Icon icon="link" />
+                                                </a>
+                                            )}
+                                        </h4>
                                         <RichPanel className={canEditDatabaseConfig && "item-disabled"}>
-                                            <RichPanelHeader className="px-4 py-2 gap-2">
-                                                <h3 className="mb-0">
-                                                    <Icon icon="server" />
-                                                    Server Configuration
-                                                </h3>
-                                                {canNavigateToServerSettings() && (
-                                                    <a
-                                                        target="_blank"
-                                                        href={appUrl.forGlobalClientConfiguration()}
-                                                        className="me-1 no-decor"
-                                                        title="Server settings"
-                                                    >
-                                                        <Icon icon="link" />
-                                                    </a>
-                                                )}
-                                            </RichPanelHeader>
                                             <div className="p-4">
                                                 <div className="md-label">
                                                     Identity parts separator{" "}
@@ -198,8 +193,9 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                                     placement="right"
                                                 >
                                                     <div className="p-3">
-                                                        Set this number to restrict the number of requests<br />
-                                                        (<code>Reads</code> & <code>Writes</code>) per session in the client API.
+                                                        Set this number to restrict the number of requests (
+                                                        <code>Reads</code> & <code>Writes</code>) per session in the
+                                                        client API.
                                                     </div>
                                                 </UncontrolledPopover>
                                                 <Input
@@ -216,13 +212,11 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                     </Col>
                                 )}
                                 <Col>
+                                    <h4 className="my-3">
+                                        <Icon icon="database" />
+                                        Database Configuration
+                                    </h4>
                                     <RichPanel className={!canEditDatabaseConfig && "item-disabled"}>
-                                        <RichPanelHeader className="px-4 py-2">
-                                            <h3 className="mb-0">
-                                                <Icon icon="database" />
-                                                Database Configuration
-                                            </h3>
-                                        </RichPanelHeader>
                                         <div className="p-4">
                                             <div className="md-label">
                                                 Identity parts separator{" "}
@@ -273,8 +267,9 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                                 placement="right"
                                             >
                                                 <div className="p-3">
-                                                    Set this number to restrict the number of requests<br />
-                                                    (<code>Reads</code> & <code>Writes</code>) per session in the client API.
+                                                    Set this number to restrict the number of requests
+                                                    <br />(<code>Reads</code> & <code>Writes</code>) per session in the
+                                                    client API.
                                                 </div>
                                             </UncontrolledPopover>
                                             <InputGroup>
@@ -309,7 +304,7 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                     { "justify-content-between": !globalConfig }
                                 )}
                             >
-                                <h4 className={globalConfig && "text-center"}>Load Balancing Client Requests</h4>
+                                <h5 className={globalConfig && "text-center"}>Load Balancing Client Requests</h5>
                                 <small title="Navigate to the documentation" className="position-absolute end-0">
                                     <a href="https://ravendb.net/l/GYJ8JA/latest/csharp" target="_blank">
                                         <Icon icon="link" /> Load balancing tutorial
@@ -342,16 +337,18 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                                         <li className="mb-1">
                                                             <code>None</code>
                                                             <br />
-                                                            <strong>Read</strong> requests - the node the client will target will be
-                                                            based on Read balance behavior configuration.
+                                                            <strong>Read</strong> requests - the node the client will
+                                                            target will be based on Read balance behavior configuration.
                                                             <br />
-                                                            <strong>Write</strong> requests - will be sent to the preferred node.
+                                                            <strong>Write</strong> requests - will be sent to the
+                                                            preferred node.
                                                         </li>
                                                         <li className="mb-1">
                                                             <code>Use session context</code>
                                                             <br />
                                                             Sessions that are assigned the same context will have all
-                                                            their <strong>Read & Write</strong> requests routed to the same node.
+                                                            their <strong>Read & Write</strong> requests routed to the
+                                                            same node.
                                                             <br />
                                                             The session context is hashed from a context string (given
                                                             by the client) and an optional seed.
@@ -407,7 +404,7 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                                     <div className="p-3">
                                                         <div>
                                                             Set the Read balance method the client will use when
-                                                            accessing a node with <code> Read</code> requests.
+                                                            accessing a node with <code>Read</code> requests.
                                                             <br />
                                                             <code>Write</code> requests are sent to the preferred node.
                                                         </div>
@@ -445,16 +442,17 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                                     <li className="mb-1">
                                                         <code>None</code>
                                                         <br />
-                                                        <strong>Read</strong> requests - the node the client will target will be based
-                                                        on Read balance behavior configuration.
+                                                        <strong>Read</strong> requests - the node the client will target
+                                                        will be based on Read balance behavior configuration.
                                                         <br />
-                                                        <strong>Write</strong> requests - will be sent to the preferred node.
+                                                        <strong>Write</strong> requests - will be sent to the preferred
+                                                        node.
                                                     </li>
                                                     <li className="mb-1">
                                                         <code>Use session context</code>
                                                         <br />
-                                                        Sessions that are assigned the same context will have all 
-                                                        their <strong>Read & Write</strong> requests routed to the same node.
+                                                        Sessions that are assigned the same context will have all their{" "}
+                                                        <strong>Read & Write</strong> requests routed to the same node.
                                                         <br />
                                                         The session context is hashed from a context string (given by
                                                         the client) and an optional seed.
@@ -580,13 +578,14 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                 <p>
                                     <ul>
                                         <li className="margin-bottom-xs">
-                                            This is the <strong>Database Client-Configuration</strong> view.<br />
+                                            This is the <strong>Database Client-Configuration</strong> view.
+                                            <br />
                                             The values set in this view will apply only to this database.
                                         </li>
                                         <li>
-                                            If the Server-wide Client-Configuration view has any values set,<br />
-                                            then this view provides the option to override the Server-wide configuration<br />
-                                            and customize specific values for this database.
+                                            If the Server-wide Client-Configuration view has any values set, then this
+                                            view provides the option to override the Server-wide configuration and
+                                            customize specific values for this database.
                                         </li>
                                     </ul>
                                 </p>
@@ -596,37 +595,12 @@ export default function ClientDatabaseConfiguration({ db, licenseType }: ClientD
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "community" && (
-                                <AccordionItemWrapper
-                                    icon="license"
-                                    color="warning"
-                                    heading="Licensing"
-                                    description="See which plans offer this and more exciting features"
+                            {licenseType === "Community" && (
+                                <AccordionCommunityLicenseNotIncluded
                                     targetId="licensing"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="star-filled"
-                                >
-                                    <AccordionItemLicensing
-                                        description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                        featureName="Client Configuration"
-                                        featureIcon="database-client-configuration"
-                                        checkedLicenses={["Professional", "Enterprise"]}
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    featureName="Client Configuration"
+                                    featureIcon="database-client-configuration"
+                                />
                             )}
                         </AboutViewAnchored>
                     </Col>
